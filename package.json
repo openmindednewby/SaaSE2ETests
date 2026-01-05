@@ -1,0 +1,30 @@
+{
+  "name": "e2e-tests",
+  "version": "1.0.0",
+  "description": "Playwright E2E tests for OnlineMenu SaaS microservices",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:ui": "playwright test --ui",
+    "test:identity": "playwright test tests/identity/",
+    "test:questioner": "playwright test tests/questioner/",
+    "test:smoke": "playwright test tests/smoke/",
+    "test:chrome": "playwright test --project=chromium",
+    "test:firefox": "playwright test --project=firefox",
+    "test:mobile": "playwright test --project=mobile-chrome",
+    "docker:up": "docker compose -f ../docker-compose.e2e.yml up -d --build",
+    "docker:down": "docker compose -f ../docker-compose.e2e.yml down",
+    "docker:test": "docker compose -f ../docker-compose.e2e.yml up --build --abort-on-container-exit playwright",
+    "docker:logs": "docker compose -f ../docker-compose.e2e.yml logs -f",
+    "report": "playwright show-report reports/html",
+    "codegen": "playwright codegen localhost:8082"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^22.0.0",
+    "axios": "^1.7.0",
+    "dotenv": "^16.4.0",
+    "typescript": "^5.6.0"
+  }
+}
