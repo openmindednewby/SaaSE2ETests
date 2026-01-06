@@ -12,7 +12,7 @@ export class LoginPage extends BasePage {
     // Based on login.tsx - uses placeholder text for inputs
     this.usernameInput = page.getByPlaceholder(/enter username/i);
     this.passwordInput = page.getByPlaceholder(/enter password/i);
-    this.loginButton = page.getByRole('button', { name: /login/i });
+    this.loginButton = page.getByRole('button', { name: /sign in/i });
     this.loadingIndicator = page.locator('[role="progressbar"]');
   }
 
@@ -20,7 +20,8 @@ export class LoginPage extends BasePage {
    * Navigate to login page
    */
   async goto() {
-    await super.goto('/(auth)/login');
+    // Expo Router: (auth) is a route group, the URL is just /login
+    await super.goto('/login');
   }
 
   /**
@@ -34,9 +35,12 @@ export class LoginPage extends BasePage {
 
   /**
    * Wait for login to complete and redirect to protected area
+   * Expo Router: (protected) is a route group, URL doesn't include parentheses
    */
   async waitForLoginComplete() {
-    await expect(this.page).toHaveURL(/\(protected\)/, { timeout: 30000 });
+    // After login, we should be redirected away from /login to a protected route
+    // Common protected routes: /quiz-templates, /quiz-active, /quiz-answers, /tenants, /users
+    await expect(this.page).not.toHaveURL(/\/login/, { timeout: 30000 });
   }
 
   /**
@@ -62,10 +66,12 @@ export class LoginPage extends BasePage {
   }
 
   /**
-   * Expect to be on the protected route after login
+   * Expect to be on a protected route after login
+   * Expo Router: (protected) is a route group, URL doesn't include parentheses
    */
   async expectToBeOnProtectedRoute() {
-    await expect(this.page).toHaveURL(/\(protected\)/);
+    // Verify we're NOT on login page anymore (means we reached a protected route)
+    await expect(this.page).not.toHaveURL(/\/login/);
   }
 
   /**

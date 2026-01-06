@@ -8,10 +8,37 @@ export abstract class BasePage {
   }
 
   /**
+   * Restore auth state from localStorage to sessionStorage.
+   * The app uses Redux persist which stores auth in sessionStorage under 'persist:auth'.
+   * Playwright only persists localStorage, so we copy it back to sessionStorage.
+   */
+  async restoreAuth() {
+    try {
+      await this.page.evaluate(() => {
+        // Check if auth is already in sessionStorage
+        if (sessionStorage.getItem('persist:auth')) {
+          return;
+        }
+        // Copy from localStorage (where Playwright persists it)
+        const authState = localStorage.getItem('persist:auth');
+        if (authState) {
+          sessionStorage.setItem('persist:auth', authState);
+        }
+      });
+    } catch {
+      // Ignore errors if page context is not ready (e.g., about:blank)
+    }
+  }
+
+  /**
    * Navigate to a specific path
    */
   async goto(path: string) {
-    await this.page.goto(path);
+    await this.page.goto(path, { waitUntil: 'domcontentloaded' });
+    // Restore auth after navigation (copy from localStorage to sessionStorage)
+    if (!path.includes('/login')) {
+      await this.restoreAuth();
+    }
   }
 
   /**

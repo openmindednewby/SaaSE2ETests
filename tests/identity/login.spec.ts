@@ -8,7 +8,8 @@ test.describe('Login Flow @identity @auth', () => {
     loginPage = new LoginPage(page);
     // Clear any existing auth state for login tests
     await page.context().clearCookies();
-    await page.goto('/');
+    // Navigate directly to login page and clear storage there
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
     await page.evaluate(() => {
       sessionStorage.clear();
       localStorage.clear();
@@ -16,8 +17,7 @@ test.describe('Login Flow @identity @auth', () => {
   });
 
   test('should display login form elements', async ({ page }) => {
-    await loginPage.goto();
-
+    // Already navigated in beforeEach, just wait for elements
     await expect(loginPage.usernameInput).toBeVisible();
     await expect(loginPage.passwordInput).toBeVisible();
     await expect(loginPage.loginButton).toBeVisible();
@@ -32,14 +32,13 @@ test.describe('Login Flow @identity @auth', () => {
       return;
     }
 
-    await loginPage.goto();
+    // Already on login page from beforeEach
     await loginPage.login(username, password);
     await loginPage.expectToBeOnProtectedRoute();
   });
 
   test('should show error with invalid credentials', async ({ page }) => {
-    await loginPage.goto();
-
+    // Already on login page from beforeEach
     // Set up dialog handler for the alert
     let dialogMessage = '';
     page.once('dialog', async dialog => {
@@ -57,8 +56,7 @@ test.describe('Login Flow @identity @auth', () => {
   });
 
   test('should require username and password', async ({ page }) => {
-    await loginPage.goto();
-
+    // Already on login page from beforeEach
     // Set up dialog handler for the alert
     let dialogMessage = '';
     page.once('dialog', async dialog => {
@@ -76,8 +74,7 @@ test.describe('Login Flow @identity @auth', () => {
   });
 
   test('should require password when username is provided', async ({ page }) => {
-    await loginPage.goto();
-
+    // Already on login page from beforeEach
     let dialogMessage = '';
     page.once('dialog', async dialog => {
       dialogMessage = dialog.message();
@@ -93,8 +90,7 @@ test.describe('Login Flow @identity @auth', () => {
   });
 
   test('should require username when password is provided', async ({ page }) => {
-    await loginPage.goto();
-
+    // Already on login page from beforeEach
     let dialogMessage = '';
     page.once('dialog', async dialog => {
       dialogMessage = dialog.message();
@@ -118,7 +114,7 @@ test.describe('Login Flow @identity @auth', () => {
       return;
     }
 
-    await loginPage.goto();
+    // Already on login page from beforeEach
     await loginPage.usernameInput.fill(username);
     await loginPage.passwordInput.fill(password);
     await loginPage.loginButton.click();

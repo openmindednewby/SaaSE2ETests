@@ -1,35 +1,56 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page, BrowserContext } from '@playwright/test';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
 import { QuizActivePage } from '../../../pages/QuizActivePage.js';
+import { LoginPage } from '../../../pages/LoginPage.js';
 
-test.describe('Activate Quiz Template @questioner @crud', () => {
+// Use serial mode so tests run in order and share the same browser context
+test.describe.serial('Activate Quiz Template @questioner @crud', () => {
+  let context: BrowserContext;
+  let page: Page;
   let templatesPage: QuizTemplatesPage;
   let testTemplateName: string;
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeAll(async ({ browser }) => {
+    const username = process.env.TEST_USER_USERNAME;
+    const password = process.env.TEST_USER_PASSWORD;
+
+    if (!username || !password) {
+      throw new Error('TEST_USER_USERNAME or TEST_USER_PASSWORD not set');
+    }
+
+    // Create a new browser context for this test suite
+    context = await browser.newContext();
+    page = await context.newPage();
+
+    // Login once for all tests in this suite
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.loginAndWait(username, password);
+
+    // Initialize page objects
     templatesPage = new QuizTemplatesPage(page);
-    testTemplateName = `Activate Test ${Date.now()}`;
-
-    await templatesPage.goto();
-
-    // Create a template to activate
-    await templatesPage.createTemplate(testTemplateName, 'Template for activation test');
-    await templatesPage.expectTemplateInList(testTemplateName);
   });
 
-  test.afterEach(async () => {
+  test.afterAll(async () => {
     // Cleanup
     try {
-      await templatesPage.goto();
-      if (await templatesPage.templateExists(testTemplateName)) {
+      if (testTemplateName && await templatesPage.templateExists(testTemplateName)) {
         await templatesPage.deleteTemplate(testTemplateName);
       }
     } catch {
       // Ignore cleanup errors
     }
+    await context?.close();
   });
 
-  test('should activate a template @critical', async ({ page }) => {
+  test('should create template for activation tests', async () => {
+    testTemplateName = `Activate Test ${Date.now()}`;
+    await templatesPage.goto();
+    await templatesPage.createTemplate(testTemplateName, 'Template for activation test');
+    await templatesPage.expectTemplateInList(testTemplateName);
+  });
+
+  test('should activate a template @critical', async () => {
     // Activate the template
     await templatesPage.activateTemplate(testTemplateName);
 
@@ -38,12 +59,11 @@ test.describe('Activate Quiz Template @questioner @crud', () => {
     expect(isActive).toBe(true);
   });
 
-  test('should deactivate an active template', async ({ page }) => {
-    // First activate
-    await templatesPage.activateTemplate(testTemplateName);
+  test('should deactivate an active template', async () => {
+    // Template should already be active from previous test
     expect(await templatesPage.isTemplateActive(testTemplateName)).toBe(true);
 
-    // Then deactivate (click activate again to toggle)
+    // Deactivate (click activate again to toggle)
     await templatesPage.activateTemplate(testTemplateName);
 
     // Check if it's now inactive
@@ -51,8 +71,8 @@ test.describe('Activate Quiz Template @questioner @crud', () => {
     expect(isActive).toBe(false);
   });
 
-  test('should show active template on quiz-active page', async ({ page }) => {
-    // Activate the template
+  test('should show active template on quiz-active page', async () => {
+    // Activate the template again
     await templatesPage.activateTemplate(testTemplateName);
 
     // Navigate to quiz active page

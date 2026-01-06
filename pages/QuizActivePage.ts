@@ -28,9 +28,10 @@ export class QuizActivePage extends BasePage {
 
   /**
    * Navigate to active quiz page
+   * Expo Router: (protected) is a route group, URL is just /quiz-active
    */
   async goto() {
-    await super.goto('/(protected)/quiz-active');
+    await super.goto('/quiz-active');
     await this.waitForLoading();
   }
 

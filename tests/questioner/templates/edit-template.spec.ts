@@ -1,33 +1,55 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page, BrowserContext } from '@playwright/test';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
+import { LoginPage } from '../../../pages/LoginPage.js';
 
-test.describe('Edit Quiz Template @questioner @crud', () => {
+// Use serial mode so tests run in order and share the same browser context
+test.describe.serial('Edit Quiz Template @questioner @crud', () => {
+  let context: BrowserContext;
+  let page: Page;
   let templatesPage: QuizTemplatesPage;
   let testTemplateName: string;
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeAll(async ({ browser }) => {
+    const username = process.env.TEST_USER_USERNAME;
+    const password = process.env.TEST_USER_PASSWORD;
+
+    if (!username || !password) {
+      throw new Error('TEST_USER_USERNAME or TEST_USER_PASSWORD not set');
+    }
+
+    // Create a new browser context for this test suite
+    context = await browser.newContext();
+    page = await context.newPage();
+
+    // Login once for all tests in this suite
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.loginAndWait(username, password);
+
+    // Initialize page objects
     templatesPage = new QuizTemplatesPage(page);
-    testTemplateName = `Edit Test ${Date.now()}`;
-
-    await templatesPage.goto();
-
-    // Create a template to edit
-    await templatesPage.createTemplate(testTemplateName, 'Original description');
-    await templatesPage.expectTemplateInList(testTemplateName);
   });
 
-  test.afterEach(async () => {
-    // Cleanup - try to delete the template
+  test.afterAll(async () => {
+    // Cleanup - try to delete the template if it exists
     try {
-      if (await templatesPage.templateExists(testTemplateName)) {
+      if (testTemplateName && await templatesPage.templateExists(testTemplateName)) {
         await templatesPage.deleteTemplate(testTemplateName);
       }
     } catch {
       // Ignore cleanup errors
     }
+    await context?.close();
   });
 
-  test('should open edit modal when clicking edit @critical', async ({ page }) => {
+  test('should create template for editing', async () => {
+    testTemplateName = `Edit Test ${Date.now()}`;
+    await templatesPage.goto();
+    await templatesPage.createTemplate(testTemplateName, 'Original description');
+    await templatesPage.expectTemplateInList(testTemplateName);
+  });
+
+  test('should open edit modal when clicking edit @critical', async () => {
     await templatesPage.editTemplate(testTemplateName);
 
     // Modal should be visible
@@ -41,7 +63,7 @@ test.describe('Edit Quiz Template @questioner @crud', () => {
     }
   });
 
-  test('should update template name', async ({ page }) => {
+  test('should update template name', async () => {
     const newName = `Updated ${Date.now()}`;
 
     await templatesPage.editTemplate(testTemplateName);
@@ -63,12 +85,11 @@ test.describe('Edit Quiz Template @questioner @crud', () => {
     testTemplateName = newName;
   });
 
-  test('should cancel edit without saving', async ({ page }) => {
+  test('should cancel edit without saving', async () => {
     await templatesPage.editTemplate(testTemplateName);
 
     // Modify the name
     const modalNameInput = page.locator('[role="dialog"] input[type="text"]').first();
-    const originalValue = await modalNameInput.inputValue();
     await modalNameInput.fill('Should Not Save');
 
     // Cancel

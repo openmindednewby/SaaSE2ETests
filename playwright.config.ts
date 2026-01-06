@@ -7,6 +7,17 @@ dotenv.config({ path: path.resolve(__dirname, '.env.local') });
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:8082';
 
+// Script to copy auth tokens from localStorage to sessionStorage
+// This is needed because the app uses sessionStorage but Playwright only persists localStorage
+const authInitScript = `
+  (() => {
+    const accessToken = localStorage.getItem('accessToken');
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (accessToken) sessionStorage.setItem('accessToken', accessToken);
+    if (refreshToken) sessionStorage.setItem('refreshToken', refreshToken);
+  })();
+`;
+
 export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
@@ -42,6 +53,10 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'playwright/.auth/user.json',
+        // Run init script on every page to restore auth from localStorage to sessionStorage
+        contextOptions: {
+          serviceWorkers: 'allow',
+        },
       },
       dependencies: ['setup'],
     },

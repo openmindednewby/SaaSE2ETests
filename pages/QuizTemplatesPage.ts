@@ -23,9 +23,10 @@ export class QuizTemplatesPage extends BasePage {
 
   /**
    * Navigate to quiz templates page
+   * Expo Router: (protected) is a route group, URL is just /quiz-templates
    */
   async goto() {
-    await super.goto('/(protected)/quiz-templates');
+    await super.goto('/quiz-templates');
     await this.waitForLoading();
   }
 
@@ -33,12 +34,38 @@ export class QuizTemplatesPage extends BasePage {
    * Create a new template
    */
   async createTemplate(name: string, description: string = '') {
+    // Clear any existing input first
+    await this.templateNameInput.clear();
     await this.templateNameInput.fill(name);
     if (description) {
+      await this.templateDescriptionInput.clear();
       await this.templateDescriptionInput.fill(description);
     }
+
+    // Click Save button and wait for API response
+    // API endpoint is /questionerTemplates (POST for create)
+    const responsePromise = this.page.waitForResponse(
+      response => response.url().includes('/questionerTemplates') && response.request().method() === 'POST',
+      { timeout: 15000 }
+    );
+
     await this.saveButton.click();
+
+    // Wait for API response or timeout
+    try {
+      const response = await responsePromise;
+      // Check if the response was successful
+      if (!response.ok()) {
+        console.warn(`Template creation API returned status ${response.status()}`);
+      }
+    } catch {
+      // API call didn't happen - this might be an issue with the form validation
+      console.warn('No API call detected for template creation');
+    }
+
     await this.waitForLoading();
+    // Wait for the list to refresh
+    await this.page.waitForTimeout(1000);
   }
 
   /**

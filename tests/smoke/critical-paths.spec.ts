@@ -1,53 +1,68 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page, BrowserContext } from '@playwright/test';
 import { LoginPage } from '../../pages/LoginPage.js';
 import { QuizTemplatesPage } from '../../pages/QuizTemplatesPage.js';
 import { QuizActivePage } from '../../pages/QuizActivePage.js';
 import { QuizAnswersPage } from '../../pages/QuizAnswersPage.js';
 
-test.describe('Critical Path Smoke Tests @smoke @critical', () => {
-  test('complete user journey: login -> create template -> activate -> view answers', async ({ page }) => {
+// Use serial mode so tests run in order and share the same browser context
+test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
+  let context: BrowserContext;
+  let page: Page;
+  let templatesPage: QuizTemplatesPage;
+  let quizActivePage: QuizActivePage;
+  let answersPage: QuizAnswersPage;
+
+  test.beforeAll(async ({ browser }) => {
     const username = process.env.TEST_USER_USERNAME;
     const password = process.env.TEST_USER_PASSWORD;
 
     if (!username || !password) {
-      test.skip(true, 'Test credentials not configured');
-      return;
+      throw new Error('TEST_USER_USERNAME or TEST_USER_PASSWORD not set');
     }
 
-    // 1. Login
+    // Create a new browser context for this test suite
+    context = await browser.newContext();
+    page = await context.newPage();
+
+    // Login once for all tests in this suite
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.loginAndWait(username, password);
 
-    // Verify we're in protected area
-    await expect(page).toHaveURL(/\(protected\)/);
+    // Initialize page objects
+    templatesPage = new QuizTemplatesPage(page);
+    quizActivePage = new QuizActivePage(page);
+    answersPage = new QuizAnswersPage(page);
+  });
 
-    // 2. Navigate to Quiz Templates
-    const templatesPage = new QuizTemplatesPage(page);
+  test.afterAll(async () => {
+    await context?.close();
+  });
+
+  test('complete user journey: create template -> activate -> view answers', async () => {
+    // 1. Navigate to Quiz Templates
     await templatesPage.goto();
 
     // Verify page loaded
     await expect(page).toHaveURL(/quiz-templates/);
 
-    // 3. Create a test template
+    // 2. Create a test template
     const templateName = `Smoke Test ${Date.now()}`;
     await templatesPage.createTemplate(templateName, 'Smoke test template');
     await templatesPage.expectTemplateInList(templateName);
 
-    // 4. Activate the template
+    // 3. Activate the template
     await templatesPage.activateTemplate(templateName);
 
-    // 5. Navigate to Quiz Active page
-    const quizActivePage = new QuizActivePage(page);
+    // 4. Navigate to Quiz Active page
     await quizActivePage.goto();
     await expect(page).toHaveURL(/quiz-active/);
 
-    // 6. Navigate to Quiz Answers page
-    const answersPage = new QuizAnswersPage(page);
+    // 5. Navigate to Quiz Answers page
     await answersPage.goto();
     await expect(page).toHaveURL(/quiz-answers/);
 
-    // 7. Cleanup - delete the test template
+    // 6. Cleanup - delete the test template
     await templatesPage.goto();
     await templatesPage.deleteTemplate(templateName);
 
@@ -56,30 +71,27 @@ test.describe('Critical Path Smoke Tests @smoke @critical', () => {
     expect(stillExists).toBe(false);
   });
 
-  test('navigation between all protected pages', async ({ page }) => {
-    // Uses authenticated state from setup
-
+  test('navigation between all protected pages', async () => {
     // Navigate to each protected route
     const routes = [
-      '/(protected)',
-      '/(protected)/quiz-templates',
-      '/(protected)/quiz-active',
-      '/(protected)/quiz-answers',
+      '/',
+      '/quiz-templates',
+      '/quiz-active',
+      '/quiz-answers',
     ];
 
     for (const route of routes) {
-      await page.goto(route);
+      await page.goto(route, { waitUntil: 'domcontentloaded' });
       await page.waitForLoadState('networkidle');
 
       // Verify we stayed on a protected route (not redirected to login)
       const url = page.url();
-      expect(url).toMatch(/\(protected\)/);
+      expect(url).not.toMatch(/\/login/);
     }
   });
 
-  test('authenticated API calls work correctly', async ({ page }) => {
+  test('authenticated API calls work correctly', async () => {
     // Navigate to templates page which makes API calls
-    const templatesPage = new QuizTemplatesPage(page);
     await templatesPage.goto();
 
     // Wait for API response
@@ -97,8 +109,7 @@ test.describe('Critical Path Smoke Tests @smoke @critical', () => {
     }
   });
 
-  test('template CRUD operations work end-to-end', async ({ page }) => {
-    const templatesPage = new QuizTemplatesPage(page);
+  test('template CRUD operations work end-to-end', async () => {
     await templatesPage.goto();
 
     const templateName = `CRUD Test ${Date.now()}`;
@@ -134,19 +145,19 @@ test.describe('Critical Path Smoke Tests @smoke @critical', () => {
     }
   });
 
-  test('page refresh maintains authenticated state', async ({ page }) => {
-    await page.goto('/(protected)/quiz-templates');
+  test('page refresh maintains authenticated state', async () => {
+    await page.goto('/quiz-templates', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/quiz-templates/);
 
     // Refresh the page
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // Should still be on protected route
-    await expect(page).toHaveURL(/\(protected\)/);
+    // Should still be on protected route (not redirected to login)
+    await expect(page).not.toHaveURL(/\/login/);
   });
 
-  test('all main pages load without JavaScript errors', async ({ page }) => {
+  test('all main pages load without JavaScript errors', async () => {
     const errors: string[] = [];
 
     // Listen for console errors
@@ -163,14 +174,14 @@ test.describe('Critical Path Smoke Tests @smoke @critical', () => {
 
     // Visit each main page
     const pages = [
-      '/(protected)',
-      '/(protected)/quiz-templates',
-      '/(protected)/quiz-active',
-      '/(protected)/quiz-answers',
+      '/',
+      '/quiz-templates',
+      '/quiz-active',
+      '/quiz-answers',
     ];
 
     for (const route of pages) {
-      await page.goto(route);
+      await page.goto(route, { waitUntil: 'domcontentloaded' });
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(1000); // Allow time for async errors
     }
