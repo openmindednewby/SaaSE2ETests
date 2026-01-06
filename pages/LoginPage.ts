@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Locator, Page, expect } from '@playwright/test';
 import { BasePage } from './BasePage.js';
 
 export class LoginPage extends BasePage {
@@ -28,6 +28,7 @@ export class LoginPage extends BasePage {
    * Fill in login form and submit
    */
   async login(username: string, password: string) {
+    await this.dismissOverlay();
     await this.usernameInput.fill(username);
     await this.passwordInput.fill(password);
     await this.loginButton.click();

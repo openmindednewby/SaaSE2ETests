@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page } from '@playwright/test';
 
 export abstract class BasePage {
   readonly page: Page;
@@ -31,10 +31,21 @@ export abstract class BasePage {
   }
 
   /**
+   * Dismiss any blocking overlays (like PWA install prompts)
+   */
+  async dismissOverlay() {
+    const dismissButton = this.page.getByRole('button', { name: /continue in browser/i });
+    if (await dismissButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await dismissButton.click();
+    }
+  }
+
+  /**
    * Navigate to a specific path
    */
   async goto(path: string) {
     await this.page.goto(path, { waitUntil: 'domcontentloaded' });
+    await this.dismissOverlay();
     // Restore auth after navigation (copy from localStorage to sessionStorage)
     if (!path.includes('/login')) {
       await this.restoreAuth();

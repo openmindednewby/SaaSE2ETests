@@ -39,12 +39,23 @@ export default defineConfig({
 
   // Global setup for authentication
   globalSetup: require.resolve('./fixtures/global-setup.ts'),
+  
+  // Global teardown for cleanup (deletes test tenants and users)
+  globalTeardown: require.resolve('./tests/multi-tenant.teardown.ts'),
 
   projects: [
     // Auth setup project - runs before all tests
     {
       name: 'setup',
-      testMatch: /.*\.setup\.ts/,
+      testMatch: /auth\.setup\.ts/,
+    },
+
+    // Multi-tenant setup - creates test tenants and users
+    {
+      name: 'multi-tenant-setup',
+      testMatch: /multi-tenant\.setup\.ts/,
+      dependencies: ['setup'],
+      timeout: 180000, // 3 minutes for full setup
     },
 
     // Desktop Chrome
@@ -58,7 +69,7 @@ export default defineConfig({
           serviceWorkers: 'allow',
         },
       },
-      dependencies: ['setup'],
+      dependencies: ['setup', 'multi-tenant-setup'],
     },
 
     // Mobile viewport (React Native Web)
@@ -68,7 +79,7 @@ export default defineConfig({
         ...devices['Pixel 5'],
         storageState: 'playwright/.auth/user.json',
       },
-      dependencies: ['setup'],
+      dependencies: ['setup', 'multi-tenant-setup'],
     },
 
     // Firefox for cross-browser testing
@@ -78,7 +89,7 @@ export default defineConfig({
         ...devices['Desktop Firefox'],
         storageState: 'playwright/.auth/user.json',
       },
-      dependencies: ['setup'],
+      dependencies: ['setup', 'multi-tenant-setup'],
     },
   ],
 

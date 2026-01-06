@@ -1,0 +1,342 @@
+﻿
+≡ƒöì Checking IdentityService at http://localhost:5002...
+Γ£à IdentityService is available
+≡ƒöÉ Authenticating test user...
+Γ£à API authentication successful
+≡ƒöì Checking frontend at http://localhost:8082...
+Γ£à Frontend is available
+Γ£à Global setup complete - authentication state saved
+
+ΓÅ¡∩╕Å Skipping cleanup: no setup state found
+{
+  "config": {
+    "configFile": "C:\\desktopContents\\projects\\SaaS\\E2ETests\\playwright.config.ts",
+    "rootDir": "C:/desktopContents/projects/SaaS/E2ETests/tests",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": "C:\\desktopContents\\projects\\SaaS\\E2ETests\\fixtures\\global-setup.ts",
+    "globalTeardown": "C:\\desktopContents\\projects\\SaaS\\E2ETests\\tests\\multi-tenant.teardown.ts",
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "C:/desktopContents/projects/SaaS/E2ETests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "setup",
+        "name": "setup",
+        "testDir": "C:/desktopContents/projects/SaaS/E2ETests/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/auth\\.setup\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/desktopContents/projects/SaaS/E2ETests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "multi-tenant-setup",
+        "name": "multi-tenant-setup",
+        "testDir": "C:/desktopContents/projects/SaaS/E2ETests/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/multi-tenant\\.setup\\.ts/"
+        ],
+        "timeout": 180000
+      },
+      {
+        "outputDir": "C:/desktopContents/projects/SaaS/E2ETests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/desktopContents/projects/SaaS/E2ETests/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/desktopContents/projects/SaaS/E2ETests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "mobile-chrome",
+        "name": "mobile-chrome",
+        "testDir": "C:/desktopContents/projects/SaaS/E2ETests/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/desktopContents/projects/SaaS/E2ETests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "C:/desktopContents/projects/SaaS/E2ETests/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.57.0",
+    "workers": 12,
+    "webServer": {
+      "command": "npm run start:test",
+      "cwd": "../OnlineMenuSaaS/clients/OnlineMenuClientApp",
+      "url": "http://localhost:8082",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "auth.setup.ts",
+      "file": "auth.setup.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "authenticate",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1850,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "Auth state found: { hasAccessToken: \u001b[33mtrue\u001b[39m, hasRefreshToken: \u001b[33mtrue\u001b[39m }\n"
+                    },
+                    {
+                      "text": "Auth file saved with \u001b[33m1\u001b[39m origins\n"
+                    },
+                    {
+                      "text": "Auth setup complete - storage state saved to: C:\\desktopContents\\projects\\SaaS\\E2ETests\\playwright\\.auth\\user.json\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-01-06T13:37:12.670Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-60f085b113a677673906",
+          "file": "auth.setup.ts",
+          "line": 8,
+          "column": 6
+        }
+      ]
+    },
+    {
+      "title": "multi-tenant.setup.ts",
+      "file": "multi-tenant.setup.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Multi-Tenant Test Setup",
+          "file": "multi-tenant.setup.ts",
+          "line": 13,
+          "column": 7,
+          "specs": [
+            {
+              "title": "create test tenants and users",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "multi-tenant-setup",
+                  "projectName": "multi-tenant-setup",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 23732,
+                      "error": {
+                        "message": "TimeoutError: page.waitForResponse: Timeout 15000ms exceeded while waiting for event \"response\"",
+                        "stack": "TimeoutError: page.waitForResponse: Timeout 15000ms exceeded while waiting for event \"response\"\n    at UsersPage.createUser (C:\\desktopContents\\projects\\SaaS\\E2ETests\\pages\\UsersPage.ts:112:39)\n    at C:\\desktopContents\\projects\\SaaS\\E2ETests\\tests\\multi-tenant.setup.ts:106:9",
+                        "location": {
+                          "file": "C:\\desktopContents\\projects\\SaaS\\E2ETests\\pages\\UsersPage.ts",
+                          "column": 39,
+                          "line": 112
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39m..\\pages\\UsersPage.ts:112\n\n\u001b[0m \u001b[90m 110 |\u001b[39m\n \u001b[90m 111 |\u001b[39m     \u001b[90m// Click Create button and wait for API response\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 112 |\u001b[39m     \u001b[36mconst\u001b[39m responsePromise \u001b[33m=\u001b[39m \u001b[36mthis\u001b[39m\u001b[33m.\u001b[39mpage\u001b[33m.\u001b[39mwaitForResponse(\n \u001b[90m     |\u001b[39m                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 113 |\u001b[39m       response \u001b[33m=>\u001b[39m response\u001b[33m.\u001b[39murl()\u001b[33m.\u001b[39mincludes(\u001b[32m'/users'\u001b[39m) \u001b[33m&&\u001b[39m response\u001b[33m.\u001b[39mrequest()\u001b[33m.\u001b[39mmethod() \u001b[33m===\u001b[39m \u001b[32m'POST'\u001b[39m\u001b[33m,\u001b[39m\n \u001b[90m 114 |\u001b[39m       { timeout\u001b[33m:\u001b[39m \u001b[35m15000\u001b[39m }\n \u001b[90m 115 |\u001b[39m     )\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\desktopContents\\projects\\SaaS\\E2ETests\\pages\\UsersPage.ts",
+                            "column": 39,
+                            "line": 112
+                          },
+                          "message": "TimeoutError: page.waitForResponse: Timeout 15000ms exceeded while waiting for event \"response\"\n\n   at ..\\pages\\UsersPage.ts:112\n\n  110 |\n  111 |     // Click Create button and wait for API response\n> 112 |     const responsePromise = this.page.waitForResponse(\n      |                                       ^\n  113 |       response => response.url().includes('/users') && response.request().method() === 'POST',\n  114 |       { timeout: 15000 }\n  115 |     );\n    at UsersPage.createUser (C:\\desktopContents\\projects\\SaaS\\E2ETests\\pages\\UsersPage.ts:112:39)\n    at C:\\desktopContents\\projects\\SaaS\\E2ETests\\tests\\multi-tenant.setup.ts:106:9"
+                        },
+                        {
+                          "location": {
+                            "file": "C:\\desktopContents\\projects\\SaaS\\E2ETests\\pages\\UsersPage.ts",
+                            "column": 24,
+                            "line": 118
+                          },
+                          "message": "Error: locator.click: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('[role=\"dialog\"]').getByRole('button', { name: /create/i })\u001b[22m\n\n\n   at ..\\pages\\UsersPage.ts:118\n\n  116 |\n  117 |     const createButton = modal.getByRole('button', { name: /create/i });\n> 118 |     await createButton.click();\n      |                        ^\n  119 |\n  120 |     try {\n  121 |       const response = await responsePromise;\n    at UsersPage.createUser (C:\\desktopContents\\projects\\SaaS\\E2ETests\\pages\\UsersPage.ts:118:24)\n    at C:\\desktopContents\\projects\\SaaS\\E2ETests\\tests\\multi-tenant.setup.ts:106:9"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "≡ƒÅù∩╕Å Starting multi-tenant test setup...\n"
+                        },
+                        {
+                          "text": "Γ£à Logged in as super user\n"
+                        },
+                        {
+                          "text": "≡ƒôé Navigating to tenants page...\n"
+                        },
+                        {
+                          "text": "≡ƒöì Checking if tenant A exists: e2e-TenantA\n"
+                        },
+                        {
+                          "text": "  Tenant A existence result: true\n"
+                        },
+                        {
+                          "text": "ΓÅ¡∩╕Å Tenant e2e-TenantA already exists, skipping...\n"
+                        },
+                        {
+                          "text": "≡ƒöì Checking if tenant B exists: e2e-TenantB\n"
+                        },
+                        {
+                          "text": "  Tenant B existence result: true\n"
+                        },
+                        {
+                          "text": "ΓÅ¡∩╕Å Tenant e2e-TenantB already exists, skipping...\n"
+                        },
+                        {
+                          "text": "≡ƒôé Navigating to users page...\n"
+                        },
+                        {
+                          "text": "ΓÅ│ Waiting for user management header...\n"
+                        },
+                        {
+                          "text": "≡ƒöì Checking if user exists: e2e-tenantA-admin\n"
+                        },
+                        {
+                          "text": "≡ƒæñ Creating user: e2e-tenantA-admin (admin)\n"
+                        }
+                      ],
+                      "stderr": [
+                        {
+                          "text": "Γ¥î MULTI-TENANT SETUP FAILED: locator.click: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('[role=\"dialog\"]').getByRole('button', { name: /create/i })\u001b[22m\n\n"
+                        },
+                        {
+                          "text": "locator.click: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('[role=\"dialog\"]').getByRole('button', { name: /create/i })\u001b[22m\n\n    at UsersPage.createUser (C:\\desktopContents\\projects\\SaaS\\E2ETests\\pages\\UsersPage.ts:118:24)\n    at C:\\desktopContents\\projects\\SaaS\\E2ETests\\tests\\multi-tenant.setup.ts:106:9\n"
+                        }
+                      ],
+                      "retry": 0,
+                      "startTime": "2026-01-06T13:37:15.384Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\desktopContents\\projects\\SaaS\\E2ETests\\test-results\\multi-tenant.setup.ts-Mult-1c663-eate-test-tenants-and-users-multi-tenant-setup\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\desktopContents\\projects\\SaaS\\E2ETests\\test-results\\multi-tenant.setup.ts-Mult-1c663-eate-test-tenants-and-users-multi-tenant-setup\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\desktopContents\\projects\\SaaS\\E2ETests\\test-results\\multi-tenant.setup.ts-Mult-1c663-eate-test-tenants-and-users-multi-tenant-setup\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\desktopContents\\projects\\SaaS\\E2ETests\\pages\\UsersPage.ts",
+                        "column": 39,
+                        "line": 112
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "06c632052968fe9f97ae-5df7b7a2c43afd1c83c7",
+              "file": "multi-tenant.setup.ts",
+              "line": 14,
+              "column": 8
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-01-06T13:37:10.445Z",
+    "duration": 29025.792,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

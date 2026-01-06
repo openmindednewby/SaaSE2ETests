@@ -1,8 +1,9 @@
-import { test, expect, Page, BrowserContext } from '@playwright/test';
+import { BrowserContext, expect, Page, test } from '@playwright/test';
+import { TEST_USERS } from '../../fixtures/test-data.js';
 import { LoginPage } from '../../pages/LoginPage.js';
-import { QuizTemplatesPage } from '../../pages/QuizTemplatesPage.js';
 import { QuizActivePage } from '../../pages/QuizActivePage.js';
 import { QuizAnswersPage } from '../../pages/QuizAnswersPage.js';
+import { QuizTemplatesPage } from '../../pages/QuizTemplatesPage.js';
 
 // Use serial mode so tests run in order and share the same browser context
 test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
@@ -13,21 +14,17 @@ test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
   let answersPage: QuizAnswersPage;
 
   test.beforeAll(async ({ browser }) => {
-    const username = process.env.TEST_USER_USERNAME;
-    const password = process.env.TEST_USER_PASSWORD;
-
-    if (!username || !password) {
-      throw new Error('TEST_USER_USERNAME or TEST_USER_PASSWORD not set');
-    }
+    // Use tenant A admin (has admin role required to create templates)
+    const adminUser = TEST_USERS.TENANT_A_ADMIN;
 
     // Create a new browser context for this test suite
     context = await browser.newContext();
     page = await context.newPage();
 
-    // Login once for all tests in this suite
+    // Login as tenant admin
     const loginPage = new LoginPage(page);
     await loginPage.goto();
-    await loginPage.loginAndWait(username, password);
+    await loginPage.loginAndWait(adminUser.username, adminUser.password);
 
     // Initialize page objects
     templatesPage = new QuizTemplatesPage(page);

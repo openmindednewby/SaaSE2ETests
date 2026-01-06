@@ -1,0 +1,54 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e8]:
+  - generic [ref=e9]:
+    - generic [ref=e10]: Menu
+    - generic [ref=e12] [cursor=pointer]: Home
+    - generic [ref=e14] [cursor=pointer]: Tenants
+    - generic [ref=e16] [cursor=pointer]: Users
+  - generic [ref=e17]:
+    - generic [ref=e18]:
+      - generic "Tag Heuer" [ref=e20]:
+        - img "Tag Heuer" [ref=e22]
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - generic [ref=e25]: Dark
+          - switch [ref=e29] [cursor=pointer]
+        - generic [ref=e31] [cursor=pointer]: EN
+        - generic [ref=e32]:
+          - generic [ref=e33]: superUser superUser
+          - generic [ref=e34]: superuser@gmail.com
+        - generic [ref=e36] [cursor=pointer]: Logout
+    - generic [ref=e42]:
+      - generic [ref=e44]:
+        - generic [ref=e45]: Tenants
+        - generic [ref=e46]:
+          - generic [ref=e48] [cursor=pointer]: Refresh
+          - generic [ref=e50] [cursor=pointer]: + Add
+      - generic [ref=e52]:
+        - generic [ref=e55]:
+          - generic [ref=e56]: e2e-TenantA
+          - generic [ref=e58]: Enabled
+          - generic [ref=e59]:
+            - generic "Edit" [ref=e60] [cursor=pointer]:
+              - generic [ref=e61]: ✏️ Edit
+            - generic "Delete" [ref=e62] [cursor=pointer]:
+              - generic [ref=e63]: 🗑️ Delete
+        - generic [ref=e66]:
+          - generic [ref=e67]: t1
+          - generic [ref=e69]: Enabled
+          - generic [ref=e70]:
+            - generic "Edit" [ref=e71] [cursor=pointer]:
+              - generic [ref=e72]: ✏️ Edit
+            - generic "Delete" [ref=e73] [cursor=pointer]:
+              - generic [ref=e74]: 🗑️ Delete
+        - generic [ref=e77]:
+          - generic [ref=e78]: t2
+          - generic [ref=e80]: Enabled
+          - generic [ref=e81]:
+            - generic "Edit" [ref=e82] [cursor=pointer]:
+              - generic [ref=e83]: ✏️ Edit
+            - generic "Delete" [ref=e84] [cursor=pointer]:
+              - generic [ref=e85]: 🗑️ Delete
+```
