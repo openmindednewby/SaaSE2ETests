@@ -52,20 +52,18 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
     await templatesPage.activateTemplate(testTemplateName);
 
     // Check if it shows as active
-    const isActive = await templatesPage.isTemplateActive(testTemplateName);
-    expect(isActive).toBe(true);
+    await templatesPage.expectTemplateActive(testTemplateName, true);
   });
 
   test('should deactivate an active template', async () => {
     // Template should already be active from previous test
-    expect(await templatesPage.isTemplateActive(testTemplateName)).toBe(true);
+    await templatesPage.expectTemplateActive(testTemplateName, true);
 
     // Deactivate (click activate again to toggle)
     await templatesPage.activateTemplate(testTemplateName);
 
     // Check if it's now inactive
-    const isActive = await templatesPage.isTemplateActive(testTemplateName);
-    expect(isActive).toBe(false);
+    await templatesPage.expectTemplateActive(testTemplateName, false);
   });
 
   test('should show active template on quiz-active page', async () => {

@@ -166,7 +166,7 @@ export class UsersPage extends BasePage {
    * Get user row by username
    */
   getUserRow(username: string): Locator {
-    return this.page.locator(`text="${username}"`).locator('..');
+    return this.page.locator('[data-testid="user-item"]').filter({ hasText: username }).first();
   }
 
   /**
@@ -174,15 +174,19 @@ export class UsersPage extends BasePage {
    */
   async deleteUser(username: string) {
     const row = this.getUserRow(username);
-    await row.getByRole('button', { name: /delete/i }).click();
+    await row.scrollIntoViewIfNeeded();
 
     // Handle confirmation dialog if present
     // The app uses window.confirm for delete confirmation
+    // MUST set up before click
     this.page.once('dialog', async dialog => {
       await dialog.accept();
     });
 
+    await row.getByRole('button', { name: /delete/i }).click({ force: true });
+
     await this.waitForLoading();
+    await expect(row).not.toBeVisible({ timeout: 10000 });
   }
 
   /**

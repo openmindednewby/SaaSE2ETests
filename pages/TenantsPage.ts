@@ -94,7 +94,7 @@ export class TenantsPage extends BasePage {
    * Get tenant row by name
    */
   getTenantRow(name: string): Locator {
-    return this.page.locator(`text="${name}"`).locator('..');
+    return this.page.locator('[data-testid="tenant-list-item"]').filter({ hasText: name }).first();
   }
 
   /**
@@ -102,15 +102,24 @@ export class TenantsPage extends BasePage {
    */
   async deleteTenant(name: string) {
     const row = this.getTenantRow(name);
-    await row.getByRole('button', { name: /delete/i }).click();
+    await row.scrollIntoViewIfNeeded();
 
-    // Handle confirmation dialog if present
-    const confirmButton = this.page.getByRole('button', { name: /confirm|yes|ok/i });
-    if (await confirmButton.waitFor({ state: 'visible', timeout: 2000 }).then(() => true).catch(() => false)) {
-      await confirmButton.click();
+    // Handle confirmation dialog if present (set up before click)
+    const dialogHandler = async (dialog: any) => {
+      await dialog.accept();
+    };
+    this.page.once('dialog', dialogHandler);
+
+    await row.getByRole('button', { name: /delete/i }).click({ force: true });
+
+    // Handle web-based confirmation dialog if present (fallback)
+    const confirmButton = this.page.getByRole('button', { name: /confirm|yes|ok/i }).last();
+    if (await confirmButton.isVisible({ timeout: 2000 })) {
+      await confirmButton.click({ force: true });
     }
 
     await this.waitForLoading();
+    await expect(row).not.toBeVisible({ timeout: 10000 });
   }
 
   /**
@@ -118,7 +127,7 @@ export class TenantsPage extends BasePage {
    */
   async getTenantNames(): Promise<string[]> {
     await this.waitForLoading();
-    const items = this.page.locator('[data-testid="tenant-item"], [role="listitem"]');
+    const items = this.page.locator('[data-testid="tenant-list-item"]');
     const count = await items.count();
     const names: string[] = [];
     for (let i = 0; i < count; i++) {

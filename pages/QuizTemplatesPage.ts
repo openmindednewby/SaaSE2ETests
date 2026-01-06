@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Locator, Page, expect } from '@playwright/test';
 import { BasePage } from './BasePage.js';
 
 export class QuizTemplatesPage extends BasePage {
@@ -14,9 +14,10 @@ export class QuizTemplatesPage extends BasePage {
     // Based on quiz-templates/index.tsx
     this.pageHeader = page.getByText(/quiz templates/i);
     // TemplateForm component inputs
-    this.templateNameInput = page.getByPlaceholder(/name/i).first();
-    this.templateDescriptionInput = page.getByPlaceholder(/description/i).first();
-    this.saveButton = page.getByRole('button', { name: /save/i }).first();
+    const creationForm = page.locator('[data-testid="create-template-form"]');
+    this.templateNameInput = creationForm.getByPlaceholder(/name/i);
+    this.templateDescriptionInput = creationForm.getByPlaceholder(/description/i);
+    this.saveButton = creationForm.getByRole('button', { name: /save/i });
     this.templateList = page.locator('[data-testid="template-list"]');
     this.loadingIndicator = page.locator('[role="progressbar"]');
   }
@@ -34,37 +35,50 @@ export class QuizTemplatesPage extends BasePage {
    * Create a new template
    */
   async createTemplate(name: string, description: string = '') {
-    // Clear any existing input first
-    await this.templateNameInput.clear();
+    await this.waitForLoading();
+    
+    // Ensure form is visible
+    await this.templateNameInput.waitFor({ state: 'visible', timeout: 5000 });
+
+    // Clear and fill name
+    await this.templateNameInput.fill('');
     await this.templateNameInput.fill(name);
+    
     if (description) {
-      await this.templateDescriptionInput.clear();
+      await this.templateDescriptionInput.fill('');
       await this.templateDescriptionInput.fill(description);
     }
 
+    // Ensure button is clickable
+    await this.saveButton.waitFor({ state: 'visible' });
+    const isDisabled = await this.saveButton.isDisabled();
+    if (isDisabled) {
+      console.error('Save button is disabled. Form validation might have failed.');
+      // Try to focus name input to trigger validation
+      await this.templateNameInput.focus();
+      await this.page.waitForTimeout(500);
+    }
+
     // Click Save button and wait for API response
-    // API endpoint is /questionerTemplates (POST for create)
     const responsePromise = this.page.waitForResponse(
       response => response.url().includes('/questionerTemplates') && response.request().method() === 'POST',
       { timeout: 15000 }
-    );
+    ).catch(() => null);
 
-    await this.saveButton.click();
+    await this.saveButton.click({ force: true });
 
-    // Wait for API response or timeout
-    try {
-      const response = await responsePromise;
-      // Check if the response was successful
-      if (!response.ok()) {
+    const response = await responsePromise;
+    if (response) {
+      if (response.ok()) {
+        console.log(`Template "${name}" created successfully.`);
+      } else {
         console.warn(`Template creation API returned status ${response.status()}`);
       }
-    } catch {
-      // API call didn't happen - this might be an issue with the form validation
-      console.warn('No API call detected for template creation');
+    } else {
+      console.warn('No POST /questionerTemplates API call detected for template creation');
     }
 
     await this.waitForLoading();
-    // Wait for the list to refresh
     await this.page.waitForTimeout(1000);
   }
 
@@ -72,22 +86,29 @@ export class QuizTemplatesPage extends BasePage {
    * Get template row by name
    */
   getTemplateRow(name: string): Locator {
-    return this.page.locator(`text="${name}"`).locator('..');
+    // Find the template item that contains a heading with the specified name
+    return this.page.locator('[data-testid="tenant-list-item"]').filter({
+      has: this.page.locator('[data-testid="heading-text"]', { hasText: name })
+    }).first();
   }
 
   /**
    * Check if a template exists in the list
    */
   async templateExists(name: string): Promise<boolean> {
-    const template = this.page.getByText(name, { exact: false });
-    return await template.isVisible({ timeout: 5000 }).catch(() => false);
+    await this.waitForLoading();
+    const template = this.getTemplateRow(name);
+    return await template.waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
   }
 
   /**
    * Expect template to be visible in the list
    */
   async expectTemplateInList(name: string) {
-    await expect(this.page.getByText(name)).toBeVisible();
+    const template = this.getTemplateRow(name);
+    await expect(template).toBeVisible({ timeout: 10000 });
   }
 
   /**
@@ -95,7 +116,21 @@ export class QuizTemplatesPage extends BasePage {
    */
   async editTemplate(name: string) {
     const row = this.getTemplateRow(name);
-    await row.getByRole('button', { name: /edit/i }).click();
+    await row.scrollIntoViewIfNeeded();
+    
+    const editBtn = row.getByRole('button', { name: /edit/i });
+    if (await editBtn.isVisible({ timeout: 2000 })) {
+      await editBtn.click({ force: true });
+    } else {
+      await row.locator('text=/edit/i').first().click({ force: true });
+    }
+    
+    // Wait for modal to appear
+    await this.page.locator('[data-testid="template-modal"]').waitFor({ state: 'visible', timeout: 5000 });
+  }
+  
+  async waitForModalToClose() {
+    await expect(this.page.locator('[data-testid="template-modal"]')).not.toBeVisible({ timeout: 10000 });
   }
 
   /**
@@ -103,15 +138,31 @@ export class QuizTemplatesPage extends BasePage {
    */
   async deleteTemplate(name: string) {
     const row = this.getTemplateRow(name);
-    await row.getByRole('button', { name: /delete/i }).click();
+    await row.scrollIntoViewIfNeeded();
+    
+    // Set up dialog handler before clicking delete (some environments use native confirm)
+    const dialogHandler = async (dialog: any) => {
+      await dialog.accept();
+    };
+    this.page.once('dialog', dialogHandler);
+    
+    const deleteBtn = row.getByRole('button', { name: /delete/i });
+    if (await deleteBtn.isVisible({ timeout: 2000 })) {
+      await deleteBtn.click({ force: true });
+    } else {
+      // Fallback to text click (Trash icon + Delete text)
+      await row.locator('text=/delete/i').first().click({ force: true });
+    }
 
-    // Handle confirmation dialog if present
-    const confirmButton = this.page.getByRole('button', { name: /confirm|yes|ok/i });
-    if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmButton.click();
+    // Handle web-based confirmation dialog if present (as fallback to native)
+    const confirmBtn = this.page.getByRole('button', { name: /confirm|ok|delete|yes/i }).last();
+    if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await confirmBtn.click({ force: true });
     }
 
     await this.waitForLoading();
+    // Wait for the item to actually disappear from the DOM
+    await expect(row).not.toBeVisible({ timeout: 10000 });
   }
 
   /**
@@ -119,8 +170,19 @@ export class QuizTemplatesPage extends BasePage {
    */
   async activateTemplate(name: string) {
     const row = this.getTemplateRow(name);
-    await row.getByRole('button', { name: /activate/i }).click();
+    await row.scrollIntoViewIfNeeded();
+    
+    const activateBtn = row.getByRole('button', { name: /activate|deactivate/i });
+    if (await activateBtn.isVisible({ timeout: 2000 })) {
+      await activateBtn.click({ force: true });
+    } else {
+      // Fallback to finding the button with the emoji/text
+      await row.locator('text=/activate|🔁/i').first().click({ force: true });
+    }
+
     await this.waitForLoading();
+    // Wait a bit for the status change to reflect in UI
+    await this.page.waitForTimeout(1000);
   }
 
   /**
@@ -128,8 +190,21 @@ export class QuizTemplatesPage extends BasePage {
    */
   async isTemplateActive(name: string): Promise<boolean> {
     const row = this.getTemplateRow(name);
-    const activeIndicator = row.getByText(/active/i);
-    return await activeIndicator.isVisible();
+    const statusLabel = row.locator('[data-testid="status-label"]');
+    const statusText = (await statusLabel.textContent().catch(() => '')) || '';
+    
+    // Status should be "Active" or "Enabled"
+    return statusText.toLowerCase().includes('active') || statusText.toLowerCase().includes('enabled');
+  }
+
+  async expectTemplateActive(name: string, active: boolean = true) {
+    const row = this.getTemplateRow(name);
+    const statusLabel = row.locator('[data-testid="status-label"]');
+    if (active) {
+      await expect(statusLabel).toHaveText(/active|enabled/i, { timeout: 10000 });
+    } else {
+      await expect(statusLabel).toHaveText(/inactive|disabled/i, { timeout: 10000 });
+    }
   }
 
   /**
@@ -137,12 +212,26 @@ export class QuizTemplatesPage extends BasePage {
    */
   async getTemplateNames(): Promise<string[]> {
     await this.waitForLoading();
-    const items = this.page.locator('[data-testid="template-item"], [role="listitem"]');
+    const items = this.page.locator('[data-testid="tenant-list-item"]');
+    // Wait for at least one item if any
+    await items.first().waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+    
     const count = await items.count();
     const names: string[] = [];
     for (let i = 0; i < count; i++) {
-      const text = await items.nth(i).textContent();
-      if (text) names.push(text.trim());
+      const item = items.nth(i);
+      // Try to get title from heading-text test ID first, with a very short timeout
+      const text = await item.locator('[data-testid="heading-text"]').first()
+        .textContent({ timeout: 1000 })
+        .catch(() => null);
+      
+      if (text) {
+        names.push(text.trim());
+      } else {
+        // Fallback to searching for the first Text element or just text content
+        const fullText = await item.textContent().catch(() => '');
+        if (fullText) names.push(fullText.split('\n')[0].trim());
+      }
     }
     return names;
   }

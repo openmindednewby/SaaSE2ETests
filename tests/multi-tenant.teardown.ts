@@ -43,7 +43,7 @@ async function globalTeardown(config: FullConfig) {
   console.log('🧹 Starting multi-tenant cleanup...');
 
   const browser = await chromium.launch();
-  const context = await browser.newContext();
+  const context = await browser.newContext({ baseURL });
   const page = await context.newPage();
 
   try {
@@ -67,14 +67,7 @@ async function globalTeardown(config: FullConfig) {
       try {
         if (await usersPage.userExists(username)) {
           console.log(`🗑️ Deleting user: ${username}`);
-          
-          // Set up dialog handler before clicking delete
-          page.once('dialog', async dialog => {
-            await dialog.accept();
-          });
-          
           await usersPage.deleteUser(username);
-          await page.waitForTimeout(500);
           console.log(`✅ Deleted user: ${username}`);
         }
       } catch (error: any) {

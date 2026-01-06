@@ -64,10 +64,6 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'playwright/.auth/user.json',
-        // Run init script on every page to restore auth from localStorage to sessionStorage
-        contextOptions: {
-          serviceWorkers: 'allow',
-        },
       },
       dependencies: ['setup', 'multi-tenant-setup'],
     },
