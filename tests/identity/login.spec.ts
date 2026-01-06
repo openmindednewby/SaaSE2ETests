@@ -39,17 +39,21 @@ test.describe('Login Flow @identity @auth', () => {
 
   test('should show error with invalid credentials', async ({ page }) => {
     // Already on login page from beforeEach
-    // Set up dialog handler for the alert
-    let dialogMessage = '';
-    page.once('dialog', async dialog => {
-      dialogMessage = dialog.message();
-      await dialog.accept();
+    // Set up dialog handler BEFORE triggering the action - use a promise to properly wait
+    const dialogPromise = new Promise<string>((resolve) => {
+      const timeout = setTimeout(() => resolve(''), 10000); // 10 second timeout
+      page.once('dialog', async dialog => {
+        clearTimeout(timeout);
+        const message = dialog.message();
+        await dialog.accept();
+        resolve(message);
+      });
     });
 
     await loginPage.login('invaliduser', 'invalidpassword');
 
-    // Wait a bit for the alert to appear
-    await page.waitForTimeout(2000);
+    // Wait for the dialog to be handled
+    const dialogMessage = await dialogPromise;
 
     // The app shows an error via alert
     expect(dialogMessage).toBeTruthy();
@@ -57,17 +61,22 @@ test.describe('Login Flow @identity @auth', () => {
 
   test('should require username and password', async ({ page }) => {
     // Already on login page from beforeEach
-    // Set up dialog handler for the alert
-    let dialogMessage = '';
-    page.once('dialog', async dialog => {
-      dialogMessage = dialog.message();
-      await dialog.accept();
+    // Set up dialog handler BEFORE triggering the action
+    const dialogPromise = new Promise<string>((resolve) => {
+      const timeout = setTimeout(() => resolve(''), 5000);
+      page.once('dialog', async dialog => {
+        clearTimeout(timeout);
+        const message = dialog.message();
+        await dialog.accept();
+        resolve(message);
+      });
     });
 
     // Try to login without credentials
     await loginPage.loginButton.click();
 
-    await page.waitForTimeout(1000);
+    // Wait for the dialog to be handled
+    const dialogMessage = await dialogPromise;
 
     // Should show validation message
     expect(dialogMessage.toLowerCase()).toContain('enter');
@@ -75,32 +84,40 @@ test.describe('Login Flow @identity @auth', () => {
 
   test('should require password when username is provided', async ({ page }) => {
     // Already on login page from beforeEach
-    let dialogMessage = '';
-    page.once('dialog', async dialog => {
-      dialogMessage = dialog.message();
-      await dialog.accept();
+    const dialogPromise = new Promise<string>((resolve) => {
+      const timeout = setTimeout(() => resolve(''), 5000);
+      page.once('dialog', async dialog => {
+        clearTimeout(timeout);
+        const message = dialog.message();
+        await dialog.accept();
+        resolve(message);
+      });
     });
 
     await loginPage.usernameInput.fill('someuser');
     await loginPage.loginButton.click();
 
-    await page.waitForTimeout(1000);
+    const dialogMessage = await dialogPromise;
 
     expect(dialogMessage.toLowerCase()).toContain('enter');
   });
 
   test('should require username when password is provided', async ({ page }) => {
     // Already on login page from beforeEach
-    let dialogMessage = '';
-    page.once('dialog', async dialog => {
-      dialogMessage = dialog.message();
-      await dialog.accept();
+    const dialogPromise = new Promise<string>((resolve) => {
+      const timeout = setTimeout(() => resolve(''), 5000);
+      page.once('dialog', async dialog => {
+        clearTimeout(timeout);
+        const message = dialog.message();
+        await dialog.accept();
+        resolve(message);
+      });
     });
 
     await loginPage.passwordInput.fill('somepassword');
     await loginPage.loginButton.click();
 
-    await page.waitForTimeout(1000);
+    const dialogMessage = await dialogPromise;
 
     expect(dialogMessage.toLowerCase()).toContain('enter');
   });

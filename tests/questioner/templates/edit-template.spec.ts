@@ -2,6 +2,7 @@ import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { TEST_USERS } from '../../../fixtures/test-data.js';
 import { LoginPage } from '../../../pages/LoginPage.js';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
+import { TestIds, testIdSelector } from '../../../shared/testIds.js';
 
 // Use serial mode so tests run in order and share the same browser context
 test.describe.serial('Edit Quiz Template @questioner @crud', () => {
@@ -50,13 +51,13 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
     await templatesPage.editTemplate(testTemplateName);
 
     // Modal should be visible
-    const modal = page.locator('[role="dialog"], [data-testid="template-modal"]');
+    const modal = page.locator(`[role="dialog"], ${testIdSelector(TestIds.TEMPLATE_MODAL)}`);
     await expect(modal).toBeVisible({ timeout: 5000 });
 
-    // Close modal
-    const cancelButton = page.getByRole('button', { name: /cancel|close/i });
-    if (await cancelButton.isVisible()) {
-      await cancelButton.click();
+    // Close modal - use the modal's cancel button specifically
+    const modalCancelButton = page.locator(testIdSelector(TestIds.TEMPLATE_MODAL)).getByRole('button', { name: /cancel/i }).first();
+    if (await modalCancelButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await modalCancelButton.click();
     }
   });
 

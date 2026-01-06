@@ -12,7 +12,8 @@ export class LoginPage extends BasePage {
     // Based on login.tsx - uses placeholder text for inputs
     this.usernameInput = page.getByPlaceholder(/enter username/i);
     this.passwordInput = page.getByPlaceholder(/enter password/i);
-    this.loginButton = page.getByRole('button', { name: /sign in/i });
+    // Login button uses SaveButton with title t('login.submit', 'Login')
+    this.loginButton = page.getByRole('button', { name: /login|sign in/i });
     this.loadingIndicator = page.locator('[role="progressbar"]');
   }
 
@@ -72,7 +73,7 @@ export class LoginPage extends BasePage {
    */
   async expectToBeOnProtectedRoute() {
     // Verify we're NOT on login page anymore (means we reached a protected route)
-    await expect(this.page).not.toHaveURL(/\/login/);
+    await expect(this.page).not.toHaveURL(/\/login/, { timeout: 10000 });
   }
 
   /**

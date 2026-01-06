@@ -1,5 +1,6 @@
 import { Locator, Page, expect } from '@playwright/test';
 import { BasePage } from './BasePage.js';
+import { TestIds, testIdSelector } from '../shared/testIds.js';
 
 export class QuizTemplatesPage extends BasePage {
   readonly pageHeader: Locator;
@@ -14,11 +15,11 @@ export class QuizTemplatesPage extends BasePage {
     // Based on quiz-templates/index.tsx
     this.pageHeader = page.getByText(/quiz templates/i);
     // TemplateForm component inputs
-    const creationForm = page.locator('[data-testid="create-template-form"]');
+    const creationForm = page.locator(testIdSelector(TestIds.CREATE_TEMPLATE_FORM));
     this.templateNameInput = creationForm.getByPlaceholder(/name/i);
     this.templateDescriptionInput = creationForm.getByPlaceholder(/description/i);
     this.saveButton = creationForm.getByRole('button', { name: /save/i });
-    this.templateList = page.locator('[data-testid="template-list"]');
+    this.templateList = page.locator(testIdSelector(TestIds.TEMPLATE_LIST));
     this.loadingIndicator = page.locator('[role="progressbar"]');
   }
 
@@ -79,7 +80,14 @@ export class QuizTemplatesPage extends BasePage {
     }
 
     await this.waitForLoading();
-    await this.page.waitForTimeout(1000);
+
+    // Wait for the list to refetch (the GET call after create)
+    await this.page.waitForResponse(
+      response => response.url().includes('/questionerTemplates') && response.request().method() === 'GET',
+      { timeout: 10000 }
+    ).catch(() => null);
+
+    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -87,8 +95,8 @@ export class QuizTemplatesPage extends BasePage {
    */
   getTemplateRow(name: string): Locator {
     // Find the template item that contains a heading with the specified name
-    return this.page.locator('[data-testid="tenant-list-item"]').filter({
-      has: this.page.locator('[data-testid="heading-text"]', { hasText: name })
+    return this.page.locator(testIdSelector(TestIds.TENANT_LIST_ITEM)).filter({
+      has: this.page.locator(testIdSelector(TestIds.HEADING_TEXT), { hasText: name })
     }).first();
   }
 
@@ -126,11 +134,11 @@ export class QuizTemplatesPage extends BasePage {
     }
     
     // Wait for modal to appear
-    await this.page.locator('[data-testid="template-modal"]').waitFor({ state: 'visible', timeout: 5000 });
+    await this.page.locator(testIdSelector(TestIds.TEMPLATE_MODAL)).waitFor({ state: 'visible', timeout: 5000 });
   }
-  
+
   async waitForModalToClose() {
-    await expect(this.page.locator('[data-testid="template-modal"]')).not.toBeVisible({ timeout: 10000 });
+    await expect(this.page.locator(testIdSelector(TestIds.TEMPLATE_MODAL))).not.toBeVisible({ timeout: 10000 });
   }
 
   /**
@@ -139,13 +147,19 @@ export class QuizTemplatesPage extends BasePage {
   async deleteTemplate(name: string) {
     const row = this.getTemplateRow(name);
     await row.scrollIntoViewIfNeeded();
-    
+
     // Set up dialog handler before clicking delete (some environments use native confirm)
     const dialogHandler = async (dialog: any) => {
       await dialog.accept();
     };
     this.page.once('dialog', dialogHandler);
-    
+
+    // Set up response listener for delete API call
+    const responsePromise = this.page.waitForResponse(
+      response => response.url().includes('/questionerTemplates') && response.request().method() === 'DELETE',
+      { timeout: 15000 }
+    ).catch(() => null);
+
     const deleteBtn = row.getByRole('button', { name: /delete/i });
     if (await deleteBtn.isVisible({ timeout: 2000 })) {
       await deleteBtn.click({ force: true });
@@ -160,7 +174,26 @@ export class QuizTemplatesPage extends BasePage {
       await confirmBtn.click({ force: true });
     }
 
+    // Wait for the delete API call to complete
+    const response = await responsePromise;
+    if (response) {
+      if (response.ok()) {
+        console.log(`Template "${name}" deleted successfully.`);
+      } else {
+        console.warn(`Template deletion API returned status ${response.status()}`);
+      }
+    } else {
+      console.warn('No DELETE /questionerTemplates API call detected for template deletion');
+    }
+
     await this.waitForLoading();
+
+    // Wait for the list to refetch (the GET call after delete)
+    await this.page.waitForResponse(
+      response => response.url().includes('/questionerTemplates') && response.request().method() === 'GET',
+      { timeout: 10000 }
+    ).catch(() => null);
+
     // Wait for the item to actually disappear from the DOM
     await expect(row).not.toBeVisible({ timeout: 10000 });
   }
@@ -190,16 +223,16 @@ export class QuizTemplatesPage extends BasePage {
    */
   async isTemplateActive(name: string): Promise<boolean> {
     const row = this.getTemplateRow(name);
-    const statusLabel = row.locator('[data-testid="status-label"]');
+    const statusLabel = row.locator(testIdSelector(TestIds.STATUS_LABEL));
     const statusText = (await statusLabel.textContent().catch(() => '')) || '';
-    
+
     // Status should be "Active" or "Enabled"
     return statusText.toLowerCase().includes('active') || statusText.toLowerCase().includes('enabled');
   }
 
   async expectTemplateActive(name: string, active: boolean = true) {
     const row = this.getTemplateRow(name);
-    const statusLabel = row.locator('[data-testid="status-label"]');
+    const statusLabel = row.locator(testIdSelector(TestIds.STATUS_LABEL));
     if (active) {
       await expect(statusLabel).toHaveText(/active|enabled/i, { timeout: 10000 });
     } else {
@@ -212,19 +245,19 @@ export class QuizTemplatesPage extends BasePage {
    */
   async getTemplateNames(): Promise<string[]> {
     await this.waitForLoading();
-    const items = this.page.locator('[data-testid="tenant-list-item"]');
+    const items = this.page.locator(testIdSelector(TestIds.TENANT_LIST_ITEM));
     // Wait for at least one item if any
     await items.first().waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
-    
+
     const count = await items.count();
     const names: string[] = [];
     for (let i = 0; i < count; i++) {
       const item = items.nth(i);
       // Try to get title from heading-text test ID first, with a very short timeout
-      const text = await item.locator('[data-testid="heading-text"]').first()
+      const text = await item.locator(testIdSelector(TestIds.HEADING_TEXT)).first()
         .textContent({ timeout: 1000 })
         .catch(() => null);
-      
+
       if (text) {
         names.push(text.trim());
       } else {
