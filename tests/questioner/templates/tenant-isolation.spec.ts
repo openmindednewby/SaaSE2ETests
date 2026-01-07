@@ -41,7 +41,7 @@ test.describe('Tenant Isolation @questioner @security', () => {
         await templatesPage.deleteTemplate(tenantATemplateName);
       }
     } finally {
-      await context.close();
+      await context.close().catch(() => {});
     }
   });
 
@@ -74,7 +74,7 @@ test.describe('Tenant Isolation @questioner @security', () => {
         await templatesPage.deleteTemplate(tenantBTemplateName);
       }
     } finally {
-      await context.close();
+      await context.close().catch(() => {});
     }
   });
 
@@ -120,7 +120,7 @@ test.describe('Tenant Isolation @questioner @security', () => {
       // Test passes if form is not visible OR template creation fails
       expect(true).toBe(true);
     } finally {
-      await context.close();
+      await context.close().catch(() => {});
     }
   });
 
@@ -147,7 +147,7 @@ test.describe('Tenant Isolation @questioner @security', () => {
       const existsInA = await templatesPageA.templateExists(isolationTemplateName);
       expect(existsInA).toBe(true);
     } finally {
-      await contextA.close();
+      await contextA.close().catch(() => {});
     }
 
     // Login as TenantB admin and verify the template is NOT visible
@@ -164,12 +164,14 @@ test.describe('Tenant Isolation @questioner @security', () => {
 
       const templatesPageB = new QuizTemplatesPage(pageB);
       await templatesPageB.goto();
+      await pageB.reload(); // Force reload to ensure no client-side caching
+      await templatesPageB.waitForLoading();
       
       // TenantA's template should NOT be visible to TenantB
       const existsInB = await templatesPageB.templateExists(isolationTemplateName);
       expect(existsInB).toBe(false);
     } finally {
-      await contextB.close();
+      await contextB.close().catch(() => {});
     }
 
     // Cleanup: Delete the template as TenantA admin
@@ -191,7 +193,7 @@ test.describe('Tenant Isolation @questioner @security', () => {
         await templatesPageCleanup.deleteTemplate(isolationTemplateName);
       }
     } finally {
-      await contextCleanup.close();
+      await contextCleanup.close().catch(() => {});
     }
   });
 });

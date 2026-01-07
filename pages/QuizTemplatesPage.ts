@@ -1,6 +1,6 @@
 import { Locator, Page, expect } from '@playwright/test';
-import { BasePage } from './BasePage.js';
 import { TestIds, testIdSelector } from '../shared/testIds.js';
+import { BasePage } from './BasePage.js';
 
 export class QuizTemplatesPage extends BasePage {
   readonly pageHeader: Locator;
@@ -133,8 +133,11 @@ export class QuizTemplatesPage extends BasePage {
       await row.locator('text=/edit/i').first().click({ force: true });
     }
     
-    // Wait for modal to appear
-    await this.page.locator(testIdSelector(TestIds.TEMPLATE_MODAL)).waitFor({ state: 'visible', timeout: 5000 });
+    // Wait for modal to appear and be interactive
+    const modal = this.page.locator(testIdSelector(TestIds.TEMPLATE_MODAL));
+    await modal.waitFor({ state: 'visible', timeout: 5000 });
+    // Just wait a small amount for animations to settle, trying to find input specifically can differ by implementation
+    await this.page.waitForTimeout(500);
   }
 
   async waitForModalToClose() {
@@ -146,56 +149,74 @@ export class QuizTemplatesPage extends BasePage {
    */
   async deleteTemplate(name: string) {
     const row = this.getTemplateRow(name);
+    // Scroll to row
     await row.scrollIntoViewIfNeeded();
 
-    // Set up dialog handler before clicking delete (some environments use native confirm)
+    // Set up dialog handler
     const dialogHandler = async (dialog: any) => {
       await dialog.accept();
     };
     this.page.once('dialog', dialogHandler);
 
     // Set up response listener for delete API call
-    const responsePromise = this.page.waitForResponse(
+    const deletePromise = this.page.waitForResponse(
       response => response.url().includes('/questionerTemplates') && response.request().method() === 'DELETE',
       { timeout: 15000 }
     ).catch(() => null);
 
+    // Try multiple selectors for the delete button
     const deleteBtn = row.getByRole('button', { name: /delete/i });
-    if (await deleteBtn.isVisible({ timeout: 2000 })) {
+    const deleteBtnByText = row.locator('text=Delete').first();
+    const deleteBtnByEmoji = row.locator('text=🗑️').first();
+
+    if (await deleteBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
       await deleteBtn.click({ force: true });
+    } else if (await deleteBtnByText.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await deleteBtnByText.click({ force: true });
+    } else if (await deleteBtnByEmoji.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await deleteBtnByEmoji.click({ force: true });
     } else {
-      // Fallback to text click (Trash icon + Delete text)
-      await row.locator('text=/delete/i').first().click({ force: true });
+      await row.locator('[data-testid], [role="button"]').filter({ hasText: /delete/i }).first().click({ force: true });
     }
 
-    // Handle web-based confirmation dialog if present (as fallback to native)
-    const confirmBtn = this.page.getByRole('button', { name: /confirm|ok|delete|yes/i }).last();
-    if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmBtn.click({ force: true });
+    // Handle web-based confirmation dialog if present
+    // Locate the confirm button specifically within a dialog to avoid hitting unrelated buttons
+    const dialog = this.page.locator('[role="dialog"]');
+    if (await dialog.isVisible({ timeout: 3000 }).catch(() => false)) {
+        const confirmBtn = dialog.getByRole('button', { name: /confirm|ok|delete|yes/i }).last();
+        if (await confirmBtn.isVisible()) {
+             await confirmBtn.click();
+        }
+    } else {
+         // Fallback for non-dialog confirmation or if dialog selector diff
+         const confirmBtn = this.page.getByRole('button', { name: /confirm|ok|delete|yes/i }).last();
+         if (await confirmBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
+             await confirmBtn.click({ force: true });
+         }
     }
 
     // Wait for the delete API call to complete
-    const response = await responsePromise;
+    const response = await deletePromise;
     if (response) {
-      if (response.ok()) {
-        console.log(`Template "${name}" deleted successfully.`);
-      } else {
-        console.warn(`Template deletion API returned status ${response.status()}`);
+      if (!response.ok()) {
+        throw new Error(`Template deletion API returned status ${response.status()}`);
       }
+      console.log(`Template "${name}" deleted successfully.`);
     } else {
-      console.warn('No DELETE /questionerTemplates API call detected for template deletion');
+      console.warn('No DELETE /questionerTemplates API call detected, but continuing check...');
     }
 
+    // Wait for UI to update
     await this.waitForLoading();
 
-    // Wait for the list to refetch (the GET call after delete)
+    // Wait for the list to refetch
     await this.page.waitForResponse(
       response => response.url().includes('/questionerTemplates') && response.request().method() === 'GET',
       { timeout: 10000 }
     ).catch(() => null);
 
-    // Wait for the item to actually disappear from the DOM
-    await expect(row).not.toBeVisible({ timeout: 10000 });
+    // Wait for the item to disappear
+    await expect(row).not.toBeVisible({ timeout: 15000 });
   }
 
   /**

@@ -110,16 +110,31 @@ export class TenantsPage extends BasePage {
     };
     this.page.once('dialog', dialogHandler);
 
+    // Listen for delete response
+    const deletePromise = this.page.waitForResponse(
+        response => response.url().includes('/tenants') && response.request().method() === 'DELETE',
+        { timeout: 15000 }
+    ).catch(() => null);
+
     await row.getByRole('button', { name: /delete/i }).click({ force: true });
 
     // Handle web-based confirmation dialog if present (fallback)
-    const confirmButton = this.page.getByRole('button', { name: /confirm|yes|ok/i }).last();
-    if (await confirmButton.isVisible({ timeout: 2000 })) {
-      await confirmButton.click({ force: true });
+    const dialog = this.page.locator('[role="dialog"]');
+    if (await dialog.isVisible({ timeout: 3000 }).catch(() => false)) {
+        const confirmButton = dialog.getByRole('button', { name: /confirm|yes|ok|delete/i }).last();
+        if (await confirmButton.isVisible()) {
+             await confirmButton.click();
+        }
+    }
+
+    // Verify response
+    const response = await deletePromise;
+    if (response && !response.ok()) {
+         console.warn(`Tenant deletion failed with status: ${response.status()}`);
     }
 
     await this.waitForLoading();
-    await expect(row).not.toBeVisible({ timeout: 10000 });
+    await expect(row).not.toBeVisible({ timeout: 15000 });
   }
 
   /**

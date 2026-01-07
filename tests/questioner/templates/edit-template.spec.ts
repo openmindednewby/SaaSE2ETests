@@ -31,13 +31,17 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
   test.afterAll(async () => {
     // Cleanup - try to delete the template if it exists
     try {
-      if (testTemplateName && await templatesPage.templateExists(testTemplateName)) {
-        await templatesPage.deleteTemplate(testTemplateName);
+      // Only attempt cleanup if context is still open
+      if (context?.pages().length > 0) {
+          if (testTemplateName && await templatesPage.templateExists(testTemplateName)) {
+            await templatesPage.deleteTemplate(testTemplateName);
+          }
       }
-    } catch {
-      // Ignore cleanup errors
+    } catch (e) {
+      console.log('Cleanup failed (expected if test crashed):', e);
+    } finally {
+        await context?.close().catch(() => {});
     }
-    await context?.close();
   });
 
   test('should create template for editing', async () => {
@@ -66,13 +70,15 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
 
     await templatesPage.editTemplate(testTemplateName);
 
-    // Find name input in modal and update
-    const modalNameInput = page.locator('[role="dialog"] input[type="text"]').first();
+    // Find name input in modal and update - use testID selector since Modal doesn't have role="dialog"
+    const modal = page.locator(testIdSelector(TestIds.TEMPLATE_MODAL));
+    const modalNameInput = modal.locator('input[type="text"]').first();
+    await modalNameInput.waitFor({ state: 'visible', timeout: 5000 });
     await modalNameInput.clear();
     await modalNameInput.fill(newName);
 
     // Save
-    const saveButton = page.locator('[role="dialog"]').getByRole('button', { name: /save|update/i });
+    const saveButton = modal.getByRole('button', { name: /save|update/i });
     await saveButton.click();
     await templatesPage.waitForLoading();
 
@@ -86,12 +92,13 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
   test('should cancel edit without saving', async () => {
     await templatesPage.editTemplate(testTemplateName);
 
-    // Modify the name
-    const modalNameInput = page.locator('[role="dialog"] input[type="text"]').first();
+    // Modify the name - use testID selector
+    const modal = page.locator(testIdSelector(TestIds.TEMPLATE_MODAL));
+    const modalNameInput = modal.locator('input[type="text"]').first();
     await modalNameInput.fill('Should Not Save');
 
     // Cancel
-    const cancelButton = page.locator('[role="dialog"]').getByRole('button', { name: /cancel/i });
+    const cancelButton = modal.getByRole('button', { name: /cancel/i });
     await cancelButton.click();
 
     // Original name should still be in list
