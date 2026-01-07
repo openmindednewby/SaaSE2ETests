@@ -1,5 +1,5 @@
 
-import { test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { TEST_USERS } from '../../../fixtures/test-data';
 import { LoginPage } from '../../../pages/LoginPage';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage';
@@ -64,6 +64,10 @@ test.describe('Active Quiz Limit @questioner', () => {
     // Check states - T1 should still be active, T2 should still be inactive
     await templatesPage.expectTemplateActive(t1Name, true);
     await templatesPage.expectTemplateActive(t2Name, false);
+
+    // Expect error notification
+    // The exact text depends on translation, but backend sends "Another template is already active..."
+    await expect(templatesPage.page.getByText(/another template is already active/i)).toBeVisible({ timeout: 5000 });
     
     // 4. Deactivate T1
     await templatesPage.activateTemplate(t1Name); // Toggle off (assuming toggle logic) OR explicit deactivate
