@@ -36,9 +36,9 @@ test.describe('Tenant Isolation @questioner @security', () => {
       const exists = await templatesPage.templateExists(tenantATemplateName);
       expect(exists).toBe(true);
 
-      // Cleanup
+      // Cleanup - use throwOnError=false to not fail test on cleanup issues
       if (exists) {
-        await templatesPage.deleteTemplate(tenantATemplateName);
+        await templatesPage.deleteTemplate(tenantATemplateName, false);
       }
     } finally {
       await context.close().catch(() => {});
@@ -69,9 +69,9 @@ test.describe('Tenant Isolation @questioner @security', () => {
       const exists = await templatesPage.templateExists(tenantBTemplateName);
       expect(exists).toBe(true);
 
-      // Cleanup
+      // Cleanup - use throwOnError=false to not fail test on cleanup issues
       if (exists) {
-        await templatesPage.deleteTemplate(tenantBTemplateName);
+        await templatesPage.deleteTemplate(tenantBTemplateName, false);
       }
     } finally {
       await context.close().catch(() => {});
@@ -127,7 +127,7 @@ test.describe('Tenant Isolation @questioner @security', () => {
   test('TenantA templates are isolated from TenantB', async ({ browser }) => {
     // This test creates a template in TenantA and verifies TenantB cannot see it
     const isolationTemplateName = `Isolation Test ${Date.now()}`;
-    
+
     // Create template as TenantA admin
     const contextA = await browser.newContext();
     const pageA = await contextA.newPage();
@@ -143,7 +143,7 @@ test.describe('Tenant Isolation @questioner @security', () => {
       const templatesPageA = new QuizTemplatesPage(pageA);
       await templatesPageA.goto();
       await templatesPageA.createTemplate(isolationTemplateName, 'For isolation test');
-      
+
       const existsInA = await templatesPageA.templateExists(isolationTemplateName);
       expect(existsInA).toBe(true);
     } finally {
@@ -154,6 +154,7 @@ test.describe('Tenant Isolation @questioner @security', () => {
     const contextB = await browser.newContext();
     const pageB = await contextB.newPage();
 
+    let existsInB = false;
     try {
       const loginPageB = new LoginPage(pageB);
       await loginPageB.goto();
@@ -166,9 +167,19 @@ test.describe('Tenant Isolation @questioner @security', () => {
       await templatesPageB.goto();
       await pageB.reload(); // Force reload to ensure no client-side caching
       await templatesPageB.waitForLoading();
-      
+
       // TenantA's template should NOT be visible to TenantB
-      const existsInB = await templatesPageB.templateExists(isolationTemplateName);
+      existsInB = await templatesPageB.templateExists(isolationTemplateName);
+
+      // Log all visible templates for debugging
+      const visibleTemplates = await templatesPageB.getTemplateNames();
+      console.log(`Templates visible to TenantB: ${visibleTemplates.join(', ')}`);
+
+      if (existsInB) {
+        console.warn(`⚠️ TENANT ISOLATION FAILURE: Template "${isolationTemplateName}" created by TenantA is visible to TenantB`);
+        console.warn('This indicates a backend multi-tenancy filtering issue in the QuestionerService API');
+      }
+
       expect(existsInB).toBe(false);
     } finally {
       await contextB.close().catch(() => {});
@@ -188,9 +199,10 @@ test.describe('Tenant Isolation @questioner @security', () => {
 
       const templatesPageCleanup = new QuizTemplatesPage(pageCleanup);
       await templatesPageCleanup.goto();
-      
+
       if (await templatesPageCleanup.templateExists(isolationTemplateName)) {
-        await templatesPageCleanup.deleteTemplate(isolationTemplateName);
+        // Use throwOnError=false for cleanup
+        await templatesPageCleanup.deleteTemplate(isolationTemplateName, false);
       }
     } finally {
       await contextCleanup.close().catch(() => {});

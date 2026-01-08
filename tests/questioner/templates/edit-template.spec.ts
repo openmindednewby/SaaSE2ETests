@@ -2,7 +2,6 @@ import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { TEST_USERS } from '../../../fixtures/test-data.js';
 import { LoginPage } from '../../../pages/LoginPage.js';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
-import { TestIds, testIdSelector } from '../../../shared/testIds.js';
 
 // Use serial mode so tests run in order and share the same browser context
 test.describe.serial('Edit Quiz Template @questioner @crud', () => {
@@ -54,14 +53,14 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
   test('should open edit modal when clicking edit @critical', async () => {
     await templatesPage.editTemplate(testTemplateName);
 
-    // Modal should be visible
-    const modal = page.locator(`[role="dialog"], ${testIdSelector(TestIds.TEMPLATE_MODAL)}`);
+    // Modal should be visible - use page object's getEditModal
+    const modal = templatesPage.getEditModal();
     await expect(modal).toBeVisible({ timeout: 5000 });
 
-    // Close modal - use the modal's cancel button specifically
-    const modalCancelButton = page.locator(testIdSelector(TestIds.TEMPLATE_MODAL)).getByRole('button', { name: /cancel/i }).first();
-    if (await modalCancelButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await modalCancelButton.click();
+    // Close modal - use cancel button within the modal
+    const cancelButton = modal.getByRole('button', { name: /cancel/i }).first();
+    if (await cancelButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await cancelButton.click();
     }
   });
 
@@ -70,8 +69,8 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
 
     await templatesPage.editTemplate(testTemplateName);
 
-    // Find name input in modal and update - use testID selector since Modal doesn't have role="dialog"
-    const modal = page.locator(testIdSelector(TestIds.TEMPLATE_MODAL));
+    // Find name input in modal and update - use page object's getEditModal
+    const modal = templatesPage.getEditModal();
     const modalNameInput = modal.locator('input[type="text"]').first();
     await modalNameInput.waitFor({ state: 'visible', timeout: 5000 });
     await modalNameInput.clear();
@@ -92,8 +91,8 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
   test('should cancel edit without saving', async () => {
     await templatesPage.editTemplate(testTemplateName);
 
-    // Modify the name - use testID selector
-    const modal = page.locator(testIdSelector(TestIds.TEMPLATE_MODAL));
+    // Modify the name - use page object's getEditModal
+    const modal = templatesPage.getEditModal();
     const modalNameInput = modal.locator('input[type="text"]').first();
     await modalNameInput.fill('Should Not Save');
 

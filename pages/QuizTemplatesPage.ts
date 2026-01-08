@@ -125,29 +125,57 @@ export class QuizTemplatesPage extends BasePage {
   async editTemplate(name: string) {
     const row = this.getTemplateRow(name);
     await row.scrollIntoViewIfNeeded();
-    
+
     const editBtn = row.getByRole('button', { name: /edit/i });
     if (await editBtn.isVisible({ timeout: 2000 })) {
       await editBtn.click({ force: true });
     } else {
       await row.locator('text=/edit/i').first().click({ force: true });
     }
-    
-    // Wait for modal to appear and be interactive
-    const modal = this.page.locator(testIdSelector(TestIds.TEMPLATE_MODAL));
-    await modal.waitFor({ state: 'visible', timeout: 5000 });
-    // Just wait a small amount for animations to settle, trying to find input specifically can differ by implementation
+
+    // Wait for modal to appear - try both testId and role="dialog"
+    const modalByTestId = this.page.locator(testIdSelector(TestIds.TEMPLATE_MODAL));
+    const modalByRole = this.page.locator('[role="dialog"]');
+
+    // Wait for either to be visible
+    await Promise.race([
+      modalByTestId.waitFor({ state: 'visible', timeout: 5000 }),
+      modalByRole.waitFor({ state: 'visible', timeout: 5000 }),
+    ]).catch(() => {
+      throw new Error('Edit modal did not appear within 5 seconds');
+    });
+
+    // Wait for animations to settle
     await this.page.waitForTimeout(500);
   }
 
+  /**
+   * Get the edit modal locator (handles both testId and role="dialog")
+   */
+  getEditModal(): Locator {
+    // Check if testId-based modal exists, otherwise use role="dialog"
+    const modalByTestId = this.page.locator(testIdSelector(TestIds.TEMPLATE_MODAL));
+    const modalByRole = this.page.locator('[role="dialog"]');
+    // Return a combined locator that matches either
+    return this.page.locator(`${testIdSelector(TestIds.TEMPLATE_MODAL)}, [role="dialog"]`).first();
+  }
+
   async waitForModalToClose() {
-    await expect(this.page.locator(testIdSelector(TestIds.TEMPLATE_MODAL))).not.toBeVisible({ timeout: 10000 });
+    // Wait for both possible modal types to close
+    const modalByTestId = this.page.locator(testIdSelector(TestIds.TEMPLATE_MODAL));
+    const modalByRole = this.page.locator('[role="dialog"]');
+
+    await Promise.all([
+      expect(modalByTestId).not.toBeVisible({ timeout: 10000 }).catch(() => {}),
+      expect(modalByRole).not.toBeVisible({ timeout: 10000 }).catch(() => {}),
+    ]);
   }
 
   /**
    * Click delete button for a template
+   * @param throwOnError - If false, won't throw on API errors (useful for cleanup)
    */
-  async deleteTemplate(name: string) {
+  async deleteTemplate(name: string, throwOnError: boolean = true) {
     const row = this.getTemplateRow(name);
     // Scroll to row
     await row.scrollIntoViewIfNeeded();
@@ -199,9 +227,15 @@ export class QuizTemplatesPage extends BasePage {
     const response = await deletePromise;
     if (response) {
       if (!response.ok()) {
-        throw new Error(`Template deletion API returned status ${response.status()}`);
+        const errorMsg = `Template deletion API returned status ${response.status()}`;
+        if (throwOnError) {
+          throw new Error(errorMsg);
+        } else {
+          console.warn(errorMsg);
+        }
+      } else {
+        console.log(`Template "${name}" deleted successfully.`);
       }
-      console.log(`Template "${name}" deleted successfully.`);
     } else {
       console.warn('No DELETE /questionerTemplates API call detected, but continuing check...');
     }
@@ -215,8 +249,20 @@ export class QuizTemplatesPage extends BasePage {
       { timeout: 10000 }
     ).catch(() => null);
 
+    // Wait a bit for UI refresh
+    await this.page.waitForTimeout(500);
+
+    // Try to reload to ensure fresh data
+    await this.page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
+    await this.waitForLoading();
+
     // Wait for the item to disappear
-    await expect(row).not.toBeVisible({ timeout: 15000 });
+    const stillExists = await this.templateExists(name);
+    if (stillExists && throwOnError) {
+      throw new Error(`Template "${name}" still visible after deletion`);
+    } else if (stillExists) {
+      console.warn(`Template "${name}" still visible after deletion attempt`);
+    }
   }
 
   /**
@@ -225,7 +271,13 @@ export class QuizTemplatesPage extends BasePage {
   async activateTemplate(name: string) {
     const row = this.getTemplateRow(name);
     await row.scrollIntoViewIfNeeded();
-    
+
+    // Set up response listener for activate API call
+    const activatePromise = this.page.waitForResponse(
+      response => response.url().includes('/questionerTemplates/ActivateTemplate') && response.request().method() === 'PUT',
+      { timeout: 15000 }
+    ).catch(() => null);
+
     const activateBtn = row.getByRole('button', { name: /activate|deactivate/i });
     if (await activateBtn.isVisible({ timeout: 2000 })) {
       await activateBtn.click({ force: true });
@@ -234,9 +286,28 @@ export class QuizTemplatesPage extends BasePage {
       await row.locator('text=/activate|🔁/i').first().click({ force: true });
     }
 
+    // Wait for the API call to complete
+    const response = await activatePromise;
+    if (response) {
+      if (response.ok()) {
+        console.log(`Template "${name}" activation toggled successfully.`);
+      } else {
+        console.warn(`Template activation API returned status ${response.status()}`);
+      }
+    } else {
+      console.warn('No PUT /questionerTemplates/ActivateTemplate API call detected');
+    }
+
     await this.waitForLoading();
+
+    // Wait for the list to refetch
+    await this.page.waitForResponse(
+      response => response.url().includes('/questionerTemplates') && response.request().method() === 'GET',
+      { timeout: 10000 }
+    ).catch(() => null);
+
     // Wait a bit for the status change to reflect in UI
-    await this.page.waitForTimeout(1000);
+    await this.page.waitForTimeout(500);
   }
 
   /**

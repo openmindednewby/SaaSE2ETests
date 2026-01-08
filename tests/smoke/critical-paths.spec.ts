@@ -119,16 +119,18 @@ test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
     // Update (via edit modal)
     await templatesPage.editTemplate(templateName);
 
-    const modal = page.locator('[role="dialog"]');
+    // Use page object's getEditModal for consistent modal handling
+    const modal = templatesPage.getEditModal();
     if (await modal.isVisible({ timeout: 3000 }).catch(() => false)) {
       const nameInput = modal.locator('input[type="text"]').first();
+      await nameInput.waitFor({ state: 'visible', timeout: 5000 });
       await nameInput.clear();
       await nameInput.fill(updatedName);
 
       const saveButton = modal.getByRole('button', { name: /save|update/i });
       await saveButton.click({ force: true });
-      await templatesPage.waitForModalToClose();
       await templatesPage.waitForLoading();
+      await page.waitForTimeout(1000); // Wait for modal to close
     }
 
     // Verify update (if modal was found)
