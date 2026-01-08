@@ -209,18 +209,32 @@ export class QuizTemplatesPage extends BasePage {
 
     // Handle web-based confirmation dialog if present
     // Locate the confirm button specifically within a dialog to avoid hitting unrelated buttons
+    // Handle web-based confirmation dialog if present
+    // Locate the confirm button specifically within a dialog to avoid hitting unrelated buttons
     const dialog = this.page.locator('[role="dialog"]');
-    if (await dialog.isVisible({ timeout: 3000 }).catch(() => false)) {
-        const confirmBtn = dialog.getByRole('button', { name: /confirm|ok|delete|yes/i }).last();
-        if (await confirmBtn.isVisible()) {
-             await confirmBtn.click();
-        }
-    } else {
-         // Fallback for non-dialog confirmation or if dialog selector diff
-         const confirmBtn = this.page.getByRole('button', { name: /confirm|ok|delete|yes/i }).last();
-         if (await confirmBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
-             await confirmBtn.click({ force: true });
+    try {
+      // Try to find and click the confirm button.
+      let clicked = false;
+      const confirmBtn = this.page.getByRole('button', { name: /confirm|ok|delete|yes/i, exact: false });
+      
+      // Wait for at least one confirm button to be visible
+      // We prioritize the one in the dialog if it exists
+      if (await dialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+         const dialogConfirm = dialog.getByRole('button', { name: /confirm|ok|delete|yes/i }).last();
+         try {
+             await dialogConfirm.click({ timeout: 3000, force: true });
+             clicked = true;
+         } catch (err) {
+             console.log('Dialog visible but confirm click failed, trying fallback:', err);
          }
+      } 
+      
+      if (!clicked) {
+         // Fallback - just look for a confirm button
+         await confirmBtn.last().click({ timeout: 2000, force: true });
+      }
+    } catch (e) {
+      console.log('No confirmation dialog/button found or clicked:', e);
     }
 
     // Wait for the delete API call to complete
@@ -273,21 +287,26 @@ export class QuizTemplatesPage extends BasePage {
     await row.scrollIntoViewIfNeeded();
 
     // Set up response listener for activate API call
-    const activatePromise = this.page.waitForResponse(
-      response => response.url().includes('/questionerTemplates/ActivateTemplate') && response.request().method() === 'PUT',
+    // Set up response listener (could be Activate (PUT) or Deactivate (PUT/DELETE))
+    // We broaden the match so we don't miss different endpoints
+    const apiPromise = this.page.waitForResponse(
+      response => response.url().includes('/questionerTemplates') && (response.request().method() === 'PUT' || response.request().method() === 'DELETE'),
       { timeout: 15000 }
     ).catch(() => null);
 
     const activateBtn = row.getByRole('button', { name: /activate|deactivate/i });
     if (await activateBtn.isVisible({ timeout: 2000 })) {
+      const text = await activateBtn.textContent();
+      console.log(`Clicking activation button: "${text}"`);
       await activateBtn.click({ force: true });
     } else {
       // Fallback to finding the button with the emoji/text
+      console.log('Clicking activation button via text fallback');
       await row.locator('text=/activate|🔁/i').first().click({ force: true });
     }
 
     // Wait for the API call to complete
-    const response = await activatePromise;
+    const response = await apiPromise;
     if (response) {
       if (response.ok()) {
         console.log(`Template "${name}" activation toggled successfully.`);
@@ -323,6 +342,7 @@ export class QuizTemplatesPage extends BasePage {
   }
 
   async expectTemplateActive(name: string, active: boolean = true) {
+    await this.waitForLoading();
     const row = this.getTemplateRow(name);
     const statusLabel = row.locator(testIdSelector(TestIds.STATUS_LABEL));
     if (active) {

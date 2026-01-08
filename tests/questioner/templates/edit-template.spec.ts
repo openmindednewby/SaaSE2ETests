@@ -71,7 +71,8 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
 
     // Find name input in modal and update - use page object's getEditModal
     const modal = templatesPage.getEditModal();
-    const modalNameInput = modal.locator('input[type="text"]').first();
+    // Use the same selector strategy as in create (placeholder) for better reliability
+    const modalNameInput = modal.getByPlaceholder(/name/i).first();
     await modalNameInput.waitFor({ state: 'visible', timeout: 5000 });
     await modalNameInput.clear();
     await modalNameInput.fill(newName);
