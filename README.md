@@ -127,7 +127,7 @@ docker-compose up
 cd C:\desktopContents\projects\SaaS\OnlineMenuSaaS\OnlineMenuService
 docker-compose up
 
-# Terminal 3: Start QuestionerService
+# Terminal 3: Start QuestionerService (uses questioner-db service)
 cd C:\desktopContents\projects\SaaS\QuestionerService
 docker-compose up
 
