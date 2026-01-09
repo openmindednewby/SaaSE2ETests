@@ -240,7 +240,9 @@ export class QuizTemplatesPage extends BasePage {
     // Wait for the delete API call to complete
     const response = await deletePromise;
     if (response) {
-      if (!response.ok()) {
+      if (response.status() === 404) {
+        console.warn(`Template deletion API returned 404 for "${name}" (already removed?).`);
+      } else if (!response.ok()) {
         const errorMsg = `Template deletion API returned status ${response.status()}`;
         if (throwOnError) {
           throw new Error(errorMsg);
@@ -286,6 +288,12 @@ export class QuizTemplatesPage extends BasePage {
     const row = this.getTemplateRow(name);
     await row.scrollIntoViewIfNeeded();
 
+    // Get current status before clicking
+    const statusLabel = row.locator(testIdSelector(TestIds.STATUS_LABEL));
+    const statusBefore = (await statusLabel.textContent().catch(() => '')) || '';
+    const wasActive = statusBefore.toLowerCase().includes('enabled') || statusBefore.toLowerCase().includes('active');
+    console.log(`Template "${name}" status before: "${statusBefore}" (wasActive: ${wasActive})`);
+
     // Set up response listener for activate API call
     // Set up response listener (could be Activate (PUT) or Deactivate (PUT/DELETE))
     // We broaden the match so we don't miss different endpoints
@@ -308,13 +316,16 @@ export class QuizTemplatesPage extends BasePage {
     // Wait for the API call to complete
     const response = await apiPromise;
     if (response) {
+      const requestUrl = response.url();
+      console.log(`API request URL: ${requestUrl}`);
       if (response.ok()) {
         console.log(`Template "${name}" activation toggled successfully.`);
       } else {
-        console.warn(`Template activation API returned status ${response.status()}`);
+        const responseBody = await response.text().catch(() => '');
+        console.warn(`Template activation API returned status ${response.status()}: ${responseBody}`);
       }
     } else {
-      console.warn('No PUT /questionerTemplates/ActivateTemplate API call detected');
+      console.warn('No PUT /questionerTemplates API call detected');
     }
 
     await this.waitForLoading();
@@ -327,6 +338,19 @@ export class QuizTemplatesPage extends BasePage {
 
     // Wait a bit for the status change to reflect in UI
     await this.page.waitForTimeout(500);
+
+    // Verify status changed - if not, try refreshing the page
+    const statusAfter = (await statusLabel.textContent().catch(() => '')) || '';
+    console.log(`Template "${name}" status after: "${statusAfter}"`);
+
+    const isNowActive = statusAfter.toLowerCase().includes('enabled') || statusAfter.toLowerCase().includes('active');
+    if (wasActive === isNowActive && response?.ok()) {
+      console.log('Status did not change after API success, refreshing page...');
+      await this.page.reload({ waitUntil: 'domcontentloaded' });
+      await this.waitForLoading();
+      const statusAfterRefresh = (await this.getTemplateRow(name).locator(testIdSelector(TestIds.STATUS_LABEL)).textContent().catch(() => '')) || '';
+      console.log(`Template "${name}" status after refresh: "${statusAfterRefresh}"`);
+    }
   }
 
   /**
@@ -379,5 +403,36 @@ export class QuizTemplatesPage extends BasePage {
       }
     }
     return names;
+  }
+
+  /**
+   * Deactivate any templates that are currently marked as active/enabled.
+   * Useful when a test needs to start from a clean state with no active quizzes.
+   */
+  async deactivateAllTemplates() {
+    await this.waitForLoading();
+    const statusSelector = testIdSelector(TestIds.STATUS_LABEL);
+
+    while (true) {
+      const activeRows = this.page.locator(testIdSelector(TestIds.TENANT_LIST_ITEM)).filter({
+        has: this.page.locator(statusSelector, { hasText: /active|enabled/i })
+      });
+
+      const count = await activeRows.count();
+      if (count === 0) {
+        break;
+      }
+
+      const row = activeRows.first();
+      const activateButton = row.getByRole('button', { name: /activate/i }).first();
+      if (await activateButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await activateButton.click({ force: true });
+        await this.waitForLoading();
+        await this.page.waitForTimeout(500);
+      } else {
+        console.warn('Active template detected but activate button is not yet visible, retrying shortly');
+        await this.page.waitForTimeout(500);
+      }
+    }
   }
 }

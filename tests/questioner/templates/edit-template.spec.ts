@@ -78,7 +78,7 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
     await modalNameInput.fill(newName);
 
     // Save
-    const saveButton = modal.getByRole('button', { name: /save|update/i });
+    const saveButton = modal.getByRole('button', { name: /save|update/i }).first();
     await saveButton.click();
     await templatesPage.waitForLoading();
 

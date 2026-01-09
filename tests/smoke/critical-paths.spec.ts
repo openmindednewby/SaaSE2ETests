@@ -127,7 +127,7 @@ test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
       await nameInput.clear();
       await nameInput.fill(updatedName);
 
-      const saveButton = modal.getByRole('button', { name: /save|update/i });
+      const saveButton = modal.getByRole('button', { name: /save|update/i }).first();
       await saveButton.click({ force: true });
       await templatesPage.waitForLoading();
       await page.waitForTimeout(1000); // Wait for modal to close
