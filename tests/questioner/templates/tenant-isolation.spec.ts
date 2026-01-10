@@ -8,6 +8,10 @@ import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
  * are not visible to other tenants.
  */
 test.describe('Tenant Isolation @questioner @security', () => {
+  test.beforeEach(async ({}, testInfo) => {
+    testInfo.skip(testInfo.project.name !== 'chromium', 'Runs once (chromium) to avoid cross-project tenant collisions');
+  });
+
   // Unique template names for isolation tests
   const tenantATemplateName = `TenantA Template ${Date.now()}`;
   const tenantBTemplateName = `TenantB Template ${Date.now()}`;

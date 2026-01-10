@@ -1,5 +1,5 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test';
-import { TEST_USERS } from '../../fixtures/test-data.js';
+import { getProjectUsers } from '../../fixtures/test-data.js';
 import { LoginPage } from '../../pages/LoginPage.js';
 import { QuizActivePage } from '../../pages/QuizActivePage.js';
 import { QuizAnswersPage } from '../../pages/QuizAnswersPage.js';
@@ -13,9 +13,8 @@ test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
   let quizActivePage: QuizActivePage;
   let answersPage: QuizAnswersPage;
 
-  test.beforeAll(async ({ browser }) => {
-    // Use tenant A admin (has admin role required to create templates)
-    const adminUser = TEST_USERS.TENANT_A_ADMIN;
+  test.beforeAll(async ({ browser }, testInfo) => {
+    const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     // Create a new browser context for this test suite
     context = await browser.newContext();
@@ -122,7 +121,7 @@ test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
     // Use page object's getEditModal for consistent modal handling
     const modal = templatesPage.getEditModal();
     if (await modal.isVisible({ timeout: 3000 }).catch(() => false)) {
-      const nameInput = modal.locator('input[type="text"]').first();
+      const nameInput = modal.getByPlaceholder(/name/i).first();
       await nameInput.waitFor({ state: 'visible', timeout: 5000 });
       await nameInput.clear();
       await nameInput.fill(updatedName);
@@ -130,6 +129,7 @@ test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
       const saveButton = modal.getByRole('button', { name: /save|update/i }).first();
       await saveButton.click({ force: true });
       await templatesPage.waitForLoading();
+      await templatesPage.waitForModalToClose();
       await page.waitForTimeout(1000); // Wait for modal to close
     }
 

@@ -84,6 +84,20 @@ setup.describe('Multi-Tenant Test Setup', () => {
         console.log(`⏭️ Tenant ${TEST_TENANTS.TENANT_B} already exists, skipping...`);
       }
 
+      // Create TenantC if it doesn't exist
+      console.log(`🔍 Checking if tenant C exists: ${TEST_TENANTS.TENANT_C}`);
+      const tCExists = await tenantsPage.tenantExists(TEST_TENANTS.TENANT_C);
+      console.log(`  Tenant C existence result: ${tCExists}`);
+      if (!tCExists) {
+        console.log(`📁 Creating tenant: ${TEST_TENANTS.TENANT_C}`);
+        await tenantsPage.createTenant(TEST_TENANTS.TENANT_C);
+        console.log(`⏳ Waiting for tenant C to appear: ${TEST_TENANTS.TENANT_C}`);
+        await expect(page.getByText(TEST_TENANTS.TENANT_C)).toBeVisible({ timeout: 10000 });
+        console.log(`✅ Created tenant: ${TEST_TENANTS.TENANT_C}`);
+      } else {
+        console.log(`⏭️ Tenant ${TEST_TENANTS.TENANT_C} already exists, skipping...`);
+      }
+
       // Create users
       const usersPage = new UsersPage(page);
       console.log('📂 Navigating to users page...');

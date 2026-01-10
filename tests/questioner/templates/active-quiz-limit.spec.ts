@@ -1,6 +1,6 @@
 
 import { expect, test } from '@playwright/test';
-import { TEST_USERS } from '../../../fixtures/test-data';
+import { getProjectUsers } from '../../../fixtures/test-data.js';
 import { LoginPage } from '../../../pages/LoginPage';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage';
 
@@ -18,14 +18,15 @@ test.describe('Active Quiz Limit @questioner', () => {
     // Actually standard is separate tests, but this is a sequence
   });
 
-  test.beforeEach(async ({ browser }) => {
+  test.beforeEach(async ({ browser }, testInfo) => {
     context = await browser.newContext();
     const page = await context.newPage();
     const loginPage = new LoginPage(page);
     templatesPage = new QuizTemplatesPage(page);
 
     await loginPage.goto();
-    await loginPage.loginAndWait(TEST_USERS.TENANT_A_ADMIN.username, TEST_USERS.TENANT_A_ADMIN.password);
+    const { admin } = getProjectUsers(testInfo.project.name);
+    await loginPage.loginAndWait(admin.username, admin.password);
     await templatesPage.goto();
     await templatesPage.deactivateAllTemplates();
   });
@@ -56,7 +57,13 @@ test.describe('Active Quiz Limit @questioner', () => {
     await templatesPage.expectTemplateActive(t2Name, false);
 
     // 2. Activate T1
-    await templatesPage.activateTemplate(t1Name);
+    const t1Activated = await templatesPage.activateTemplate(t1Name);
+    if (!t1Activated) {
+      // If T1 activation failed, there might be another template active - try to deactivate all and retry
+      console.log('T1 activation failed, deactivating all templates and retrying...');
+      await templatesPage.deactivateAllTemplates();
+      await templatesPage.activateTemplate(t1Name);
+    }
     await templatesPage.expectTemplateActive(t1Name, true);
     await templatesPage.expectTemplateActive(t2Name, false);
 

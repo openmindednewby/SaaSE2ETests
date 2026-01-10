@@ -108,6 +108,7 @@ Edit `.env.local` with your test credentials:
 BASE_URL=http://localhost:8082
 IDENTITY_API_URL=http://localhost:5002
 QUESTIONER_API_URL=http://localhost:5004
+ONLINEMENU_API_URL=http://localhost:5006
 
 # Test User Credentials (from Keycloak)
 TEST_USER_USERNAME=your-test-user
@@ -215,6 +216,7 @@ docker compose -f docker-compose.e2e.yml down -v
 | `fill-quiz.spec.ts` | Display quiz, navigate pages, validation |
 | `submit-quiz.spec.ts` | Submit quiz, thank you message |
 | `view-answers.spec.ts` | Search answers, view details, export |
+| `health/services-health.spec.ts` | Startup/liveness/readiness probes for services |
 
 ### Smoke Tests
 

@@ -1,5 +1,5 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test';
-import { TEST_USERS } from '../../../fixtures/test-data.js';
+import { getProjectUsers } from '../../../fixtures/test-data.js';
 import { LoginPage } from '../../../pages/LoginPage.js';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
 
@@ -10,9 +10,8 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
   let templatesPage: QuizTemplatesPage;
   let testTemplateName: string;
 
-  test.beforeAll(async ({ browser }) => {
-    // Use tenant A admin (has admin role required to create templates)
-    const adminUser = TEST_USERS.TENANT_A_ADMIN;
+  test.beforeAll(async ({ browser }, testInfo) => {
+    const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     // Create a new browser context for this test suite
     context = await browser.newContext();
@@ -61,6 +60,7 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
     const cancelButton = modal.getByRole('button', { name: /cancel/i }).first();
     if (await cancelButton.isVisible({ timeout: 2000 }).catch(() => false)) {
       await cancelButton.click();
+      await templatesPage.waitForModalToClose();
     }
   });
 
@@ -79,8 +79,9 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
 
     // Save
     const saveButton = modal.getByRole('button', { name: /save|update/i }).first();
-    await saveButton.click();
+    await saveButton.click({ force: true });
     await templatesPage.waitForLoading();
+    await templatesPage.waitForModalToClose();
 
     // Verify new name appears
     await templatesPage.expectTemplateInList(newName);
@@ -94,12 +95,15 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
 
     // Modify the name - use page object's getEditModal
     const modal = templatesPage.getEditModal();
-    const modalNameInput = modal.locator('input[type="text"]').first();
+    const modalNameInput = modal.getByPlaceholder(/name/i).first();
+    await modalNameInput.waitFor({ state: 'visible', timeout: 5000 });
+    await modalNameInput.clear();
     await modalNameInput.fill('Should Not Save');
 
     // Cancel
     const cancelButton = modal.getByRole('button', { name: /cancel/i });
     await cancelButton.click();
+    await templatesPage.waitForModalToClose();
 
     // Original name should still be in list
     await templatesPage.expectTemplateInList(testTemplateName);

@@ -1,5 +1,5 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test';
-import { TEST_USERS } from '../../../fixtures/test-data.js';
+import { getProjectUsers } from '../../../fixtures/test-data.js';
 import { LoginPage } from '../../../pages/LoginPage.js';
 import { QuizActivePage } from '../../../pages/QuizActivePage.js';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
@@ -11,9 +11,8 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
   let templatesPage: QuizTemplatesPage;
   let testTemplateName: string;
 
-  test.beforeAll(async ({ browser }) => {
-    // Use tenant A admin (has admin role required to create templates)
-    const adminUser = TEST_USERS.TENANT_A_ADMIN;
+  test.beforeAll(async ({ browser }, testInfo) => {
+    const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     // Create a new browser context for this test suite
     context = await browser.newContext();

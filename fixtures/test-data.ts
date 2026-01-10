@@ -9,6 +9,7 @@
 export const TEST_TENANTS = {
   TENANT_A: 'e2e-TenantA',
   TENANT_B: 'e2e-TenantB',
+  TENANT_C: 'e2e-TenantC',
 };
 
 // Test user configuration
@@ -49,4 +50,35 @@ export const TEST_USERS = {
     tenantName: TEST_TENANTS.TENANT_B,
     roles: ['user'],
   },
+  TENANT_C_ADMIN: {
+    username: 'e2e-tenantC-admin',
+    email: 'e2e-tenantC-admin@test.local',
+    password: 'TestPass123!',
+    firstName: 'TenantC',
+    lastName: 'Admin',
+    tenantName: TEST_TENANTS.TENANT_C,
+    roles: ['admin'],
+  },
+  TENANT_C_USER: {
+    username: 'e2e-tenantC-user',
+    email: 'e2e-tenantC-user@test.local',
+    password: 'TestPass123!',
+    firstName: 'TenantC',
+    lastName: 'User',
+    tenantName: TEST_TENANTS.TENANT_C,
+    roles: ['user'],
+  },
 };
+
+export function getProjectUsers(projectName: string) {
+  switch (projectName) {
+    case 'chromium':
+      return { admin: TEST_USERS.TENANT_A_ADMIN, user: TEST_USERS.TENANT_A_USER };
+    case 'mobile-chrome':
+      return { admin: TEST_USERS.TENANT_B_ADMIN, user: TEST_USERS.TENANT_B_USER };
+    case 'firefox':
+      return { admin: TEST_USERS.TENANT_C_ADMIN, user: TEST_USERS.TENANT_C_USER };
+    default:
+      return { admin: TEST_USERS.TENANT_A_ADMIN, user: TEST_USERS.TENANT_A_USER };
+  }
+}

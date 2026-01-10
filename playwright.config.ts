@@ -20,7 +20,7 @@ const authInitScript = `
 
 export default defineConfig({
   testDir: './tests',
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
@@ -35,6 +35,7 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    ignoreHTTPSErrors: true,
   },
 
   // Global setup for authentication
@@ -58,9 +59,18 @@ export default defineConfig({
       timeout: 180000, // 3 minutes for full setup
     },
 
+    // Health probe checks (no tenant/user setup required)
+    {
+      name: 'health',
+      testMatch: /health\/.*\.spec\.ts/,
+      dependencies: ['setup'],
+    },
+
     // Desktop Chrome
     {
       name: 'chromium',
+      workers: 1,
+      testIgnore: /health\//,
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'playwright/.auth/user.json',
@@ -71,6 +81,8 @@ export default defineConfig({
     // Mobile viewport (React Native Web)
     {
       name: 'mobile-chrome',
+      workers: 1,
+      testIgnore: /health\//,
       use: {
         ...devices['Pixel 5'],
         storageState: 'playwright/.auth/user.json',
@@ -81,6 +93,8 @@ export default defineConfig({
     // Firefox for cross-browser testing
     {
       name: 'firefox',
+      workers: 1,
+      testIgnore: /health\//,
       use: {
         ...devices['Desktop Firefox'],
         storageState: 'playwright/.auth/user.json',

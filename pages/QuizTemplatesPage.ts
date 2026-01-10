@@ -93,11 +93,15 @@ export class QuizTemplatesPage extends BasePage {
   /**
    * Get template row by name
    */
+  getTemplateRows(name: string): Locator {
+    return this.page.locator(testIdSelector(TestIds.TENANT_LIST_ITEM)).filter({
+      has: this.page.locator(testIdSelector(TestIds.HEADING_TEXT), { hasText: name }),
+    });
+  }
+
   getTemplateRow(name: string): Locator {
     // Find the template item that contains a heading with the specified name
-    return this.page.locator(testIdSelector(TestIds.TENANT_LIST_ITEM)).filter({
-      has: this.page.locator(testIdSelector(TestIds.HEADING_TEXT), { hasText: name })
-    }).first();
+    return this.getTemplateRows(name).first();
   }
 
   /**
@@ -176,7 +180,8 @@ export class QuizTemplatesPage extends BasePage {
    * @param throwOnError - If false, won't throw on API errors (useful for cleanup)
    */
   async deleteTemplate(name: string, throwOnError: boolean = true) {
-    const row = this.getTemplateRow(name);
+    const rows = this.getTemplateRows(name);
+    const row = rows.first();
     // Scroll to row
     await row.scrollIntoViewIfNeeded();
 
@@ -207,34 +212,14 @@ export class QuizTemplatesPage extends BasePage {
       await row.locator('[data-testid], [role="button"]').filter({ hasText: /delete/i }).first().click({ force: true });
     }
 
-    // Handle web-based confirmation dialog if present
-    // Locate the confirm button specifically within a dialog to avoid hitting unrelated buttons
-    // Handle web-based confirmation dialog if present
-    // Locate the confirm button specifically within a dialog to avoid hitting unrelated buttons
+    // Most quiz template deletes are immediate (no confirmation modal).
+    // If a custom modal is present, only click within that modal (never a global fallback).
     const dialog = this.page.locator('[role="dialog"]');
-    try {
-      // Try to find and click the confirm button.
-      let clicked = false;
-      const confirmBtn = this.page.getByRole('button', { name: /confirm|ok|delete|yes/i, exact: false });
-      
-      // Wait for at least one confirm button to be visible
-      // We prioritize the one in the dialog if it exists
-      if (await dialog.isVisible({ timeout: 2000 }).catch(() => false)) {
-         const dialogConfirm = dialog.getByRole('button', { name: /confirm|ok|delete|yes/i }).last();
-         try {
-             await dialogConfirm.click({ timeout: 3000, force: true });
-             clicked = true;
-         } catch (err) {
-             console.log('Dialog visible but confirm click failed, trying fallback:', err);
-         }
-      } 
-      
-      if (!clicked) {
-         // Fallback - just look for a confirm button
-         await confirmBtn.last().click({ timeout: 2000, force: true });
+    if (await dialog.isVisible({ timeout: 1000 }).catch(() => false)) {
+      const dialogConfirm = dialog.getByRole('button', { name: /confirm|ok|yes|delete/i }).last();
+      if (await dialogConfirm.isVisible({ timeout: 1000 }).catch(() => false)) {
+        await dialogConfirm.click({ timeout: 5000, force: true }).catch(() => {});
       }
-    } catch (e) {
-      console.log('No confirmation dialog/button found or clicked:', e);
     }
 
     // Wait for the delete API call to complete
@@ -265,18 +250,16 @@ export class QuizTemplatesPage extends BasePage {
       { timeout: 10000 }
     ).catch(() => null);
 
-    // Wait a bit for UI refresh
-    await this.page.waitForTimeout(500);
-
-    // Try to reload to ensure fresh data
-    await this.page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
-    await this.waitForLoading();
-
-    // Wait for the item to disappear
-    const stillExists = await this.templateExists(name);
-    if (stillExists && throwOnError) {
+    // Wait for the item to disappear (avoid hard reloads which can be flaky)
+    const stillExists = await rows.count().then(c => c > 0).catch(() => false);
+    if (stillExists) {
+      // Give the UI a bit more time to refresh (React Query refetch)
+      await this.page.waitForTimeout(500);
+    }
+    const stillExistsAfter = await rows.count().then(c => c > 0).catch(() => false);
+    if (stillExistsAfter && throwOnError) {
       throw new Error(`Template "${name}" still visible after deletion`);
-    } else if (stillExists) {
+    } else if (stillExistsAfter) {
       console.warn(`Template "${name}" still visible after deletion attempt`);
     }
   }
@@ -315,14 +298,21 @@ export class QuizTemplatesPage extends BasePage {
 
     // Wait for the API call to complete
     const response = await apiPromise;
+    let apiSuccess = false;
+
     if (response) {
       const requestUrl = response.url();
       console.log(`API request URL: ${requestUrl}`);
       if (response.ok()) {
         console.log(`Template "${name}" activation toggled successfully.`);
+        apiSuccess = true;
       } else {
         const responseBody = await response.text().catch(() => '');
         console.warn(`Template activation API returned status ${response.status()}: ${responseBody}`);
+        // 409 means another template is active - this is an expected business error
+        if (response.status() === 409) {
+          console.log('409 Conflict: Another template is already active');
+        }
       }
     } else {
       console.warn('No PUT /questionerTemplates API call detected');
@@ -344,13 +334,18 @@ export class QuizTemplatesPage extends BasePage {
     console.log(`Template "${name}" status after: "${statusAfter}"`);
 
     const isNowActive = statusAfter.toLowerCase().includes('enabled') || statusAfter.toLowerCase().includes('active');
-    if (wasActive === isNowActive && response?.ok()) {
+
+    // If API succeeded but status didn't change, refresh the page
+    if (wasActive === isNowActive && apiSuccess) {
       console.log('Status did not change after API success, refreshing page...');
       await this.page.reload({ waitUntil: 'domcontentloaded' });
       await this.waitForLoading();
       const statusAfterRefresh = (await this.getTemplateRow(name).locator(testIdSelector(TestIds.STATUS_LABEL)).textContent().catch(() => '')) || '';
       console.log(`Template "${name}" status after refresh: "${statusAfterRefresh}"`);
     }
+
+    // Return whether the activation was successful (API returned 2xx)
+    return apiSuccess;
   }
 
   /**
@@ -411,28 +406,68 @@ export class QuizTemplatesPage extends BasePage {
    */
   async deactivateAllTemplates() {
     await this.waitForLoading();
-    const statusSelector = testIdSelector(TestIds.STATUS_LABEL);
 
-    while (true) {
+    // Refresh the page first to ensure we have the latest state
+    await this.page.reload({ waitUntil: 'domcontentloaded' });
+    await this.waitForLoading();
+
+    const statusSelector = testIdSelector(TestIds.STATUS_LABEL);
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (attempts < maxAttempts) {
+      attempts++;
       const activeRows = this.page.locator(testIdSelector(TestIds.TENANT_LIST_ITEM)).filter({
         has: this.page.locator(statusSelector, { hasText: /active|enabled/i })
       });
 
       const count = await activeRows.count();
+      console.log(`deactivateAllTemplates: Found ${count} active templates (attempt ${attempts})`);
+
       if (count === 0) {
         break;
       }
 
       const row = activeRows.first();
+      const templateName = await row.locator(testIdSelector(TestIds.HEADING_TEXT)).textContent().catch(() => 'unknown');
+      console.log(`Deactivating template: ${templateName}`);
+
+      // Set up response listener
+      const apiPromise = this.page.waitForResponse(
+        response => response.url().includes('/questionerTemplates') && response.request().method() === 'PUT',
+        { timeout: 10000 }
+      ).catch(() => null);
+
       const activateButton = row.getByRole('button', { name: /activate/i }).first();
       if (await activateButton.isVisible({ timeout: 2000 }).catch(() => false)) {
         await activateButton.click({ force: true });
+
+        // Wait for API response
+        const response = await apiPromise;
+        if (response?.ok()) {
+          console.log(`Deactivated template: ${templateName}`);
+        } else {
+          console.warn(`Failed to deactivate template: ${templateName}, status: ${response?.status()}`);
+        }
+
         await this.waitForLoading();
-        await this.page.waitForTimeout(500);
+
+        // Wait for list refresh
+        await this.page.waitForResponse(
+          response => response.url().includes('/questionerTemplates') && response.request().method() === 'GET',
+          { timeout: 5000 }
+        ).catch(() => null);
+
+        await this.page.waitForTimeout(300);
       } else {
-        console.warn('Active template detected but activate button is not yet visible, retrying shortly');
-        await this.page.waitForTimeout(500);
+        console.warn('Active template detected but activate button is not yet visible, refreshing...');
+        await this.page.reload({ waitUntil: 'domcontentloaded' });
+        await this.waitForLoading();
       }
+    }
+
+    if (attempts >= maxAttempts) {
+      console.warn(`deactivateAllTemplates: Reached max attempts (${maxAttempts}), some templates may still be active`);
     }
   }
 }
