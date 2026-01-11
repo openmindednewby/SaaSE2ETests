@@ -32,6 +32,11 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
     await templatesPage.goto();
   });
 
+  async function ensureNoActiveTemplates() {
+    await templatesPage.deactivateAllTemplates();
+    await templatesPage.refetchTemplatesList();
+  }
+
   test.afterAll(async () => {
     // Cleanup
     try {
@@ -47,7 +52,7 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
   test('should create template for activation tests', async () => {
     testTemplateName = `Activate Test ${Date.now()}`;
     await templatesPage.goto();
-    await templatesPage.deactivateAllTemplates();
+    await ensureNoActiveTemplates();
     await templatesPage.createTemplate(testTemplateName, 'Template for activation test');
     await templatesPage.expectTemplateInList(testTemplateName);
   });
@@ -57,7 +62,14 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
     await templatesPage.expectTemplateInList(testTemplateName);
 
     // Activate the template
-    await templatesPage.activateTemplate(testTemplateName);
+    await ensureNoActiveTemplates();
+    const activated = await templatesPage.activateTemplate(testTemplateName);
+    if (!activated) {
+      // Common flake: another test in the same tenant activated something concurrently.
+      // Deactivate again and retry once.
+      await ensureNoActiveTemplates();
+      await templatesPage.activateTemplate(testTemplateName);
+    }
 
     // Check if it shows as active
     await templatesPage.expectTemplateActive(testTemplateName, true);

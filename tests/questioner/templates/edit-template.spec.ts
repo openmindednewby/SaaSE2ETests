@@ -27,6 +27,15 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
     templatesPage = new QuizTemplatesPage(page);
   });
 
+  test.beforeEach(async () => {
+    await templatesPage.goto();
+  });
+
+  async function ensureNoActiveTemplates() {
+    await templatesPage.deactivateAllTemplates();
+    await templatesPage.refetchTemplatesList();
+  }
+
   test.afterAll(async () => {
     // Cleanup - try to delete the template if it exists
     try {
@@ -46,13 +55,14 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
 
   test('should create template for editing', async () => {
     testTemplateName = `Edit Test ${Date.now()}`;
-    await templatesPage.goto();
-    await templatesPage.deactivateAllTemplates();
+    await ensureNoActiveTemplates();
     await templatesPage.createTemplate(testTemplateName, 'Original description');
     await templatesPage.expectTemplateInList(testTemplateName);
   });
 
   test('should open edit modal when clicking edit @critical', async () => {
+    expect(testTemplateName, 'Test template name not set; did the create test run?').toBeTruthy();
+    await templatesPage.expectTemplateInList(testTemplateName);
     await templatesPage.editTemplate(testTemplateName);
 
     // Modal should be visible - use page object's getEditModal
@@ -68,6 +78,8 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
   });
 
   test('should update template name', async () => {
+    expect(testTemplateName, 'Test template name not set; did the create test run?').toBeTruthy();
+    await templatesPage.expectTemplateInList(testTemplateName);
     const newName = `Updated ${Date.now()}`;
 
     await templatesPage.editTemplate(testTemplateName);
@@ -94,6 +106,8 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
   });
 
   test('should cancel edit without saving', async () => {
+    expect(testTemplateName, 'Test template name not set; did the create test run?').toBeTruthy();
+    await templatesPage.expectTemplateInList(testTemplateName);
     await templatesPage.editTemplate(testTemplateName);
 
     // Modify the name - use page object's getEditModal
