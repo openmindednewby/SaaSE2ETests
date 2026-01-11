@@ -1,10 +1,74 @@
 import { test, expect, Page, BrowserContext } from '@playwright/test';
 import { LoginPage } from '../../pages/LoginPage.js';
+import { TestIds, testIdSelector } from '../../shared/testIds.js';
 
 // Use serial mode so tests run in order and share the same browser context
 test.describe.serial('Logout Flow @identity @auth', () => {
   let context: BrowserContext;
   let page: Page;
+
+  async function clickLogout() {
+    const logoutApi = page
+      .waitForResponse((r) => r.url().includes('/api/auth/logout') && r.request().method() === 'POST', { timeout: 8000 })
+      .catch(() => null);
+
+    const logoutButton = page.locator(testIdSelector(TestIds.LOGOUT_BUTTON));
+    if (await logoutButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await logoutButton.click({ force: true });
+      await logoutApi;
+      return;
+    }
+
+    const navMenu = page.locator(testIdSelector(TestIds.NAV_MENU));
+    if (await navMenu.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await navMenu.click({ force: true });
+      await expect(logoutButton).toBeVisible({ timeout: 5000 });
+      await logoutButton.click({ force: true });
+      await logoutApi;
+      return;
+    }
+
+    // Fallback to role-based selector if testID isn't present
+    const logoutByRole = page.getByRole('button', { name: /logout|sign out/i });
+    await expect(logoutByRole, 'Expected logout button to exist in authenticated UI').toBeVisible({ timeout: 5000 });
+    await logoutByRole.click({ force: true });
+    await logoutApi;
+  }
+
+  async function expectLoggedOut() {
+    // Wait for logout to propagate to storage/UI
+    await expect
+      .poll(async () => {
+        return await page.evaluate(() => {
+          const raw = sessionStorage.getItem('persist:auth');
+          const accessTokenKey = sessionStorage.getItem('accessToken');
+          const refreshTokenKey = sessionStorage.getItem('refreshToken');
+          let parsed: any = null;
+          if (raw) {
+            try {
+              parsed = JSON.parse(raw);
+            } catch {
+              parsed = { _parseError: true };
+            }
+          }
+
+          const tokenFromPersist = parsed?.accessToken ?? null;
+          const isLoggedIn = parsed?.isLoggedIn ?? null;
+
+          const loggedOut =
+            (!raw || !tokenFromPersist) &&
+            !accessTokenKey &&
+            !refreshTokenKey;
+
+          return { loggedOut, rawPresent: !!raw, tokenFromPersist, isLoggedIn, accessTokenKey, refreshTokenKey };
+        });
+      }, { timeout: 20000 })
+      .toMatchObject({ loggedOut: true });
+
+    // Depending on navigation strategy, URL may or may not change; login form should be visible either way.
+    const loginForm = page.locator(testIdSelector(TestIds.LOGIN_FORM));
+    await expect(loginForm).toBeVisible({ timeout: 10000 });
+  }
 
   test.beforeAll(async ({ browser }) => {
     const username = process.env.TEST_USER_USERNAME;
@@ -32,27 +96,8 @@ test.describe.serial('Logout Flow @identity @auth', () => {
     // Start on protected route (using authenticated state)
     await page.goto('/quiz-templates', { waitUntil: 'domcontentloaded' });
 
-    // Find and click logout button
-    const logoutButton = page.getByRole('button', { name: /logout|sign out/i });
-
-    if (await logoutButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await logoutButton.click();
-
-      // Should redirect to login page
-      await expect(page).toHaveURL(/login/i, { timeout: 10000 });
-    } else {
-      // Try looking for logout in a menu or sidebar
-      const menuButton = page.getByRole('button', { name: /menu/i });
-      if (await menuButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await menuButton.click();
-        const logoutMenuItem = page.getByText(/logout|sign out/i);
-        await logoutMenuItem.click();
-        await expect(page).toHaveURL(/login/i, { timeout: 10000 });
-      } else {
-        // Skip if no logout button found (might be mobile-specific UI)
-        test.skip(true, 'Logout button not found in current UI');
-      }
-    }
+    await clickLogout();
+    await expectLoggedOut();
   });
 
   test('should clear session after logout', async () => {
@@ -71,24 +116,19 @@ test.describe.serial('Logout Flow @identity @auth', () => {
 
     await page.goto('/quiz-templates', { waitUntil: 'domcontentloaded' });
 
-    const logoutButton = page.getByRole('button', { name: /logout|sign out/i });
+    await clickLogout();
+    await expectLoggedOut();
 
-    if (await logoutButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await logoutButton.click();
-      await expect(page).toHaveURL(/login/i, { timeout: 10000 });
-
-      // Verify session is cleared
-      const tokens = await page.evaluate(() => {
-        return {
-          accessToken: sessionStorage.getItem('accessToken'),
-          refreshToken: sessionStorage.getItem('refreshToken'),
-        };
-      });
-
-      expect(tokens.accessToken).toBeFalsy();
-      expect(tokens.refreshToken).toBeFalsy();
+    // Verify session is cleared
+    const persisted = await page.evaluate(() => sessionStorage.getItem('persist:auth'));
+    if (persisted) {
+      const parsed = JSON.parse(persisted);
+      expect(parsed.accessToken).toBeFalsy();
+      expect(parsed.refreshToken).toBeFalsy();
+      expect(parsed.isLoggedIn).toBeFalsy();
     } else {
-      test.skip(true, 'Logout button not found');
+      // Storage key removed is also a valid "cleared session" state.
+      expect(persisted).toBeNull();
     }
   });
 

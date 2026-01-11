@@ -1,5 +1,6 @@
 import { Locator, Page, expect } from '@playwright/test';
 import { BasePage } from './BasePage.js';
+import { TestIds, testIdSelector } from '../shared/testIds.js';
 
 export class LoginPage extends BasePage {
   readonly usernameInput: Locator;
@@ -10,10 +11,10 @@ export class LoginPage extends BasePage {
   constructor(page: Page) {
     super(page);
     // Based on login.tsx - uses placeholder text for inputs
-    this.usernameInput = page.getByPlaceholder(/enter username/i);
-    this.passwordInput = page.getByPlaceholder(/enter password/i);
+    this.usernameInput = page.locator(testIdSelector(TestIds.USERNAME_INPUT)).or(page.getByPlaceholder(/enter username/i));
+    this.passwordInput = page.locator(testIdSelector(TestIds.PASSWORD_INPUT)).or(page.getByPlaceholder(/enter password/i));
     // Login button uses SaveButton with title t('login.submit', 'Login')
-    this.loginButton = page.getByRole('button', { name: /login|sign in/i });
+    this.loginButton = page.locator(testIdSelector(TestIds.LOGIN_BUTTON)).or(page.getByRole('button', { name: /login|sign in/i }));
     this.loadingIndicator = page.locator('[role="progressbar"]');
   }
 
