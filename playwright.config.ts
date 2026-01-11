@@ -66,39 +66,73 @@ export default defineConfig({
       dependencies: ['setup'],
     },
 
-    // Desktop Chrome
+    // ==================== BATCHED UI PROJECTS ====================
+    // Identity batch (no multi-tenant setup required)
     {
-      name: 'chromium',
-      workers: 1,
-      testIgnore: /health\//,
-      use: {
-        ...devices['Desktop Chrome'],
-        storageState: 'playwright/.auth/user.json',
-      },
+      name: 'identity-chromium',
+      workers: 3,
+      testMatch: /identity\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'identity-mobile',
+      workers: 3,
+      testMatch: /identity\/.*\.spec\.ts/,
+      use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'identity-firefox',
+      workers: 3,
+      testMatch: /identity\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup'],
+    },
+
+    // Questioner batch (requires multi-tenant setup)
+    {
+      name: 'questioner-chromium',
+      workers: 3,
+      testMatch: /questioner\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
+    {
+      name: 'questioner-mobile',
+      workers: 3,
+      testMatch: /questioner\/.*\.spec\.ts/,
+      use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
+    {
+      name: 'questioner-firefox',
+      workers: 3,
+      testMatch: /questioner\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup', 'multi-tenant-setup'],
     },
 
-    // Mobile viewport (React Native Web)
+    // Smoke batch (requires multi-tenant setup)
     {
-      name: 'mobile-chrome',
-      workers: 1,
-      testIgnore: /health\//,
-      use: {
-        ...devices['Pixel 5'],
-        storageState: 'playwright/.auth/user.json',
-      },
+      name: 'smoke-chromium',
+      workers: 3,
+      testMatch: /smoke\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup', 'multi-tenant-setup'],
     },
-
-    // Firefox for cross-browser testing
     {
-      name: 'firefox',
-      workers: 1,
-      testIgnore: /health\//,
-      use: {
-        ...devices['Desktop Firefox'],
-        storageState: 'playwright/.auth/user.json',
-      },
+      name: 'smoke-mobile',
+      workers: 3,
+      testMatch: /smoke\/.*\.spec\.ts/,
+      use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
+    {
+      name: 'smoke-firefox',
+      workers: 3,
+      testMatch: /smoke\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup', 'multi-tenant-setup'],
     },
   ],

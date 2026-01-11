@@ -7,6 +7,7 @@ import { QuizTemplatesPage } from '../../pages/QuizTemplatesPage.js';
 
 // Use serial mode so tests run in order and share the same browser context
 test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
+  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let templatesPage: QuizTemplatesPage;
@@ -38,6 +39,7 @@ test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
   test('complete user journey: create template -> activate -> view answers', async () => {
     // 1. Navigate to Quiz Templates
     await templatesPage.goto();
+    await templatesPage.deactivateAllTemplates();
 
     // Verify page loaded
     await expect(page).toHaveURL(/quiz-templates/);

@@ -21,18 +21,8 @@ setup.describe('Multi-Tenant Test Setup', () => {
       return;
     }
 
-    // Check if already set up
-    if (fs.existsSync(setupStateFile)) {
-      try {
-        const setupState = JSON.parse(fs.readFileSync(setupStateFile, 'utf-8'));
-        if (setupState.setupComplete && Date.now() - setupState.timestamp < 3600000) {
-          console.log('Multi-tenant setup already complete (less than 1 hour ago), skipping...');
-          return;
-        }
-      } catch {
-        // Continue with setup if file is invalid
-      }
-    }
+    // Always run idempotent setup.
+    // Tests rely on these tenants/users existing, and globalTeardown may remove them between runs.
 
     try {
       console.log('🏗️ Starting multi-tenant test setup...');

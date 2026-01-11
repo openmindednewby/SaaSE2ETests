@@ -144,6 +144,33 @@ cd E2ETests
 npm test
 ```
 
+#### Recommended (Run In Sequence)
+
+```bash
+cd E2ETests
+npm run test:health
+npm run test:identity
+npm run test:questioner
+npm run test:smoke
+```
+
+#### Useful Batches
+
+```bash
+npm run test:health
+npm run test:identity
+npm run test:questioner
+npm run test:questioner:templates
+npm run test:questioner:quiz
+npm run test:smoke
+```
+
+#### Single Command (All Projects)
+
+```bash
+cd E2ETests && npx playwright test --project=health --project=identity-chromium --project=identity-mobile --project=identity-firefox --project=questioner-chromium --project=questioner-mobile --project=questioner-firefox --project=smoke-chromium --project=smoke-mobile --project=smoke-firefox
+```
+
 ## NPM Scripts
 
 | Command | Description |
@@ -152,12 +179,12 @@ npm test
 | `npm run test:headed` | Run tests with browser visible |
 | `npm run test:debug` | Run tests in debug mode |
 | `npm run test:ui` | Open Playwright UI |
-| `npm run test:identity` | Run IdentityService tests only |
-| `npm run test:questioner` | Run QuestionerService tests only |
-| `npm run test:smoke` | Run smoke tests only |
-| `npm run test:chrome` | Run tests in Chrome only |
-| `npm run test:firefox` | Run tests in Firefox only |
-| `npm run test:mobile` | Run tests in mobile viewport |
+| `npm run test:health` | Run service probe tests only |
+| `npm run test:identity` | Run IdentityService tests only (all browsers) |
+| `npm run test:questioner` | Run QuestionerService tests only (all browsers) |
+| `npm run test:questioner:templates` | Run Questioner template CRUD tests (all browsers) |
+| `npm run test:questioner:quiz` | Run Questioner quiz active/answers tests (all browsers) |
+| `npm run test:smoke` | Run smoke tests only (all browsers) |
 | `npm run report` | Open HTML test report |
 | `npm run codegen` | Open Playwright codegen tool |
 

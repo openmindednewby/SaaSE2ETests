@@ -63,7 +63,7 @@ test.describe.serial('Create Quiz Template @questioner @crud', () => {
 
     // Cleanup
     if (exists) {
-      await templatesPage.deleteTemplate(templateName);
+      await templatesPage.deleteTemplate(templateName, false);
     }
   });
 
@@ -85,7 +85,7 @@ test.describe.serial('Create Quiz Template @questioner @crud', () => {
 
     // Cleanup
     if (exists) {
-      await templatesPage.deleteTemplate(templateName);
+      await templatesPage.deleteTemplate(templateName, false);
     }
   });
 
@@ -125,7 +125,7 @@ test.describe.serial('Create Quiz Template @questioner @crud', () => {
     // Verify it was created
     const exists = await templatesPage.templateExists(specialName);
     if (exists) {
-      await templatesPage.deleteTemplate(specialName);
+      await templatesPage.deleteTemplate(specialName, false);
     }
   });
 });

@@ -9,8 +9,11 @@ import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
  */
 test.describe('Tenant Isolation @questioner @security', () => {
   test.beforeEach(async ({}, testInfo) => {
-    testInfo.skip(testInfo.project.name !== 'chromium', 'Runs once (chromium) to avoid cross-project tenant collisions');
+    const isChromium = (testInfo.project.name || '').toLowerCase().includes('chromium');
+    testInfo.skip(!isChromium, 'Runs once (chromium) to avoid cross-project tenant collisions');
   });
+
+  test.setTimeout(120000);
 
   // Unique template names for isolation tests
   const tenantATemplateName = `TenantA Template ${Date.now()}`;

@@ -180,13 +180,34 @@ export class UsersPage extends BasePage {
     // The app uses window.confirm for delete confirmation
     // MUST set up before click
     this.page.once('dialog', async dialog => {
-      await dialog.accept();
+      try {
+        await dialog.accept();
+      } catch {
+        // Can happen if another handler already accepted the dialog
+      }
     });
+
+    const deletePromise = this.page.waitForResponse(
+      resp => resp.request().method() === 'DELETE' && /\/api\/users\b/i.test(resp.url()),
+      { timeout: 15000 }
+    ).catch(() => null);
 
     await row.getByRole('button', { name: /delete/i }).click({ force: true });
 
+    const response = await deletePromise;
+    if (response && !response.ok()) {
+      console.warn(`User deletion API returned status ${response.status()}`);
+    }
+
     await this.waitForLoading();
-    await expect(row).not.toBeVisible({ timeout: 10000 });
+
+    // Sometimes the list doesn't re-render immediately; retry once after a refresh.
+    const hidden = await row.isVisible({ timeout: 5000 }).then(v => !v).catch(() => false);
+    if (!hidden) {
+      await this.page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
+      await this.waitForLoading();
+    }
+    await expect(row).not.toBeVisible({ timeout: 15000 });
   }
 
   /**

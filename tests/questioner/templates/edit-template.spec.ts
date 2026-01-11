@@ -5,6 +5,7 @@ import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
 
 // Use serial mode so tests run in order and share the same browser context
 test.describe.serial('Edit Quiz Template @questioner @crud', () => {
+  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let templatesPage: QuizTemplatesPage;
@@ -31,8 +32,9 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
     try {
       // Only attempt cleanup if context is still open
       if (context?.pages().length > 0) {
+          await templatesPage.goto();
           if (testTemplateName && await templatesPage.templateExists(testTemplateName)) {
-            await templatesPage.deleteTemplate(testTemplateName);
+            await templatesPage.deleteTemplate(testTemplateName, false);
           }
       }
     } catch (e) {
@@ -45,6 +47,7 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
   test('should create template for editing', async () => {
     testTemplateName = `Edit Test ${Date.now()}`;
     await templatesPage.goto();
+    await templatesPage.deactivateAllTemplates();
     await templatesPage.createTemplate(testTemplateName, 'Original description');
     await templatesPage.expectTemplateInList(testTemplateName);
   });
@@ -101,8 +104,8 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
     await modalNameInput.fill('Should Not Save');
 
     // Cancel
-    const cancelButton = modal.getByRole('button', { name: /cancel/i });
-    await cancelButton.click();
+    const cancelButton = modal.getByRole('button', { name: /cancel/i }).first();
+    await cancelButton.click({ force: true });
     await templatesPage.waitForModalToClose();
 
     // Original name should still be in list

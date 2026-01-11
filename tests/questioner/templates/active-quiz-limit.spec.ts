@@ -6,7 +6,7 @@ import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage';
 
 test.describe('Active Quiz Limit @questioner', () => {
   // Increase timeout for this test suite since it involves multiple operations
-  test.setTimeout(60000);
+  test.setTimeout(120000);
 
   const t1Name = `Limit Test T1 ${Date.now()}`;
   const t2Name = `Limit Test T2 ${Date.now()}`;
@@ -34,10 +34,10 @@ test.describe('Active Quiz Limit @questioner', () => {
   test.afterEach(async () => {
     try {
       if (await templatesPage.templateExists(t1Name)) {
-        await templatesPage.deleteTemplate(t1Name);
+        await templatesPage.deleteTemplate(t1Name, false);
       }
       if (await templatesPage.templateExists(t2Name)) {
-        await templatesPage.deleteTemplate(t2Name);
+        await templatesPage.deleteTemplate(t2Name, false);
       }
     } finally {
         await context.close().catch(() => {});

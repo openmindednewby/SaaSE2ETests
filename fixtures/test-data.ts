@@ -71,14 +71,8 @@ export const TEST_USERS = {
 };
 
 export function getProjectUsers(projectName: string) {
-  switch (projectName) {
-    case 'chromium':
-      return { admin: TEST_USERS.TENANT_A_ADMIN, user: TEST_USERS.TENANT_A_USER };
-    case 'mobile-chrome':
-      return { admin: TEST_USERS.TENANT_B_ADMIN, user: TEST_USERS.TENANT_B_USER };
-    case 'firefox':
-      return { admin: TEST_USERS.TENANT_C_ADMIN, user: TEST_USERS.TENANT_C_USER };
-    default:
-      return { admin: TEST_USERS.TENANT_A_ADMIN, user: TEST_USERS.TENANT_A_USER };
-  }
+  const name = (projectName || '').toLowerCase();
+  if (name.includes('mobile')) return { admin: TEST_USERS.TENANT_B_ADMIN, user: TEST_USERS.TENANT_B_USER };
+  if (name.includes('firefox')) return { admin: TEST_USERS.TENANT_C_ADMIN, user: TEST_USERS.TENANT_C_USER };
+  return { admin: TEST_USERS.TENANT_A_ADMIN, user: TEST_USERS.TENANT_A_USER };
 }

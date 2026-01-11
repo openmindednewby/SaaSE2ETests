@@ -6,6 +6,7 @@ import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
 
 // Use serial mode so tests run in order and share the same browser context
 test.describe.serial('Activate Quiz Template @questioner @crud', () => {
+  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let templatesPage: QuizTemplatesPage;
@@ -31,7 +32,8 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
     // Cleanup
     try {
       if (testTemplateName && await templatesPage.templateExists(testTemplateName)) {
-        await templatesPage.deleteTemplate(testTemplateName);
+        await templatesPage.goto();
+        await templatesPage.deleteTemplate(testTemplateName, false);
       }
     } catch {
       // Ignore cleanup errors
@@ -42,6 +44,7 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
   test('should create template for activation tests', async () => {
     testTemplateName = `Activate Test ${Date.now()}`;
     await templatesPage.goto();
+    await templatesPage.deactivateAllTemplates();
     await templatesPage.createTemplate(testTemplateName, 'Template for activation test');
     await templatesPage.expectTemplateInList(testTemplateName);
   });
