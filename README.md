@@ -149,6 +149,7 @@ npm test
 ```bash
 cd E2ETests
 npm run test:health
+npm run test:diagnostics
 npm run test:identity
 npm run test:questioner
 npm run test:smoke
@@ -171,6 +172,13 @@ npm run test:smoke
 cd E2ETests && npx playwright test --project=health --project=identity-chromium --project=identity-mobile --project=identity-firefox --project=questioner-chromium --project=questioner-mobile --project=questioner-firefox --project=smoke-chromium --project=smoke-mobile --project=smoke-firefox
 ```
 
+#### Diagnostics
+
+```bash
+cd E2ETests
+npm run test:diagnostics
+```
+
 ## NPM Scripts
 
 | Command | Description |
@@ -180,6 +188,7 @@ cd E2ETests && npx playwright test --project=health --project=identity-chromium 
 | `npm run test:debug` | Run tests in debug mode |
 | `npm run test:ui` | Open Playwright UI |
 | `npm run test:health` | Run service probe tests only |
+| `npm run test:diagnostics` | Print/validate tenantId claims (all browsers) |
 | `npm run test:identity` | Run IdentityService tests only (all browsers) |
 | `npm run test:questioner` | Run QuestionerService tests only (all browsers) |
 | `npm run test:questioner:templates` | Run Questioner template CRUD tests (all browsers) |

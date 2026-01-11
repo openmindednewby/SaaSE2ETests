@@ -8,6 +8,7 @@
     "test:debug": "playwright test --debug",
     "test:ui": "playwright test --ui",
     "test:health": "playwright test tests/health --project=health",
+    "test:diagnostics": "playwright test tests/diagnostics --project=diagnostics-chromium --project=diagnostics-mobile --project=diagnostics-firefox",
     "test:identity": "playwright test tests/identity --project=identity-chromium --project=identity-mobile --project=identity-firefox",
     "test:questioner": "playwright test tests/questioner --project=questioner-chromium --project=questioner-mobile --project=questioner-firefox",
     "test:questioner:templates": "playwright test tests/questioner/templates --project=questioner-chromium --project=questioner-mobile --project=questioner-firefox",

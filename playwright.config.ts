@@ -66,25 +66,45 @@ export default defineConfig({
       dependencies: ['setup'],
     },
 
+    // Diagnostics (API-only) - validates tenantId claims per project user
+    {
+      name: 'diagnostics-chromium',
+      testMatch: /diagnostics\/.*\.spec\.ts/,
+      dependencies: ['setup', 'multi-tenant-setup'],
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'diagnostics-mobile',
+      testMatch: /diagnostics\/.*\.spec\.ts/,
+      dependencies: ['setup', 'multi-tenant-setup'],
+      use: { ...devices['Pixel 5'] },
+    },
+    {
+      name: 'diagnostics-firefox',
+      testMatch: /diagnostics\/.*\.spec\.ts/,
+      dependencies: ['setup', 'multi-tenant-setup'],
+      use: { ...devices['Desktop Firefox'] },
+    },
+
     // ==================== BATCHED UI PROJECTS ====================
     // Identity batch (no multi-tenant setup required)
     {
       name: 'identity-chromium',
-      workers: 3,
+      workers: 1,
       testMatch: /identity\/.*\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup'],
     },
     {
       name: 'identity-mobile',
-      workers: 3,
+      workers: 1,
       testMatch: /identity\/.*\.spec\.ts/,
       use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup'],
     },
     {
       name: 'identity-firefox',
-      workers: 3,
+      workers: 1,
       testMatch: /identity\/.*\.spec\.ts/,
       use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup'],
@@ -93,21 +113,21 @@ export default defineConfig({
     // Questioner batch (requires multi-tenant setup)
     {
       name: 'questioner-chromium',
-      workers: 3,
+      workers: 1,
       testMatch: /questioner\/.*\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup', 'multi-tenant-setup'],
     },
     {
       name: 'questioner-mobile',
-      workers: 3,
+      workers: 1,
       testMatch: /questioner\/.*\.spec\.ts/,
       use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup', 'multi-tenant-setup'],
     },
     {
       name: 'questioner-firefox',
-      workers: 3,
+      workers: 1,
       testMatch: /questioner\/.*\.spec\.ts/,
       use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup', 'multi-tenant-setup'],
@@ -116,21 +136,21 @@ export default defineConfig({
     // Smoke batch (requires multi-tenant setup)
     {
       name: 'smoke-chromium',
-      workers: 3,
+      workers: 1,
       testMatch: /smoke\/.*\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup', 'multi-tenant-setup'],
     },
     {
       name: 'smoke-mobile',
-      workers: 3,
+      workers: 1,
       testMatch: /smoke\/.*\.spec\.ts/,
       use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup', 'multi-tenant-setup'],
     },
     {
       name: 'smoke-firefox',
-      workers: 3,
+      workers: 1,
       testMatch: /smoke\/.*\.spec\.ts/,
       use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup', 'multi-tenant-setup'],
