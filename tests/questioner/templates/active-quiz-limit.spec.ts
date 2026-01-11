@@ -3,13 +3,14 @@ import { expect, test } from '@playwright/test';
 import { getProjectUsers } from '../../../fixtures/test-data.js';
 import { LoginPage } from '../../../pages/LoginPage';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage';
+import { activateTemplateAndWait, createTemplateAndWait } from '../../../flows/quiz-templates.flow.js';
 
 test.describe('Active Quiz Limit @questioner', () => {
   // Increase timeout for this test suite since it involves multiple operations
   test.setTimeout(120000);
 
-  const t1Name = `Limit Test T1 ${Date.now()}`;
-  const t2Name = `Limit Test T2 ${Date.now()}`;
+  let t1Name: string;
+  let t2Name: string;
   let templatesPage: QuizTemplatesPage;
   let context: any;
 
@@ -23,6 +24,10 @@ test.describe('Active Quiz Limit @questioner', () => {
     const page = await context.newPage();
     const loginPage = new LoginPage(page);
     templatesPage = new QuizTemplatesPage(page);
+
+    const runId = `${testInfo.project.name}-${Date.now()}`;
+    t1Name = `Limit Test T1 ${runId}`;
+    t2Name = `Limit Test T2 ${runId}`;
 
     await loginPage.goto();
     const { admin } = getProjectUsers(testInfo.project.name);
@@ -46,23 +51,21 @@ test.describe('Active Quiz Limit @questioner', () => {
 
   test('Should only allow one active quiz at a time', async () => {
     // 1. Create two templates
-    await templatesPage.createTemplate(t1Name, 'T1 Desc');
-    await templatesPage.expectTemplateInList(t1Name);
+    await createTemplateAndWait(templatesPage, t1Name, 'T1 Desc');
     
-    await templatesPage.createTemplate(t2Name, 'T2 Desc');
-    await templatesPage.expectTemplateInList(t2Name);
+    await createTemplateAndWait(templatesPage, t2Name, 'T2 Desc');
 
     // Initial state: both should be inactive
     await templatesPage.expectTemplateActive(t1Name, false);
     await templatesPage.expectTemplateActive(t2Name, false);
 
     // 2. Activate T1
-    const t1Activated = await templatesPage.activateTemplate(t1Name);
+    const t1Activated = await activateTemplateAndWait(templatesPage, t1Name);
     if (!t1Activated) {
       // If T1 activation failed, there might be another template active - try to deactivate all and retry
       console.log('T1 activation failed, deactivating all templates and retrying...');
       await templatesPage.deactivateAllTemplates();
-      await templatesPage.activateTemplate(t1Name);
+      await activateTemplateAndWait(templatesPage, t1Name);
     }
     await templatesPage.expectTemplateActive(t1Name, true);
     await templatesPage.expectTemplateActive(t2Name, false);
@@ -70,7 +73,7 @@ test.describe('Active Quiz Limit @questioner', () => {
     // 3. Activate T2 -> Should Fail because T1 is active
     // Depending on UI implementation, we might see a toast error or the status just doesn't change.
     // Assuming the UI handles the 409 Conflict:
-    await templatesPage.activateTemplate(t2Name);
+    await activateTemplateAndWait(templatesPage, t2Name);
     
     // Check states - T1 should still be active, T2 should still be inactive
     await templatesPage.expectTemplateActive(t1Name, true);
@@ -88,12 +91,12 @@ test.describe('Active Quiz Limit @questioner', () => {
     }
 
     // 4. Deactivate T1
-    await templatesPage.activateTemplate(t1Name); // Toggle off (assuming toggle logic) OR explicit deactivate
+    await activateTemplateAndWait(templatesPage, t1Name); // Toggle off (assuming toggle logic) OR explicit deactivate
     // If activateTemplate just clicks the button, and button is "Deactivate" or Toggle, this works.
     await templatesPage.expectTemplateActive(t1Name, false);
 
     // 5. Now Activate T2 -> Should Success
-    await templatesPage.activateTemplate(t2Name);
+    await activateTemplateAndWait(templatesPage, t2Name);
     await templatesPage.expectTemplateActive(t2Name, true);
     await templatesPage.expectTemplateActive(t1Name, false);
   });

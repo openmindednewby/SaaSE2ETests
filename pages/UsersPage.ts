@@ -157,7 +157,7 @@ export class UsersPage extends BasePage {
     await this.waitForLoading();
     // Use a more robust check that actually waits
     const user = this.page.getByText(`@${username}`, { exact: false });
-    return await user.waitFor({ state: 'visible', timeout: 5000 })
+    return await user.waitFor({ state: 'visible', timeout: 1000 })
       .then(() => true)
       .catch(() => false);
   }

@@ -33,6 +33,23 @@ export class QuizTemplatesPage extends BasePage {
   }
 
   /**
+   * Force a fresh fetch of the templates list (helps when React Query cache is stale).
+   */
+  async refetchTemplatesList() {
+    await this.waitForLoading();
+
+    const listFetch = this.page.waitForResponse(
+      (response) => response.url().includes('/questionerTemplates') && response.request().method() === 'GET',
+      { timeout: 10000 }
+    ).catch(() => null);
+
+    await this.page.reload({ waitUntil: 'domcontentloaded' });
+    await this.waitForLoading();
+    await listFetch;
+    await this.page.waitForTimeout(200);
+  }
+
+  /**
    * Create a new template
    */
   async createTemplate(name: string, description: string = '') {
@@ -361,13 +378,21 @@ export class QuizTemplatesPage extends BasePage {
   }
 
   async expectTemplateActive(name: string, active: boolean = true) {
-    await this.waitForLoading();
-    const row = this.getTemplateRow(name);
-    const statusLabel = row.locator(testIdSelector(TestIds.STATUS_LABEL));
-    if (active) {
-      await expect(statusLabel).toHaveText(/active|enabled/i, { timeout: 10000 });
-    } else {
-      await expect(statusLabel).toHaveText(/inactive|disabled/i, { timeout: 10000 });
+    const expected = active ? /active|enabled/i : /inactive|disabled/i;
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      await this.waitForLoading();
+      const row = this.getTemplateRow(name);
+      const statusLabel = row.locator(testIdSelector(TestIds.STATUS_LABEL));
+
+      try {
+        await expect(statusLabel).toHaveText(expected, { timeout: 10000 });
+        return;
+      } catch (error) {
+        if (attempt >= 3) throw error;
+        console.log(`expectTemplateActive: "${name}" not "${active ? 'active' : 'inactive'}" yet, refetching list (attempt ${attempt})...`);
+        await this.refetchTemplatesList();
+      }
     }
   }
 

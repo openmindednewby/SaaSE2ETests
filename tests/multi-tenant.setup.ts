@@ -4,8 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { TEST_TENANTS, TEST_USERS } from '../fixtures/test-data.js';
 import { LoginPage } from '../pages/LoginPage.js';
-import { TenantsPage } from '../pages/TenantsPage.js';
-import { UsersPage } from '../pages/UsersPage.js';
+import { ensureTestTenantsAndUsers } from '../flows/multi-tenant.flow.js';
 
 // File to store setup state (prevents re-running if already set up)
 const setupStateFile = path.resolve(__dirname, '../playwright/.auth/multi-tenant-setup.json');
@@ -42,74 +41,7 @@ setup.describe('Multi-Tenant Test Setup', () => {
       }
 
       // Create tenants
-      const tenantsPage = new TenantsPage(page);
-      console.log('📂 Navigating to tenants page...');
-      await tenantsPage.goto();
-
-      // Create TenantA if it doesn't exist
-      console.log(`🔍 Checking if tenant A exists: ${TEST_TENANTS.TENANT_A}`);
-      const tAExists = await tenantsPage.tenantExists(TEST_TENANTS.TENANT_A);
-      console.log(`  Tenant A existence result: ${tAExists}`);
-      if (!tAExists) {
-        console.log(`📁 Creating tenant: ${TEST_TENANTS.TENANT_A}`);
-        await tenantsPage.createTenant(TEST_TENANTS.TENANT_A);
-        console.log(`⏳ Waiting for tenant A to appear: ${TEST_TENANTS.TENANT_A}`);
-        await expect(page.getByText(TEST_TENANTS.TENANT_A)).toBeVisible({ timeout: 10000 });
-        console.log(`✅ Created tenant: ${TEST_TENANTS.TENANT_A}`);
-      } else {
-        console.log(`⏭️ Tenant ${TEST_TENANTS.TENANT_A} already exists, skipping...`);
-      }
-
-      // Create TenantB if it doesn't exist
-      console.log(`🔍 Checking if tenant B exists: ${TEST_TENANTS.TENANT_B}`);
-      const tBExists = await tenantsPage.tenantExists(TEST_TENANTS.TENANT_B);
-      console.log(`  Tenant B existence result: ${tBExists}`);
-      if (!tBExists) {
-        console.log(`📁 Creating tenant: ${TEST_TENANTS.TENANT_B}`);
-        await tenantsPage.createTenant(TEST_TENANTS.TENANT_B);
-        console.log(`⏳ Waiting for tenant B to appear: ${TEST_TENANTS.TENANT_B}`);
-        await expect(page.getByText(TEST_TENANTS.TENANT_B)).toBeVisible({ timeout: 10000 });
-        console.log(`✅ Created tenant: ${TEST_TENANTS.TENANT_B}`);
-      } else {
-        console.log(`⏭️ Tenant ${TEST_TENANTS.TENANT_B} already exists, skipping...`);
-      }
-
-      // Create TenantC if it doesn't exist
-      console.log(`🔍 Checking if tenant C exists: ${TEST_TENANTS.TENANT_C}`);
-      const tCExists = await tenantsPage.tenantExists(TEST_TENANTS.TENANT_C);
-      console.log(`  Tenant C existence result: ${tCExists}`);
-      if (!tCExists) {
-        console.log(`📁 Creating tenant: ${TEST_TENANTS.TENANT_C}`);
-        await tenantsPage.createTenant(TEST_TENANTS.TENANT_C);
-        console.log(`⏳ Waiting for tenant C to appear: ${TEST_TENANTS.TENANT_C}`);
-        await expect(page.getByText(TEST_TENANTS.TENANT_C)).toBeVisible({ timeout: 10000 });
-        console.log(`✅ Created tenant: ${TEST_TENANTS.TENANT_C}`);
-      } else {
-        console.log(`⏭️ Tenant ${TEST_TENANTS.TENANT_C} already exists, skipping...`);
-      }
-
-      // Create users
-      const usersPage = new UsersPage(page);
-      console.log('📂 Navigating to users page...');
-      await usersPage.goto();
-
-      // Wait for user management page to load
-      console.log('⏳ Waiting for user management header...');
-      await expect(usersPage.pageHeader).toBeVisible({ timeout: 10000 });
-
-      // Create all test users
-      for (const [key, userData] of Object.entries(TEST_USERS)) {
-        console.log(`🔍 Checking if user exists: ${userData.username}`);
-        // Check if user exists first
-        if (await usersPage.userExists(userData.username)) {
-          console.log(`⏭️ User ${userData.username} already exists, skipping...`);
-          continue;
-        }
-
-        console.log(`👤 Creating user: ${userData.username} (${userData.roles.join(', ')})`);
-        await usersPage.createUser(userData);
-        console.log(`✅ Created user: ${userData.username}`);
-      }
+      await ensureTestTenantsAndUsers(page);
 
       // Save setup state
       const authDir = path.dirname(setupStateFile);
