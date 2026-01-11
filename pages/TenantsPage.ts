@@ -85,7 +85,7 @@ export class TenantsPage extends BasePage {
     const regex = new RegExp(name, 'i');
     const tenantByText = this.page.getByText(regex).first();
     
-    return await tenantByText.waitFor({ state: 'visible', timeout: 5000 })
+    return await tenantByText.waitFor({ state: 'visible', timeout: 1000 })
       .then(() => true)
       .catch(() => false);
   }
