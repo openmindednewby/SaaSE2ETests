@@ -12,6 +12,7 @@
 
     "test:identity": "playwright test tests/identity --project=identity-chromium --project=identity-mobile --project=identity-firefox",
     "test:identity:chromium": "playwright test tests/identity --project=identity-chromium",
+    "test:identity:chromium:headed": "playwright test --headed tests/identity --project=identity-chromium",
     "test:identity:mobile": "playwright test tests/identity --project=identity-mobile",
     "test:identity:firefox": "playwright test tests/identity --project=identity-firefox",
 
