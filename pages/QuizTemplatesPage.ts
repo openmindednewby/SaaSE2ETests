@@ -433,8 +433,7 @@ export class QuizTemplatesPage extends BasePage {
     await this.waitForLoading();
 
     // Refresh the page first to ensure we have the latest state
-    await this.page.reload({ waitUntil: 'domcontentloaded' });
-    await this.waitForLoading();
+    await this.refetchTemplatesList();
 
     const statusSelector = testIdSelector(TestIds.STATUS_LABEL);
     let attempts = 0;
@@ -454,41 +453,41 @@ export class QuizTemplatesPage extends BasePage {
       }
 
       const row = activeRows.first();
+      await row.scrollIntoViewIfNeeded().catch(() => {});
       const templateName = await row.locator(testIdSelector(TestIds.HEADING_TEXT)).textContent().catch(() => 'unknown');
       console.log(`Deactivating template: ${templateName}`);
 
       // Set up response listener
       const apiPromise = this.page.waitForResponse(
-        response => response.url().includes('/questionerTemplates') && response.request().method() === 'PUT',
+        response => response.url().includes('/questionerTemplates') && (response.request().method() === 'PUT' || response.request().method() === 'DELETE'),
         { timeout: 10000 }
       ).catch(() => null);
 
-      const activateButton = row.getByRole('button', { name: /activate/i }).first();
+      const activateButton = row.getByRole('button', { name: /activate|deactivate/i }).first();
+      const activateFallback = row.locator('text=/activate|🔁|⚡/i').first();
+
       if (await activateButton.isVisible({ timeout: 2000 }).catch(() => false)) {
         await activateButton.click({ force: true });
-
-        // Wait for API response
-        const response = await apiPromise;
-        if (response?.ok()) {
-          console.log(`Deactivated template: ${templateName}`);
-        } else {
-          console.warn(`Failed to deactivate template: ${templateName}, status: ${response?.status()}`);
-        }
-
-        await this.waitForLoading();
-
-        // Wait for list refresh
-        await this.page.waitForResponse(
-          response => response.url().includes('/questionerTemplates') && response.request().method() === 'GET',
-          { timeout: 5000 }
-        ).catch(() => null);
-
-        await this.page.waitForTimeout(300);
+      } else if (await activateFallback.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await activateFallback.click({ force: true });
       } else {
-        console.warn('Active template detected but activate button is not yet visible, refreshing...');
-        await this.page.reload({ waitUntil: 'domcontentloaded' });
-        await this.waitForLoading();
+        console.warn('Active template detected but activation button is not visible, refetching list...');
+        await this.refetchTemplatesList();
+        continue;
       }
+
+      // Wait for API response
+      const response = await apiPromise;
+      if (response?.ok()) {
+        console.log(`Deactivated template: ${templateName}`);
+      } else if (response?.status() === 404) {
+        console.warn(`Deactivation returned 404 for "${templateName}" - refetching list (stale UI?)`);
+      } else {
+        console.warn(`Failed to deactivate template: ${templateName}, status: ${response?.status()}`);
+      }
+
+      await this.waitForLoading();
+      await this.refetchTemplatesList();
     }
 
     if (attempts >= maxAttempts) {

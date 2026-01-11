@@ -50,6 +50,7 @@ test.describe('Active Quiz Limit @questioner', () => {
   });
 
   test('Should only allow one active quiz at a time', async () => {
+    await templatesPage.deactivateAllTemplates();
     // 1. Create two templates
     await createTemplateAndWait(templatesPage, t1Name, 'T1 Desc');
     
