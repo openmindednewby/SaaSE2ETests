@@ -7,29 +7,63 @@ test.describe.serial('Logout Flow @identity @auth', () => {
   let context: BrowserContext;
   let page: Page;
 
+  async function openLogoutMenu() {
+    const logoutButton = page.locator(testIdSelector(TestIds.LOGOUT_BUTTON));
+    if (await logoutButton.first().isVisible({ timeout: 300 }).catch(() => false)) return;
+
+    // Prefer the MobileTopbar "Menu" button first (opens drawer that contains Logout),
+    // because the left collapsed sidebar menu can open a different overlay.
+    const candidates = [
+      page.getByRole('button', { name: /^menu$/i }),
+      page.getByRole('button', { name: /open menu/i }),
+      page.locator(testIdSelector(TestIds.NAV_MENU)),
+      page.getByRole('button', { name: /menu/i }),
+      page.getByText(/^menu$/i),
+    ];
+
+    for (const candidate of candidates) {
+      if (await candidate.isVisible({ timeout: 500 }).catch(() => false)) {
+        await candidate.click({ force: true });
+        if (await logoutButton.first().isVisible({ timeout: 5000 }).catch(() => false)) return;
+      }
+    }
+  }
+
   async function clickLogout() {
     const logoutApi = page
       .waitForResponse((r) => r.url().includes('/api/auth/logout') && r.request().method() === 'POST', { timeout: 8000 })
       .catch(() => null);
 
-    const logoutButton = page.locator(testIdSelector(TestIds.LOGOUT_BUTTON));
-    if (await logoutButton.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await logoutButton.click({ force: true });
-      await logoutApi;
-      return;
+    const logoutButtons = page.locator(testIdSelector(TestIds.LOGOUT_BUTTON));
+    const initialCount = await logoutButtons.count().catch(() => 0);
+    if (initialCount > 0) {
+      for (let i = 0; i < initialCount; i++) {
+        const candidate = logoutButtons.nth(i);
+        if (await candidate.isVisible({ timeout: 300 }).catch(() => false)) {
+          await candidate.click({ force: true });
+          await logoutApi;
+          return;
+        }
+      }
     }
 
-    const navMenu = page.locator(testIdSelector(TestIds.NAV_MENU));
-    if (await navMenu.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await navMenu.click({ force: true });
-      await expect(logoutButton).toBeVisible({ timeout: 5000 });
-      await logoutButton.click({ force: true });
-      await logoutApi;
-      return;
+    // Some mobile layouts trigger logout from an icon-only sidebar without a visible "Logout" label.
+    // Prefer our explicit testID first; if it's not visible, try common "open menu" affordances.
+    await openLogoutMenu();
+    const afterMenuCount = await logoutButtons.count().catch(() => 0);
+    if (afterMenuCount > 0) {
+      for (let i = 0; i < afterMenuCount; i++) {
+        const candidate = logoutButtons.nth(i);
+        if (await candidate.isVisible({ timeout: 1500 }).catch(() => false)) {
+          await candidate.click({ force: true });
+          await logoutApi;
+          return;
+        }
+      }
     }
 
     // Fallback to role-based selector if testID isn't present
-    const logoutByRole = page.getByRole('button', { name: /logout|sign out/i });
+    const logoutByRole = page.getByRole('button', { name: /logout|sign out/i }).first();
     await expect(logoutByRole, 'Expected logout button to exist in authenticated UI').toBeVisible({ timeout: 5000 });
     await logoutByRole.click({ force: true });
     await logoutApi;
