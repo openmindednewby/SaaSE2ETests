@@ -28,11 +28,14 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
     templatesPage = new QuizTemplatesPage(page);
   });
 
+  test.beforeEach(async () => {
+    await templatesPage.goto();
+  });
+
   test.afterAll(async () => {
     // Cleanup
     try {
       if (testTemplateName && await templatesPage.templateExists(testTemplateName)) {
-        await templatesPage.goto();
         await templatesPage.deleteTemplate(testTemplateName, false);
       }
     } catch {
@@ -50,6 +53,9 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
   });
 
   test('should activate a template @critical', async () => {
+    expect(testTemplateName, 'Test template name not set; did the create test run?').toBeTruthy();
+    await templatesPage.expectTemplateInList(testTemplateName);
+
     // Activate the template
     await templatesPage.activateTemplate(testTemplateName);
 
@@ -58,6 +64,7 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
   });
 
   test('should deactivate an active template', async () => {
+    expect(testTemplateName, 'Test template name not set; did the create test run?').toBeTruthy();
     // Template should already be active from previous test
     await templatesPage.expectTemplateActive(testTemplateName, true);
 
@@ -69,6 +76,7 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
   });
 
   test('should show active template on quiz-active page', async () => {
+    expect(testTemplateName, 'Test template name not set; did the create test run?').toBeTruthy();
     // Activate the template again
     await templatesPage.activateTemplate(testTemplateName);
 

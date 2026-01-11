@@ -26,7 +26,10 @@
     "test:questioner:firefox": "playwright test tests/questioner --project=questioner-firefox",
 
     "test:questioner:templates": "playwright test tests/questioner/templates --project=questioner-chromium --project=questioner-mobile --project=questioner-firefox",
+
     "test:questioner:templates:chromium": "playwright test tests/questioner/templates --project=questioner-chromium",
+    "test:questioner:templates:chromium:headed": "playwright test --headed tests/questioner/templates --project=questioner-chromium",
+
     "test:questioner:templates:mobile": "playwright test tests/questioner/templates --project=questioner-mobile",
     "test:questioner:templates:firefox": "playwright test tests/questioner/templates --project=questioner-firefox",
 
