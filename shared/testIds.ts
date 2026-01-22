@@ -42,6 +42,12 @@ export const TestIds = {
   SAVE_BUTTON: 'save-button',
   CANCEL_BUTTON: 'cancel-button',
   ACTIVATE_BUTTON: 'activate-button',
+  DELETE_INACTIVE_BUTTON: 'delete-inactive-button',
+
+  // Confirm dialog
+  CONFIRM_DIALOG: 'confirm-dialog',
+  CONFIRM_BUTTON: 'confirm-button',
+  CANCEL_CONFIRM_BUTTON: 'cancel-confirm-button',
 
   // Loading states
   LOADING_INDICATOR: 'loading-indicator',

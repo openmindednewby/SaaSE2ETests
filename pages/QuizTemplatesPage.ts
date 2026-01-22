@@ -9,6 +9,10 @@ export class QuizTemplatesPage extends BasePage {
   readonly saveButton: Locator;
   readonly templateList: Locator;
   readonly loadingIndicator: Locator;
+  readonly deleteInactiveButton: Locator;
+  readonly confirmDialog: Locator;
+  readonly confirmButton: Locator;
+  readonly cancelConfirmButton: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -21,6 +25,11 @@ export class QuizTemplatesPage extends BasePage {
     this.saveButton = creationForm.getByRole('button', { name: /save/i });
     this.templateList = page.locator(testIdSelector(TestIds.TEMPLATE_LIST));
     this.loadingIndicator = page.locator('[role="progressbar"]');
+    // Delete inactive templates
+    this.deleteInactiveButton = page.locator(testIdSelector(TestIds.DELETE_INACTIVE_BUTTON));
+    this.confirmDialog = page.locator(testIdSelector(TestIds.CONFIRM_DIALOG));
+    this.confirmButton = page.locator(testIdSelector(TestIds.CONFIRM_BUTTON));
+    this.cancelConfirmButton = page.locator(testIdSelector(TestIds.CANCEL_CONFIRM_BUTTON));
   }
 
   /**
@@ -423,6 +432,78 @@ export class QuizTemplatesPage extends BasePage {
       }
     }
     return names;
+  }
+
+  /**
+   * Click the Delete Inactive button to open the confirmation dialog
+   */
+  async clickDeleteInactive(): Promise<void> {
+    await this.waitForLoading();
+    await this.deleteInactiveButton.waitFor({ state: 'visible', timeout: 5000 });
+    await this.deleteInactiveButton.click();
+    await this.confirmDialog.waitFor({ state: 'visible', timeout: 5000 });
+  }
+
+  /**
+   * Confirm the delete inactive dialog and wait for API response
+   * @returns The number of deleted templates from the API response
+   */
+  async confirmDeleteInactive(): Promise<number> {
+    // Set up response listener for delete inactive API call
+    const deletePromise = this.page.waitForResponse(
+      response =>
+        response.url().includes('/questionerTemplates/delete/inactive') &&
+        response.request().method() === 'DELETE',
+      { timeout: 15000 }
+    );
+
+    await this.confirmButton.click();
+
+    const response = await deletePromise;
+    let deletedCount = 0;
+
+    if (response.ok()) {
+      try {
+        const body = await response.json();
+        deletedCount = body.deletedCount ?? 0;
+        console.log(`Deleted ${deletedCount} inactive templates`);
+      } catch {
+        console.warn('Could not parse delete inactive response');
+      }
+    } else {
+      console.warn(`Delete inactive API returned status ${response.status()}`);
+    }
+
+    // Wait for dialog to close and list to refresh
+    await this.waitForLoading();
+    await this.page.waitForResponse(
+      response =>
+        response.url().includes('/questionerTemplates') &&
+        response.request().method() === 'GET',
+      { timeout: 10000 }
+    ).catch(() => null);
+
+    await this.page.waitForTimeout(500);
+
+    return deletedCount;
+  }
+
+  /**
+   * Cancel the delete inactive confirmation dialog
+   */
+  async cancelDeleteInactive(): Promise<void> {
+    await this.cancelConfirmButton.click();
+    // Wait for dialog to close
+    await expect(this.confirmDialog).not.toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Delete all inactive templates and return the count
+   * Combines clickDeleteInactive and confirmDeleteInactive
+   */
+  async deleteInactiveTemplates(): Promise<number> {
+    await this.clickDeleteInactive();
+    return await this.confirmDeleteInactive();
   }
 
   /**
