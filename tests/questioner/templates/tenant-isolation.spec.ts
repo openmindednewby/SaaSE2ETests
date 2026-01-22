@@ -1,7 +1,8 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, request as playwrightRequest } from '@playwright/test';
 import { TEST_USERS } from '../../../fixtures/test-data.js';
 import { LoginPage } from '../../../pages/LoginPage.js';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
+import { AuthHelper } from '../../../helpers/auth-helper.js';
 
 /**
  * Tests for tenant isolation - ensures that templates created by one tenant
@@ -111,9 +112,8 @@ test.describe('Tenant Isolation @questioner @security', () => {
       if (hasForm) {
         // Form exists - try to submit and it should fail
         await templatesPage.createTemplate(templateName, 'Attempt by non-admin');
-        
+
         // Template should not be created (or should fail silently)
-        await page.waitForTimeout(2000);
         const exists = await templatesPage.templateExists(templateName);
         
         // If template somehow got created, clean it up and fail the test
@@ -131,88 +131,69 @@ test.describe('Tenant Isolation @questioner @security', () => {
     }
   });
 
-  test('TenantA templates are isolated from TenantB', async ({ browser }) => {
-    // This test creates a template in TenantA and verifies TenantB cannot see it
+  test('TenantA templates are isolated from TenantB', async () => {
+    // This is fundamentally a backend multi-tenancy guarantee.
+    // Using API calls here makes the test far faster and less flaky than UI-driven login flows.
+    const identityApiUrl = process.env.IDENTITY_API_URL || 'http://localhost:5002';
+    const rawQuestionerApiUrl = process.env.QUESTIONER_API_URL || 'https://localhost:5004';
+    // QuestionerService runs on HTTPS locally; normalize env misconfig that points to HTTP.
+    const questionerApiUrl =
+      rawQuestionerApiUrl.replace(/^http:\/\/localhost:5004\b/i, 'https://localhost:5004');
+
     const isolationTemplateName = `Isolation Test ${Date.now()}`;
 
-    // Create template as TenantA admin
-    const contextA = await browser.newContext();
-    const pageA = await contextA.newPage();
+    const authA = new AuthHelper(identityApiUrl);
+    const tokensA = await authA.loginViaAPI(TEST_USERS.TENANT_A_ADMIN.username, TEST_USERS.TENANT_A_ADMIN.password);
+    const tokenA = tokensA.accessToken;
+    expect(tokenA).toBeTruthy();
 
+    const authB = new AuthHelper(identityApiUrl);
+    const tokensB = await authB.loginViaAPI(TEST_USERS.TENANT_B_ADMIN.username, TEST_USERS.TENANT_B_ADMIN.password);
+    const tokenB = tokensB.accessToken;
+    expect(tokenB).toBeTruthy();
+
+    const apiA = await playwrightRequest.newContext({
+      baseURL: questionerApiUrl,
+      ignoreHTTPSErrors: true,
+      extraHTTPHeaders: { Authorization: `Bearer ${tokenA}` },
+    });
+    const apiB = await playwrightRequest.newContext({
+      baseURL: questionerApiUrl,
+      ignoreHTTPSErrors: true,
+      extraHTTPHeaders: { Authorization: `Bearer ${tokenB}` },
+    });
+
+    let createdId: string | undefined;
     try {
-      const loginPageA = new LoginPage(pageA);
-      await loginPageA.goto();
-      await loginPageA.loginAndWait(
-        TEST_USERS.TENANT_A_ADMIN.username,
-        TEST_USERS.TENANT_A_ADMIN.password
-      );
+      // Create template as TenantA admin
+      const createResp = await apiA.post('/questionerTemplates', {
+        data: { name: isolationTemplateName, description: 'For isolation test' },
+      });
+      expect(createResp.ok()).toBe(true);
+      const createBody = (await createResp.json()) as { externalId?: string };
+      createdId = createBody.externalId;
+      expect(createdId).toBeTruthy();
 
-      const templatesPageA = new QuizTemplatesPage(pageA);
-      await templatesPageA.goto();
-      await templatesPageA.createTemplate(isolationTemplateName, 'For isolation test');
+      // Verify TenantA can see it
+      const listAResp = await apiA.get('/questionerTemplates/list');
+      expect(listAResp.ok()).toBe(true);
+      const listA = (await listAResp.json()) as { questionerTemplates?: Array<{ externalId?: string; name?: string }> };
+      const namesA = (listA.questionerTemplates ?? []).map((t) => t.name).filter((n): n is string => typeof n === 'string');
+      expect(namesA).toContain(isolationTemplateName);
 
-      const existsInA = await templatesPageA.templateExists(isolationTemplateName);
-      expect(existsInA).toBe(true);
+      // Verify TenantB cannot see it
+      const listBResp = await apiB.get('/questionerTemplates/list');
+      expect(listBResp.ok()).toBe(true);
+      const listB = (await listBResp.json()) as { questionerTemplates?: Array<{ externalId?: string; name?: string }> };
+      const namesB = (listB.questionerTemplates ?? []).map((t) => t.name).filter((n): n is string => typeof n === 'string');
+      console.log(`Templates visible to TenantB: ${namesB.join(', ')}`);
+      expect(namesB).not.toContain(isolationTemplateName);
     } finally {
-      await contextA.close().catch(() => {});
-    }
-
-    // Login as TenantB admin and verify the template is NOT visible
-    const contextB = await browser.newContext();
-    const pageB = await contextB.newPage();
-
-    let existsInB = false;
-    try {
-      const loginPageB = new LoginPage(pageB);
-      await loginPageB.goto();
-      await loginPageB.loginAndWait(
-        TEST_USERS.TENANT_B_ADMIN.username,
-        TEST_USERS.TENANT_B_ADMIN.password
-      );
-
-      const templatesPageB = new QuizTemplatesPage(pageB);
-      await templatesPageB.goto();
-      await pageB.reload(); // Force reload to ensure no client-side caching
-      await templatesPageB.waitForLoading();
-
-      // TenantA's template should NOT be visible to TenantB
-      existsInB = await templatesPageB.templateExists(isolationTemplateName);
-
-      // Log all visible templates for debugging
-      const visibleTemplates = await templatesPageB.getTemplateNames();
-      console.log(`Templates visible to TenantB: ${visibleTemplates.join(', ')}`);
-
-      if (existsInB) {
-        console.warn(`⚠️ TENANT ISOLATION FAILURE: Template "${isolationTemplateName}" created by TenantA is visible to TenantB`);
-        console.warn('This indicates a backend multi-tenancy filtering issue in the QuestionerService API');
+      if (typeof createdId === 'string' && createdId.length > 0) {
+        await apiA.delete(`/questionerTemplates/${createdId}`).catch(() => {});
       }
-
-      expect(existsInB).toBe(false);
-    } finally {
-      await contextB.close().catch(() => {});
-    }
-
-    // Cleanup: Delete the template as TenantA admin
-    const contextCleanup = await browser.newContext();
-    const pageCleanup = await contextCleanup.newPage();
-
-    try {
-      const loginPageCleanup = new LoginPage(pageCleanup);
-      await loginPageCleanup.goto();
-      await loginPageCleanup.loginAndWait(
-        TEST_USERS.TENANT_A_ADMIN.username,
-        TEST_USERS.TENANT_A_ADMIN.password
-      );
-
-      const templatesPageCleanup = new QuizTemplatesPage(pageCleanup);
-      await templatesPageCleanup.goto();
-
-      if (await templatesPageCleanup.templateExists(isolationTemplateName)) {
-        // Use throwOnError=false for cleanup
-        await templatesPageCleanup.deleteTemplate(isolationTemplateName, false);
-      }
-    } finally {
-      await contextCleanup.close().catch(() => {});
+      await apiA.dispose();
+      await apiB.dispose();
     }
   });
 });
