@@ -36,6 +36,17 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     ignoreHTTPSErrors: true,
+    // Performance: Reduce default timeouts (Playwright defaults are 30s)
+    actionTimeout: 10000,      // 10s for actions like click, fill
+    navigationTimeout: 15000,  // 15s for navigation
+  },
+
+  // Default test timeout (can be overridden per-test)
+  timeout: 30000,
+
+  // Assertion timeout - how long web-first assertions retry
+  expect: {
+    timeout: 5000,
   },
 
   // Global setup for authentication

@@ -31,40 +31,38 @@ export abstract class BasePage {
   }
 
   /**
-   * Dismiss any blocking overlays (like PWA install prompts)
+   * Dismiss any blocking overlays (like PWA install prompts).
+   * Uses count() which is instant instead of isVisible() with timeout.
    */
   async dismissOverlay() {
     const dismissButton = this.page.getByRole('button', { name: /continue in browser/i });
-    if (await dismissButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    // count() is instant - no timeout wait if element doesn't exist
+    if (await dismissButton.count() > 0) {
       await dismissButton.click();
     }
   }
 
   /**
-   * Navigate to a specific path
+   * Navigate to a specific path.
+   * Uses 'commit' for fastest navigation - let assertions wait for elements.
    */
   async goto(path: string) {
-    await this.page.goto(path, { waitUntil: 'domcontentloaded' });
-    await this.dismissOverlay();
-    // Restore auth after navigation (copy from localStorage to sessionStorage)
-    if (!path.includes('/login')) {
-      await this.restoreAuth();
-    }
+    await this.page.goto(path, { waitUntil: 'commit' });
+    // Run dismissOverlay and restoreAuth in parallel for speed
+    await Promise.all([
+      this.dismissOverlay(),
+      !path.includes('/login') ? this.restoreAuth() : Promise.resolve(),
+    ]);
   }
 
   /**
-   * Wait for network to be idle
-   */
-  async waitForNetworkIdle() {
-    await this.page.waitForLoadState('networkidle');
-  }
-
-  /**
-   * Wait for a loading indicator to disappear
+   * Wait for a loading indicator to disappear.
+   * Uses count() for instant check instead of isVisible() with timeout.
    */
   async waitForLoading() {
     const loadingIndicator = this.page.locator('[role="progressbar"], [data-testid="loading"]');
-    if (await loadingIndicator.isVisible({ timeout: 1000 }).catch(() => false)) {
+    // count() is instant - no timeout wait if element doesn't exist
+    if (await loadingIndicator.count() > 0) {
       await loadingIndicator.waitFor({ state: 'hidden', timeout: 30000 });
     }
   }

@@ -52,10 +52,9 @@ export class QuizTemplatesPage extends BasePage {
       { timeout: 10000 }
     ).catch(() => null);
 
-    await this.page.reload({ waitUntil: 'domcontentloaded' });
+    await this.page.reload({ waitUntil: 'commit' });
     await this.waitForLoading();
     await listFetch;
-    await this.page.waitForTimeout(200);
   }
 
   /**
@@ -83,7 +82,8 @@ export class QuizTemplatesPage extends BasePage {
       console.error('Save button is disabled. Form validation might have failed.');
       // Try to focus name input to trigger validation
       await this.templateNameInput.focus();
-      await this.page.waitForTimeout(500);
+      // Wait for button to become enabled instead of arbitrary timeout
+      await expect(this.saveButton).toBeEnabled({ timeout: 2000 }).catch(() => {});
     }
 
     // Click Save button and wait for API response
@@ -112,8 +112,6 @@ export class QuizTemplatesPage extends BasePage {
       response => response.url().includes('/questionerTemplates') && response.request().method() === 'GET',
       { timeout: 10000 }
     ).catch(() => null);
-
-    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -175,8 +173,6 @@ export class QuizTemplatesPage extends BasePage {
       throw new Error('Edit modal did not appear within 5 seconds');
     });
 
-    // Wait for animations to settle
-    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -276,16 +272,13 @@ export class QuizTemplatesPage extends BasePage {
       { timeout: 10000 }
     ).catch(() => null);
 
-    // Wait for the item to disappear (avoid hard reloads which can be flaky)
-    const stillExists = await rows.count().then(c => c > 0).catch(() => false);
-    if (stillExists) {
-      // Give the UI a bit more time to refresh (React Query refetch)
-      await this.page.waitForTimeout(500);
-    }
-    const stillExistsAfter = await rows.count().then(c => c > 0).catch(() => false);
-    if (stillExistsAfter && throwOnError) {
-      throw new Error(`Template "${name}" still visible after deletion`);
-    } else if (stillExistsAfter) {
+    // Wait for the item to disappear using expect with retry
+    try {
+      await expect(rows).toHaveCount(0, { timeout: 5000 });
+    } catch {
+      if (throwOnError) {
+        throw new Error(`Template "${name}" still visible after deletion`);
+      }
       console.warn(`Template "${name}" still visible after deletion attempt`);
     }
   }
@@ -352,22 +345,20 @@ export class QuizTemplatesPage extends BasePage {
       { timeout: 10000 }
     ).catch(() => null);
 
-    // Wait a bit for the status change to reflect in UI
-    await this.page.waitForTimeout(500);
+    // Wait for status to change using web-first assertion with retry
+    const expectedStatus = wasActive ? /inactive|disabled/i : /active|enabled/i;
+    try {
+      await expect(statusLabel).toHaveText(expectedStatus, { timeout: 5000 });
+    } catch {
+      // If status didn't change, log and refresh as fallback
+      const statusAfter = (await statusLabel.textContent().catch(() => '')) || '';
+      console.log(`Template "${name}" status after: "${statusAfter}" (expected change from wasActive=${wasActive})`);
 
-    // Verify status changed - if not, try refreshing the page
-    const statusAfter = (await statusLabel.textContent().catch(() => '')) || '';
-    console.log(`Template "${name}" status after: "${statusAfter}"`);
-
-    const isNowActive = statusAfter.toLowerCase().includes('enabled') || statusAfter.toLowerCase().includes('active');
-
-    // If API succeeded but status didn't change, refresh the page
-    if (wasActive === isNowActive && apiSuccess) {
-      console.log('Status did not change after API success, refreshing page...');
-      await this.page.reload({ waitUntil: 'domcontentloaded' });
-      await this.waitForLoading();
-      const statusAfterRefresh = (await this.getTemplateRow(name).locator(testIdSelector(TestIds.STATUS_LABEL)).textContent().catch(() => '')) || '';
-      console.log(`Template "${name}" status after refresh: "${statusAfterRefresh}"`);
+      if (apiSuccess) {
+        console.log('Status did not change after API success, refreshing page...');
+        await this.page.reload({ waitUntil: 'commit' });
+        await this.waitForLoading();
+      }
     }
 
     // Return whether the activation was successful (API returned 2xx)
@@ -475,6 +466,7 @@ export class QuizTemplatesPage extends BasePage {
     }
 
     // Wait for dialog to close and list to refresh
+    await expect(this.confirmDialog).not.toBeVisible({ timeout: 5000 });
     await this.waitForLoading();
     await this.page.waitForResponse(
       response =>
@@ -482,8 +474,6 @@ export class QuizTemplatesPage extends BasePage {
         response.request().method() === 'GET',
       { timeout: 10000 }
     ).catch(() => null);
-
-    await this.page.waitForTimeout(500);
 
     return deletedCount;
   }

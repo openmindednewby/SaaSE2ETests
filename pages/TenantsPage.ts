@@ -73,7 +73,6 @@ export class TenantsPage extends BasePage {
     await this.waitForLoading();
     // Wait for modal to disappear
     await expect(modal).not.toBeVisible({ timeout: 5000 }).catch(() => console.warn('Modal did not disappear'));
-    await this.page.waitForTimeout(1000);
   }
 
   /**

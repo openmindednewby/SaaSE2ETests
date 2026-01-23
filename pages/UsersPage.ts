@@ -147,7 +147,6 @@ export class UsersPage extends BasePage {
     });
 
     await this.waitForLoading();
-    await this.page.waitForTimeout(500);
   }
 
   /**

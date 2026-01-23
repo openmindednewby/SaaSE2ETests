@@ -32,8 +32,8 @@ export class QuizAnswersPage extends BasePage {
    */
   async search(query: string) {
     await this.searchInput.fill(query);
-    // Give time for filtering
-    await this.page.waitForTimeout(300);
+    // Wait for list to filter (debounce)
+    await this.waitForLoading();
   }
 
   /**
@@ -41,7 +41,7 @@ export class QuizAnswersPage extends BasePage {
    */
   async clearSearch() {
     await this.searchInput.clear();
-    await this.page.waitForTimeout(300);
+    await this.waitForLoading();
   }
 
   /**
@@ -73,7 +73,7 @@ export class QuizAnswersPage extends BasePage {
     const row = this.getAnswerRow(name);
     await row.getByRole('button', { name: /view/i }).click();
     // Wait for modal to open
-    await this.page.waitForTimeout(500);
+    await expect(this.page.locator('[role="dialog"]')).toBeVisible({ timeout: 5000 });
   }
 
   /**

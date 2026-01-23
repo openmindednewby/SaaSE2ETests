@@ -10,11 +10,10 @@ export class LoginPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    // Based on login.tsx - uses placeholder text for inputs
-    this.usernameInput = page.locator(testIdSelector(TestIds.USERNAME_INPUT)).or(page.getByPlaceholder(/enter username/i));
-    this.passwordInput = page.locator(testIdSelector(TestIds.PASSWORD_INPUT)).or(page.getByPlaceholder(/enter password/i));
-    // Login button uses SaveButton with title t('login.submit', 'Login')
-    this.loginButton = page.locator(testIdSelector(TestIds.LOGIN_BUTTON)).or(page.getByRole('button', { name: /login|sign in/i }));
+    // Use testId-only locators for speed (no .or() fallback chains)
+    this.usernameInput = page.locator(testIdSelector(TestIds.USERNAME_INPUT));
+    this.passwordInput = page.locator(testIdSelector(TestIds.PASSWORD_INPUT));
+    this.loginButton = page.locator(testIdSelector(TestIds.LOGIN_BUTTON));
     this.loadingIndicator = page.locator('[role="progressbar"]');
   }
 
