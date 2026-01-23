@@ -29,6 +29,7 @@ End-to-end testing suite for the OnlineMenu SaaS microservices using Playwright.
     - [Browser not found](#browser-not-found)
   - [CI/CD Integration (Future)](#cicd-integration-future)
   - [Related Documentation](#related-documentation)
+    - [Playwright Best Practices](docs/playwright-best-practices.md)
 
 
 ## Overview
@@ -267,6 +268,8 @@ docker compose -f docker-compose.e2e.yml down -v
 
 ## Writing New Tests
 
+> **Important**: Before writing tests, read the [Playwright Best Practices](docs/playwright-best-practices.md) guide for patterns that ensure fast, reliable tests.
+
 ### Using Page Objects
 
 ```typescript
@@ -374,6 +377,7 @@ jobs:
 
 ## Related Documentation
 
+- [Playwright Best Practices](docs/playwright-best-practices.md) - **Start here for writing fast, robust tests**
 - [Playwright Documentation](https://playwright.dev/docs/intro)
 - [OnlineMenuSaaS README](../OnlineMenuSaaS/README.md)
 - [IdentityService README](../IdentityService/README.md)
