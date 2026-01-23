@@ -103,11 +103,9 @@ test.describe.serial('Create Quiz Template @questioner @crud', () => {
     // Try to save without name
     await templatesPage.saveButton.click();
 
-    // Should either show validation error or not create the template
-    await page.waitForTimeout(1000);
-
-    // Test passes if page doesn't crash
-    expect(true).toBe(true);
+    // Should either show validation error or button remains enabled (no navigation away)
+    // Web-first assertion: page should stay on quiz-templates
+    await expect(page).toHaveURL(/quiz-templates/);
   });
 
   test('should handle special characters in template name', async () => {

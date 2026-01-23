@@ -96,12 +96,7 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
     const quizActivePage = new QuizActivePage(page);
     await quizActivePage.goto();
 
-    // The active template should be displayed
-    // Note: This depends on the template having questions
-    // Since we created a basic template, it might show "no questions"
-    await page.waitForTimeout(2000);
-
-    // Verify we're on the quiz active page
+    // Verify we're on the quiz active page (web-first assertion auto-retries)
     await expect(page).toHaveURL(/quiz-active/);
   });
 });

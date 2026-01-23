@@ -69,12 +69,11 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
     const modal = templatesPage.getEditModal();
     await expect(modal).toBeVisible({ timeout: 5000 });
 
-    // Close modal - use cancel button within the modal
+    // Close modal - scroll cancel button into view first (modal content may exceed viewport)
     const cancelButton = modal.getByRole('button', { name: /cancel/i }).first();
-    if (await cancelButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await cancelButton.click();
-      await templatesPage.waitForModalToClose();
-    }
+    await cancelButton.scrollIntoViewIfNeeded();
+    await cancelButton.click();
+    await templatesPage.waitForModalToClose();
   });
 
   test('should update template name', async () => {
@@ -92,10 +91,10 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
     await modalNameInput.clear();
     await modalNameInput.fill(newName);
 
-    // Save
+    // Save - scroll button into view first (modal content may exceed viewport)
     const saveButton = modal.getByRole('button', { name: /save|update/i }).first();
-    await saveButton.click({ force: true });
-    await templatesPage.waitForLoading();
+    await saveButton.scrollIntoViewIfNeeded();
+    await saveButton.click();
     await templatesPage.waitForModalToClose();
 
     // Verify new name appears
@@ -117,9 +116,10 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
     await modalNameInput.clear();
     await modalNameInput.fill('Should Not Save');
 
-    // Cancel
+    // Cancel - scroll button into view first (modal content may exceed viewport)
     const cancelButton = modal.getByRole('button', { name: /cancel/i }).first();
-    await cancelButton.click({ force: true });
+    await cancelButton.scrollIntoViewIfNeeded();
+    await cancelButton.click();
     await templatesPage.waitForModalToClose();
 
     // Original name should still be in list
