@@ -166,6 +166,29 @@ export default defineConfig({
       use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup', 'multi-tenant-setup'],
     },
+
+    // Online Menus batch (requires multi-tenant setup)
+    {
+      name: 'online-menus-chromium',
+      workers: 1,
+      testMatch: /online-menus\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
+    {
+      name: 'online-menus-mobile',
+      workers: 1,
+      testMatch: /online-menus\/.*\.spec\.ts/,
+      use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
+    {
+      name: 'online-menus-firefox',
+      workers: 1,
+      testMatch: /online-menus\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
   ],
 
   // Web server configuration - starts the client app if not running

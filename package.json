@@ -38,6 +38,12 @@
     "test:questioner:quiz:mobile": "playwright test tests/questioner/quiz-active tests/questioner/quiz-answers --project=questioner-mobile",
     "test:questioner:quiz:firefox": "playwright test tests/questioner/quiz-active tests/questioner/quiz-answers --project=questioner-firefox",
 
+    "test:online-menus": "playwright test tests/online-menus --project=online-menus-chromium --project=online-menus-mobile --project=online-menus-firefox",
+    "test:online-menus:chromium": "playwright test tests/online-menus --project=online-menus-chromium",
+    "test:online-menus:chromium:headed": "playwright test --headed tests/online-menus --project=online-menus-chromium",
+    "test:online-menus:mobile": "playwright test tests/online-menus --project=online-menus-mobile",
+    "test:online-menus:firefox": "playwright test tests/online-menus --project=online-menus-firefox",
+
     "test:smoke": "playwright test tests/smoke --project=smoke-chromium --project=smoke-mobile --project=smoke-firefox",
     "docker:up": "docker compose -f ../docker-compose.e2e.yml up -d --build",
     "docker:down": "docker compose -f ../docker-compose.e2e.yml down",

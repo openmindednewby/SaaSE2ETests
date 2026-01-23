@@ -50,9 +50,16 @@ test.describe.serial('Token Session Tests @identity @auth', () => {
     context = await browser.newContext();
     page = await context.newPage();
 
+    // Clear any stale state
+    await page.context().clearCookies();
+
     // Login once for all tests in this suite
     const loginPage = new LoginPage(page);
     await loginPage.goto();
+
+    // Wait for login form with increased timeout for app hydration
+    await expect(loginPage.usernameInput).toBeVisible({ timeout: 15000 });
+
     await loginPage.loginAndWait(username, password);
   });
 

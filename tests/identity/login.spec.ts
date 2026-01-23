@@ -8,17 +8,22 @@ test.describe('Login Flow @identity @auth', () => {
     loginPage = new LoginPage(page);
     // Clear any existing auth state for login tests
     await page.context().clearCookies();
-    // Navigate directly to login page and clear storage there
-    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+    // Clear storage BEFORE navigating to avoid race conditions
     await page.evaluate(() => {
       sessionStorage.clear();
       localStorage.clear();
+    }).catch(() => {
+      // Ignore if page context not ready
     });
+    // Navigate to login page and wait for the app to load
+    // The login page already clears auth state on mount
+    await loginPage.goto();
+    // Wait for the login form to be ready
+    await expect(loginPage.usernameInput).toBeVisible({ timeout: 15000 });
   });
 
   test('should display login form elements', async ({ page }) => {
-    // Already navigated in beforeEach, just wait for elements
-    await expect(loginPage.usernameInput).toBeVisible();
+    // usernameInput already verified in beforeEach, check the rest
     await expect(loginPage.passwordInput).toBeVisible();
     await expect(loginPage.loginButton).toBeVisible();
   });

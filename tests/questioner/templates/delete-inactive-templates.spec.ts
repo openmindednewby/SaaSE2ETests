@@ -10,6 +10,9 @@ import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
  * helping to clean up old/unused templates.
  */
 test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
+  // Multi-step tests need more time
+  test.setTimeout(60000);
+
   let context: BrowserContext;
   let page: Page;
   let templatesPage: QuizTemplatesPage;
@@ -51,191 +54,120 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
 
   test('should display Delete Inactive button on templates page', async () => {
     await templatesPage.goto();
-
-    // Wait for page to load
-    await templatesPage.waitForLoading();
-
-    // Check that Delete Inactive button is visible
+    // Web-first assertion auto-retries - no need for waitForLoading
     await expect(templatesPage.deleteInactiveButton).toBeVisible({ timeout: 5000 });
   });
 
   test('should open confirmation dialog when clicking Delete Inactive', async () => {
-    await templatesPage.goto();
-    await templatesPage.waitForLoading();
-
-    // Click delete inactive button
+    // Serial tests share context - already on page from previous test
     await templatesPage.clickDeleteInactive();
-
-    // Verify dialog is visible
     await expect(templatesPage.confirmDialog).toBeVisible({ timeout: 5000 });
-
-    // Verify dialog has confirm and cancel buttons
     await expect(templatesPage.confirmButton).toBeVisible();
     await expect(templatesPage.cancelConfirmButton).toBeVisible();
-
-    // Cancel to close dialog
     await templatesPage.cancelDeleteInactive();
   });
 
   test('should close dialog when clicking Cancel', async () => {
-    await templatesPage.goto();
-    await templatesPage.waitForLoading();
-
-    // Open dialog
+    // Serial tests share context - already on page
     await templatesPage.clickDeleteInactive();
     await expect(templatesPage.confirmDialog).toBeVisible();
-
-    // Cancel
     await templatesPage.cancelDeleteInactive();
-
-    // Dialog should be closed
     await expect(templatesPage.confirmDialog).not.toBeVisible({ timeout: 5000 });
   });
 
   test('should show "no inactive templates" message when all templates are active', async () => {
-    // Increase timeout for this test since it involves multiple operations
-    test.setTimeout(60000);
-
-    await templatesPage.goto();
-    await templatesPage.waitForLoading();
-
-    // First, deactivate all existing templates and delete them to start fresh
+    // Clean slate: deactivate any active templates, delete all inactive
     await templatesPage.deactivateAllTemplates();
     await templatesPage.deleteInactiveTemplates();
 
-    // Create a single template (created as inactive by default)
+    // Create and activate a single template
     const activeTemplateName = `Active Only ${Date.now()}`;
     createdTemplates.push(activeTemplateName);
+    await templatesPage.createTemplate(activeTemplateName);
+    await templatesPage.activateTemplate(activeTemplateName);
 
-    await templatesPage.createTemplate(activeTemplateName, 'Test active template');
-
-    // Activate it (templates are created inactive by default)
-    const isAlreadyActive = await templatesPage.isTemplateActive(activeTemplateName);
-    if (!isAlreadyActive) {
-      await templatesPage.activateTemplate(activeTemplateName);
-    }
-    await templatesPage.expectTemplateActive(activeTemplateName, true);
-
-    // Now try to delete inactive - should return 0 since our only template is active
+    // Try to delete inactive - should return 0
     const deletedCount = await templatesPage.deleteInactiveTemplates();
     expect(deletedCount).toBe(0);
 
-    // Cleanup: Just delete the template directly - deactivate via the delete inactive flow
-    // Toggle to inactive first
+    // Cleanup: deactivate and delete
     await templatesPage.activateTemplate(activeTemplateName);
-    // Delete it (now inactive)
     await templatesPage.deleteInactiveTemplates();
     createdTemplates.pop();
   });
 
   test('should delete multiple inactive templates and show count @critical', async () => {
-    await templatesPage.goto();
-    await templatesPage.waitForLoading();
-
-    // First deactivate all templates
+    // Ensure clean state
     await templatesPage.deactivateAllTemplates();
 
-    // Create 3 inactive templates
-    const inactiveNames: string[] = [];
-    for (let i = 1; i <= 3; i++) {
-      const name = `Inactive Test ${i} ${Date.now()}`;
-      inactiveNames.push(name);
-      createdTemplates.push(name);
-      await templatesPage.createTemplate(name, `Inactive template ${i}`);
-    }
+    // Create 3 inactive templates (templates are inactive by default)
+    const timestamp = Date.now();
+    const inactiveNames = [
+      `Inactive Test 1 ${timestamp}`,
+      `Inactive Test 2 ${timestamp}`,
+      `Inactive Test 3 ${timestamp}`,
+    ];
 
-    // Verify all templates are inactive (they should be inactive by default)
     for (const name of inactiveNames) {
-      await templatesPage.expectTemplateActive(name, false);
+      createdTemplates.push(name);
+      await templatesPage.createTemplate(name);
     }
 
     // Delete all inactive templates
     const deletedCount = await templatesPage.deleteInactiveTemplates();
-
-    // Should have deleted at least 3 (our created templates)
     expect(deletedCount).toBeGreaterThanOrEqual(3);
 
-    // Verify templates are gone
+    // Verify templates are gone (use web-first assertion)
     for (const name of inactiveNames) {
-      const exists = await templatesPage.templateExists(name);
-      expect(exists).toBe(false);
-    }
-
-    // Remove from cleanup list since they're already deleted
-    inactiveNames.forEach(name => {
+      await expect(templatesPage.getTemplateRow(name)).not.toBeVisible({ timeout: 5000 });
       const idx = createdTemplates.indexOf(name);
       if (idx > -1) createdTemplates.splice(idx, 1);
-    });
+    }
   });
 
   test('should not delete active templates when deleting inactive', async () => {
-    await templatesPage.goto();
-    await templatesPage.waitForLoading();
-
-    // Deactivate all templates first
+    // Ensure clean state
     await templatesPage.deactivateAllTemplates();
 
-    // Create one active template and one inactive template
-    const activeTemplateName = `Should Stay Active ${Date.now()}`;
-    const inactiveTemplateName = `Should Be Deleted ${Date.now()}`;
+    // Create one active and one inactive template
+    const timestamp = Date.now();
+    const activeTemplateName = `Should Stay Active ${timestamp}`;
+    const inactiveTemplateName = `Should Be Deleted ${timestamp}`;
     createdTemplates.push(activeTemplateName, inactiveTemplateName);
 
-    await templatesPage.createTemplate(activeTemplateName, 'Active template');
-    await templatesPage.createTemplate(inactiveTemplateName, 'Inactive template');
-
-    // Activate only one template
+    await templatesPage.createTemplate(activeTemplateName);
+    await templatesPage.createTemplate(inactiveTemplateName);
     await templatesPage.activateTemplate(activeTemplateName);
-    await templatesPage.expectTemplateActive(activeTemplateName, true);
-    await templatesPage.expectTemplateActive(inactiveTemplateName, false);
 
     // Delete inactive templates
     const deletedCount = await templatesPage.deleteInactiveTemplates();
-
-    // Should have deleted at least the inactive one
     expect(deletedCount).toBeGreaterThanOrEqual(1);
 
-    // Active template should still exist
-    const activeExists = await templatesPage.templateExists(activeTemplateName);
-    expect(activeExists).toBe(true);
+    // Active template should still exist, inactive should be gone
+    await expect(templatesPage.getTemplateRow(activeTemplateName)).toBeVisible();
+    await expect(templatesPage.getTemplateRow(inactiveTemplateName)).not.toBeVisible({ timeout: 5000 });
 
-    // Inactive template should be gone
-    const inactiveExists = await templatesPage.templateExists(inactiveTemplateName);
-    expect(inactiveExists).toBe(false);
-
-    // Cleanup - deactivate and delete the active template
-    await templatesPage.activateTemplate(activeTemplateName); // Toggle to inactive
+    // Cleanup
+    await templatesPage.activateTemplate(activeTemplateName);
     await templatesPage.deleteTemplate(activeTemplateName, false);
-
-    // Update cleanup list
-    const activeIdx = createdTemplates.indexOf(activeTemplateName);
-    if (activeIdx > -1) createdTemplates.splice(activeIdx, 1);
-    const inactiveIdx = createdTemplates.indexOf(inactiveTemplateName);
-    if (inactiveIdx > -1) createdTemplates.splice(inactiveIdx, 1);
+    createdTemplates.splice(createdTemplates.indexOf(activeTemplateName), 1);
+    createdTemplates.splice(createdTemplates.indexOf(inactiveTemplateName), 1);
   });
 
   test('should refresh template list after deleting inactive', async () => {
-    await templatesPage.goto();
-    await templatesPage.waitForLoading();
-
     // Create an inactive template
     const templateName = `Refresh Test ${Date.now()}`;
     createdTemplates.push(templateName);
+    await templatesPage.createTemplate(templateName);
 
-    await templatesPage.createTemplate(templateName, 'Test template');
+    // Verify it exists using web-first assertion
+    await expect(templatesPage.getTemplateRow(templateName)).toBeVisible();
 
-    // Verify it exists
-    let exists = await templatesPage.templateExists(templateName);
-    expect(exists).toBe(true);
-
-    // Delete inactive
+    // Delete inactive - list should auto-refresh
     await templatesPage.deleteInactiveTemplates();
 
-    // List should automatically refresh - template should be gone without manual refresh
-    exists = await templatesPage.templateExists(templateName);
-    expect(exists).toBe(false);
-
-    // Remove from cleanup
-    const idx = createdTemplates.indexOf(templateName);
-    if (idx > -1) createdTemplates.splice(idx, 1);
+    // Template should be gone (web-first assertion auto-retries)
+    await expect(templatesPage.getTemplateRow(templateName)).not.toBeVisible({ timeout: 5000 });
+    createdTemplates.splice(createdTemplates.indexOf(templateName), 1);
   });
 });

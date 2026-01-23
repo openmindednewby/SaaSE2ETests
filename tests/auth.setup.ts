@@ -31,29 +31,19 @@ setup('authenticate', async ({ page, baseURL }) => {
     }
   }
 
-  // Check if frontend is available
-  try {
-    const response = await page.goto(baseURL || 'http://localhost:8082', {
-      waitUntil: 'domcontentloaded',
-      timeout: 10000,
-    });
-
-    if (!response) {
-      setup.skip(true, `Frontend not available at ${baseURL}`);
-      return;
-    }
-  } catch (error: any) {
-    setup.skip(true, `Frontend not available: ${error.message}`);
-    return;
-  }
-
+  // Check if frontend is available by navigating to the login page
   const loginPage = new LoginPage(page);
 
   try {
+    // Clear any stale auth state first
+    await page.context().clearCookies();
+
+    // Navigate directly to login page
     await loginPage.goto();
 
-    // Wait for the login form to be ready
-    await expect(loginPage.usernameInput).toBeVisible({ timeout: 10000 });
+    // Wait for the login form to be ready with increased timeout
+    // This gives React time to hydrate and render
+    await expect(loginPage.usernameInput).toBeVisible({ timeout: 15000 });
 
     await loginPage.loginAndWait(username, password);
 

@@ -109,11 +109,29 @@ async function globalSetup(config: FullConfig) {
     // Navigate to the app
     await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-    // Set tokens in localStorage (matching AuthProvider storage pattern)
+    // Set tokens in storage matching the app's Redux persist pattern
+    // The app stores auth state in sessionStorage under 'persist:auth' key
     await page.evaluate((tokenData) => {
-      // Store tokens as the app expects
+      // Create the auth state object matching Redux persist format
+      const authState = {
+        accessToken: tokenData.accessToken || null,
+        refreshToken: tokenData.refreshToken || null,
+        isLoggedIn: Boolean(tokenData.accessToken),
+        user: tokenData.userInfo || null,
+        userInfo: tokenData.userInfo || null,
+        loading: false,
+        refreshingUserInfo: false,
+      };
+
+      // Store in sessionStorage as persist:auth (primary auth storage)
+      sessionStorage.setItem('persist:auth', JSON.stringify(authState));
+
+      // Also store individual tokens for backwards compatibility
       sessionStorage.setItem('accessToken', tokenData.accessToken || '');
       sessionStorage.setItem('refreshToken', tokenData.refreshToken || '');
+
+      // Copy to localStorage for Playwright persistence across tests
+      localStorage.setItem('persist:auth', JSON.stringify(authState));
       if (tokenData.userInfo) {
         localStorage.setItem('userProfile', JSON.stringify(tokenData.userInfo));
       }
