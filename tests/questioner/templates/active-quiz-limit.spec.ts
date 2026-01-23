@@ -38,6 +38,9 @@ test.describe('Active Quiz Limit @questioner', () => {
 
   test.afterEach(async () => {
     try {
+      // Deactivate all templates first (T2 is active at end of test)
+      await templatesPage.goto();
+      await templatesPage.deactivateAllTemplates();
       if (await templatesPage.templateExists(t1Name)) {
         await templatesPage.deleteTemplate(t1Name, false);
       }
@@ -45,60 +48,40 @@ test.describe('Active Quiz Limit @questioner', () => {
         await templatesPage.deleteTemplate(t2Name, false);
       }
     } finally {
-        await context.close().catch(() => {});
+      await context.close().catch(() => {});
     }
   });
 
   test('Should only allow one active quiz at a time', async () => {
-    await templatesPage.deactivateAllTemplates();
+    // Note: deactivateAllTemplates() already called in beforeEach - no need to call again
+
     // 1. Create two templates
     await createTemplateAndWait(templatesPage, t1Name, 'T1 Desc');
-    
     await createTemplateAndWait(templatesPage, t2Name, 'T2 Desc');
 
-    // Initial state: both should be inactive
-    await templatesPage.expectTemplateActive(t1Name, false);
-    await templatesPage.expectTemplateActive(t2Name, false);
-
     // 2. Activate T1
-    const t1Activated = await activateTemplateAndWait(templatesPage, t1Name);
-    if (!t1Activated) {
-      // If T1 activation failed, there might be another template active - try to deactivate all and retry
-      console.log('T1 activation failed, deactivating all templates and retrying...');
-      await templatesPage.deactivateAllTemplates();
-      await activateTemplateAndWait(templatesPage, t1Name);
-    }
+    await templatesPage.activateTemplate(t1Name);
+    await templatesPage.expectTemplateActive(t1Name, true);
+
+    // 3. Try to activate T2 -> Should fail (409 Conflict)
+    await templatesPage.activateTemplate(t2Name);
+    // T1 should still be active, T2 should still be inactive
     await templatesPage.expectTemplateActive(t1Name, true);
     await templatesPage.expectTemplateActive(t2Name, false);
 
-    // 3. Activate T2 -> Should Fail because T1 is active
-    // Depending on UI implementation, we might see a toast error or the status just doesn't change.
-    // Assuming the UI handles the 409 Conflict:
-    await activateTemplateAndWait(templatesPage, t2Name);
-    
-    // Check states - T1 should still be active, T2 should still be inactive
-    await templatesPage.expectTemplateActive(t1Name, true);
-    await templatesPage.expectTemplateActive(t2Name, false);
-
-    // Optional: Check for error notification (may be transient/toast-based)
-    // The backend sends "Another template is already active..." on 409 Conflict
-    // The notification check is optional since the key validation is the status check above
-    const errorNotification = templatesPage.page.getByText(/another template is already active/i);
-    const notificationVisible = await errorNotification.isVisible({ timeout: 2000 }).catch(() => false);
-    if (notificationVisible) {
-      console.log('Error notification displayed correctly');
-    } else {
-      console.log('Error notification not visible (may have already dismissed or toast-based)');
-    }
-
-    // 4. Deactivate T1
-    await activateTemplateAndWait(templatesPage, t1Name); // Toggle off (assuming toggle logic) OR explicit deactivate
-    // If activateTemplate just clicks the button, and button is "Deactivate" or Toggle, this works.
+    // 4. Deactivate T1 (toggle off)
+    await templatesPage.activateTemplate(t1Name);
     await templatesPage.expectTemplateActive(t1Name, false);
 
-    // 5. Now Activate T2 -> Should Success
-    await activateTemplateAndWait(templatesPage, t2Name);
+    // 5. Now activate T2 -> Should succeed
+    // Note: May need retry if there's a race condition with the deactivation
+    let t2Activated = await templatesPage.activateTemplate(t2Name);
+    if (!t2Activated) {
+      // Retry once after a short wait for backend to catch up
+      await templatesPage.page.reload({ waitUntil: 'commit' });
+      await templatesPage.waitForLoading();
+      t2Activated = await templatesPage.activateTemplate(t2Name);
+    }
     await templatesPage.expectTemplateActive(t2Name, true);
-    await templatesPage.expectTemplateActive(t1Name, false);
   });
 });

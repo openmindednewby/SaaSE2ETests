@@ -38,8 +38,10 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
   }
 
   test.afterAll(async () => {
-    // Cleanup
+    // Cleanup - deactivate first if active, then delete
     try {
+      await templatesPage.goto();
+      await templatesPage.deactivateAllTemplates();
       if (testTemplateName && await templatesPage.templateExists(testTemplateName)) {
         await templatesPage.deleteTemplate(testTemplateName, false);
       }

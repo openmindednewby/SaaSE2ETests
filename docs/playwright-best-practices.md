@@ -405,8 +405,9 @@ test('should create template', async () => {
 |-----------|-----------------|
 | Simple UI check | < 500ms |
 | Form submission | < 800ms |
-| CRUD operation | < 1s |
+| CRUD operation | < 1.5s |
 | Multi-step flow | < 2s |
+| Complex integration | < 5s |
 
 ### Optimization Checklist
 
@@ -417,6 +418,9 @@ test('should create template', async () => {
 - [ ] No `.or()` locator chains
 - [ ] Wait for specific conditions, not arbitrary time
 - [ ] Run independent setup steps in parallel with `Promise.all`
+- [ ] Remove redundant `waitForLoading()` calls (React Query auto-invalidates)
+- [ ] Skip `goto()` in serial tests when already on the page
+- [ ] Remove duplicate setup calls (e.g., `deactivateAllTemplates()` in beforeEach AND test)
 
 ### Parallel Operations
 
@@ -432,6 +436,104 @@ await Promise.all([
 await expect(page.locator('[data-testid="header"]')).toBeVisible();
 await expect(page.locator('[data-testid="sidebar"]')).toBeVisible();
 await expect(page.locator('[data-testid="content"]')).toBeVisible();
+```
+
+### React Query Cache Invalidation
+
+When using React Query, the cache is automatically invalidated after mutations. This means:
+
+```typescript
+// GOOD - React Query auto-invalidates after POST
+await saveButton.click();
+await page.waitForResponse(r => r.url().includes('/api') && r.request().method() === 'POST');
+await waitForLoading(); // Just wait for loading indicator to clear
+// List is already updated - no need to wait for GET
+
+// BAD - Redundant GET wait after mutation
+await saveButton.click();
+await page.waitForResponse(r => r.request().method() === 'POST');
+await page.waitForResponse(r => r.request().method() === 'GET'); // Unnecessary!
+await waitForLoading();
+```
+
+---
+
+## UI Testing Philosophy
+
+### Always Test Through the UI
+
+E2E tests must exercise the actual user interface. **Never bypass the UI to call APIs directly** for test setup or assertions.
+
+```typescript
+// GOOD - Test creates data through the UI
+await templatesPage.createTemplate('My Template');
+await templatesPage.expectTemplateInList('My Template');
+
+// BAD - Test calls API directly (doesn't test the UI)
+await fetch('/api/templates', { method: 'POST', body: JSON.stringify({...}) });
+await templatesPage.expectTemplateInList('My Template');
+```
+
+### Why UI Testing Matters
+
+1. **Tests what users see** - Catches UI bugs that API tests miss
+2. **Validates the full stack** - Frontend, API, database working together
+3. **Catches integration issues** - Form validation, state management, routing
+4. **Tests accessibility** - Ensures elements are reachable and interactable
+
+### Optimizing Multi-Step UI Tests
+
+When tests require multiple setup steps, optimize the UI flow rather than bypassing it:
+
+```typescript
+// GOOD - Streamlined UI flow
+test('should only allow one active quiz', async () => {
+  // Setup via UI (but optimized - no redundant waits)
+  await templatesPage.createTemplate(name1);
+  await templatesPage.createTemplate(name2);
+
+  // Test the actual behavior
+  await templatesPage.activateTemplate(name1);
+  await templatesPage.activateTemplate(name2); // Should fail
+  await templatesPage.expectTemplateActive(name1, true);
+  await templatesPage.expectTemplateActive(name2, false);
+});
+
+// BAD - Bypassing UI for "speed"
+test('should only allow one active quiz', async () => {
+  // API setup (skips UI testing!)
+  await api.createTemplate(name1);
+  await api.createTemplate(name2);
+  await api.activateTemplate(name1);
+
+  // Only tests this one button click
+  await templatesPage.activateTemplate(name2);
+});
+```
+
+### Serial Tests Optimization
+
+For `test.describe.serial` test suites, tests share context. Avoid redundant navigation:
+
+```typescript
+test.describe.serial('Template CRUD', () => {
+  test('should create template', async () => {
+    await templatesPage.goto(); // First test navigates
+    await templatesPage.createTemplate('Test');
+    await templatesPage.expectTemplateInList('Test');
+  });
+
+  test('should edit template', async () => {
+    // Already on the page from previous test - skip goto()
+    await templatesPage.editTemplate('Test');
+    // ...
+  });
+
+  test('should delete template', async () => {
+    // Still on the page - skip goto()
+    await templatesPage.deleteTemplate('Test');
+  });
+});
 ```
 
 ---

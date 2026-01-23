@@ -58,32 +58,17 @@ export class QuizTemplatesPage extends BasePage {
   }
 
   /**
-   * Create a new template
+   * Create a new template (optimized - no redundant waits)
    */
   async createTemplate(name: string, description: string = '') {
-    await this.waitForLoading();
-    
-    // Ensure form is visible
+    // Ensure form is visible (locator auto-retries, no need for waitForLoading)
     await this.templateNameInput.waitFor({ state: 'visible', timeout: 5000 });
 
-    // Clear and fill name
-    await this.templateNameInput.fill('');
+    // Fill name (fill() clears first, no need for separate clear)
     await this.templateNameInput.fill(name);
-    
-    if (description) {
-      await this.templateDescriptionInput.fill('');
-      await this.templateDescriptionInput.fill(description);
-    }
 
-    // Ensure button is clickable
-    await this.saveButton.waitFor({ state: 'visible' });
-    const isDisabled = await this.saveButton.isDisabled();
-    if (isDisabled) {
-      console.error('Save button is disabled. Form validation might have failed.');
-      // Try to focus name input to trigger validation
-      await this.templateNameInput.focus();
-      // Wait for button to become enabled instead of arbitrary timeout
-      await expect(this.saveButton).toBeEnabled({ timeout: 2000 }).catch(() => {});
+    if (description) {
+      await this.templateDescriptionInput.fill(description);
     }
 
     // Click Save button and wait for API response
@@ -105,13 +90,8 @@ export class QuizTemplatesPage extends BasePage {
       console.warn('No POST /questionerTemplates API call detected for template creation');
     }
 
+    // React Query auto-invalidates - just wait for loading indicator to clear
     await this.waitForLoading();
-
-    // Wait for the list to refetch (the GET call after create)
-    await this.page.waitForResponse(
-      response => response.url().includes('/questionerTemplates') && response.request().method() === 'GET',
-      { timeout: 10000 }
-    ).catch(() => null);
   }
 
   /**
@@ -284,7 +264,7 @@ export class QuizTemplatesPage extends BasePage {
   }
 
   /**
-   * Click activate button for a template
+   * Click activate button for a template (optimized - no redundant waits)
    */
   async activateTemplate(name: string) {
     const row = this.getTemplateRow(name);
@@ -296,9 +276,7 @@ export class QuizTemplatesPage extends BasePage {
     const wasActive = statusBefore.toLowerCase().includes('enabled') || statusBefore.toLowerCase().includes('active');
     console.log(`Template "${name}" status before: "${statusBefore}" (wasActive: ${wasActive})`);
 
-    // Set up response listener for activate API call
     // Set up response listener (could be Activate (PUT) or Deactivate (PUT/DELETE))
-    // We broaden the match so we don't miss different endpoints
     const apiPromise = this.page.waitForResponse(
       response => response.url().includes('/questionerTemplates') && (response.request().method() === 'PUT' || response.request().method() === 'DELETE'),
       { timeout: 15000 }
@@ -328,7 +306,6 @@ export class QuizTemplatesPage extends BasePage {
       } else {
         const responseBody = await response.text().catch(() => '');
         console.warn(`Template activation API returned status ${response.status()}: ${responseBody}`);
-        // 409 means another template is active - this is an expected business error
         if (response.status() === 409) {
           console.log('409 Conflict: Another template is already active');
         }
@@ -337,31 +314,18 @@ export class QuizTemplatesPage extends BasePage {
       console.warn('No PUT /questionerTemplates API call detected');
     }
 
+    // React Query auto-invalidates - just wait for loading indicator to clear
     await this.waitForLoading();
 
-    // Wait for the list to refetch
-    await this.page.waitForResponse(
-      response => response.url().includes('/questionerTemplates') && response.request().method() === 'GET',
-      { timeout: 10000 }
-    ).catch(() => null);
-
-    // Wait for status to change using web-first assertion with retry
-    const expectedStatus = wasActive ? /inactive|disabled/i : /active|enabled/i;
-    try {
-      await expect(statusLabel).toHaveText(expectedStatus, { timeout: 5000 });
-    } catch {
-      // If status didn't change, log and refresh as fallback
-      const statusAfter = (await statusLabel.textContent().catch(() => '')) || '';
-      console.log(`Template "${name}" status after: "${statusAfter}" (expected change from wasActive=${wasActive})`);
-
-      if (apiSuccess) {
-        console.log('Status did not change after API success, refreshing page...');
-        await this.page.reload({ waitUntil: 'commit' });
-        await this.waitForLoading();
-      }
+    // Wait for status to change using web-first assertion (auto-retries for 5s)
+    if (apiSuccess) {
+      const expectedStatus = wasActive ? /inactive|disabled/i : /active|enabled/i;
+      await expect(statusLabel).toHaveText(expectedStatus, { timeout: 5000 }).catch(() => {
+        const statusAfter = statusLabel.textContent().catch(() => '');
+        console.log(`Template "${name}" status after: "${statusAfter}" (expected change from wasActive=${wasActive})`);
+      });
     }
 
-    // Return whether the activation was successful (API returned 2xx)
     return apiSuccess;
   }
 
@@ -497,18 +461,17 @@ export class QuizTemplatesPage extends BasePage {
   }
 
   /**
-   * Deactivate any templates that are currently marked as active/enabled.
+   * Deactivate any templates that are currently marked as active/enabled (optimized).
    * Useful when a test needs to start from a clean state with no active quizzes.
    */
   async deactivateAllTemplates() {
+    // Reload to ensure we see current server state (not stale cache)
+    await this.page.reload({ waitUntil: 'commit' });
     await this.waitForLoading();
-
-    // Refresh the page first to ensure we have the latest state
-    await this.refetchTemplatesList();
 
     const statusSelector = testIdSelector(TestIds.STATUS_LABEL);
     let attempts = 0;
-    const maxAttempts = 10;
+    const maxAttempts = 5;
 
     while (attempts < maxAttempts) {
       attempts++;
@@ -537,13 +500,14 @@ export class QuizTemplatesPage extends BasePage {
       const activateButton = row.getByRole('button', { name: /activate|deactivate/i }).first();
       const activateFallback = row.locator('text=/activate|🔁|⚡/i').first();
 
-      if (await activateButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await activateButton.isVisible({ timeout: 1000 }).catch(() => false)) {
         await activateButton.click({ force: true });
-      } else if (await activateFallback.isVisible({ timeout: 2000 }).catch(() => false)) {
+      } else if (await activateFallback.isVisible({ timeout: 1000 }).catch(() => false)) {
         await activateFallback.click({ force: true });
       } else {
-        console.warn('Active template detected but activation button is not visible, refetching list...');
-        await this.refetchTemplatesList();
+        console.warn('Active template detected but activation button is not visible, refreshing...');
+        await this.page.reload({ waitUntil: 'commit' });
+        await this.waitForLoading();
         continue;
       }
 
@@ -552,13 +516,13 @@ export class QuizTemplatesPage extends BasePage {
       if (response?.ok()) {
         console.log(`Deactivated template: ${templateName}`);
       } else if (response?.status() === 404) {
-        console.warn(`Deactivation returned 404 for "${templateName}" - refetching list (stale UI?)`);
+        console.warn(`Deactivation returned 404 for "${templateName}"`);
       } else {
         console.warn(`Failed to deactivate template: ${templateName}, status: ${response?.status()}`);
       }
 
+      // Just wait for loading - React Query auto-invalidates
       await this.waitForLoading();
-      await this.refetchTemplatesList();
     }
 
     if (attempts >= maxAttempts) {
