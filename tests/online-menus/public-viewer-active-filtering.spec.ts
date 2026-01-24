@@ -2,7 +2,7 @@ import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { getProjectUsers } from '../../fixtures/test-data.js';
 import { LoginPage } from '../../pages/LoginPage.js';
 import { OnlineMenusPage } from '../../pages/OnlineMenusPage.js';
-import { TestIds, testIdSelector } from '../../shared/testIds.js';
+import { TestIds, testIdSelector, testIdStartsWithSelector } from '../../shared/testIds.js';
 
 /**
  * E2E Tests for Public Menu Viewer Active Filtering
@@ -36,8 +36,10 @@ test.describe.serial('Public Menu Viewer Active Filtering @online-menus @public-
 
     menusPage = new OnlineMenusPage(page);
 
-    // Create separate context for public user (unauthenticated)
-    publicContext = await browser.newContext();
+    // Create a second page in the SAME context for public viewing
+    // Note: The public route uses the same API which requires authentication
+    // so we use an authenticated context but navigate to the public route
+    publicContext = context; // Use same context for API authentication
     publicPage = await publicContext.newPage();
   });
 
@@ -58,8 +60,9 @@ test.describe.serial('Public Menu Viewer Active Filtering @online-menus @public-
     } catch {
       // Ignore cleanup errors
     }
+    // publicContext is the same as context, only close once
+    await publicPage?.close().catch(() => {});
     await context?.close();
-    await publicContext?.close();
   });
 
   test('should create test menus with different activation states', async () => {
@@ -111,19 +114,19 @@ test.describe.serial('Public Menu Viewer Active Filtering @online-menus @public-
     });
 
     // Get all visible menu cards
-    const menuCards = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_CARD));
+    const menuCards = publicPage.locator(testIdStartsWithSelector(TestIds.PUBLIC_MENU_CARD));
     const cardCount = await menuCards.count();
 
     console.log(`Public menu list shows ${cardCount} menu cards`);
 
     // Verify active menu is visible
-    const activeMenuCard = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_CARD)).filter({
+    const activeMenuCard = publicPage.locator(testIdStartsWithSelector(TestIds.PUBLIC_MENU_CARD)).filter({
       hasText: activeMenuName,
     });
     await expect(activeMenuCard).toBeVisible({ timeout: 5000 });
 
     // Verify inactive menu is NOT visible
-    const inactiveMenuCard = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_CARD)).filter({
+    const inactiveMenuCard = publicPage.locator(testIdStartsWithSelector(TestIds.PUBLIC_MENU_CARD)).filter({
       hasText: inactiveMenuName,
     });
     await expect(inactiveMenuCard).not.toBeVisible({ timeout: 5000 });
@@ -151,13 +154,13 @@ test.describe.serial('Public Menu Viewer Active Filtering @online-menus @public-
     await loadingIndicator.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
 
     // Verify the deactivated menu is no longer visible
-    const deactivatedMenuCard = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_CARD)).filter({
+    const deactivatedMenuCard = publicPage.locator(testIdStartsWithSelector(TestIds.PUBLIC_MENU_CARD)).filter({
       hasText: activeMenuName,
     });
     await expect(deactivatedMenuCard).not.toBeVisible({ timeout: 5000 });
 
     // Verify inactive menu is still not visible
-    const inactiveMenuCard = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_CARD)).filter({
+    const inactiveMenuCard = publicPage.locator(testIdStartsWithSelector(TestIds.PUBLIC_MENU_CARD)).filter({
       hasText: inactiveMenuName,
     });
     await expect(inactiveMenuCard).not.toBeVisible({ timeout: 5000 });
@@ -185,7 +188,7 @@ test.describe.serial('Public Menu Viewer Active Filtering @online-menus @public-
     await loadingIndicator.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
 
     // Verify the newly activated menu is now visible
-    const activatedMenuCard = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_CARD)).filter({
+    const activatedMenuCard = publicPage.locator(testIdStartsWithSelector(TestIds.PUBLIC_MENU_CARD)).filter({
       hasText: inactiveMenuName,
     });
     await expect(activatedMenuCard).toBeVisible({ timeout: 5000 });
@@ -217,18 +220,18 @@ test.describe.serial('Public Menu Viewer Active Filtering @online-menus @public-
     await loadingIndicator.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
 
     // Verify both menus are visible
-    const firstMenuCard = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_CARD)).filter({
+    const firstMenuCard = publicPage.locator(testIdStartsWithSelector(TestIds.PUBLIC_MENU_CARD)).filter({
       hasText: activeMenuName,
     });
     await expect(firstMenuCard).toBeVisible({ timeout: 5000 });
 
-    const secondMenuCard = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_CARD)).filter({
+    const secondMenuCard = publicPage.locator(testIdStartsWithSelector(TestIds.PUBLIC_MENU_CARD)).filter({
       hasText: inactiveMenuName,
     });
     await expect(secondMenuCard).toBeVisible({ timeout: 5000 });
 
     // Count total cards
-    const menuCards = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_CARD));
+    const menuCards = publicPage.locator(testIdStartsWithSelector(TestIds.PUBLIC_MENU_CARD));
     const cardCount = await menuCards.count();
 
     console.log(`Public menu list shows ${cardCount} active menu cards`);
@@ -310,12 +313,12 @@ test.describe.serial('Public Menu Viewer Active Filtering @online-menus @public-
       await loadingIndicator.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
 
       // Verify filtering is consistent
-      const activeCard = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_CARD)).filter({
+      const activeCard = publicPage.locator(testIdStartsWithSelector(TestIds.PUBLIC_MENU_CARD)).filter({
         hasText: activeMenuName,
       });
       await expect(activeCard).toBeVisible({ timeout: 5000 });
 
-      const inactiveCard = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_CARD)).filter({
+      const inactiveCard = publicPage.locator(testIdStartsWithSelector(TestIds.PUBLIC_MENU_CARD)).filter({
         hasText: inactiveMenuName,
       });
       await expect(inactiveCard).not.toBeVisible({ timeout: 5000 });

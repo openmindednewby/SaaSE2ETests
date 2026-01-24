@@ -60,7 +60,10 @@ export const TestIds = {
   // Online Menu Management
   MENU_LIST: 'menu-list',
   MENU_LIST_CREATE_BUTTON: 'menu-list-create-button',
+  MENU_TAB_ALL: 'menu-tab-all',
+  MENU_TAB_ACTIVE: 'menu-tab-active',
   MENU_CARD: 'menu-card',
+  MENU_CARD_ID: 'menu-card-id',
   MENU_CARD_NAME: 'menu-card-name',
   MENU_CARD_DESCRIPTION: 'menu-card-description',
   MENU_CARD_STATUS_BADGE: 'menu-card-status-badge',
@@ -126,4 +129,9 @@ export type TestId = typeof TestIds[keyof typeof TestIds];
 // Selector helper for Playwright
 export function testIdSelector(testId: TestId): string {
   return `[data-testid="${testId}"]`;
+}
+
+// Selector helper for testIDs with suffixes (e.g., "public-menu-card-abc123")
+export function testIdStartsWithSelector(testId: TestId): string {
+  return `[data-testid^="${testId}"]`;
 }

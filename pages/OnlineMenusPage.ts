@@ -101,11 +101,16 @@ export class OnlineMenusPage extends BasePage {
   }
 
   /**
-   * Get menu card by name
+   * Get menu card by exact name match
+   * Uses regex with ^ and $ anchors to ensure exact match
    */
   getMenuCard(name: string): Locator {
+    // Escape special regex characters in the menu name
+    const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Use regex with anchors for exact match to avoid "Active Menu" matching "Inactive Menu"
+    const exactRegex = new RegExp(`^${escapedName}$`);
     return this.page.locator(testIdSelector(TestIds.MENU_CARD)).filter({
-      has: this.page.locator(testIdSelector(TestIds.MENU_CARD_NAME), { hasText: name }),
+      has: this.page.locator(testIdSelector(TestIds.MENU_CARD_NAME), { hasText: exactRegex }),
     }).first();
   }
 
@@ -433,8 +438,9 @@ export class OnlineMenusPage extends BasePage {
 
     while (attempts < maxAttempts) {
       attempts++;
+      // Use exact match for "Active" to avoid matching "Inactive"
       const activeCards = this.page.locator(testIdSelector(TestIds.MENU_CARD)).filter({
-        has: this.page.locator(statusSelector, { hasText: /active/i })
+        has: this.page.locator(statusSelector, { hasText: /^Active$/i })
       });
 
       const count = await activeCards.count();
