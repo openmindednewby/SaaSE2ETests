@@ -72,6 +72,8 @@ export const TestIds = {
   MENU_CARD_ACTIVATE_BUTTON: 'menu-card-activate-button',
   MENU_CARD_DEACTIVATE_BUTTON: 'menu-card-deactivate-button',
   MENU_CARD_PREVIEW_BUTTON: 'menu-card-preview-button',
+  MENU_CARD_OPEN_EXTERNAL_BUTTON: 'menu-card-open-external-button',
+  MENU_PREVIEW_MODAL: 'menu-preview-modal',
 
   // Menu Editor
   MENU_EDITOR: 'menu-editor',

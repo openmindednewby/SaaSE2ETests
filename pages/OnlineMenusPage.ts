@@ -18,6 +18,9 @@ export class OnlineMenusPage extends BasePage {
   readonly menuEditorSaveButton: Locator;
   readonly menuEditorCancelButton: Locator;
 
+  // Preview Modal
+  readonly previewModal: Locator;
+
   constructor(page: Page) {
     super(page);
     this.pageHeader = page.getByText(/menus/i);
@@ -34,6 +37,9 @@ export class OnlineMenusPage extends BasePage {
     this.menuDescriptionInput = page.locator(testIdSelector(TestIds.MENU_EDITOR_DESCRIPTION_INPUT));
     this.menuEditorSaveButton = page.locator(testIdSelector(TestIds.MENU_EDITOR_SAVE_BUTTON));
     this.menuEditorCancelButton = page.locator(testIdSelector(TestIds.MENU_EDITOR_CANCEL_BUTTON));
+
+    // Preview Modal
+    this.previewModal = page.locator(testIdSelector(TestIds.MENU_PREVIEW_MODAL));
   }
 
   /**
@@ -487,5 +493,126 @@ export class OnlineMenusPage extends BasePage {
     if (attempts >= maxAttempts) {
       console.warn(`deactivateAllMenus: Reached max attempts (${maxAttempts}), some menus may still be active`);
     }
+  }
+
+  /**
+   * Click preview button for a menu to open the preview modal
+   */
+  async openPreview(name: string) {
+    const card = this.getMenuCard(name);
+    await card.scrollIntoViewIfNeeded();
+
+    const previewBtn = card.locator(testIdSelector(TestIds.MENU_CARD_PREVIEW_BUTTON));
+    await previewBtn.click();
+
+    // Wait for preview modal to appear
+    await expect(this.previewModal).toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Close the preview modal
+   */
+  async closePreview() {
+    // Look for close button within the modal (could be X button or Close text)
+    const closeButton = this.previewModal.getByRole('button', { name: /close|cancel|x/i }).first();
+
+    // Check if there's a visible close button
+    if (await closeButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await closeButton.click();
+    } else {
+      // Try clicking outside the modal or pressing Escape
+      await this.page.keyboard.press('Escape');
+    }
+
+    // Wait for modal to disappear
+    await expect(this.previewModal).not.toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Expect the preview modal to be visible
+   */
+  async expectPreviewModalVisible() {
+    await expect(this.previewModal).toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Expect the preview modal to not be visible
+   */
+  async expectPreviewModalNotVisible() {
+    await expect(this.previewModal).not.toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Get the preview button for a menu
+   */
+  getPreviewButton(name: string): Locator {
+    const card = this.getMenuCard(name);
+    return card.locator(testIdSelector(TestIds.MENU_CARD_PREVIEW_BUTTON));
+  }
+
+  /**
+   * Get the open external link button for a menu
+   */
+  getOpenExternalButton(name: string): Locator {
+    const card = this.getMenuCard(name);
+    return card.locator(testIdSelector(TestIds.MENU_CARD_OPEN_EXTERNAL_BUTTON));
+  }
+
+  /**
+   * Check if the open external button is enabled/clickable for a menu
+   */
+  async isOpenExternalButtonEnabled(name: string): Promise<boolean> {
+    const openExternalBtn = this.getOpenExternalButton(name);
+
+    // Check if button exists and is enabled
+    const isEnabled = await openExternalBtn.isEnabled({ timeout: 1000 }).catch(() => false);
+    return isEnabled;
+  }
+
+  /**
+   * Click open external button for a menu and return the new page that opens
+   * Returns the new page/tab if successful, null if it didn't open
+   */
+  async openExternalLink(name: string): Promise<Page | null> {
+    const card = this.getMenuCard(name);
+    await card.scrollIntoViewIfNeeded();
+
+    const openExternalBtn = card.locator(testIdSelector(TestIds.MENU_CARD_OPEN_EXTERNAL_BUTTON));
+
+    // Check if button is enabled
+    const isEnabled = await openExternalBtn.isEnabled({ timeout: 1000 }).catch(() => false);
+    if (!isEnabled) {
+      console.log(`Open external button is disabled for menu "${name}"`);
+      return null;
+    }
+
+    // Listen for new page/tab to open
+    const pagePromise = this.page.context().waitForEvent('page', { timeout: 10000 }).catch(() => null);
+
+    await openExternalBtn.click();
+
+    const newPage = await pagePromise;
+
+    if (newPage) {
+      // Wait for the new page to load
+      await newPage.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => {});
+      console.log(`New tab opened with URL: ${newPage.url()}`);
+    } else {
+      console.warn(`No new tab opened when clicking open external for menu "${name}"`);
+    }
+
+    return newPage;
+  }
+
+  /**
+   * Get the external ID of a menu from its card (if available)
+   */
+  async getMenuExternalId(name: string): Promise<string | null> {
+    const card = this.getMenuCard(name);
+    const idElement = card.locator(testIdSelector(TestIds.MENU_CARD_ID));
+
+    // Try to get the ID from the card
+    const idText = await idElement.textContent({ timeout: 1000 }).catch(() => null);
+    return idText?.trim() || null;
   }
 }
