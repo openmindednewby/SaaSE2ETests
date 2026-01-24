@@ -137,13 +137,17 @@ test.describe.serial('Menu Activation and Deactivation @online-menus @crud', () 
     await menusPage.expectMenuActive(testMenuName, true);
 
     // Cycle through deactivate -> activate -> deactivate
+    // Use refresh after each state change to ensure UI is fully updated
     await menusPage.deactivateMenu(testMenuName);
+    await menusPage.refresh();
     await menusPage.expectMenuActive(testMenuName, false);
 
     await menusPage.activateMenu(testMenuName);
+    await menusPage.refresh();
     await menusPage.expectMenuActive(testMenuName, true);
 
     await menusPage.deactivateMenu(testMenuName);
+    await menusPage.refresh();
     await menusPage.expectMenuActive(testMenuName, false);
   });
 });

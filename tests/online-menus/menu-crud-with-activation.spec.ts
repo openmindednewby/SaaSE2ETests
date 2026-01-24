@@ -121,17 +121,17 @@ test.describe.serial('Menu CRUD with Activation State @online-menus @crud', () =
     // Activate the first one
     await menusPage.activateMenu(activeMenuName);
 
-    // Verify all three menus exist with correct states
+    // Refresh the list to ensure all status badges are current
+    await menusPage.refresh();
+
+    // Verify all three menus exist with correct states using web-first assertions
     await menusPage.expectMenuInList(testMenuName);
     await menusPage.expectMenuInList(activeMenuName);
     await menusPage.expectMenuInList(inactiveMenuName);
 
-    const testMenuActive = await menusPage.isMenuActive(testMenuName);
-    const activeMenuActive = await menusPage.isMenuActive(activeMenuName);
-    const inactiveMenuActive = await menusPage.isMenuActive(inactiveMenuName);
-
-    expect(activeMenuActive).toBe(true);
-    expect(inactiveMenuActive).toBe(false);
+    // Use expectMenuActive which has retry logic, instead of isMenuActive
+    await menusPage.expectMenuActive(activeMenuName, true);
+    await menusPage.expectMenuActive(inactiveMenuName, false);
 
     // Cleanup the extra menus
     await menusPage.deactivateMenu(activeMenuName);

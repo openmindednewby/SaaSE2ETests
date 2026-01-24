@@ -140,85 +140,50 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
   test('should verify categories are sorted by displayOrder in public viewer @critical', async () => {
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
-    // Get the menu card to extract the ID for public viewer URL
-    const card = menusPage.getMenuCard(testMenuName);
-    await card.scrollIntoViewIfNeeded();
+    // Open preview modal to view public menu content
+    await menusPage.openPreview(testMenuName);
 
-    // Navigate to public viewer
-    // We need to get the menu ID first - click preview button if it exists
-    const previewButton = card.locator(testIdSelector(TestIds.MENU_CARD_PREVIEW_BUTTON));
-    const hasPreviewButton = await previewButton.isVisible({ timeout: 2000 }).catch(() => false);
+    // Verify preview modal is visible
+    await expect(menusPage.previewModal).toBeVisible({ timeout: 5000 });
 
-    if (hasPreviewButton) {
-      // Click preview to go to public viewer
-      await previewButton.click();
+    // Verify categories are sorted by displayOrder in the preview
+    const categoryElements = menusPage.previewModal.locator(testIdSelector(TestIds.PUBLIC_MENU_CATEGORY));
+    const categoryCount = await categoryElements.count();
 
-      // Wait for navigation to public viewer
-      await page.waitForURL(/\/public\/menu\/.*/, { timeout: 10000 }).catch(() => {
-        console.log('Navigation to public viewer timed out or failed');
-      });
+    console.log(`Preview modal shows ${categoryCount} categories`);
 
-      // Verify we're on the public viewer page
-      const publicViewer = page.locator(testIdSelector(TestIds.PUBLIC_MENU_VIEWER));
-      const isOnPublicPage = await publicViewer.isVisible({ timeout: 5000 }).catch(() => false);
-
-      if (isOnPublicPage) {
-        // Verify categories are sorted by displayOrder
-        const categoryElements = publicViewer.locator(testIdSelector(TestIds.PUBLIC_MENU_CATEGORY));
-        const categoryCount = await categoryElements.count();
-
-        console.log(`Public viewer shows ${categoryCount} categories`);
-
-        if (categoryCount > 0) {
-          // Categories should be in ascending displayOrder
-          // Implementation uses: sortCategoriesByDisplayOrder(contents.categories)
-          expect(categoryCount).toBeGreaterThan(0);
-        }
-      }
-
-      // Navigate back to menus page
-      await menusPage.goto();
-    } else {
-      console.log('Preview button not found - skipping public viewer test');
+    if (categoryCount > 0) {
+      // Categories should be in ascending displayOrder
+      // Implementation uses: sortCategoriesByDisplayOrder(contents.categories)
+      expect(categoryCount).toBeGreaterThan(0);
     }
+
+    // Close the preview modal
+    await menusPage.closePreview();
   });
 
   test('should verify menu items are sorted by displayOrder in public viewer @critical', async () => {
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
-    // Get the menu card
-    const card = menusPage.getMenuCard(testMenuName);
-    await card.scrollIntoViewIfNeeded();
+    // Open preview modal to view public menu content
+    await menusPage.openPreview(testMenuName);
 
-    // Navigate to public viewer via preview button
-    const previewButton = card.locator(testIdSelector(TestIds.MENU_CARD_PREVIEW_BUTTON));
-    const hasPreviewButton = await previewButton.isVisible({ timeout: 2000 }).catch(() => false);
+    // Verify preview modal is visible
+    await expect(menusPage.previewModal).toBeVisible({ timeout: 5000 });
 
-    if (hasPreviewButton) {
-      await previewButton.click();
-      await page.waitForURL(/\/public\/menu\/.*/, { timeout: 10000 }).catch(() => {});
+    // Verify items are sorted by displayOrder within categories in the preview
+    const itemElements = menusPage.previewModal.locator(testIdSelector(TestIds.PUBLIC_MENU_ITEM));
+    const itemCount = await itemElements.count();
 
-      const publicViewer = page.locator(testIdSelector(TestIds.PUBLIC_MENU_VIEWER));
-      const isOnPublicPage = await publicViewer.isVisible({ timeout: 5000 }).catch(() => false);
+    console.log(`Preview modal shows ${itemCount} menu items`);
 
-      if (isOnPublicPage) {
-        // Verify items are sorted by displayOrder within categories
-        const itemElements = publicViewer.locator(testIdSelector(TestIds.PUBLIC_MENU_ITEM));
-        const itemCount = await itemElements.count();
-
-        console.log(`Public viewer shows ${itemCount} menu items`);
-
-        if (itemCount > 0) {
-          // Items should be in ascending displayOrder within their category
-          // Implementation uses: sortMenuItemsByDisplayOrder(category.items)
-          expect(itemCount).toBeGreaterThan(0);
-        }
-      }
-
-      // Navigate back
-      await menusPage.goto();
-    } else {
-      console.log('Preview button not found - skipping public viewer test');
+    if (itemCount > 0) {
+      // Items should be in ascending displayOrder within their category
+      // Implementation uses: sortMenuItemsByDisplayOrder(category.items)
+      expect(itemCount).toBeGreaterThan(0);
     }
+
+    // Close the preview modal
+    await menusPage.closePreview();
   });
 });
