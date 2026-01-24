@@ -60,6 +60,7 @@ export const TestIds = {
   // Online Menu Management
   MENU_LIST: 'menu-list',
   MENU_LIST_CREATE_BUTTON: 'menu-list-create-button',
+  MENU_LIST_REFRESH_BUTTON: 'menu-list-refresh-button',
   MENU_TAB_ALL: 'menu-tab-all',
   MENU_TAB_ACTIVE: 'menu-tab-active',
   MENU_CARD: 'menu-card',

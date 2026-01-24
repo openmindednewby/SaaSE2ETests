@@ -6,6 +6,7 @@ export class OnlineMenusPage extends BasePage {
   readonly pageHeader: Locator;
   readonly menuList: Locator;
   readonly createMenuButton: Locator;
+  readonly refreshButton: Locator;
   readonly loadingIndicator: Locator;
   readonly confirmDialog: Locator;
   readonly confirmButton: Locator;
@@ -26,6 +27,7 @@ export class OnlineMenusPage extends BasePage {
     this.pageHeader = page.getByText(/menus/i);
     this.menuList = page.locator(testIdSelector(TestIds.MENU_LIST));
     this.createMenuButton = page.locator(testIdSelector(TestIds.MENU_LIST_CREATE_BUTTON));
+    this.refreshButton = page.locator(testIdSelector(TestIds.MENU_LIST_REFRESH_BUTTON));
     this.loadingIndicator = page.locator('[role="progressbar"]');
     this.confirmDialog = page.locator(testIdSelector(TestIds.CONFIRM_DIALOG));
     this.confirmButton = page.locator(testIdSelector(TestIds.CONFIRM_BUTTON));
@@ -63,6 +65,30 @@ export class OnlineMenusPage extends BasePage {
 
     await this.page.reload({ waitUntil: 'commit' });
     await this.waitForLoading();
+    await listFetch;
+  }
+
+  /**
+   * Click the refresh button to reload the menus list.
+   * Uses the new refresh button in the page header for a more targeted refresh
+   * without a full page reload.
+   */
+  async refresh() {
+    await this.waitForLoading();
+
+    // Set up listener for the API call
+    const listFetch = this.page.waitForResponse(
+      (response) => response.url().includes('/TenantMenus') && response.request().method() === 'GET',
+      { timeout: 10000 }
+    ).catch(() => null);
+
+    // Click the refresh button
+    await this.refreshButton.click();
+
+    // Wait for loading indicator to appear and disappear
+    await this.waitForLoading();
+
+    // Wait for the API response
     await listFetch;
   }
 

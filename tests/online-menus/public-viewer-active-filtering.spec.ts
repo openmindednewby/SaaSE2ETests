@@ -37,10 +37,16 @@ test.describe.serial('Public Menu Viewer Active Filtering @online-menus @public-
     menusPage = new OnlineMenusPage(page);
 
     // Create a second page in the SAME context for public viewing
-    // Note: The public route uses the same API which requires authentication
-    // so we use an authenticated context but navigate to the public route
-    publicContext = context; // Use same context for API authentication
+    // Note: The public route uses the same API which requires authentication.
+    // Since authentication is stored in sessionStorage (which is NOT shared between
+    // tabs/pages), we need to login on the publicPage as well.
+    publicContext = context;
     publicPage = await publicContext.newPage();
+
+    // Login on the public page to ensure API calls are authenticated
+    const publicLoginPage = new LoginPage(publicPage);
+    await publicLoginPage.goto();
+    await publicLoginPage.loginAndWait(adminUser.username, adminUser.password);
   });
 
   test.beforeEach(async () => {
