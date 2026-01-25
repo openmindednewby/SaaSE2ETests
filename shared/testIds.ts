@@ -124,6 +124,23 @@ export const TestIds = {
   PUBLIC_MENU_SHARE_BUTTON: 'public-menu-share-button',
   PUBLIC_MENU_CATEGORY: 'public-menu-category',
   PUBLIC_MENU_ITEM: 'public-menu-item',
+
+  // Content Upload Components
+  CONTENT_UPLOADER: 'content-uploader',
+  CONTENT_UPLOADER_BUTTON: 'content-uploader-button',
+  CONTENT_UPLOADER_ERROR: 'content-uploader-error',
+  CONTENT_PREVIEW: 'content-preview',
+  CONTENT_PREVIEW_IMAGE: 'content-preview-image',
+  CONTENT_PREVIEW_VIDEO_THUMBNAIL: 'content-preview-video-thumbnail',
+  CONTENT_PREVIEW_DOCUMENT: 'content-preview-document',
+  CONTENT_PREVIEW_DELETE_BUTTON: 'content-preview-delete-button',
+  UPLOAD_PROGRESS_CONTAINER: 'upload-progress-container',
+  UPLOAD_PROGRESS_FILE_NAME: 'upload-progress-file-name',
+  UPLOAD_PROGRESS_BAR: 'upload-progress-bar',
+  UPLOAD_PROGRESS_CANCEL_BUTTON: 'upload-progress-cancel-button',
+  IMAGE_PICKER: 'image-picker',
+  VIDEO_PICKER: 'video-picker',
+  DOCUMENT_PICKER: 'document-picker',
 } as const;
 
 // Type for testID values

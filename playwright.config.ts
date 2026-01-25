@@ -189,6 +189,29 @@ export default defineConfig({
       use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup', 'multi-tenant-setup'],
     },
+
+    // Content upload batch (requires multi-tenant setup)
+    {
+      name: 'content-chromium',
+      workers: 1,
+      testMatch: /content\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
+    {
+      name: 'content-mobile',
+      workers: 1,
+      testMatch: /content\/.*\.spec\.ts/,
+      use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
+    {
+      name: 'content-firefox',
+      workers: 1,
+      testMatch: /content\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
   ],
 
   // Web server configuration - starts the client app if not running

@@ -44,6 +44,12 @@
     "test:online-menus:mobile": "playwright test tests/online-menus --project=online-menus-mobile",
     "test:online-menus:firefox": "playwright test tests/online-menus --project=online-menus-firefox",
 
+    "test:content": "playwright test tests/content --project=content-chromium --project=content-mobile --project=content-firefox",
+    "test:content:chromium": "playwright test tests/content --project=content-chromium",
+    "test:content:chromium:headed": "playwright test --headed tests/content --project=content-chromium",
+    "test:content:mobile": "playwright test tests/content --project=content-mobile",
+    "test:content:firefox": "playwright test tests/content --project=content-firefox",
+
     "test:smoke": "playwright test tests/smoke --project=smoke-chromium --project=smoke-mobile --project=smoke-firefox",
     "docker:up": "docker compose -f ../docker-compose.e2e.yml up -d --build",
     "docker:down": "docker compose -f ../docker-compose.e2e.yml down",
