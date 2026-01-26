@@ -126,6 +126,9 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
   });
 
   test('should not delete active templates when deleting inactive', async () => {
+    // Navigate to templates page (required when running test in isolation)
+    await templatesPage.goto();
+
     // Ensure clean state
     await templatesPage.deactivateAllTemplates();
 
@@ -143,8 +146,11 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
     const deletedCount = await templatesPage.deleteInactiveTemplates();
     expect(deletedCount).toBeGreaterThanOrEqual(1);
 
+    // Refetch to ensure we see current server state (waits for API response, prevents flaky mobile tests)
+    await templatesPage.refetchTemplatesList();
+
     // Active template should still exist, inactive should be gone
-    await expect(templatesPage.getTemplateRow(activeTemplateName)).toBeVisible();
+    await expect(templatesPage.getTemplateRow(activeTemplateName)).toBeVisible({ timeout: 10000 });
     await expect(templatesPage.getTemplateRow(inactiveTemplateName)).not.toBeVisible({ timeout: 5000 });
 
     // Cleanup

@@ -63,6 +63,7 @@ const services: Service[] = [
   { name: 'IdentityService', baseUrl: resolveBaseUrl('IDENTITY_API_URL', 'http://localhost:5002') },
   { name: 'QuestionerService', baseUrl: resolveBaseUrl('QUESTIONER_API_URL', 'https://localhost:5004') },
   { name: 'OnlineMenuService', baseUrl: resolveBaseUrl('ONLINEMENU_API_URL', 'https://localhost:5006') },
+  { name: 'ContentService', baseUrl: resolveBaseUrl('CONTENT_API_URL', 'http://localhost:5009') },
 ];
 
 const probes = [

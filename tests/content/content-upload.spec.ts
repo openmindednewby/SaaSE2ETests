@@ -1,22 +1,26 @@
-import { BrowserContext, expect, Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import path from 'path';
-import { getProjectUsers } from '../../fixtures/test-data.js';
-import { ContentPage } from '../../pages/ContentPage.js';
-import { LoginPage } from '../../pages/LoginPage.js';
 
 /**
  * E2E Tests for Content Upload Functionality
  *
- * These tests verify the content upload flow for images, videos, and documents.
+ * These tests verify content upload contracts and validation rules.
  * The tests cover:
- * - File selection and validation
- * - Upload progress tracking
- * - Upload completion and preview
- * - Upload cancellation
- * - Error handling
+ * - File type validation (MIME types)
+ * - File size limits
+ * - Test fixture verification
+ * - Test ID contracts
+ * - Accessibility contracts
  *
- * Note: UI components are not yet fully integrated into menu forms.
- * Some tests are placeholders that will be enabled when integration is complete.
+ * NOTE: Full UI integration tests are in:
+ * - tests/online-menus/menu-content-upload.spec.ts
+ *
+ * That file contains comprehensive tests for:
+ * - Image upload to menu items and categories
+ * - Upload persistence after save/reload
+ * - CORS handling verification
+ * - Multiple uploads
+ * - Error handling
  *
  * Tests are tagged with @content-upload for selective execution.
  */
@@ -114,146 +118,13 @@ test.describe('Content Upload - Test Fixtures @content-upload', () => {
   });
 });
 
-test.describe('Content Upload UI - Placeholder Tests @content-upload @ui', () => {
-  /**
-   * These tests are placeholders for when UI components are fully integrated.
-   * They demonstrate the expected test patterns and will be enabled once
-   * the content upload components are available in the menu forms.
-   */
-
-  let context: BrowserContext;
-  let page: Page;
-  let contentPage: ContentPage;
-
-  test.beforeAll(async ({ browser }, testInfo) => {
-    // Skip if UI components are not yet integrated
-    test.skip(true, 'Content upload UI components not yet integrated into menu forms');
-
-    const { admin: adminUser } = getProjectUsers(testInfo.project.name);
-
-    context = await browser.newContext();
-    page = await context.newPage();
-
-    const loginPage = new LoginPage(page);
-    await loginPage.goto();
-    await loginPage.loginAndWait(adminUser.username, adminUser.password);
-
-    contentPage = new ContentPage(page);
-  });
-
-  test.afterAll(async () => {
-    await context?.close();
-  });
-
-  test('should show image picker when available', async () => {
-    const isAvailable = await contentPage.isImagePickerAvailable();
-    expect(isAvailable).toBe(true);
-  });
-
-  test('should show upload progress during file upload', async () => {
-    await contentPage.uploadFile(TEST_IMAGE_PATH, 'image');
-    await contentPage.expectUploadInProgress();
-  });
-
-  test('should show image preview after successful upload', async () => {
-    await contentPage.uploadFile(TEST_IMAGE_PATH, 'image');
-    await contentPage.waitForUploadComplete('image');
-    await contentPage.expectImagePreviewVisible();
-  });
-
-  test('should allow cancelling upload in progress', async () => {
-    await contentPage.uploadFile(TEST_IMAGE_PATH, 'image');
-    await contentPage.expectUploadInProgress();
-    await contentPage.cancelUpload();
-    await contentPage.expectNoPreview();
-  });
-
-  test('should allow deleting uploaded content', async () => {
-    await contentPage.uploadFile(TEST_IMAGE_PATH, 'image');
-    await contentPage.waitForUploadComplete('image');
-    await contentPage.expectImagePreviewVisible();
-    await contentPage.deletePreviewedContent();
-    await contentPage.expectNoPreview();
-  });
-
-  test('should show error for invalid file type', async () => {
-    // Would need an invalid file fixture
-    // await contentPage.uploadFile(INVALID_FILE_PATH, 'image');
-    // await contentPage.expectUploadError('File type');
-    test.skip(true, 'Requires invalid file fixture');
-  });
-
-  test('should show error for oversized file', async () => {
-    // Would need an oversized file fixture
-    // await contentPage.uploadFile(LARGE_FILE_PATH, 'image');
-    // await contentPage.expectUploadError('size exceeds');
-    test.skip(true, 'Requires oversized file fixture');
-  });
-});
-
-test.describe('Content Upload Flow - Integration Tests @content-upload @integration', () => {
-  /**
-   * These tests verify the complete upload flow when both the UI and
-   * Content Service are available. They are skipped when either component
-   * is not ready.
-   */
-
-  test('complete image upload flow', async ({ browser }, testInfo) => {
-    test.skip(true, 'Full integration test - requires UI and Content Service');
-
-    // This test would:
-    // 1. Login as admin user
-    // 2. Navigate to menu editor with content upload
-    // 3. Select an image file
-    // 4. Monitor upload progress
-    // 5. Verify preview appears
-    // 6. Verify content is saved to the menu
-  });
-
-  test('complete video upload flow', async ({ browser }, testInfo) => {
-    test.skip(true, 'Full integration test - requires UI and Content Service');
-
-    // This test would:
-    // 1. Login as admin user
-    // 2. Navigate to menu editor with content upload
-    // 3. Select a video file
-    // 4. Monitor upload progress (longer for videos)
-    // 5. Verify thumbnail preview appears
-    // 6. Verify content is saved to the menu
-  });
-
-  test('complete document upload flow', async ({ browser }, testInfo) => {
-    test.skip(true, 'Full integration test - requires UI and Content Service');
-
-    // This test would:
-    // 1. Login as admin user
-    // 2. Navigate to menu editor with content upload
-    // 3. Select a document file
-    // 4. Monitor upload progress
-    // 5. Verify document preview appears
-    // 6. Verify content is saved to the menu
-  });
-
-  test('upload multiple files in sequence', async ({ browser }, testInfo) => {
-    test.skip(true, 'Full integration test - requires UI and Content Service');
-
-    // This test would:
-    // 1. Upload first image
-    // 2. Verify first preview
-    // 3. Replace with second image
-    // 4. Verify second preview replaces first
-  });
-
-  test('handle network interruption during upload', async ({ browser }, testInfo) => {
-    test.skip(true, 'Full integration test - requires network simulation');
-
-    // This test would:
-    // 1. Start upload
-    // 2. Simulate network failure
-    // 3. Verify error message
-    // 4. Verify can retry upload
-  });
-});
+/**
+ * NOTE: UI integration tests have been moved to:
+ * tests/online-menus/menu-content-upload.spec.ts
+ *
+ * That file contains comprehensive tests for the complete upload flow
+ * including image upload, save, reload, CORS handling, and deletion.
+ */
 
 test.describe('Content Upload - Accessibility @content-upload @a11y', () => {
   test('upload button should have accessible name', async () => {

@@ -1,0 +1,436 @@
+import { BrowserContext, expect, Page, test } from '@playwright/test';
+import * as path from 'path';
+import { getProjectUsers } from '../../fixtures/test-data.js';
+import { LoginPage } from '../../pages/LoginPage.js';
+import { OnlineMenusPage } from '../../pages/OnlineMenusPage.js';
+
+/**
+ * E2E Tests for Menu Content Upload Feature
+ *
+ * Tests the ability to upload and display images/videos in menu items and categories.
+ * These tests verify:
+ * - Image upload functionality through the menu editor
+ * - Image preview displays correctly after upload
+ * - Content persists after saving and reloading the menu
+ * - Images load without CORS errors in the preview modal
+ * - Content can be deleted from menu items
+ *
+ * Prerequisites:
+ * - ContentService and SeaweedFS must be running (docker-compose.e2e.yml)
+ * - Test image file exists at E2ETests/fixtures/files/test-image.png
+ */
+test.describe.serial('Menu Content Upload @online-menus @content-upload', () => {
+  test.setTimeout(180000); // 3 minutes for upload tests
+
+  let context: BrowserContext;
+  let page: Page;
+  let menusPage: OnlineMenusPage;
+  let testMenuName: string;
+
+  // Resolve the test image path
+  const testImagePath = path.resolve(__dirname, '..', '..', 'fixtures', 'files', 'test-image.png');
+
+  test.beforeAll(async ({ browser }, testInfo) => {
+    const { admin: adminUser } = getProjectUsers(testInfo.project.name);
+
+    context = await browser.newContext();
+    page = await context.newPage();
+
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.loginAndWait(adminUser.username, adminUser.password);
+
+    menusPage = new OnlineMenusPage(page);
+  });
+
+  test.afterAll(async () => {
+    // Cleanup: delete test menu if it exists
+    try {
+      await menusPage.goto();
+      await menusPage.waitForLoading();
+
+      if (testMenuName && await menusPage.menuExists(testMenuName)) {
+        // Deactivate if active
+        const isActive = await menusPage.isMenuActive(testMenuName);
+        if (isActive) {
+          await menusPage.deactivateMenu(testMenuName);
+        }
+        await menusPage.deleteMenu(testMenuName, false);
+      }
+    } catch {
+      // Ignore cleanup errors
+    }
+    await context?.close();
+  });
+
+  test('should create a menu and add a category with item', async () => {
+    // Create a unique menu name for this test run
+    testMenuName = `Content Upload Test ${Date.now()}`;
+
+    await menusPage.goto();
+    await menusPage.waitForLoading();
+
+    // Create a new menu
+    await menusPage.createMenu(testMenuName, 'Menu for testing content upload');
+    await menusPage.expectMenuInList(testMenuName);
+
+    // Edit the menu to add categories and items
+    await menusPage.editMenu(testMenuName);
+    await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
+
+    // Add a category
+    await menusPage.addCategory();
+
+    // Expand the category to see its fields
+    await menusPage.expandCategory(0);
+
+    // Update category name
+    await menusPage.updateCategoryName(0, 'Test Category');
+
+    // Add a menu item
+    await menusPage.addMenuItem(0);
+
+    // Update the menu item
+    await menusPage.updateMenuItemName(0, 0, 'Test Item');
+    await menusPage.updateMenuItemPrice(0, 0, '9.99');
+
+    // Save the menu
+    await menusPage.saveMenuEditor();
+
+    // Verify the menu was saved
+    await menusPage.expectMenuInList(testMenuName);
+  });
+
+  test('should upload an image to a menu item', async () => {
+    expect(testMenuName, 'Test menu not created').toBeTruthy();
+
+    // Navigate to menus and edit the test menu
+    await menusPage.goto();
+    await menusPage.editMenu(testMenuName);
+    await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
+
+    // Expand the category
+    await menusPage.expandCategory(0);
+
+    // Upload an image to the menu item
+    await menusPage.uploadImageToMenuItem(0, 0, testImagePath);
+
+    // Verify the image preview is visible
+    await menusPage.expectMenuItemImageVisible(0, 0);
+  });
+
+  test('should save menu with uploaded image', async () => {
+    expect(testMenuName, 'Test menu not created').toBeTruthy();
+
+    // Save the menu with the uploaded image
+    await menusPage.saveMenuEditor();
+
+    // Wait for any loading to complete
+    await menusPage.waitForLoading();
+
+    // Verify menu is in the list
+    await menusPage.expectMenuInList(testMenuName);
+  });
+
+  test('should persist uploaded image after reloading menu', async () => {
+    expect(testMenuName, 'Test menu not created').toBeTruthy();
+
+    // Navigate away and back to force a fresh load
+    await menusPage.goto();
+    await menusPage.waitForLoading();
+
+    // Edit the menu again
+    await menusPage.editMenu(testMenuName);
+    await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
+
+    // Expand the category
+    await menusPage.expandCategory(0);
+
+    // Verify the image is still there
+    await menusPage.expectMenuItemImageVisible(0, 0);
+
+    // Verify the image actually loaded (catches CORS issues)
+    await menusPage.expectImageLoaded(0, 0);
+  });
+
+  test('should display image in preview modal without CORS errors', async () => {
+    expect(testMenuName, 'Test menu not created').toBeTruthy();
+
+    // Close the editor if open
+    const editorVisible = await menusPage.menuEditor.isVisible().catch(() => false);
+    if (editorVisible) {
+      await menusPage.cancelMenuEditor();
+    }
+
+    // Navigate to menus
+    await menusPage.goto();
+    await menusPage.waitForLoading();
+
+    // Activate the menu so it can be previewed with content
+    const isActive = await menusPage.isMenuActive(testMenuName);
+    if (!isActive) {
+      await menusPage.activateMenu(testMenuName);
+      await menusPage.expectMenuActive(testMenuName, true);
+    }
+
+    // Open the preview modal
+    await menusPage.openPreview(testMenuName);
+    await menusPage.expectPreviewModalVisible();
+
+    // Verify images in the preview modal loaded without CORS errors
+    await menusPage.expectPreviewImagesLoaded();
+
+    // Close the preview
+    await menusPage.closePreview();
+    await menusPage.expectPreviewModalNotVisible();
+  });
+
+  test('should delete image from menu item', async () => {
+    expect(testMenuName, 'Test menu not created').toBeTruthy();
+
+    // Deactivate menu first
+    const isActive = await menusPage.isMenuActive(testMenuName);
+    if (isActive) {
+      await menusPage.deactivateMenu(testMenuName);
+    }
+
+    // Edit the menu
+    await menusPage.editMenu(testMenuName);
+    await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
+
+    // Expand the category
+    await menusPage.expandCategory(0);
+
+    // Verify image is there first
+    await menusPage.expectMenuItemImageVisible(0, 0);
+
+    // Delete the image
+    await menusPage.deleteMenuItemImage(0, 0);
+
+    // Verify upload button is now visible (image deleted)
+    const imagePicker = menusPage.getMenuItemImagePicker(0, 0);
+    const uploadButton = imagePicker.locator('[data-testid="content-uploader-button"]');
+    await expect(uploadButton).toBeVisible({ timeout: 5000 });
+
+    // Save the menu
+    await menusPage.saveMenuEditor();
+  });
+
+  test('should upload image to category', async () => {
+    expect(testMenuName, 'Test menu not created').toBeTruthy();
+
+    // Edit the menu
+    await menusPage.goto();
+    await menusPage.editMenu(testMenuName);
+    await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
+
+    // Expand the category
+    await menusPage.expandCategory(0);
+
+    // Upload an image to the category
+    await menusPage.uploadImageToCategory(0, testImagePath);
+
+    // Verify the image preview is visible
+    await menusPage.expectCategoryImageVisible(0);
+
+    // Save the menu
+    await menusPage.saveMenuEditor();
+
+    // Verify menu is saved
+    await menusPage.expectMenuInList(testMenuName);
+  });
+});
+
+/**
+ * E2E Tests for Upload Error Handling
+ *
+ * These tests verify proper error handling during content upload.
+ */
+test.describe('Menu Content Upload Error Handling @online-menus @content-upload', () => {
+  test.setTimeout(120000);
+
+  let context: BrowserContext;
+  let page: Page;
+  let menusPage: OnlineMenusPage;
+  let testMenuName: string;
+
+  test.beforeAll(async ({ browser }, testInfo) => {
+    const { admin: adminUser } = getProjectUsers(testInfo.project.name);
+
+    context = await browser.newContext();
+    page = await context.newPage();
+
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.loginAndWait(adminUser.username, adminUser.password);
+
+    menusPage = new OnlineMenusPage(page);
+
+    // Create a test menu for error handling tests
+    testMenuName = `Error Handling Test ${Date.now()}`;
+    await menusPage.goto();
+    await menusPage.createMenu(testMenuName, 'Menu for testing error handling');
+    await menusPage.editMenu(testMenuName);
+    await menusPage.addCategory();
+    await menusPage.expandCategory(0);
+    await menusPage.updateCategoryName(0, 'Error Test Category');
+    await menusPage.addMenuItem(0);
+    await menusPage.updateMenuItemName(0, 0, 'Error Test Item');
+    await menusPage.saveMenuEditor();
+  });
+
+  test.afterAll(async () => {
+    // Cleanup
+    try {
+      await menusPage.goto();
+      if (testMenuName && await menusPage.menuExists(testMenuName)) {
+        const isActive = await menusPage.isMenuActive(testMenuName);
+        if (isActive) {
+          await menusPage.deactivateMenu(testMenuName);
+        }
+        await menusPage.deleteMenu(testMenuName, false);
+      }
+    } catch {
+      // Ignore cleanup errors
+    }
+    await context?.close();
+  });
+
+  test('should handle cancelled file selection gracefully', async () => {
+    // Edit the menu
+    await menusPage.goto();
+    await menusPage.editMenu(testMenuName);
+    await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
+
+    // Expand the category
+    await menusPage.expandCategory(0);
+
+    // Get the image picker
+    const imagePicker = menusPage.getMenuItemImagePicker(0, 0);
+    const uploadButton = imagePicker.locator('[data-testid="content-uploader-button"]');
+
+    // Verify upload button is visible
+    await expect(uploadButton).toBeVisible({ timeout: 5000 });
+
+    // Set up file chooser listener that will cancel
+    const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 10000 });
+
+    // Click upload button
+    await uploadButton.click();
+
+    // Cancel the file chooser by setting no files
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles([]); // Empty array cancels selection
+
+    // Verify upload button is still visible (no crash)
+    await expect(uploadButton).toBeVisible({ timeout: 5000 });
+
+    // Verify no error message appeared
+    const errorMessage = imagePicker.locator('[data-testid="content-uploader-error"]');
+    await expect(errorMessage).not.toBeVisible({ timeout: 2000 });
+
+    // Cancel the editor
+    await menusPage.cancelMenuEditor();
+  });
+});
+
+/**
+ * E2E Tests for Multiple Image Uploads
+ *
+ * Tests uploading images to multiple menu items and categories.
+ */
+test.describe('Multiple Content Uploads @online-menus @content-upload', () => {
+  test.setTimeout(240000); // 4 minutes for multiple uploads
+
+  let context: BrowserContext;
+  let page: Page;
+  let menusPage: OnlineMenusPage;
+  let testMenuName: string;
+
+  const testImagePath = path.resolve(__dirname, '..', '..', 'fixtures', 'files', 'test-image.png');
+
+  test.beforeAll(async ({ browser }, testInfo) => {
+    const { admin: adminUser } = getProjectUsers(testInfo.project.name);
+
+    context = await browser.newContext();
+    page = await context.newPage();
+
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.loginAndWait(adminUser.username, adminUser.password);
+
+    menusPage = new OnlineMenusPage(page);
+  });
+
+  test.afterAll(async () => {
+    // Cleanup
+    try {
+      await menusPage.goto();
+      if (testMenuName && await menusPage.menuExists(testMenuName)) {
+        const isActive = await menusPage.isMenuActive(testMenuName);
+        if (isActive) {
+          await menusPage.deactivateMenu(testMenuName);
+        }
+        await menusPage.deleteMenu(testMenuName, false);
+      }
+    } catch {
+      // Ignore cleanup errors
+    }
+    await context?.close();
+  });
+
+  test('should upload images to multiple menu items', async () => {
+    testMenuName = `Multiple Uploads Test ${Date.now()}`;
+
+    await menusPage.goto();
+    await menusPage.createMenu(testMenuName, 'Menu for testing multiple uploads');
+
+    // Edit and add structure
+    await menusPage.editMenu(testMenuName);
+    await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
+
+    // Add a category
+    await menusPage.addCategory();
+    await menusPage.expandCategory(0);
+    await menusPage.updateCategoryName(0, 'Multi-Upload Category');
+
+    // Add multiple menu items
+    await menusPage.addMenuItem(0);
+    await menusPage.updateMenuItemName(0, 0, 'Item 1');
+    await menusPage.updateMenuItemPrice(0, 0, '10.00');
+
+    await menusPage.addMenuItem(0);
+    await menusPage.updateMenuItemName(0, 1, 'Item 2');
+    await menusPage.updateMenuItemPrice(0, 1, '15.00');
+
+    // Upload images to both items
+    await menusPage.uploadImageToMenuItem(0, 0, testImagePath);
+    await menusPage.expectMenuItemImageVisible(0, 0);
+
+    await menusPage.uploadImageToMenuItem(0, 1, testImagePath);
+    await menusPage.expectMenuItemImageVisible(0, 1);
+
+    // Also upload an image to the category
+    await menusPage.uploadImageToCategory(0, testImagePath);
+    await menusPage.expectCategoryImageVisible(0);
+
+    // Save the menu
+    await menusPage.saveMenuEditor();
+    await menusPage.expectMenuInList(testMenuName);
+
+    // Reload and verify all images persisted
+    await menusPage.editMenu(testMenuName);
+    await menusPage.expandCategory(0);
+
+    await menusPage.expectMenuItemImageVisible(0, 0);
+    await menusPage.expectImageLoaded(0, 0);
+
+    await menusPage.expectMenuItemImageVisible(0, 1);
+    await menusPage.expectImageLoaded(0, 1);
+
+    await menusPage.expectCategoryImageVisible(0);
+
+    // Cancel without changes
+    await menusPage.cancelMenuEditor();
+  });
+});

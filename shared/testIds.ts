@@ -109,6 +109,13 @@ export const TestIds = {
   MENU_ITEM_EDIT_BUTTON: 'menu-item-edit-button',
   MENU_ITEM_DELETE_BUTTON: 'menu-item-delete-button',
   MENU_ITEM_DRAG_HANDLE: 'menu-item-drag-handle',
+  MENU_ITEM_IMAGE_PICKER: 'menu-item-image-picker',
+  MENU_ITEM_VIDEO_PICKER: 'menu-item-video-picker',
+  MENU_ITEM_DOCUMENT_PICKER: 'menu-item-document-picker',
+
+  // Category Content Pickers
+  CATEGORY_IMAGE_PICKER: 'category-image-picker',
+  CATEGORY_VIDEO_PICKER: 'category-video-picker',
 
   // Live Preview
   LIVE_PREVIEW_PANEL: 'live-preview-panel',
@@ -154,4 +161,10 @@ export function testIdSelector(testId: TestId): string {
 // Selector helper for testIDs with suffixes (e.g., "public-menu-card-abc123")
 export function testIdStartsWithSelector(testId: TestId): string {
   return `[data-testid^="${testId}"]`;
+}
+
+// Selector helper for indexed testIDs (e.g., "category-item-0", "menu-item-1-2")
+export function indexedTestIdSelector(testId: TestId, ...indices: number[]): string {
+  const suffix = indices.join('-');
+  return `[data-testid="${testId}-${suffix}"]`;
 }

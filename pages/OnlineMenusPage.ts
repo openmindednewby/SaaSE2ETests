@@ -1,5 +1,5 @@
 import { Locator, Page, expect } from '@playwright/test';
-import { TestIds, testIdSelector } from '../shared/testIds.js';
+import { TestIds, testIdSelector, indexedTestIdSelector } from '../shared/testIds.js';
 import { BasePage } from './BasePage.js';
 
 export class OnlineMenusPage extends BasePage {
@@ -22,6 +22,17 @@ export class OnlineMenusPage extends BasePage {
   // Preview Modal
   readonly previewModal: Locator;
 
+  // Category Management
+  readonly categoryAddButton: Locator;
+  readonly categoryList: Locator;
+
+  // Content Upload
+  readonly contentUploader: Locator;
+  readonly contentUploaderButton: Locator;
+  readonly contentPreview: Locator;
+  readonly contentPreviewImage: Locator;
+  readonly uploadProgressContainer: Locator;
+
   constructor(page: Page) {
     super(page);
     this.pageHeader = page.getByText(/menus/i);
@@ -42,6 +53,17 @@ export class OnlineMenusPage extends BasePage {
 
     // Preview Modal
     this.previewModal = page.locator(testIdSelector(TestIds.MENU_PREVIEW_MODAL));
+
+    // Category Management
+    this.categoryAddButton = page.locator(testIdSelector(TestIds.CATEGORY_ADD_BUTTON));
+    this.categoryList = page.locator(testIdSelector(TestIds.CATEGORY_LIST));
+
+    // Content Upload
+    this.contentUploader = page.locator(testIdSelector(TestIds.CONTENT_UPLOADER));
+    this.contentUploaderButton = page.locator(testIdSelector(TestIds.CONTENT_UPLOADER_BUTTON));
+    this.contentPreview = page.locator(testIdSelector(TestIds.CONTENT_PREVIEW));
+    this.contentPreviewImage = page.locator(testIdSelector(TestIds.CONTENT_PREVIEW_IMAGE));
+    this.uploadProgressContainer = page.locator(testIdSelector(TestIds.UPLOAD_PROGRESS_CONTAINER));
   }
 
   /**
@@ -640,5 +662,324 @@ export class OnlineMenusPage extends BasePage {
     // Try to get the ID from the card
     const idText = await idElement.textContent({ timeout: 1000 }).catch(() => null);
     return idText?.trim() || null;
+  }
+
+  // ==================== MENU CONTENT EDITOR METHODS ====================
+
+  /**
+   * Switch to the Content tab in the menu editor (FullMenuEditor).
+   * The editor opens on the "Details" tab by default, so we need to click
+   * the "Content" tab to access categories and items.
+   */
+  async switchToContentTab() {
+    // Find the Content tab button by its text
+    const contentTab = this.menuEditor.getByRole('tab', { name: /content/i });
+    await contentTab.click();
+    // Wait for the category add button to be visible (indicates we're on the Content tab)
+    await expect(this.categoryAddButton).toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Add a new category to the menu
+   */
+  async addCategory() {
+    // Ensure we're on the Content tab first
+    const isContentTabActive = await this.categoryAddButton.isVisible({ timeout: 1000 }).catch(() => false);
+    if (!isContentTabActive) {
+      await this.switchToContentTab();
+    }
+    await this.categoryAddButton.click();
+    // Wait for the category to appear in the list
+    await this.waitForLoading();
+  }
+
+  /**
+   * Get a category item by index
+   */
+  getCategoryItem(categoryIndex: number): Locator {
+    return this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_ITEM, categoryIndex));
+  }
+
+  /**
+   * Expand a category to show its items
+   */
+  async expandCategory(categoryIndex: number) {
+    // Ensure we're on the Content tab first
+    const isContentTabActive = await this.categoryAddButton.isVisible({ timeout: 1000 }).catch(() => false);
+    if (!isContentTabActive) {
+      await this.switchToContentTab();
+    }
+
+    const category = this.getCategoryItem(categoryIndex);
+    // Click on the category header to expand it
+    const categoryHeader = category.locator('text=/Category|Item/i').first();
+    // Check if already expanded by looking for input fields
+    const nameInput = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_NAME_INPUT, categoryIndex));
+    if (await nameInput.count() === 0) {
+      await categoryHeader.click();
+    }
+    // Wait for the expansion animation
+    await expect(nameInput).toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Update category name
+   */
+  async updateCategoryName(categoryIndex: number, name: string) {
+    const nameInput = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_NAME_INPUT, categoryIndex));
+    await nameInput.fill(name);
+  }
+
+  /**
+   * Add a menu item to a category
+   */
+  async addMenuItem(categoryIndex: number) {
+    const addItemButton = this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_ADD_BUTTON, categoryIndex));
+    await addItemButton.click();
+    await this.waitForLoading();
+  }
+
+  /**
+   * Get a menu item by category and item index
+   */
+  getMenuItem(categoryIndex: number, itemIndex: number): Locator {
+    return this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM, categoryIndex, itemIndex));
+  }
+
+  /**
+   * Update menu item name
+   */
+  async updateMenuItemName(categoryIndex: number, itemIndex: number, name: string) {
+    const nameInput = this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_NAME_INPUT, categoryIndex, itemIndex));
+    await nameInput.fill(name);
+  }
+
+  /**
+   * Update menu item price
+   */
+  async updateMenuItemPrice(categoryIndex: number, itemIndex: number, price: string) {
+    const priceInput = this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_PRICE_INPUT, categoryIndex, itemIndex));
+    await priceInput.fill(price);
+  }
+
+  /**
+   * Get the image picker wrapper for a menu item
+   */
+  getMenuItemImagePicker(categoryIndex: number, itemIndex: number): Locator {
+    return this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_IMAGE_PICKER, categoryIndex, itemIndex));
+  }
+
+  /**
+   * Get the video picker wrapper for a menu item
+   */
+  getMenuItemVideoPicker(categoryIndex: number, itemIndex: number): Locator {
+    return this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_VIDEO_PICKER, categoryIndex, itemIndex));
+  }
+
+  /**
+   * Get the document picker wrapper for a menu item
+   */
+  getMenuItemDocumentPicker(categoryIndex: number, itemIndex: number): Locator {
+    return this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_DOCUMENT_PICKER, categoryIndex, itemIndex));
+  }
+
+  /**
+   * Get the image picker wrapper for a category
+   */
+  getCategoryImagePicker(categoryIndex: number): Locator {
+    return this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_IMAGE_PICKER, categoryIndex));
+  }
+
+  /**
+   * Upload an image to a menu item
+   * Uses file chooser to handle the native file picker
+   */
+  async uploadImageToMenuItem(categoryIndex: number, itemIndex: number, filePath: string) {
+    const imagePicker = this.getMenuItemImagePicker(categoryIndex, itemIndex);
+
+    // Find the upload button within the image picker wrapper
+    const uploadButton = imagePicker.locator(testIdSelector(TestIds.CONTENT_UPLOADER_BUTTON));
+    await expect(uploadButton).toBeVisible({ timeout: 5000 });
+
+    // Set up the file chooser promise before clicking
+    const fileChooserPromise = this.page.waitForEvent('filechooser', { timeout: 10000 });
+
+    // Click the upload button
+    await uploadButton.click();
+
+    // Handle the file chooser
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles(filePath);
+
+    // Wait for upload to complete (progress bar disappears and preview appears)
+    const progressBar = imagePicker.locator(testIdSelector(TestIds.UPLOAD_PROGRESS_CONTAINER));
+
+    // Wait for progress bar to disappear (if it appeared)
+    if (await progressBar.count() > 0) {
+      await expect(progressBar).not.toBeVisible({ timeout: 30000 });
+    }
+
+    // Wait for the content preview to appear
+    const preview = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW));
+    await expect(preview).toBeVisible({ timeout: 10000 });
+  }
+
+  /**
+   * Upload an image to a category
+   */
+  async uploadImageToCategory(categoryIndex: number, filePath: string) {
+    const imagePicker = this.getCategoryImagePicker(categoryIndex);
+
+    // Find the upload button within the image picker wrapper
+    const uploadButton = imagePicker.locator(testIdSelector(TestIds.CONTENT_UPLOADER_BUTTON));
+
+    // Set up the file chooser promise before clicking
+    const fileChooserPromise = this.page.waitForEvent('filechooser', { timeout: 10000 });
+
+    // Click the upload button
+    await uploadButton.click();
+
+    // Handle the file chooser
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles(filePath);
+
+    // Wait for upload to complete
+    const progressBar = imagePicker.locator(testIdSelector(TestIds.UPLOAD_PROGRESS_CONTAINER));
+
+    if (await progressBar.count() > 0) {
+      await expect(progressBar).not.toBeVisible({ timeout: 30000 });
+    }
+
+    // Wait for the content preview to appear
+    const preview = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW));
+    await expect(preview).toBeVisible({ timeout: 10000 });
+  }
+
+  /**
+   * Verify that an image preview is visible for a menu item
+   */
+  async expectMenuItemImageVisible(categoryIndex: number, itemIndex: number) {
+    const imagePicker = this.getMenuItemImagePicker(categoryIndex, itemIndex);
+    const preview = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW));
+    await expect(preview).toBeVisible({ timeout: 10000 });
+
+    // Also verify the image element is present
+    const imageElement = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW_IMAGE));
+    await expect(imageElement).toBeVisible({ timeout: 10000 });
+  }
+
+  /**
+   * Verify that an image preview is visible for a category
+   */
+  async expectCategoryImageVisible(categoryIndex: number) {
+    const imagePicker = this.getCategoryImagePicker(categoryIndex);
+    const preview = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW));
+    await expect(preview).toBeVisible({ timeout: 10000 });
+
+    const imageElement = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW_IMAGE));
+    await expect(imageElement).toBeVisible({ timeout: 10000 });
+  }
+
+  /**
+   * Delete an uploaded image from a menu item
+   */
+  async deleteMenuItemImage(categoryIndex: number, itemIndex: number) {
+    const imagePicker = this.getMenuItemImagePicker(categoryIndex, itemIndex);
+    const deleteButton = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW_DELETE_BUTTON));
+    await deleteButton.click();
+
+    // Wait for preview to disappear and upload button to appear
+    const preview = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW));
+    await expect(preview).not.toBeVisible({ timeout: 5000 });
+
+    const uploadButton = imagePicker.locator(testIdSelector(TestIds.CONTENT_UPLOADER_BUTTON));
+    await expect(uploadButton).toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Save the menu after editing content
+   */
+  async saveMenuEditor() {
+    // Set up listener for the PUT API call
+    const savePromise = this.page.waitForResponse(
+      response => response.url().includes('/TenantMenus') && response.request().method() === 'PUT',
+      { timeout: 15000 }
+    ).catch(() => null);
+
+    await this.menuEditorSaveButton.click();
+
+    const response = await savePromise;
+    if (response) {
+      if (response.ok()) {
+        console.log('Menu saved successfully');
+      } else {
+        console.warn(`Menu save API returned status ${response.status()}`);
+      }
+    }
+
+    await this.waitForLoading();
+  }
+
+  /**
+   * Cancel the menu editor without saving
+   */
+  async cancelMenuEditor() {
+    await this.menuEditorCancelButton.click();
+    await expect(this.menuEditor).not.toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Get the image URL from a menu item's content preview
+   * Useful for verifying CORS by checking if the image loaded
+   */
+  async getMenuItemImageUrl(categoryIndex: number, itemIndex: number): Promise<string | null> {
+    const imagePicker = this.getMenuItemImagePicker(categoryIndex, itemIndex);
+    const imageElement = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW_IMAGE));
+
+    if (await imageElement.count() === 0) {
+      return null;
+    }
+
+    // Get the src attribute from the image
+    const src = await imageElement.getAttribute('src');
+    return src;
+  }
+
+  /**
+   * Verify image loads successfully (no CORS errors)
+   * This checks if the image's naturalWidth is > 0, which indicates it loaded
+   */
+  async expectImageLoaded(categoryIndex: number, itemIndex: number) {
+    const imagePicker = this.getMenuItemImagePicker(categoryIndex, itemIndex);
+    const imageElement = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW_IMAGE));
+
+    await expect(imageElement).toBeVisible({ timeout: 10000 });
+
+    // Check that the image actually loaded by verifying naturalWidth > 0
+    // A CORS error would result in naturalWidth being 0
+    await expect(async () => {
+      const naturalWidth = await imageElement.evaluate((img: HTMLImageElement) => img.naturalWidth);
+      expect(naturalWidth).toBeGreaterThan(0);
+    }).toPass({ timeout: 10000 });
+  }
+
+  /**
+   * Verify images load in the preview modal (catches CORS issues)
+   */
+  async expectPreviewImagesLoaded() {
+    await expect(this.previewModal).toBeVisible({ timeout: 5000 });
+
+    // Find all images in the preview modal
+    const images = this.previewModal.locator('img');
+    const count = await images.count();
+
+    // If there are images, verify they loaded
+    for (let i = 0; i < count; i++) {
+      const image = images.nth(i);
+      await expect(async () => {
+        const naturalWidth = await image.evaluate((img: HTMLImageElement) => img.naturalWidth);
+        expect(naturalWidth).toBeGreaterThan(0);
+      }).toPass({ timeout: 10000 });
+    }
   }
 }
