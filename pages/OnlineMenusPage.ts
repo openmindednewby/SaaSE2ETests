@@ -951,16 +951,36 @@ export class OnlineMenusPage extends BasePage {
    */
   async expectImageLoaded(categoryIndex: number, itemIndex: number) {
     const imagePicker = this.getMenuItemImagePicker(categoryIndex, itemIndex);
-    const imageElement = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW_IMAGE));
+    const previewContainer = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW_IMAGE));
 
-    await expect(imageElement).toBeVisible({ timeout: 10000 });
+    await expect(previewContainer).toBeVisible({ timeout: 10000 });
+
+    // React Native Web may wrap the actual img element - find the img inside the container
+    // If the testID element is already an img, use it; otherwise find img inside
+    const imageElement = previewContainer.locator('img').first();
+
+    // Wait for the image to have a src attribute (URL might be loading)
+    await expect(async () => {
+      const count = await imageElement.count();
+      if (count === 0) {
+        throw new Error('No img element found inside preview container');
+      }
+      const src = await imageElement.getAttribute('src');
+      expect(src).toBeTruthy();
+    }).toPass({ timeout: 15000 });
 
     // Check that the image actually loaded by verifying naturalWidth > 0
     // A CORS error would result in naturalWidth being 0
     await expect(async () => {
-      const naturalWidth = await imageElement.evaluate((img: HTMLImageElement) => img.naturalWidth);
-      expect(naturalWidth).toBeGreaterThan(0);
-    }).toPass({ timeout: 10000 });
+      const result = await imageElement.evaluate((img: HTMLImageElement) => ({
+        naturalWidth: img.naturalWidth,
+        complete: img.complete,
+        src: img.src,
+      }));
+      // Image should be complete and have a naturalWidth > 0
+      expect(result.complete).toBe(true);
+      expect(result.naturalWidth).toBeGreaterThan(0);
+    }).toPass({ timeout: 15000 });
   }
 
   /**
