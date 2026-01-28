@@ -168,3 +168,26 @@ export type TestId = typeof TestIds[keyof typeof TestIds];
 export function testIdSelector(testId: TestId): string {
   return `[data-testid="${testId}"]`;
 }
+
+/**
+ * Helper function to create a data-testid selector that matches elements
+ * whose testid starts with the given prefix.
+ * Useful for matching dynamically generated IDs like "menu-card-123"
+ * @param testId - The test ID prefix to match
+ * @returns A CSS selector string for use with page.locator()
+ */
+export function testIdStartsWithSelector(testId: TestId): string {
+  return `[data-testid^="${testId}"]`;
+}
+
+/**
+ * Helper function to create an indexed data-testid selector.
+ * Useful for matching elements with indexed IDs like "category-item-0", "menu-item-0-1"
+ * @param testId - The base test ID constant from TestIds
+ * @param indices - One or more indices to append to the testId (e.g., categoryIndex, itemIndex)
+ * @returns A CSS selector string for use with page.locator()
+ */
+export function indexedTestIdSelector(testId: TestId, ...indices: number[]): string {
+  const indexSuffix = indices.join('-');
+  return `[data-testid="${testId}-${indexSuffix}"]`;
+}
