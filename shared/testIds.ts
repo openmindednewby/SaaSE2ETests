@@ -1,23 +1,26 @@
 /**
- * Re-export testID constants from the client app
+ * Shared testID constants for E2E testing
  *
- * This file re-exports the shared testID constants so Playwright tests
- * can use the same constants as the React components.
+ * These constants are used both in React Native components and Playwright E2E tests
+ * to ensure consistency and avoid magic strings.
  *
- * Note: These constants must stay in sync with the client app.
- * If you can't import from the client app directly, keep these values
- * synchronized manually.
+ * Usage in React components:
+ *   import { TestIds } from '../shared/testIds';
+ *   <View testID={TestIds.TEMPLATE_LIST}>
+ *
+ * Usage in Playwright tests:
+ *   import { TestIds } from '../../OnlineMenuSaaS/clients/OnlineMenuClientApp/src/shared/testIds';
+ *   page.locator(`[data-testid="${TestIds.TEMPLATE_LIST}"]`)
  */
 
-// Ideally we'd import from the client app:
-// export { TestIds, TestId } from '../../OnlineMenuSaaS/clients/OnlineMenuClientApp/src/shared/testIds';
-
-// But for compatibility, we duplicate the constants here:
 export const TestIds = {
   // Template components
   TEMPLATE_LIST: 'template-list',
   TEMPLATE_MODAL: 'template-modal',
   CREATE_TEMPLATE_FORM: 'create-template-form',
+  TEMPLATE_NAME_INPUT: 'template-name-input',
+  TEMPLATE_STATUS_ACTIVE_BUTTON: 'template-status-active-button',
+  TEMPLATE_STATUS_INACTIVE_BUTTON: 'template-status-inactive-button',
 
   // Generic list item (used by TenantListItem for various entity types)
   TENANT_LIST_ITEM: 'tenant-list-item',
@@ -97,6 +100,8 @@ export const TestIds = {
   CATEGORY_EDIT_BUTTON: 'category-edit-button',
   CATEGORY_DELETE_BUTTON: 'category-delete-button',
   CATEGORY_DRAG_HANDLE: 'category-drag-handle',
+  CATEGORY_IMAGE_PICKER: 'category-image-picker',
+  CATEGORY_VIDEO_PICKER: 'category-video-picker',
 
   // Menu Item Management
   MENU_ITEM_LIST: 'menu-item-list',
@@ -112,10 +117,6 @@ export const TestIds = {
   MENU_ITEM_IMAGE_PICKER: 'menu-item-image-picker',
   MENU_ITEM_VIDEO_PICKER: 'menu-item-video-picker',
   MENU_ITEM_DOCUMENT_PICKER: 'menu-item-document-picker',
-
-  // Category Content Pickers
-  CATEGORY_IMAGE_PICKER: 'category-image-picker',
-  CATEGORY_VIDEO_PICKER: 'category-video-picker',
 
   // Live Preview
   LIVE_PREVIEW_PANEL: 'live-preview-panel',
@@ -148,23 +149,22 @@ export const TestIds = {
   IMAGE_PICKER: 'image-picker',
   VIDEO_PICKER: 'video-picker',
   DOCUMENT_PICKER: 'document-picker',
+  CONTENT_IMAGE: 'content-image',
+  CONTENT_IMAGE_CATEGORY: 'content-image-category',
+  CONTENT_IMAGE_MENU_ITEM: 'content-image-menu-item',
+  CONTENT_VIDEO: 'content-video',
+  CONTENT_VIDEO_CATEGORY: 'content-video-category',
+  CONTENT_VIDEO_MENU_ITEM: 'content-video-menu-item',
 } as const;
 
 // Type for testID values
 export type TestId = typeof TestIds[keyof typeof TestIds];
 
-// Selector helper for Playwright
+/**
+ * Helper function to create a data-testid selector for Playwright
+ * @param testId - The test ID constant from TestIds
+ * @returns A CSS selector string for use with page.locator()
+ */
 export function testIdSelector(testId: TestId): string {
   return `[data-testid="${testId}"]`;
-}
-
-// Selector helper for testIDs with suffixes (e.g., "public-menu-card-abc123")
-export function testIdStartsWithSelector(testId: TestId): string {
-  return `[data-testid^="${testId}"]`;
-}
-
-// Selector helper for indexed testIDs (e.g., "category-item-0", "menu-item-1-2")
-export function indexedTestIdSelector(testId: TestId, ...indices: number[]): string {
-  const suffix = indices.join('-');
-  return `[data-testid="${testId}-${suffix}"]`;
 }

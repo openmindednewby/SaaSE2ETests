@@ -76,6 +76,26 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
     await templatesPage.waitForModalToClose();
   });
 
+  test('should pre-populate name field with existing template name @critical', async () => {
+    expect(testTemplateName, 'Test template name not set; did the create test run?').toBeTruthy();
+    await templatesPage.expectTemplateInList(testTemplateName);
+    await templatesPage.editTemplate(testTemplateName);
+
+    // Modal should be visible
+    const modal = templatesPage.getEditModal();
+    await expect(modal).toBeVisible({ timeout: 5000 });
+
+    // Name input should be pre-populated with the template's existing name (use data-testid)
+    const modalNameInput = modal.locator('[data-testid="template-name-input"]');
+    await expect(modalNameInput).toHaveValue(testTemplateName);
+
+    // Close modal
+    const cancelButton = modal.getByRole('button', { name: /cancel/i }).first();
+    await cancelButton.scrollIntoViewIfNeeded();
+    await cancelButton.click();
+    await templatesPage.waitForModalToClose();
+  });
+
   test('should update template name', async () => {
     expect(testTemplateName, 'Test template name not set; did the create test run?').toBeTruthy();
     await templatesPage.expectTemplateInList(testTemplateName);
