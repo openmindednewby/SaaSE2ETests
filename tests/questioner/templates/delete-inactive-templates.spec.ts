@@ -140,7 +140,17 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
 
     await templatesPage.createTemplate(activeTemplateName);
     await templatesPage.createTemplate(inactiveTemplateName);
-    await templatesPage.activateTemplate(activeTemplateName);
+
+    // Verify both templates are visible before proceeding (prevents race conditions on mobile)
+    await expect(templatesPage.getTemplateRow(activeTemplateName)).toBeVisible({ timeout: 10000 });
+    await expect(templatesPage.getTemplateRow(inactiveTemplateName)).toBeVisible({ timeout: 10000 });
+
+    // Activate the first template and verify it succeeded
+    const activated = await templatesPage.activateTemplate(activeTemplateName);
+    expect(activated).toBe(true);
+
+    // Verify template is actually active before deleting inactive templates
+    await templatesPage.expectTemplateActive(activeTemplateName, true);
 
     // Delete inactive templates
     const deletedCount = await templatesPage.deleteInactiveTemplates();
@@ -153,7 +163,7 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
     await expect(templatesPage.getTemplateRow(activeTemplateName)).toBeVisible({ timeout: 10000 });
     await expect(templatesPage.getTemplateRow(inactiveTemplateName)).not.toBeVisible({ timeout: 5000 });
 
-    // Cleanup
+    // Cleanup: deactivate (toggle off) and delete
     await templatesPage.activateTemplate(activeTemplateName);
     await templatesPage.deleteTemplate(activeTemplateName, false);
     createdTemplates.splice(createdTemplates.indexOf(activeTemplateName), 1);
