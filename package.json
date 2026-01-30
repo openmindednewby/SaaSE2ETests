@@ -51,10 +51,6 @@
     "test:content:firefox": "playwright test tests/content --project=content-firefox",
 
     "test:smoke": "playwright test tests/smoke --project=smoke-chromium --project=smoke-mobile --project=smoke-firefox",
-    "docker:up": "docker compose -f ../docker-compose.e2e.yml up -d --build",
-    "docker:down": "docker compose -f ../docker-compose.e2e.yml down",
-    "docker:test": "docker compose -f ../docker-compose.e2e.yml up --build --abort-on-container-exit playwright",
-    "docker:logs": "docker compose -f ../docker-compose.e2e.yml logs -f",
     "report": "playwright show-report reports/html",
     "codegen": "playwright codegen localhost:8082"
   },

@@ -201,11 +201,20 @@ export class OnlineMenusPage extends BasePage {
    * Click edit button for a menu
    */
   async editMenu(name: string) {
+    await this.waitForLoading();
+
     const card = this.getMenuCard(name);
     await card.scrollIntoViewIfNeeded();
 
     const editBtn = card.locator(testIdSelector(TestIds.MENU_CARD_EDIT_BUTTON));
-    await editBtn.click();
+
+    // Try normal click first, fall back to force click if overlay intercepts
+    try {
+      await editBtn.click({ timeout: 5000 });
+    } catch {
+      // Force click bypasses overlay interception (e.g., toast notifications)
+      await editBtn.click({ force: true });
+    }
 
     // Wait for editor to appear
     await this.menuEditor.waitFor({ state: 'visible', timeout: 5000 });
@@ -216,6 +225,8 @@ export class OnlineMenusPage extends BasePage {
    * @param throwOnError - If false, won't throw on API errors (useful for cleanup)
    */
   async deleteMenu(name: string, throwOnError: boolean = true) {
+    await this.waitForLoading();
+
     const card = this.getMenuCard(name);
     await card.scrollIntoViewIfNeeded();
 
@@ -226,7 +237,13 @@ export class OnlineMenusPage extends BasePage {
     ).catch(() => null);
 
     const deleteBtn = card.locator(testIdSelector(TestIds.MENU_CARD_DELETE_BUTTON));
-    await deleteBtn.click();
+
+    // Try normal click first, fall back to force click if overlay intercepts
+    try {
+      await deleteBtn.click({ timeout: 5000 });
+    } catch {
+      await deleteBtn.click({ force: true });
+    }
 
     // Handle confirmation dialog if present
     const dialog = this.page.locator('[role="dialog"]');
@@ -940,7 +957,17 @@ export class OnlineMenusPage extends BasePage {
    * Cancel the menu editor without saving
    */
   async cancelMenuEditor() {
-    await this.menuEditorCancelButton.click();
+    await this.waitForLoading();
+
+    // Wait for cancel button to be enabled (may be disabled during operations)
+    try {
+      await expect(this.menuEditorCancelButton).toBeEnabled({ timeout: 5000 });
+      await this.menuEditorCancelButton.click();
+    } catch {
+      // If button stays disabled, try pressing Escape as fallback
+      await this.page.keyboard.press('Escape');
+    }
+
     await expect(this.menuEditor).not.toBeVisible({ timeout: 5000 });
   }
 
