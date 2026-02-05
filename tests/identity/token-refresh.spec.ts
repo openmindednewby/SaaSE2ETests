@@ -1,4 +1,5 @@
-import { BrowserContext, expect, Page, test } from '@playwright/test';
+import { test, expect } from '../../fixtures/index.js';
+import type { BrowserContext, Page } from '@playwright/test';
 import { AuthHelper } from '../../helpers/auth-helper.js';
 import { LoginPage } from '../../pages/LoginPage.js';
 
@@ -50,6 +51,19 @@ test.describe.serial('Token Session Tests @identity @auth', () => {
     context = await browser.newContext();
     page = await context.newPage();
 
+    // Add init script to restore auth from localStorage to sessionStorage on page load
+    // This is needed because page.goto() causes a full reload and sessionStorage is empty
+    await page.addInitScript(() => {
+      try {
+        const persistAuth = localStorage.getItem('persist:auth');
+        if (persistAuth && !sessionStorage.getItem('persist:auth')) {
+          sessionStorage.setItem('persist:auth', persistAuth);
+        }
+      } catch {
+        // ignore
+      }
+    });
+
     // Clear any stale state
     await page.context().clearCookies();
 
@@ -61,6 +75,15 @@ test.describe.serial('Token Session Tests @identity @auth', () => {
     await expect(loginPage.usernameInput).toBeVisible({ timeout: 15000 });
 
     await loginPage.loginAndWait(username, password);
+
+    // Save auth state to localStorage so it persists across page navigations
+    // The init script will copy it back to sessionStorage on each page load
+    await page.evaluate(() => {
+      const persistAuth = sessionStorage.getItem('persist:auth');
+      if (persistAuth) {
+        localStorage.setItem('persist:auth', persistAuth);
+      }
+    });
   });
 
   test.afterAll(async () => {
@@ -73,6 +96,10 @@ test.describe.serial('Token Session Tests @identity @auth', () => {
 
     // Verify we're on a protected route (not redirected to login)
     await expect(page).toHaveURL(/quiz-templates/, { timeout: 10000 });
+
+    // Wait for the page to be stable before navigating again
+    // This prevents ERR_ABORTED errors from concurrent navigations
+    await page.waitForLoadState('networkidle');
 
     // Navigate to another protected page
     await page.goto('/quiz-answers', { waitUntil: 'domcontentloaded' });
@@ -89,6 +116,8 @@ test.describe.serial('Token Session Tests @identity @auth', () => {
       await page.goto(route, { waitUntil: 'domcontentloaded' });
       // Should not be redirected to login
       await expect(page).not.toHaveURL(/\/login/);
+      // Wait for page to be stable before next navigation
+      await page.waitForLoadState('networkidle');
     }
   });
 });

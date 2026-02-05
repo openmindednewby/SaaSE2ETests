@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../fixtures/index.js';
 import { QuizActivePage } from '../../../pages/QuizActivePage.js';
 
 test.describe('Submit Quiz @questioner', () => {

@@ -7,14 +7,30 @@ dotenv.config({ path: path.resolve(__dirname, '.env.local') });
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:8082';
 
-// Script to copy auth tokens from localStorage to sessionStorage
+// Script to copy auth state from localStorage to sessionStorage on page load
 // This is needed because the app uses sessionStorage but Playwright only persists localStorage
+// The script runs before any page scripts, ensuring auth is available when the app initializes
 const authInitScript = `
   (() => {
-    const accessToken = localStorage.getItem('accessToken');
-    const refreshToken = localStorage.getItem('refreshToken');
-    if (accessToken) sessionStorage.setItem('accessToken', accessToken);
-    if (refreshToken) sessionStorage.setItem('refreshToken', refreshToken);
+    try {
+      // Copy the persist:auth key (Redux persist format) - this is the primary auth storage
+      const persistAuth = localStorage.getItem('persist:auth');
+      if (persistAuth && !sessionStorage.getItem('persist:auth')) {
+        sessionStorage.setItem('persist:auth', persistAuth);
+      }
+
+      // Also copy individual tokens for backwards compatibility
+      const accessToken = localStorage.getItem('accessToken');
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (accessToken && !sessionStorage.getItem('accessToken')) {
+        sessionStorage.setItem('accessToken', accessToken);
+      }
+      if (refreshToken && !sessionStorage.getItem('refreshToken')) {
+        sessionStorage.setItem('refreshToken', refreshToken);
+      }
+    } catch (e) {
+      // Silently ignore errors in init script
+    }
   })();
 `;
 
@@ -40,6 +56,10 @@ export default defineConfig({
     actionTimeout: 10000,      // 10s for actions like click, fill
     navigationTimeout: 15000,  // 15s for navigation
   },
+
+  // Global script to copy auth tokens from localStorage to sessionStorage
+  // This is needed because the app uses sessionStorage but Playwright only persists localStorage
+  // NOTE: This is applied globally via addInitScript, not here
 
   // Default test timeout (can be overridden per-test)
   timeout: 30000,

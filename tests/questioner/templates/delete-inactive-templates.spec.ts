@@ -1,4 +1,5 @@
-import { BrowserContext, expect, Page, test } from '@playwright/test';
+import { test, expect } from '../../../fixtures/index.js';
+import type { BrowserContext, Page } from '@playwright/test';
 import { getProjectUsers } from '../../../fixtures/test-data.js';
 import { LoginPage } from '../../../pages/LoginPage.js';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
@@ -25,10 +26,30 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
     context = await browser.newContext();
     page = await context.newPage();
 
+    // Add init script to restore auth from localStorage to sessionStorage on page load
+    await page.addInitScript(() => {
+      try {
+        const persistAuth = localStorage.getItem('persist:auth');
+        if (persistAuth && !sessionStorage.getItem('persist:auth')) {
+          sessionStorage.setItem('persist:auth', persistAuth);
+        }
+      } catch {
+        // ignore
+      }
+    });
+
     // Login as tenant admin
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.loginAndWait(adminUser.username, adminUser.password);
+
+    // Save auth state to localStorage so it persists across page navigations
+    await page.evaluate(() => {
+      const persistAuth = sessionStorage.getItem('persist:auth');
+      if (persistAuth) {
+        localStorage.setItem('persist:auth', persistAuth);
+      }
+    });
 
     // Initialize page objects
     templatesPage = new QuizTemplatesPage(page);

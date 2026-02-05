@@ -36,9 +36,30 @@ test.describe.serial('Menu Content Upload @online-menus @content-upload', () => 
     context = await browser.newContext();
     page = await context.newPage();
 
+    // Add init script to restore auth from localStorage to sessionStorage on page load
+    // This ensures auth persists across page navigations
+    await page.addInitScript(() => {
+      try {
+        const persistAuth = localStorage.getItem('persist:auth');
+        if (persistAuth && !sessionStorage.getItem('persist:auth')) {
+          sessionStorage.setItem('persist:auth', persistAuth);
+        }
+      } catch {
+        // ignore
+      }
+    });
+
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.loginAndWait(adminUser.username, adminUser.password);
+
+    // Save auth state to localStorage so it persists across page navigations
+    await page.evaluate(() => {
+      const persistAuth = sessionStorage.getItem('persist:auth');
+      if (persistAuth) {
+        localStorage.setItem('persist:auth', persistAuth);
+      }
+    });
 
     menusPage = new OnlineMenusPage(page);
   });
@@ -293,9 +314,30 @@ test.describe('Menu Content Upload Error Handling @online-menus @content-upload'
     context = await browser.newContext();
     page = await context.newPage();
 
+    // Add init script to restore auth from localStorage to sessionStorage on page load
+    // This ensures auth persists across page navigations
+    await page.addInitScript(() => {
+      try {
+        const persistAuth = localStorage.getItem('persist:auth');
+        if (persistAuth && !sessionStorage.getItem('persist:auth')) {
+          sessionStorage.setItem('persist:auth', persistAuth);
+        }
+      } catch {
+        // ignore
+      }
+    });
+
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.loginAndWait(adminUser.username, adminUser.password);
+
+    // Save auth state to localStorage so it persists across page navigations
+    await page.evaluate(() => {
+      const persistAuth = sessionStorage.getItem('persist:auth');
+      if (persistAuth) {
+        localStorage.setItem('persist:auth', persistAuth);
+      }
+    });
 
     menusPage = new OnlineMenusPage(page);
 
@@ -388,9 +430,30 @@ test.describe('Multiple Content Uploads @online-menus @content-upload', () => {
     context = await browser.newContext();
     page = await context.newPage();
 
+    // Add init script to restore auth from localStorage to sessionStorage on page load
+    // This ensures auth persists across page navigations
+    await page.addInitScript(() => {
+      try {
+        const persistAuth = localStorage.getItem('persist:auth');
+        if (persistAuth && !sessionStorage.getItem('persist:auth')) {
+          sessionStorage.setItem('persist:auth', persistAuth);
+        }
+      } catch {
+        // ignore
+      }
+    });
+
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.loginAndWait(adminUser.username, adminUser.password);
+
+    // Save auth state to localStorage so it persists across page navigations
+    await page.evaluate(() => {
+      const persistAuth = sessionStorage.getItem('persist:auth');
+      if (persistAuth) {
+        localStorage.setItem('persist:auth', persistAuth);
+      }
+    });
 
     menusPage = new OnlineMenusPage(page);
   });

@@ -1,5 +1,5 @@
 
-import { expect, test } from '@playwright/test';
+import { test, expect } from '../../../fixtures/index.js';
 import { getProjectUsers } from '../../../fixtures/test-data.js';
 import { LoginPage } from '../../../pages/LoginPage';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage';
@@ -22,6 +22,19 @@ test.describe('Active Quiz Limit @questioner', () => {
   test.beforeEach(async ({ browser }, testInfo) => {
     context = await browser.newContext();
     const page = await context.newPage();
+
+    // Add init script to restore auth from localStorage to sessionStorage on page load
+    await page.addInitScript(() => {
+      try {
+        const persistAuth = localStorage.getItem('persist:auth');
+        if (persistAuth && !sessionStorage.getItem('persist:auth')) {
+          sessionStorage.setItem('persist:auth', persistAuth);
+        }
+      } catch {
+        // ignore
+      }
+    });
+
     const loginPage = new LoginPage(page);
     templatesPage = new QuizTemplatesPage(page);
 
@@ -32,6 +45,15 @@ test.describe('Active Quiz Limit @questioner', () => {
     await loginPage.goto();
     const { admin } = getProjectUsers(testInfo.project.name);
     await loginPage.loginAndWait(admin.username, admin.password);
+
+    // Save auth state to localStorage so it persists across page navigations
+    await page.evaluate(() => {
+      const persistAuth = sessionStorage.getItem('persist:auth');
+      if (persistAuth) {
+        localStorage.setItem('persist:auth', persistAuth);
+      }
+    });
+
     await templatesPage.goto();
     await templatesPage.deactivateAllTemplates();
   });

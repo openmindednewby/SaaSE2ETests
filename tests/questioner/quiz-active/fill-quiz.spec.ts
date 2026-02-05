@@ -1,4 +1,5 @@
-import { test, expect, Page, BrowserContext } from '@playwright/test';
+import { test, expect } from '../../../fixtures/index.js';
+import type { Page, BrowserContext } from '@playwright/test';
 import { QuizActivePage } from '../../../pages/QuizActivePage.js';
 import { LoginPage } from '../../../pages/LoginPage.js';
 
@@ -20,10 +21,30 @@ test.describe.serial('Fill Active Quiz @questioner', () => {
     context = await browser.newContext();
     page = await context.newPage();
 
+    // Add init script to restore auth from localStorage to sessionStorage on page load
+    await page.addInitScript(() => {
+      try {
+        const persistAuth = localStorage.getItem('persist:auth');
+        if (persistAuth && !sessionStorage.getItem('persist:auth')) {
+          sessionStorage.setItem('persist:auth', persistAuth);
+        }
+      } catch {
+        // ignore
+      }
+    });
+
     // Login once for all tests in this suite
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.loginAndWait(username, password);
+
+    // Save auth state to localStorage so it persists across page navigations
+    await page.evaluate(() => {
+      const persistAuth = sessionStorage.getItem('persist:auth');
+      if (persistAuth) {
+        localStorage.setItem('persist:auth', persistAuth);
+      }
+    });
 
     // Initialize page objects
     quizActivePage = new QuizActivePage(page);
