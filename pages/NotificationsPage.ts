@@ -333,8 +333,23 @@ export class NotificationsPage extends BasePage {
   // ==================== Test Helpers ====================
 
   /**
+   * Mock notification data interface
+   */
+  private createMockNotificationData(notification: {
+    id?: string;
+    title: string;
+    body?: string;
+    type?: string;
+    actionUrl?: string;
+  }): { data: typeof notification; id: string } {
+    const notificationId = notification.id ?? `mock-${Date.now()}`;
+    return { data: notification, id: notificationId };
+  }
+
+  /**
    * Mock a notification via the test API (if available)
-   * This injects a fake notification into the system for testing.
+   * This injects a fake notification into the notifications list for testing.
+   * Use mockToast() for testing toast popups.
    */
   async mockNotification(notification: {
     id?: string;
@@ -343,7 +358,7 @@ export class NotificationsPage extends BasePage {
     type?: string;
     actionUrl?: string;
   }): Promise<void> {
-    const notificationId = notification.id ?? `mock-${Date.now()}`;
+    const { data, id } = this.createMockNotificationData(notification);
 
     await this.page.evaluate(
       ({ data, id }) => {
@@ -374,7 +389,54 @@ export class NotificationsPage extends BasePage {
           );
         }
       },
-      { data: notification, id: notificationId }
+      { data, id }
+    );
+  }
+
+  /**
+   * Mock a toast notification via the test API (if available)
+   * This adds a toast popup for testing toast UI functionality.
+   * Use mockNotification() for testing the notifications list.
+   */
+  async mockToast(notification: {
+    id?: string;
+    title: string;
+    body?: string;
+    type?: string;
+    actionUrl?: string;
+  }): Promise<void> {
+    const { data, id } = this.createMockNotificationData(notification);
+
+    await this.page.evaluate(
+      ({ data, id }) => {
+        const testApi = (window as unknown as {
+          __NOTIFICATION_TEST_API__?: {
+            addToast: (n: {
+              id: string;
+              title: string;
+              body?: string;
+              type?: string;
+              actionUrl?: string;
+            }) => void;
+          };
+        }).__NOTIFICATION_TEST_API__;
+
+        if (testApi?.addToast) {
+          testApi.addToast({
+            id,
+            title: data.title,
+            body: data.body,
+            type: data.type,
+            actionUrl: data.actionUrl,
+          });
+        } else {
+          console.warn(
+            '[E2E Test] Notification test API not available. ' +
+            'Mock toast injection is not supported in this build.'
+          );
+        }
+      },
+      { data, id }
     );
   }
 }

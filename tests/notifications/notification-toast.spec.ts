@@ -50,8 +50,8 @@ test.describe('Notification Toast @notifications', () => {
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
-    // Inject a mock notification
-    await notificationsPage.mockNotification({
+    // Inject a mock toast notification
+    await notificationsPage.mockToast({
       id: 'test-notification-1',
       title: 'Test Notification',
       body: 'This is a test notification body',
@@ -69,8 +69,8 @@ test.describe('Notification Toast @notifications', () => {
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
-    // Inject a mock notification
-    await notificationsPage.mockNotification({
+    // Inject a mock toast notification
+    await notificationsPage.mockToast({
       id: 'test-auto-dismiss',
       title: 'Auto Dismiss Test',
     });
@@ -90,8 +90,8 @@ test.describe('Notification Toast @notifications', () => {
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
-    // Inject a mock notification
-    await notificationsPage.mockNotification({
+    // Inject a mock toast notification
+    await notificationsPage.mockToast({
       id: 'test-manual-dismiss',
       title: 'Manual Dismiss Test',
     });
@@ -111,8 +111,8 @@ test.describe('Notification Toast @notifications', () => {
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
-    // Inject a notification with an actionUrl
-    await notificationsPage.mockNotification({
+    // Inject a toast notification with an actionUrl
+    await notificationsPage.mockToast({
       id: 'test-action-url',
       title: 'Action Notification',
       body: 'Click to navigate',
@@ -134,18 +134,18 @@ test.describe('Notification Toast @notifications', () => {
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
-    // Inject multiple notifications
-    await notificationsPage.mockNotification({
+    // Inject multiple toast notifications
+    await notificationsPage.mockToast({
       id: 'test-stack-1',
       title: 'First Notification',
     });
 
-    await notificationsPage.mockNotification({
+    await notificationsPage.mockToast({
       id: 'test-stack-2',
       title: 'Second Notification',
     });
 
-    await notificationsPage.mockNotification({
+    await notificationsPage.mockToast({
       id: 'test-stack-3',
       title: 'Third Notification',
     });
@@ -171,8 +171,8 @@ test.describe('Notification Toast @notifications', () => {
     // (component returns null when toasts array is empty)
     await expect(container).not.toBeVisible();
 
-    // Inject a notification
-    await notificationsPage.mockNotification({
+    // Inject a toast notification
+    await notificationsPage.mockToast({
       id: 'test-container',
       title: 'Container Test',
     });
@@ -185,13 +185,13 @@ test.describe('Notification Toast @notifications', () => {
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
-    // Inject two notifications
-    await notificationsPage.mockNotification({
+    // Inject two toast notifications
+    await notificationsPage.mockToast({
       id: 'test-multi-1',
       title: 'Keep This Toast',
     });
 
-    await notificationsPage.mockNotification({
+    await notificationsPage.mockToast({
       id: 'test-multi-2',
       title: 'Dismiss This Toast',
     });

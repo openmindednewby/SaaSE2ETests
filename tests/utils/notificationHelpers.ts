@@ -230,9 +230,19 @@ export function getConnectionStatus(page: Page): Locator {
   return page.locator(testIdSelector(TestIds.NOTIFICATION_CONNECTION_STATUS));
 }
 
+/** Notification data interface for mock functions */
+interface MockNotificationData {
+  id?: string;
+  title: string;
+  body?: string;
+  type?: string;
+  actionUrl?: string;
+}
+
 /**
  * Mock a SignalR notification by evaluating JavaScript in the page context.
- * This injects a fake notification into the notification system.
+ * This injects a fake notification into the notifications list.
+ * Use mockToastNotification() for testing toast popups.
  *
  * NOTE: This requires the notification-client package to expose a mock/test API.
  * If not available, this will log a warning and do nothing.
@@ -242,13 +252,7 @@ export function getConnectionStatus(page: Page): Locator {
  */
 export async function mockSignalRNotification(
   page: Page,
-  notification: {
-    id?: string;
-    title: string;
-    body?: string;
-    type?: string;
-    actionUrl?: string;
-  }
+  notification: MockNotificationData
 ): Promise<void> {
   const notificationId = notification.id ?? `mock-${Date.now()}`;
 
@@ -279,6 +283,54 @@ export async function mockSignalRNotification(
         console.warn(
           '[E2E Test] Notification test API not available. ' +
           'Mock notification injection is not supported in this build.'
+        );
+      }
+    },
+    { notificationData: notification, id: notificationId }
+  );
+}
+
+/**
+ * Mock a toast notification by evaluating JavaScript in the page context.
+ * This adds a toast popup for testing toast UI functionality.
+ * Use mockSignalRNotification() for testing the notifications list.
+ *
+ * NOTE: This requires the notification-client package to expose a mock/test API.
+ * If not available, this will log a warning and do nothing.
+ *
+ * @param page - Playwright page instance
+ * @param notification - The notification data to inject as a toast
+ */
+export async function mockToastNotification(
+  page: Page,
+  notification: MockNotificationData
+): Promise<void> {
+  const notificationId = notification.id ?? `mock-toast-${Date.now()}`;
+
+  await page.evaluate(
+    ({ notificationData, id }) => {
+      const testApi = (window as unknown as { __NOTIFICATION_TEST_API__?: {
+        addToast: (n: {
+          id: string;
+          title: string;
+          body?: string;
+          type?: string;
+          actionUrl?: string;
+        }) => void;
+      } }).__NOTIFICATION_TEST_API__;
+
+      if (testApi?.addToast) {
+        testApi.addToast({
+          id,
+          title: notificationData.title,
+          body: notificationData.body,
+          type: notificationData.type,
+          actionUrl: notificationData.actionUrl,
+        });
+      } else {
+        console.warn(
+          '[E2E Test] Notification test API not available. ' +
+          'Mock toast injection is not supported in this build.'
         );
       }
     },

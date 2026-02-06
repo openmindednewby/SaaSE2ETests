@@ -50,6 +50,13 @@
     "test:content:mobile": "playwright test tests/content --project=content-mobile",
     "test:content:firefox": "playwright test tests/content --project=content-firefox",
 
+    "test:notification": "playwright test tests/notifications --project=notifications-chromium --project=notifications-mobile --project=notifications-firefox",
+    "test:notifications": "npm run test:notification --",
+    "test:notification:chromium": "playwright test tests/notifications --project=notifications-chromium",
+    "test:notification:chromium:headed": "playwright test --headed tests/notifications --project=notifications-chromium",
+    "test:notification:mobile": "playwright test tests/notifications --project=notifications-mobile",
+    "test:notification:firefox": "playwright test tests/notifications --project=notifications-firefox",
+
     "test:smoke": "playwright test tests/smoke --project=smoke-chromium --project=smoke-mobile --project=smoke-firefox",
     "report": "playwright show-report reports/html",
     "codegen": "playwright codegen localhost:8082"
