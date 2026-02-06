@@ -9,7 +9,7 @@
  *   <View testID={TestIds.TEMPLATE_LIST}>
  *
  * Usage in Playwright tests:
- *   import { TestIds } from '../../OnlineMenuSaaS/clients/OnlineMenuClientApp/src/shared/testIds';
+ *   import { TestIds } from '../shared/testIds.js';
  *   page.locator(`[data-testid="${TestIds.TEMPLATE_LIST}"]`)
  */
 
@@ -24,6 +24,10 @@ export const TestIds = {
 
   // Generic list item (used by TenantListItem for various entity types)
   TENANT_LIST_ITEM: 'tenant-list-item',
+
+  // Tenant Selector (User Management)
+  TENANT_SELECTOR_ALL_USERS: 'tenant-selector-all-users',
+  TENANT_SELECTOR_ITEM: 'tenant-selector-item',
 
   // Text elements
   HEADING_TEXT: 'heading-text',
@@ -95,6 +99,7 @@ export const TestIds = {
   CATEGORY_LIST: 'category-list',
   CATEGORY_ADD_BUTTON: 'category-add-button',
   CATEGORY_ITEM: 'category-item',
+  CATEGORY_TOGGLE_BUTTON: 'category-toggle-button',
   CATEGORY_NAME_INPUT: 'category-name-input',
   CATEGORY_DESCRIPTION_INPUT: 'category-description-input',
   CATEGORY_EDIT_BUTTON: 'category-edit-button',
@@ -132,6 +137,27 @@ export const TestIds = {
   PUBLIC_MENU_SHARE_BUTTON: 'public-menu-share-button',
   PUBLIC_MENU_CATEGORY: 'public-menu-category',
   PUBLIC_MENU_ITEM: 'public-menu-item',
+
+  // Notifications
+  NOTIFICATION_BELL: 'notification-bell',
+  NOTIFICATION_BELL_BADGE: 'notification-bell-badge',
+  NOTIFICATION_SCREEN: 'notification-screen',
+  NOTIFICATION_LIST: 'notification-list',
+  NOTIFICATION_ITEM: 'notification-item',
+  NOTIFICATION_MARK_ALL_READ: 'notification-mark-all-read',
+  NOTIFICATION_EMPTY_STATE: 'notification-empty-state',
+  NOTIFICATION_CONNECTION_STATUS: 'notification-connection-status',
+  NOTIFICATION_TOAST_CONTAINER: 'notification-toast-container',
+  NOTIFICATION_TOAST: 'notification-toast',
+  NOTIFICATION_TOAST_DISMISS: 'notification-toast-dismiss',
+  // Notification Preferences (for future implementation)
+  NOTIFICATION_PREFERENCES_SCREEN: 'notification-preferences-screen',
+  NOTIFICATION_PREFERENCES_EMAIL_TOGGLE: 'notification-preferences-email-toggle',
+  NOTIFICATION_PREFERENCES_PUSH_TOGGLE: 'notification-preferences-push-toggle',
+  NOTIFICATION_PREFERENCES_DISPLAY_SELECTOR: 'notification-preferences-display-selector',
+  NOTIFICATION_PREFERENCES_SAVE_BUTTON: 'notification-preferences-save-button',
+  NOTIFICATION_PERMISSION_BANNER: 'notification-permission-banner',
+  ENABLE_NOTIFICATIONS_BUTTON: 'enable-notifications-button',
 
   // Content Upload Components
   CONTENT_UPLOADER: 'content-uploader',
