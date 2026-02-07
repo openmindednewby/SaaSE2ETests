@@ -296,6 +296,141 @@ test.describe.serial('Menu Content Upload @online-menus @content-upload', () => 
 });
 
 /**
+ * E2E Tests for Create Menu with Content
+ *
+ * Tests the two-step create process: create menu first, then update with contents.
+ * This tests the bug fix where creating a new menu with category and image would
+ * lose the category because the create API only supported name/description.
+ */
+test.describe('Create Menu with Category and Image @online-menus @content-upload', () => {
+  test.setTimeout(180000); // 3 minutes for upload tests
+
+  let context: BrowserContext;
+  let page: Page;
+  let menusPage: OnlineMenusPage;
+  let testMenuName: string;
+
+  const testImagePath = path.resolve(__dirname, '..', '..', 'fixtures', 'files', 'test-image.png');
+
+  test.beforeAll(async ({ browser }, testInfo) => {
+    const { admin: adminUser } = getProjectUsers(testInfo.project.name);
+
+    context = await browser.newContext();
+    page = await context.newPage();
+
+    await page.addInitScript(() => {
+      try {
+        const persistAuth = localStorage.getItem('persist:auth');
+        if (persistAuth && !sessionStorage.getItem('persist:auth'))
+          sessionStorage.setItem('persist:auth', persistAuth);
+      } catch {
+        // ignore
+      }
+    });
+
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.loginAndWait(adminUser.username, adminUser.password);
+
+    await page.evaluate(() => {
+      const persistAuth = sessionStorage.getItem('persist:auth');
+      if (persistAuth)
+        localStorage.setItem('persist:auth', persistAuth);
+    });
+
+    menusPage = new OnlineMenusPage(page);
+  });
+
+  test.afterAll(async () => {
+    // Cleanup: delete test menu if it exists
+    try {
+      await menusPage.goto();
+      await menusPage.waitForLoading();
+
+      if (testMenuName && await menusPage.menuExists(testMenuName)) {
+        const isActive = await menusPage.isMenuActive(testMenuName);
+        if (isActive)
+          await menusPage.deactivateMenu(testMenuName);
+        await menusPage.deleteMenu(testMenuName, false);
+      }
+    } catch {
+      // Ignore cleanup errors
+    }
+    await context?.close();
+  });
+
+  test('create new menu with category and image persists correctly', async () => {
+    // This test verifies the bug fix for the two-step create process:
+    // 1. Create menu (POST with name/description only)
+    // 2. Immediately update with contents (PUT with categories/items)
+
+    testMenuName = `Create With Content Test ${Date.now()}`;
+
+    await menusPage.goto();
+    await menusPage.waitForLoading();
+
+    // Step 1: Create a new menu (just name, no description needed for this test)
+    await menusPage.createMenu(testMenuName);
+    await menusPage.expectMenuInList(testMenuName);
+
+    // Step 2: Edit the menu to add a category with an image
+    await menusPage.editMenu(testMenuName);
+    await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
+
+    // Add a category
+    await menusPage.addCategory();
+    await menusPage.expandCategory(0);
+
+    // Set category name
+    const categoryName = 'Test Category With Image';
+    await menusPage.updateCategoryName(0, categoryName);
+
+    // Upload an image to the category
+    await menusPage.uploadImageToCategory(0, testImagePath);
+    await menusPage.expectCategoryImageVisible(0);
+
+    // Step 3: Save the menu
+    await menusPage.saveMenuEditor();
+    await menusPage.expectMenuInList(testMenuName);
+
+    // Step 4: Navigate away and back to force a fresh load
+    await menusPage.goto();
+    await menusPage.waitForLoading();
+
+    // Step 5: Reopen the menu and verify category + image persisted
+    await menusPage.editMenu(testMenuName);
+    await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
+
+    // Expand the category
+    await menusPage.expandCategory(0);
+
+    // Wait for content APIs to complete
+    await page.waitForLoadState('networkidle');
+
+    // Firefox has issues with React Query state updates for dynamically loaded images
+    const browserName = page.context().browser()?.browserType().name() ?? '';
+    if (browserName === 'firefox') {
+      await page.reload();
+      await menusPage.waitForLoading();
+      await menusPage.editMenu(testMenuName);
+      await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
+      await menusPage.expandCategory(0);
+      await page.waitForLoadState('networkidle');
+    }
+
+    // Verify the category name is correct
+    const savedCategoryName = await menusPage.getCategoryNameValue(0);
+    expect(savedCategoryName).toBe(categoryName);
+
+    // Verify the category image is still present
+    await menusPage.expectCategoryImageVisible(0);
+
+    // Close the editor
+    await menusPage.cancelMenuEditor();
+  });
+});
+
+/**
  * E2E Tests for Upload Error Handling
  *
  * These tests verify proper error handling during content upload.

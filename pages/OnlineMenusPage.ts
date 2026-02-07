@@ -1,5 +1,5 @@
 import { Locator, Page, expect } from '@playwright/test';
-import { TestIds, testIdSelector, indexedTestIdSelector } from '../shared/testIds.js';
+import { TestIds, testIdSelector, indexedTestIdSelector, testIdStartsWithSelector } from '../shared/testIds.js';
 import { BasePage } from './BasePage.js';
 
 export class OnlineMenusPage extends BasePage {
@@ -727,13 +727,12 @@ export class OnlineMenusPage extends BasePage {
       await this.switchToContentTab();
     }
 
-    const category = this.getCategoryItem(categoryIndex);
-    // Click on the category header to expand it
-    const categoryHeader = category.locator('text=/Category|Item/i').first();
     // Check if already expanded by looking for input fields
     const nameInput = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_NAME_INPUT, categoryIndex));
     if (await nameInput.count() === 0) {
-      await categoryHeader.click();
+      // Click on the category toggle button to expand it
+      const toggleButton = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_TOGGLE_BUTTON, categoryIndex));
+      await toggleButton.click();
     }
     // Wait for the expansion animation
     await expect(nameInput).toBeVisible({ timeout: 5000 });
@@ -743,13 +742,12 @@ export class OnlineMenusPage extends BasePage {
    * Collapse a category by clicking on its header
    */
   async collapseCategory(categoryIndex: number) {
-    const category = this.getCategoryItem(categoryIndex);
-    // Click on the category header to collapse it
-    const categoryHeader = category.locator('text=/Category|Item/i').first();
     // Check if already collapsed by looking for input fields
     const nameInput = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_NAME_INPUT, categoryIndex));
     if (await nameInput.count() > 0) {
-      await categoryHeader.click();
+      // Click on the category toggle button to collapse it
+      const toggleButton = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_TOGGLE_BUTTON, categoryIndex));
+      await toggleButton.click();
     }
     // Wait for the collapse animation
     await expect(nameInput).not.toBeVisible({ timeout: 5000 });
@@ -770,6 +768,97 @@ export class OnlineMenusPage extends BasePage {
     const addItemButton = this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_ADD_BUTTON, categoryIndex));
     await addItemButton.click();
     await this.waitForLoading();
+  }
+
+  /**
+   * Delete a category by index
+   */
+  async deleteCategory(categoryIndex: number) {
+    const deleteButton = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_DELETE_BUTTON, categoryIndex));
+    await deleteButton.click();
+    await this.waitForLoading();
+  }
+
+  /**
+   * Delete a menu item by category and item index
+   */
+  async deleteMenuItem(categoryIndex: number, itemIndex: number) {
+    const deleteButton = this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_DELETE_BUTTON, categoryIndex, itemIndex));
+    await deleteButton.click();
+    await this.waitForLoading();
+  }
+
+  /**
+   * Get the category name input field
+   */
+  getCategoryNameInput(categoryIndex: number): Locator {
+    return this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_NAME_INPUT, categoryIndex));
+  }
+
+  /**
+   * Get the menu item name input field
+   */
+  getMenuItemNameInput(categoryIndex: number, itemIndex: number): Locator {
+    return this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_NAME_INPUT, categoryIndex, itemIndex));
+  }
+
+  /**
+   * Get the menu item description input field
+   */
+  getMenuItemDescriptionInput(categoryIndex: number, itemIndex: number): Locator {
+    return this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_DESCRIPTION_INPUT, categoryIndex, itemIndex));
+  }
+
+  /**
+   * Get the menu item price input field
+   */
+  getMenuItemPriceInput(categoryIndex: number, itemIndex: number): Locator {
+    return this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_PRICE_INPUT, categoryIndex, itemIndex));
+  }
+
+  /**
+   * Count the number of categories in the editor
+   */
+  async getCategoryCount(): Promise<number> {
+    // Ensure we're on the Content tab first
+    const isContentTabActive = await this.categoryAddButton.isVisible({ timeout: 1000 }).catch(() => false);
+    if (!isContentTabActive) {
+      await this.switchToContentTab();
+    }
+    const categories = this.page.locator(testIdStartsWithSelector(TestIds.CATEGORY_ITEM));
+    return await categories.count();
+  }
+
+  /**
+   * Count the number of items in a category
+   */
+  async getItemCount(categoryIndex: number): Promise<number> {
+    const items = this.page.locator(`[data-testid^="${TestIds.MENU_ITEM}-${categoryIndex}-"]`);
+    return await items.count();
+  }
+
+  /**
+   * Get the value of the category name input
+   */
+  async getCategoryNameValue(categoryIndex: number): Promise<string> {
+    const nameInput = this.getCategoryNameInput(categoryIndex);
+    return await nameInput.inputValue();
+  }
+
+  /**
+   * Get the value of the menu item name input
+   */
+  async getMenuItemNameValue(categoryIndex: number, itemIndex: number): Promise<string> {
+    const nameInput = this.getMenuItemNameInput(categoryIndex, itemIndex);
+    return await nameInput.inputValue();
+  }
+
+  /**
+   * Get the value of the menu item price input
+   */
+  async getMenuItemPriceValue(categoryIndex: number, itemIndex: number): Promise<string> {
+    const priceInput = this.getMenuItemPriceInput(categoryIndex, itemIndex);
+    return await priceInput.inputValue();
   }
 
   /**
