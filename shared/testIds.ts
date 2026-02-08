@@ -181,6 +181,121 @@ export const TestIds = {
   CONTENT_VIDEO: 'content-video',
   CONTENT_VIDEO_CATEGORY: 'content-video-category',
   CONTENT_VIDEO_MENU_ITEM: 'content-video-menu-item',
+
+  // Color Scheme Editor
+  COLOR_SCHEME_EDITOR: 'color-scheme-editor',
+  COLOR_SCHEME_INPUT: 'color-scheme-input',
+  COLOR_SCHEME_INPUT_ROW: 'color-scheme-input-row',
+  COLOR_SCHEME_SWATCH: 'color-scheme-swatch',
+  COLOR_SCHEME_PRESET: 'color-scheme-preset',
+  COLOR_SCHEME_RESET_BUTTON: 'color-scheme-reset-button',
+
+  // Typography Editor
+  TYPOGRAPHY_EDITOR: 'typography-editor',
+  TYPOGRAPHY_SECTION: 'typography-section',
+  TYPOGRAPHY_FONT_PICKER: 'typography-font-picker',
+  TYPOGRAPHY_SIZE_INPUT: 'typography-size-input',
+  TYPOGRAPHY_WEIGHT_PICKER: 'typography-weight-picker',
+  TYPOGRAPHY_PREVIEW: 'typography-preview',
+  TYPOGRAPHY_RESET_BUTTON: 'typography-reset-button',
+
+  // Price Style Editor
+  PRICE_STYLE_EDITOR: 'price-style-editor',
+  PRICE_STYLE_FONT_SIZE_SLIDER: 'price-style-font-size-slider',
+  PRICE_STYLE_FONT_WEIGHT_DROPDOWN: 'price-style-font-weight-dropdown',
+  PRICE_STYLE_COLOR_INPUT: 'price-style-color-input',
+  PRICE_STYLE_COLOR_SWATCH: 'price-style-color-swatch',
+  PRICE_STYLE_CURRENCY_POSITION_BEFORE: 'price-style-currency-position-before',
+  PRICE_STYLE_CURRENCY_POSITION_AFTER: 'price-style-currency-position-after',
+  PRICE_STYLE_SHOW_CURRENCY_TOGGLE: 'price-style-show-currency-toggle',
+  PRICE_STYLE_STRIKETHROUGH_TOGGLE: 'price-style-strikethrough-toggle',
+  PRICE_STYLE_PREVIEW: 'price-style-preview',
+
+  // Media Position Editor
+  MEDIA_POSITION_EDITOR: 'media-position-editor',
+  MEDIA_POSITION_BUTTON: 'media-position-button',
+  MEDIA_SIZE_BUTTON: 'media-size-button',
+  MEDIA_FIT_BUTTON: 'media-fit-button',
+  MEDIA_BORDER_RADIUS_SLIDER: 'media-border-radius-slider',
+  MEDIA_SHOW_TOGGLE: 'media-show-toggle',
+  MEDIA_PREVIEW: 'media-preview',
+
+  // Box Style Editor
+  BOX_STYLE_EDITOR: 'box-style-editor',
+  BOX_STYLE_PREVIEW: 'box-style-preview',
+  BOX_STYLE_BACKGROUND_COLOR_INPUT: 'box-style-background-color-input',
+  BOX_STYLE_BACKGROUND_COLOR_SWATCH: 'box-style-background-color-swatch',
+  BOX_STYLE_BORDER_COLOR_INPUT: 'box-style-border-color-input',
+  BOX_STYLE_BORDER_COLOR_SWATCH: 'box-style-border-color-swatch',
+  BOX_STYLE_BORDER_WIDTH_SLIDER: 'box-style-border-width-slider',
+  BOX_STYLE_BORDER_WIDTH_DECREASE: 'box-style-border-width-decrease',
+  BOX_STYLE_BORDER_WIDTH_INCREASE: 'box-style-border-width-increase',
+  BOX_STYLE_BORDER_RADIUS_SLIDER: 'box-style-border-radius-slider',
+  BOX_STYLE_BORDER_RADIUS_DECREASE: 'box-style-border-radius-decrease',
+  BOX_STYLE_BORDER_RADIUS_INCREASE: 'box-style-border-radius-increase',
+  BOX_STYLE_PADDING_SLIDER: 'box-style-padding-slider',
+  BOX_STYLE_PADDING_DECREASE: 'box-style-padding-decrease',
+  BOX_STYLE_PADDING_INCREASE: 'box-style-padding-increase',
+  BOX_STYLE_SHADOW_TOGGLE: 'box-style-shadow-toggle',
+
+  // Header Editor
+  HEADER_EDITOR: 'header-editor',
+  HEADER_EDITOR_PREVIEW: 'header-editor-preview',
+  HEADER_EDITOR_SHOW_LOGO_TOGGLE: 'header-editor-show-logo-toggle',
+  HEADER_EDITOR_LOGO_POSITION_LEFT: 'header-editor-logo-position-left',
+  HEADER_EDITOR_LOGO_POSITION_CENTER: 'header-editor-logo-position-center',
+  HEADER_EDITOR_LOGO_POSITION_RIGHT: 'header-editor-logo-position-right',
+  HEADER_EDITOR_LOGO_SIZE_SMALL: 'header-editor-logo-size-small',
+  HEADER_EDITOR_LOGO_SIZE_MEDIUM: 'header-editor-logo-size-medium',
+  HEADER_EDITOR_LOGO_SIZE_LARGE: 'header-editor-logo-size-large',
+  HEADER_EDITOR_BANNER_HEIGHT_SLIDER: 'header-editor-banner-height-slider',
+  HEADER_EDITOR_SHOW_MENU_NAME_TOGGLE: 'header-editor-show-menu-name-toggle',
+  HEADER_EDITOR_SHOW_MENU_DESCRIPTION_TOGGLE: 'header-editor-show-menu-description-toggle',
+  HEADER_EDITOR_TITLE_POSITION_LEFT: 'header-editor-title-position-left',
+  HEADER_EDITOR_TITLE_POSITION_CENTER: 'header-editor-title-position-center',
+  HEADER_EDITOR_TITLE_POSITION_RIGHT: 'header-editor-title-position-right',
+
+  // Global Styling Tab
+  GLOBAL_STYLING_TAB: 'global-styling-tab',
+  GLOBAL_STYLING_TAB_LAYOUT: 'global-styling-tab-layout',
+  GLOBAL_STYLING_TAB_COLORS: 'global-styling-tab-colors',
+  GLOBAL_STYLING_TAB_TYPOGRAPHY: 'global-styling-tab-typography',
+  GLOBAL_STYLING_TAB_MEDIA: 'global-styling-tab-media',
+  GLOBAL_STYLING_TAB_HEADER: 'global-styling-tab-header',
+  GLOBAL_STYLING_TAB_SPACING: 'global-styling-tab-spacing',
+  GLOBAL_STYLING_SECTION_HEADER: 'global-styling-section-header',
+  GLOBAL_STYLING_SECTION_CONTENT: 'global-styling-section-content',
+
+  // Spacing Settings Editor
+  SPACING_EDITOR: 'spacing-editor',
+  SPACING_PAGE_PADDING_SLIDER: 'spacing-page-padding-slider',
+  SPACING_CATEGORY_SPACING_SLIDER: 'spacing-category-spacing-slider',
+  SPACING_ITEM_SPACING_SLIDER: 'spacing-item-spacing-slider',
+  SPACING_CONTENT_PADDING_SLIDER: 'spacing-content-padding-slider',
+
+  // Category Styling Section
+  CATEGORY_STYLING_SECTION: 'category-styling-section',
+  CATEGORY_STYLING_TOGGLE: 'category-styling-toggle',
+  CATEGORY_STYLING_CONTENT: 'category-styling-content',
+  CATEGORY_STYLING_BOX_EDITOR: 'category-styling-box-editor',
+  CATEGORY_STYLING_MEDIA_EDITOR: 'category-styling-media-editor',
+
+  // Item Styling Section
+  ITEM_STYLING_SECTION: 'item-styling-section',
+  ITEM_STYLING_HEADER: 'item-styling-header',
+  ITEM_STYLING_CONTENT: 'item-styling-content',
+
+  // Menu Content View (Display)
+  MENU_CONTENT_VIEW: 'menu-content-view',
+  MENU_CONTENT_VIEW_HEADER: 'menu-content-view-header',
+  MENU_CONTENT_VIEW_BANNER: 'menu-content-view-banner',
+  MENU_CONTENT_VIEW_LOGO: 'menu-content-view-logo',
+  MENU_CONTENT_VIEW_TITLE: 'menu-content-view-title',
+  MENU_CONTENT_VIEW_DESCRIPTION: 'menu-content-view-description',
+  MENU_CONTENT_VIEW_CATEGORIES: 'menu-content-view-categories',
+  MENU_CONTENT_VIEW_EMPTY: 'menu-content-view-empty',
+  MENU_CONTENT_VIEW_CATEGORY_SECTION: 'menu-content-view-category-section',
+  MENU_CONTENT_VIEW_MENU_ITEM: 'menu-content-view-menu-item',
 } as const;
 
 // Type for testID values
