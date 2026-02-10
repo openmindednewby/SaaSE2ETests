@@ -18,10 +18,11 @@ export class QuizTemplatesPage extends BasePage {
     super(page);
     // Based on quiz-templates/index.tsx
     this.pageHeader = page.getByText(/quiz templates/i);
-    // TemplateForm component inputs
+    // TemplateForm component inputs - use direct testID selectors for better reliability
+    this.templateNameInput = page.locator(testIdSelector(TestIds.TEMPLATE_NAME_INPUT));
+    this.templateDescriptionInput = page.getByPlaceholder(/description/i);
+    // Find save button within the create form container
     const creationForm = page.locator(testIdSelector(TestIds.CREATE_TEMPLATE_FORM));
-    this.templateNameInput = creationForm.getByPlaceholder(/name/i);
-    this.templateDescriptionInput = creationForm.getByPlaceholder(/description/i);
     this.saveButton = creationForm.getByRole('button', { name: /save/i });
     this.templateList = page.locator(testIdSelector(TestIds.TEMPLATE_LIST));
     this.loadingIndicator = page.locator('[role="progressbar"]');
@@ -136,45 +137,29 @@ export class QuizTemplatesPage extends BasePage {
 
     const editBtn = row.getByRole('button', { name: /edit/i });
     if (await editBtn.isVisible({ timeout: 2000 })) {
-      await editBtn.click({ force: true });
+      await editBtn.click();
     } else {
-      await row.locator('text=/edit/i').first().click({ force: true });
+      await row.locator('text=/edit/i').first().click();
     }
 
-    // Wait for modal to appear - try both testId and role="dialog"
-    const modalByTestId = this.page.locator(testIdSelector(TestIds.TEMPLATE_MODAL));
-    const modalByRole = this.page.locator('[role="dialog"]');
-
-    // Wait for either to be visible
-    await Promise.race([
-      modalByTestId.waitFor({ state: 'visible', timeout: 5000 }),
-      modalByRole.waitFor({ state: 'visible', timeout: 5000 }),
-    ]).catch(() => {
-      throw new Error('Edit modal did not appear within 5 seconds');
-    });
-
+    // Wait for modal to appear - modal is lazy loaded, give it time to render
+    // React Native Modal creates two dialog elements (outer wrapper + inner content)
+    // Use first() to handle strict mode violation
+    await expect(this.page.getByRole('dialog').first()).toBeVisible({ timeout: 10000 });
   }
 
   /**
-   * Get the edit modal locator (handles both testId and role="dialog")
+   * Get the edit modal locator
+   * React Native Modal creates two dialog elements (outer wrapper + inner content)
+   * Use first() to get the outer dialog which contains all modal content
    */
   getEditModal(): Locator {
-    // Check if testId-based modal exists, otherwise use role="dialog"
-    const modalByTestId = this.page.locator(testIdSelector(TestIds.TEMPLATE_MODAL));
-    const modalByRole = this.page.locator('[role="dialog"]');
-    // Return a combined locator that matches either
-    return this.page.locator(`${testIdSelector(TestIds.TEMPLATE_MODAL)}, [role="dialog"]`).first();
+    return this.page.getByRole('dialog').first();
   }
 
   async waitForModalToClose() {
-    // Wait for both possible modal types to close
-    const modalByTestId = this.page.locator(testIdSelector(TestIds.TEMPLATE_MODAL));
-    const modalByRole = this.page.locator('[role="dialog"]');
-
-    await Promise.all([
-      expect(modalByTestId).not.toBeVisible({ timeout: 10000 }).catch(() => {}),
-      expect(modalByRole).not.toBeVisible({ timeout: 10000 }).catch(() => {}),
-    ]);
+    // React Native Modal creates two dialog elements - wait for first one to close
+    await expect(this.page.getByRole('dialog').first()).not.toBeVisible({ timeout: 10000 });
   }
 
   /**
