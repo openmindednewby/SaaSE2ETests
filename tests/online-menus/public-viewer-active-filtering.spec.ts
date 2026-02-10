@@ -190,8 +190,8 @@ test.describe.serial('Public Menu Viewer Active Filtering @online-menus @public-
     await menusPage.deactivateMenu(activeMenuName);
     await menusPage.expectMenuActive(activeMenuName, false);
 
-    // Refresh public menu list
-    await publicPage.reload({ waitUntil: 'commit' });
+    // Navigate to public menu list (more reliable than reload across browsers)
+    await publicPage.goto('/public/menus');
 
     // Wait for page to load
     const publicMenuList = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_LIST));
@@ -224,8 +224,8 @@ test.describe.serial('Public Menu Viewer Active Filtering @online-menus @public-
     await menusPage.activateMenu(inactiveMenuName);
     await menusPage.expectMenuActive(inactiveMenuName, true);
 
-    // Refresh public menu list
-    await publicPage.reload({ waitUntil: 'commit' });
+    // Navigate to public menu list (more reliable than reload across browsers)
+    await publicPage.goto('/public/menus');
 
     // Wait for page to load
     const publicMenuList = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_LIST));
@@ -256,8 +256,8 @@ test.describe.serial('Public Menu Viewer Active Filtering @online-menus @public-
       await menusPage.expectMenuActive(activeMenuName, true);
     }
 
-    // Refresh public menu list
-    await publicPage.reload({ waitUntil: 'commit' });
+    // Navigate to public menu list (more reliable than reload across browsers)
+    await publicPage.goto('/public/menus');
 
     // Wait for page to load
     const publicMenuList = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_LIST));
@@ -346,11 +346,11 @@ test.describe.serial('Public Menu Viewer Active Filtering @online-menus @public-
       await menusPage.expectMenuActive(inactiveMenuName, false);
     }
 
-    // Reload public page multiple times
+    // Navigate to public page multiple times (more reliable than reload across browsers)
     for (let i = 1; i <= 3; i++) {
-      console.log(`Reload attempt ${i}/3`);
+      console.log(`Navigation attempt ${i}/3`);
 
-      await publicPage.reload({ waitUntil: 'commit' });
+      await publicPage.goto('/public/menus');
 
       // Wait for page to load
       const publicMenuList = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_LIST));
