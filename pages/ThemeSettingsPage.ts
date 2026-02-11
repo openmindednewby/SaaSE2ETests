@@ -5,6 +5,8 @@ import { BasePage } from './BasePage.js';
 const DRAWER_LOAD_TIMEOUT = 10000;
 const MIN_PRESET_CARDS = 2;
 const MIN_COLOR_SWATCHES_PER_PRESET = 2;
+const DEFAULT_CONTENT_MAX_WIDTH = '1440px';
+const FULL_WIDTH_CONTENT_MAX_WIDTH = 'none';
 
 /**
  * Page object for the SyncfusionThemeStudio Theme Settings Drawer.
@@ -16,6 +18,11 @@ export class ThemeSettingsPage extends BasePage {
   readonly closeButton: Locator;
   readonly presetsTab: Locator;
   readonly presetCards: Locator;
+  readonly layoutTab: Locator;
+  readonly fullWidthCheckboxWrapper: Locator;
+  readonly fullWidthCheckboxInput: Locator;
+  readonly mainContentArea: Locator;
+  readonly contentContainer: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -23,6 +30,13 @@ export class ThemeSettingsPage extends BasePage {
     this.closeButton = page.locator(testIdSelector(TestIds.STUDIO_THEME_CLOSE_BTN));
     this.presetsTab = page.locator(testIdSelector(TestIds.STUDIO_THEME_TAB_PRESETS));
     this.presetCards = page.locator(testIdSelector(TestIds.STUDIO_THEME_PRESET_CARD));
+    this.layoutTab = page.locator(testIdSelector(TestIds.STUDIO_THEME_TAB_LAYOUT));
+    this.fullWidthCheckboxWrapper = page.locator(
+      testIdSelector(TestIds.STUDIO_LAYOUT_FULL_WIDTH_CHECKBOX)
+    );
+    this.fullWidthCheckboxInput = this.fullWidthCheckboxWrapper.locator('input[type="checkbox"]');
+    this.mainContentArea = page.locator('#main-content');
+    this.contentContainer = this.mainContentArea.locator('.max-w-content');
   }
 
   // ==================== ACTIONS ====================
@@ -165,5 +179,126 @@ export class ThemeSettingsPage extends BasePage {
       activeCount,
       'Should have at most one active preset card'
     ).toBeLessThanOrEqual(1);
+  }
+
+  // ==================== LAYOUT TAB ACTIONS ====================
+
+  /**
+   * Navigate to the Layout tab within the theme settings drawer.
+   */
+  async navigateToLayoutTab() {
+    await this.layoutTab.click();
+    // Wait for the layout section content to become visible
+    await expect(this.fullWidthCheckboxWrapper).toBeVisible({ timeout: DRAWER_LOAD_TIMEOUT });
+  }
+
+  /**
+   * Open the drawer and navigate to the Layout tab.
+   */
+  async openLayoutTab() {
+    await this.openDrawer();
+    await this.navigateToLayoutTab();
+  }
+
+  /**
+   * Toggle the Content Full Width checkbox.
+   */
+  async toggleFullWidthCheckbox() {
+    await this.fullWidthCheckboxInput.click();
+  }
+
+  // ==================== LAYOUT TAB ASSERTIONS ====================
+
+  /**
+   * Get the --content-max-width CSS variable value from the document root.
+   */
+  async getContentMaxWidthVariable(): Promise<string> {
+    return await this.page.evaluate(() => {
+      return getComputedStyle(document.documentElement)
+        .getPropertyValue('--content-max-width')
+        .trim();
+    });
+  }
+
+  /**
+   * Expect the full width checkbox to be unchecked (default state).
+   */
+  async expectFullWidthCheckboxUnchecked() {
+    await expect(this.fullWidthCheckboxInput).not.toBeChecked();
+  }
+
+  /**
+   * Expect the full width checkbox to be checked.
+   */
+  async expectFullWidthCheckboxChecked() {
+    await expect(this.fullWidthCheckboxInput).toBeChecked();
+  }
+
+  /**
+   * Expect --content-max-width CSS variable to be the default value (1440px).
+   */
+  async expectDefaultContentMaxWidth() {
+    await expect(async () => {
+      const value = await this.getContentMaxWidthVariable();
+      expect(value, 'CSS variable --content-max-width should be default').toBe(
+        DEFAULT_CONTENT_MAX_WIDTH
+      );
+    }).toPass();
+  }
+
+  /**
+   * Expect --content-max-width CSS variable to be 'none' (full width enabled).
+   */
+  async expectFullWidthContentMaxWidth() {
+    await expect(async () => {
+      const value = await this.getContentMaxWidthVariable();
+      expect(value, 'CSS variable --content-max-width should be none').toBe(
+        FULL_WIDTH_CONTENT_MAX_WIDTH
+      );
+    }).toPass();
+  }
+
+  /**
+   * Expect the main content area to have standard padding (p-6 = 24px).
+   */
+  async expectStandardPadding() {
+    await expect(this.mainContentArea).toBeVisible();
+    const hasP6 = await this.mainContentArea.evaluate((el) => {
+      return el.classList.contains('p-6');
+    });
+    expect(hasP6, 'Main content should have p-6 class for standard padding').toBe(true);
+  }
+
+  /**
+   * Expect the main content area to have reduced padding (p-2 = 8px).
+   */
+  async expectReducedPadding() {
+    await expect(this.mainContentArea).toBeVisible();
+    const hasP2 = await this.mainContentArea.evaluate((el) => {
+      return el.classList.contains('p-2');
+    });
+    expect(hasP2, 'Main content should have p-2 class for reduced padding').toBe(true);
+  }
+
+  /**
+   * Expect the content container to have mx-auto centering (default).
+   */
+  async expectContentCentered() {
+    await expect(this.contentContainer).toBeVisible();
+    const hasMxAuto = await this.contentContainer.evaluate((el) => {
+      return el.classList.contains('mx-auto');
+    });
+    expect(hasMxAuto, 'Content container should have mx-auto for centering').toBe(true);
+  }
+
+  /**
+   * Expect the content container to NOT have mx-auto centering (full width).
+   */
+  async expectContentNotCentered() {
+    await expect(this.contentContainer).toBeVisible();
+    const hasMxAuto = await this.contentContainer.evaluate((el) => {
+      return el.classList.contains('mx-auto');
+    });
+    expect(hasMxAuto, 'Content container should not have mx-auto when full width').toBe(false);
   }
 }
