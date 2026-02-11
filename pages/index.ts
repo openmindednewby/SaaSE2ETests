@@ -2,11 +2,16 @@ export { BasePage } from './BasePage.js';
 export { ContentPage } from './ContentPage.js';
 export { LoginPage } from './LoginPage.js';
 export { MenuStylingPage } from './MenuStylingPage.js';
+export { NativeComponentsPage } from './NativeComponentsPage.js';
+export { NativeFormsPage } from './NativeFormsPage.js';
 export { NotificationsPage } from './NotificationsPage.js';
 export { OnlineMenusPage } from './OnlineMenusPage.js';
 export { QuizActivePage } from './QuizActivePage.js';
 export { QuizAnswersPage } from './QuizAnswersPage.js';
 export { QuizTemplatesPage } from './QuizTemplatesPage.js';
+export { StudioLoginPage } from './StudioLoginPage.js';
+export { StudioProductsPage } from './StudioProductsPage.js';
 export { TenantsPage } from './TenantsPage.js';
+export { ThemeSettingsPage } from './ThemeSettingsPage.js';
 export { UsersPage } from './UsersPage.js';
 

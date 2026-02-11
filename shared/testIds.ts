@@ -296,6 +296,52 @@ export const TestIds = {
   MENU_CONTENT_VIEW_EMPTY: 'menu-content-view-empty',
   MENU_CONTENT_VIEW_CATEGORY_SECTION: 'menu-content-view-category-section',
   MENU_CONTENT_VIEW_MENU_ITEM: 'menu-content-view-menu-item',
+
+  // Native Forms Showcase
+  NATIVE_FORMS_PAGE: 'native-forms-page',
+  SHOWCASE_LOGIN_EMAIL: 'showcase-login-email',
+  SHOWCASE_LOGIN_PASSWORD: 'showcase-login-password',
+  SHOWCASE_LOGIN_PASSWORD_TOGGLE: 'showcase-login-password-toggle',
+  SHOWCASE_LOGIN_REMEMBER: 'showcase-login-remember',
+  SHOWCASE_LOGIN_SUBMIT: 'showcase-login-submit',
+  SHOWCASE_REGISTER_NAME: 'showcase-register-name',
+  SHOWCASE_REGISTER_EMAIL: 'showcase-register-email',
+  SHOWCASE_REGISTER_PASSWORD: 'showcase-register-password',
+  SHOWCASE_REGISTER_CONFIRM_PASSWORD: 'showcase-register-confirm-password',
+  SHOWCASE_REGISTER_SUBMIT: 'showcase-register-submit',
+  SHOWCASE_CONTACT_NAME: 'showcase-contact-name',
+  SHOWCASE_CONTACT_EMAIL: 'showcase-contact-email',
+  SHOWCASE_CONTACT_SUBJECT: 'showcase-contact-subject',
+  SHOWCASE_CONTACT_MESSAGE: 'showcase-contact-message',
+  SHOWCASE_CONTACT_SUBMIT: 'showcase-contact-submit',
+  SHOWCASE_NEWSLETTER_EMAIL: 'showcase-newsletter-email',
+  SHOWCASE_NEWSLETTER_SUBMIT: 'showcase-newsletter-submit',
+
+  // SyncfusionThemeStudio - Login
+  STUDIO_LOGIN_USERNAME: 'login-username',
+  STUDIO_LOGIN_PASSWORD: 'login-password',
+  STUDIO_LOGIN_SUBMIT: 'login-submit',
+
+  // SyncfusionThemeStudio - Native Components Page
+  STUDIO_NATIVE_COMPONENTS_PAGE: 'native-components-page',
+  STUDIO_NATIVE_CHECKBOX_CHECKED: 'native-checkbox-checked',
+  STUDIO_NATIVE_CHECKBOX_UNCHECKED: 'native-checkbox-unchecked',
+  STUDIO_NATIVE_CHECKBOX_DISABLED: 'native-checkbox-disabled',
+  STUDIO_NATIVE_CHECKBOX_INDETERMINATE: 'native-checkbox-indeterminate',
+
+  // SyncfusionThemeStudio - Products Pages
+  STUDIO_NATIVE_PRODUCTS_PAGE: 'native-products-page',
+  STUDIO_NATIVE_PRODUCTS_GRID: 'native-products-grid',
+  STUDIO_PRODUCTS_GRID: 'products-grid',
+  STUDIO_PRODUCTS_CATEGORY_FILTER: 'products-category-filter',
+  STUDIO_BTN_RETRY: 'btn-retry',
+
+  // SyncfusionThemeStudio - Theme Settings Drawer
+  STUDIO_THEME_SETTINGS_DRAWER: 'theme-settings-drawer',
+  STUDIO_THEME_SETTINGS_BUTTON: 'theme-settings-button',
+  STUDIO_THEME_PRESET_CARD: 'theme-preset-card',
+  STUDIO_THEME_TAB_PRESETS: 'theme-tab-presets',
+  STUDIO_THEME_CLOSE_BTN: 'theme-close-btn',
 } as const;
 
 // Type for testID values
