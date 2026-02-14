@@ -2,6 +2,8 @@ import { test, expect } from '../../../fixtures/index.js';
 import { QuizActivePage } from '../../../pages/QuizActivePage.js';
 
 test.describe('Submit Quiz @questioner', () => {
+  test.setTimeout(60000);
+
   let quizActivePage: QuizActivePage;
 
   test.beforeEach(async ({ page }) => {

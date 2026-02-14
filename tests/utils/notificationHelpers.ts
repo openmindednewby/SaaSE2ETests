@@ -30,7 +30,11 @@ export function getToastContainer(page: Page): Locator {
  * Get all visible notification toasts
  */
 export function getToasts(page: Page): Locator {
-  return page.locator(`[data-testid^="${TestIds.NOTIFICATION_TOAST}-"]`);
+  return page.locator(
+    `[data-testid^="${TestIds.NOTIFICATION_TOAST}-"]` +
+    `:not([data-testid="${TestIds.NOTIFICATION_TOAST_CONTAINER}"])` +
+    `:not([data-testid^="${TestIds.NOTIFICATION_TOAST_DISMISS}-"])`
+  );
 }
 
 /**
@@ -376,5 +380,29 @@ export async function dismissAllToasts(page: Page): Promise<void> {
     if (await toast.isVisible()) {
       await dismissNotificationToast(page, toast);
     }
+  }
+}
+
+/** Default timeout for waiting on the test API store */
+const STORE_READY_TIMEOUT_MS = 5000;
+
+/**
+ * Check if the notification test API is available and store is registered.
+ * Waits up to 5 seconds for the store to become ready.
+ */
+export async function hasNotificationTestApi(page: Page): Promise<boolean> {
+  try {
+    await page.waitForFunction(
+      () => {
+        const api = (window as unknown as {
+          __NOTIFICATION_TEST_API__?: { isStoreReady?: () => boolean };
+        }).__NOTIFICATION_TEST_API__;
+        return api?.isStoreReady?.() === true;
+      },
+      { timeout: STORE_READY_TIMEOUT_MS }
+    );
+    return true;
+  } catch {
+    return false;
   }
 }

@@ -20,6 +20,20 @@ test.describe('Notification Screen @notifications', () => {
 
   test.beforeEach(async ({ page }) => {
     notificationsPage = new NotificationsPage(page);
+
+    // Copy auth from localStorage (set by storageState) to sessionStorage
+    // The app reads persist:auth from sessionStorage, but Playwright's
+    // storageState only restores localStorage and cookies.
+    await page.addInitScript(() => {
+      try {
+        const persistAuth = localStorage.getItem('persist:auth');
+        if (persistAuth && !sessionStorage.getItem('persist:auth'))
+          sessionStorage.setItem('persist:auth', persistAuth);
+      } catch {
+        // ignore
+      }
+    });
+
     await notificationsPage.goto('/notifications');
     await notificationsPage.waitForLoading();
   });
@@ -227,6 +241,17 @@ test.describe('Notification Screen - Navigation @notifications', () => {
 
   test.beforeEach(async ({ page }) => {
     notificationsPage = new NotificationsPage(page);
+
+    // Copy auth from localStorage (set by storageState) to sessionStorage
+    await page.addInitScript(() => {
+      try {
+        const persistAuth = localStorage.getItem('persist:auth');
+        if (persistAuth && !sessionStorage.getItem('persist:auth'))
+          sessionStorage.setItem('persist:auth', persistAuth);
+      } catch {
+        // ignore
+      }
+    });
   });
 
   test('can navigate to notifications via bell icon', async ({ page }) => {
@@ -299,6 +324,17 @@ test.describe('Notification Screen - Rendering @notifications', () => {
 
   test.beforeEach(async ({ page }) => {
     notificationsPage = new NotificationsPage(page);
+
+    // Copy auth from localStorage (set by storageState) to sessionStorage
+    await page.addInitScript(() => {
+      try {
+        const persistAuth = localStorage.getItem('persist:auth');
+        if (persistAuth && !sessionStorage.getItem('persist:auth'))
+          sessionStorage.setItem('persist:auth', persistAuth);
+      } catch {
+        // ignore
+      }
+    });
   });
 
   test('screen renders correctly', async ({ page }) => {

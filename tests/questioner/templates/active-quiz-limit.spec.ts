@@ -100,8 +100,7 @@ test.describe('Active Quiz Limit @questioner', () => {
     let t2Activated = await templatesPage.activateTemplate(t2Name);
     if (!t2Activated) {
       // Retry once after a short wait for backend to catch up
-      await templatesPage.page.reload({ waitUntil: 'commit' });
-      await templatesPage.waitForLoading();
+      await templatesPage.refetchTemplatesList();
       t2Activated = await templatesPage.activateTemplate(t2Name);
     }
     await templatesPage.expectTemplateActive(t2Name, true);

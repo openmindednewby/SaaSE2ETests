@@ -27,7 +27,7 @@ test.describe.serial('Public Menu Viewer Active Filtering @online-menus @public-
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     // Create admin context for managing menus
-    context = await browser.newContext();
+    context = await browser.newContext({ storageState: 'playwright/.auth/user.json' });
     page = await context.newPage();
 
     // Add init script to restore auth from localStorage to sessionStorage on page load

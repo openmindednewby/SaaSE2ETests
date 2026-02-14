@@ -34,12 +34,32 @@ export class QuizTemplatesPage extends BasePage {
   }
 
   /**
+   * Wait for a concrete page element to confirm React has rendered.
+   * waitForLoading() alone can return instantly if React hasn't mounted yet
+   * because count() returns 0 on an empty DOM.
+   */
+  private async waitForPageReady() {
+    // Ensure JS bundle has fully loaded so React can mount
+    await this.page.waitForLoadState('load');
+    // Dismiss any PWA overlay that may cover page content
+    await this.dismissOverlay();
+    // Wait for React to render page content (either element confirms the page loaded)
+    // 60s timeout accounts for slow dev builds under concurrent browser load
+    const PAGE_READY_TIMEOUT = 60000;
+    await Promise.race([
+      this.templateNameInput.waitFor({ state: 'visible', timeout: PAGE_READY_TIMEOUT }),
+      this.deleteInactiveButton.waitFor({ state: 'visible', timeout: PAGE_READY_TIMEOUT }),
+    ]);
+    await this.waitForLoading();
+  }
+
+  /**
    * Navigate to quiz templates page
    * Expo Router: (protected) is a route group, URL is just /quiz-templates
    */
   async goto() {
     await super.goto('/quiz-templates');
-    await this.waitForLoading();
+    await this.waitForPageReady();
   }
 
   /**
@@ -53,8 +73,8 @@ export class QuizTemplatesPage extends BasePage {
       { timeout: 10000 }
     ).catch(() => null);
 
-    await this.page.reload({ waitUntil: 'commit' });
-    await this.waitForLoading();
+    await this.page.reload({ waitUntil: 'load', timeout: 30000 });
+    await this.waitForPageReady();
     await listFetch;
   }
 
@@ -63,7 +83,7 @@ export class QuizTemplatesPage extends BasePage {
    */
   async createTemplate(name: string, description: string = '') {
     // Ensure form is visible (locator auto-retries, no need for waitForLoading)
-    await this.templateNameInput.waitFor({ state: 'visible', timeout: 5000 });
+    await this.templateNameInput.waitFor({ state: 'visible', timeout: 15000 });
 
     // Fill name (fill() clears first, no need for separate clear)
     await this.templateNameInput.fill(name);
@@ -257,8 +277,8 @@ export class QuizTemplatesPage extends BasePage {
 
     // Get current status before clicking
     const statusLabel = row.locator(testIdSelector(TestIds.STATUS_LABEL));
-    const statusBefore = (await statusLabel.textContent().catch(() => '')) || '';
-    const wasActive = statusBefore.toLowerCase().includes('enabled') || statusBefore.toLowerCase().includes('active');
+    const statusBefore = (await statusLabel.textContent().catch(() => '')).trim();
+    const wasActive = /^(active|enabled)$/i.test(statusBefore);
     console.log(`Template "${name}" status before: "${statusBefore}" (wasActive: ${wasActive})`);
 
     // Set up response listener (could be Activate (PUT) or Deactivate (PUT/DELETE))
@@ -305,8 +325,8 @@ export class QuizTemplatesPage extends BasePage {
     // Wait for status to change using web-first assertion (auto-retries for 5s)
     if (apiSuccess) {
       const expectedStatus = wasActive ? /inactive|disabled/i : /active|enabled/i;
-      await expect(statusLabel).toHaveText(expectedStatus, { timeout: 5000 }).catch(() => {
-        const statusAfter = statusLabel.textContent().catch(() => '');
+      await expect(statusLabel).toHaveText(expectedStatus, { timeout: 5000 }).catch(async () => {
+        const statusAfter = await statusLabel.textContent().catch(() => '');
         console.log(`Template "${name}" status after: "${statusAfter}" (expected change from wasActive=${wasActive})`);
       });
     }
@@ -320,10 +340,10 @@ export class QuizTemplatesPage extends BasePage {
   async isTemplateActive(name: string): Promise<boolean> {
     const row = this.getTemplateRow(name);
     const statusLabel = row.locator(testIdSelector(TestIds.STATUS_LABEL));
-    const statusText = (await statusLabel.textContent().catch(() => '')) || '';
+    const statusText = (await statusLabel.textContent().catch(() => '')).trim();
 
-    // Status should be "Active" or "Enabled"
-    return statusText.toLowerCase().includes('active') || statusText.toLowerCase().includes('enabled');
+    // Status should be "Active" or "Enabled" (exact match to avoid matching "Inactive")
+    return /^(active|enabled)$/i.test(statusText);
   }
 
   async expectTemplateActive(name: string, active: boolean = true) {
@@ -451,8 +471,8 @@ export class QuizTemplatesPage extends BasePage {
    */
   async deactivateAllTemplates() {
     // Reload to ensure we see current server state (not stale cache)
-    await this.page.reload({ waitUntil: 'commit' });
-    await this.waitForLoading();
+    await this.page.reload({ waitUntil: 'load', timeout: 30000 });
+    await this.waitForPageReady();
 
     const statusSelector = testIdSelector(TestIds.STATUS_LABEL);
     let attempts = 0;
@@ -461,7 +481,7 @@ export class QuizTemplatesPage extends BasePage {
     while (attempts < maxAttempts) {
       attempts++;
       const activeRows = this.page.locator(testIdSelector(TestIds.TENANT_LIST_ITEM)).filter({
-        has: this.page.locator(statusSelector, { hasText: /active|enabled/i })
+        has: this.page.locator(statusSelector, { hasText: /^(active|enabled)$/i })
       });
 
       const count = await activeRows.count();
@@ -491,8 +511,8 @@ export class QuizTemplatesPage extends BasePage {
         await activateFallback.click({ force: true });
       } else {
         console.warn('Active template detected but activation button is not visible, refreshing...');
-        await this.page.reload({ waitUntil: 'commit' });
-        await this.waitForLoading();
+        await this.page.reload({ waitUntil: 'load', timeout: 30000 });
+        await this.waitForPageReady();
         continue;
       }
 

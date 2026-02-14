@@ -24,7 +24,7 @@ test.describe.serial('Menu Status Display @online-menus @ui', () => {
   test.beforeAll(async ({ browser }, testInfo) => {
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
-    context = await browser.newContext();
+    context = await browser.newContext({ storageState: 'playwright/.auth/user.json' });
     page = await context.newPage();
 
     // Add init script to restore auth from localStorage to sessionStorage on page load

@@ -47,7 +47,16 @@
     "test:notification:firefox": "cross-env SHELL=/bin/bash playwright test tests/notifications --project=notifications-firefox",
     "test:smoke": "cross-env SHELL=/bin/bash playwright test tests/smoke --project=smoke-chromium --project=smoke-mobile --project=smoke-firefox",
     "report": "playwright show-report reports/html",
-    "codegen": "playwright codegen localhost:8082"
+    "codegen": "playwright codegen localhost:8082",
+    "tilt:health": "node scripts/tilt-e2e.mjs playwright-e2e-health",
+    "tilt:identity": "node scripts/tilt-e2e.mjs playwright-e2e-identity-all",
+    "tilt:questioner": "node scripts/tilt-e2e.mjs playwright-e2e-questioner-all",
+    "tilt:questioner:templates": "node scripts/tilt-e2e.mjs playwright-e2e-questioner-templates-all",
+    "tilt:questioner:quiz": "node scripts/tilt-e2e.mjs playwright-e2e-questioner-quiz-all",
+    "tilt:online-menus": "node scripts/tilt-e2e.mjs playwright-e2e-online-menus-all",
+    "tilt:content": "node scripts/tilt-e2e.mjs playwright-e2e-content-all",
+    "tilt:notification": "node scripts/tilt-e2e.mjs playwright-e2e-notification-all",
+    "tilt:theme-studio": "node scripts/tilt-e2e.mjs theme-studio-e2e --port 10351"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",

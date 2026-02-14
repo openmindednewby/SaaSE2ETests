@@ -2,12 +2,12 @@
  * E2E Tests for Notification Preferences functionality
  *
  * Tests the notification preferences screen including:
- * - Navigation to preferences screen
- * - Toggle email notifications
- * - Toggle push notifications
- * - Change default display preference
+ * - Navigation to preferences screen via settings button
+ * - Change notification preference via dropdown
  * - Save preferences
- * - Preferences persistence
+ * - Preferences persistence across page reload
+ * - Permission banner with enable/later buttons
+ * - Enable notifications permission request
  *
  * NOTE: These tests require the notification preferences feature to be implemented.
  * Tests will be skipped if the preferences screen is not available.
@@ -38,96 +38,63 @@ test.describe('Notification Preferences @notifications', () => {
     // First go to notifications page
     await notificationsPage.goto('/notifications');
 
-    // Look for a settings/preferences link or button
-    const settingsLink = page.getByRole('link', { name: /settings|preferences/i })
-      .or(page.getByRole('button', { name: /settings|preferences/i }));
+    // Look for the notification settings button by testId first
+    const settingsButton = page.locator(testIdSelector(TestIds.NOTIFICATION_SETTINGS_BUTTON));
+    const hasSettingsButton = await settingsButton.isVisible({ timeout: 3000 }).catch(() => false);
 
-    const hasSettingsLink = await settingsLink.count() > 0;
-
-    if (hasSettingsLink) {
-      await settingsLink.first().click();
+    if (hasSettingsButton) {
+      await settingsButton.click();
       await expect(page).toHaveURL(/\/notifications\/preferences|\/settings\/notifications/i, { timeout: 5000 });
     } else {
-      // Try direct navigation
-      await page.goto('/notifications/preferences', { waitUntil: 'commit' });
+      // Fallback: look for a settings/preferences link or button by role
+      const settingsLink = page.getByRole('link', { name: /settings|preferences/i })
+        .or(page.getByRole('button', { name: /settings|preferences/i }));
 
-      // Check if we got a 404 or preferences page
-      const preferencesScreen = page.locator(testIdSelector(TestIds.NOTIFICATION_PREFERENCES_SCREEN));
-      const isVisible = await preferencesScreen.isVisible({ timeout: 3000 }).catch(() => false);
+      const hasSettingsLink = await settingsLink.count() > 0;
 
-      test.skip(!isVisible, 'Notification preferences screen not implemented yet');
+      if (hasSettingsLink) {
+        await settingsLink.first().click();
+        await expect(page).toHaveURL(/\/notifications\/preferences|\/settings\/notifications/i, { timeout: 5000 });
+      } else {
+        // Try direct navigation
+        await page.goto('/notifications/preferences', { waitUntil: 'commit' });
+
+        // Check if we got a 404 or preferences page
+        const preferencesScreen = page.locator(testIdSelector(TestIds.NOTIFICATION_PREFERENCES_SCREEN));
+        const isVisible = await preferencesScreen.isVisible({ timeout: 3000 }).catch(() => false);
+
+        test.skip(!isVisible, 'Notification preferences screen not implemented yet');
+      }
     }
   });
 
-  test('toggle email notifications', async ({ page }) => {
+  test('change notification preference via dropdown', async ({ page }) => {
     const isAvailable = await isPreferencesScreenAvailable(page);
     test.skip(!isAvailable, 'Notification preferences screen not implemented yet');
 
-    // Find the email toggle
-    const emailToggle = page.locator(testIdSelector(TestIds.NOTIFICATION_PREFERENCES_EMAIL_TOGGLE));
-    await expect(emailToggle).toBeVisible();
-
-    // Get initial state
-    const initialState = await emailToggle.getAttribute('aria-checked');
-    const isChecked = initialState === 'true';
-
-    // Toggle it
-    await emailToggle.click();
-
-    // Verify state changed
-    const newState = await emailToggle.getAttribute('aria-checked');
-    const nowChecked = newState === 'true';
-    expect(nowChecked).toBe(!isChecked);
-  });
-
-  test('toggle push notifications', async ({ page }) => {
-    const isAvailable = await isPreferencesScreenAvailable(page);
-    test.skip(!isAvailable, 'Notification preferences screen not implemented yet');
-
-    // Find the push notifications toggle
-    const pushToggle = page.locator(testIdSelector(TestIds.NOTIFICATION_PREFERENCES_PUSH_TOGGLE));
-    await expect(pushToggle).toBeVisible();
-
-    // Get initial state
-    const initialState = await pushToggle.getAttribute('aria-checked');
-    const isChecked = initialState === 'true';
-
-    // Toggle it
-    await pushToggle.click();
-
-    // Verify state changed
-    const newState = await pushToggle.getAttribute('aria-checked');
-    const nowChecked = newState === 'true';
-    expect(nowChecked).toBe(!isChecked);
-  });
-
-  test('change default display preference', async ({ page }) => {
-    const isAvailable = await isPreferencesScreenAvailable(page);
-    test.skip(!isAvailable, 'Notification preferences screen not implemented yet');
-
-    // Find the display preference selector (dropdown/radio/select)
-    const displaySelector = page.locator(testIdSelector(TestIds.NOTIFICATION_PREFERENCES_DISPLAY_SELECTOR));
+    // Find the notification preference dropdown
+    const preferenceDropdown = page.locator(testIdSelector(TestIds.NOTIFICATION_PREFERENCE_DROPDOWN));
 
     // Check if it's visible
-    const isVisible = await displaySelector.isVisible({ timeout: 3000 }).catch(() => false);
-    test.skip(!isVisible, 'Display preference selector not found');
+    const isVisible = await preferenceDropdown.isVisible({ timeout: 3000 }).catch(() => false);
+    test.skip(!isVisible, 'Notification preference dropdown not found');
 
     // Get the element type to handle it appropriately
-    const tagName = await displaySelector.evaluate((el) => el.tagName.toLowerCase());
+    const tagName = await preferenceDropdown.evaluate((el) => el.tagName.toLowerCase());
 
     if (tagName === 'select') {
       // It's a select dropdown
-      const options = await displaySelector.locator('option').allTextContents();
+      const options = await preferenceDropdown.locator('option').allTextContents();
 
       if (options.length > 1) {
         // Select a different option
-        const currentValue = await displaySelector.inputValue();
+        const currentValue = await preferenceDropdown.inputValue();
         const newOption = options.find((opt) => opt !== currentValue) ?? options[1];
-        await displaySelector.selectOption({ label: newOption });
+        await preferenceDropdown.selectOption({ label: newOption });
       }
     } else {
       // It might be a custom dropdown or radio group - click to open/toggle
-      await displaySelector.click();
+      await preferenceDropdown.click();
 
       // Look for options in a dropdown menu
       const options = page.getByRole('option').or(page.getByRole('radio'));
@@ -193,20 +160,32 @@ test.describe('Notification Preferences @notifications', () => {
     const isAvailable = await isPreferencesScreenAvailable(page);
     test.skip(!isAvailable, 'Notification preferences screen not implemented yet');
 
-    // Find toggles
-    const emailToggle = page.locator(testIdSelector(TestIds.NOTIFICATION_PREFERENCES_EMAIL_TOGGLE));
-    const pushToggle = page.locator(testIdSelector(TestIds.NOTIFICATION_PREFERENCES_PUSH_TOGGLE));
+    // Find the notification preference dropdown
+    const preferenceDropdown = page.locator(testIdSelector(TestIds.NOTIFICATION_PREFERENCE_DROPDOWN));
+    const isDropdownVisible = await preferenceDropdown.isVisible({ timeout: 3000 }).catch(() => false);
+    test.skip(!isDropdownVisible, 'Notification preference dropdown not found');
 
-    // Record initial states
-    const emailInitial = await emailToggle.getAttribute('aria-checked');
-    const pushInitial = await pushToggle.getAttribute('aria-checked');
+    // Record initial value
+    const tagName = await preferenceDropdown.evaluate((el) => el.tagName.toLowerCase());
+    let initialValue: string | null = null;
 
-    // Toggle email (change state)
-    await emailToggle.click();
-
-    // Get new state
-    const emailChanged = await emailToggle.getAttribute('aria-checked');
-    expect(emailChanged).not.toBe(emailInitial);
+    if (tagName === 'select') {
+      initialValue = await preferenceDropdown.inputValue();
+      // Change to a different option
+      const options = await preferenceDropdown.locator('option').allTextContents();
+      if (options.length > 1) {
+        const newOption = options.find((opt) => opt !== initialValue) ?? options[1];
+        await preferenceDropdown.selectOption({ label: newOption });
+      }
+    } else {
+      initialValue = await preferenceDropdown.textContent();
+      await preferenceDropdown.click();
+      const options = page.getByRole('option').or(page.getByRole('radio'));
+      const optionCount = await options.count();
+      if (optionCount > 1) {
+        await options.nth(1).click();
+      }
+    }
 
     // Save preferences
     const saveButton = page.locator(testIdSelector(TestIds.NOTIFICATION_PREFERENCES_SAVE_BUTTON));
@@ -223,23 +202,27 @@ test.describe('Notification Preferences @notifications', () => {
     // Give some time for state to persist
     await notificationsPage.waitForLoading();
 
+    // Record the changed value before reload
+    let changedValue: string | null = null;
+    if (tagName === 'select') {
+      changedValue = await preferenceDropdown.inputValue();
+    } else {
+      changedValue = await preferenceDropdown.textContent();
+    }
+    expect(changedValue).not.toBe(initialValue);
+
     // Reload the page
     await page.reload({ waitUntil: 'domcontentloaded' });
     await notificationsPage.waitForLoading();
 
-    // Check that email preference persisted
-    const emailAfterReload = await emailToggle.getAttribute('aria-checked');
-    expect(emailAfterReload).toBe(emailChanged);
-
-    // Push should be unchanged
-    const pushAfterReload = await pushToggle.getAttribute('aria-checked');
-    expect(pushAfterReload).toBe(pushInitial);
-
-    // Restore original state for cleanup
-    if (emailAfterReload !== emailInitial) {
-      await emailToggle.click();
-      await saveButton.click();
+    // Check that preference persisted after reload
+    let afterReloadValue: string | null = null;
+    if (tagName === 'select') {
+      afterReloadValue = await preferenceDropdown.inputValue();
+    } else {
+      afterReloadValue = await preferenceDropdown.textContent();
     }
+    expect(afterReloadValue).toBe(changedValue);
   });
 
   test('notification permission banner appears when permissions needed', async ({ page }) => {
@@ -251,7 +234,8 @@ test.describe('Notification Preferences @notifications', () => {
 
     // Check for permission banner
     const permissionBanner = page.locator(testIdSelector(TestIds.NOTIFICATION_PERMISSION_BANNER));
-    const enableButton = page.locator(testIdSelector(TestIds.ENABLE_NOTIFICATIONS_BUTTON));
+    const enableButton = page.locator(testIdSelector(TestIds.NOTIFICATION_PERMISSION_ENABLE_BUTTON));
+    const laterButton = page.locator(testIdSelector(TestIds.NOTIFICATION_PERMISSION_LATER_BUTTON));
 
     // Permission banner may or may not be visible depending on browser state
     const bannerVisible = await permissionBanner.isVisible({ timeout: 3000 }).catch(() => false);
@@ -259,6 +243,9 @@ test.describe('Notification Preferences @notifications', () => {
     if (bannerVisible) {
       // If visible, verify enable button is present
       await expect(enableButton).toBeVisible();
+
+      // Verify later/dismiss button is present
+      await expect(laterButton).toBeVisible();
 
       // Verify banner has explanatory text
       await expect(permissionBanner).toContainText(/notification|alert|permission/i);
@@ -278,7 +265,7 @@ test.describe('Notification Preferences @notifications', () => {
       await notificationsPage.waitForLoading();
     }
 
-    const enableButton = page.locator(testIdSelector(TestIds.ENABLE_NOTIFICATIONS_BUTTON));
+    const enableButton = page.locator(testIdSelector(TestIds.NOTIFICATION_PERMISSION_ENABLE_BUTTON));
     const isVisible = await enableButton.isVisible({ timeout: 3000 }).catch(() => false);
 
     test.skip(!isVisible, 'Enable notifications button not visible (may already be enabled)');

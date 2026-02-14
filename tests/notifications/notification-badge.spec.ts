@@ -15,21 +15,26 @@ import { test, expect } from '@playwright/test';
 
 import { NotificationsPage } from '../../pages/NotificationsPage.js';
 import { TestIds } from '../../shared/testIds.js';
-
-/**
- * Helper to check if notification test API is available
- */
-async function hasNotificationTestApi(page: import('@playwright/test').Page): Promise<boolean> {
-  return await page.evaluate(() => {
-    return typeof (window as unknown as { __NOTIFICATION_TEST_API__?: unknown }).__NOTIFICATION_TEST_API__ !== 'undefined';
-  });
-}
+import { hasNotificationTestApi } from '../utils/notificationHelpers.js';
 
 test.describe('Notification Badge @notifications', () => {
   let notificationsPage: NotificationsPage;
 
   test.beforeEach(async ({ page }) => {
     notificationsPage = new NotificationsPage(page);
+
+    // Copy auth from localStorage (set by storageState) to sessionStorage
+    // The app reads persist:auth from sessionStorage, but Playwright's
+    // storageState only restores localStorage and cookies.
+    await page.addInitScript(() => {
+      try {
+        const persistAuth = localStorage.getItem('persist:auth');
+        if (persistAuth && !sessionStorage.getItem('persist:auth'))
+          sessionStorage.setItem('persist:auth', persistAuth);
+      } catch {
+        // ignore
+      }
+    });
 
     // Navigate to a page where the notification bell is visible
     await notificationsPage.goto('/menus');

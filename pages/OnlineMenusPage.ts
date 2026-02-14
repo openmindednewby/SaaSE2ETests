@@ -72,6 +72,9 @@ export class OnlineMenusPage extends BasePage {
   async goto() {
     await super.goto('/menus');
     await this.waitForLoading();
+    // Wait for the page header or create button to confirm the menus page has rendered.
+    // Under concurrency, the page may take longer to hydrate after auth restoration.
+    await expect(this.createMenuButton).toBeVisible({ timeout: 15000 });
   }
 
   /**
@@ -87,6 +90,8 @@ export class OnlineMenusPage extends BasePage {
 
     await this.page.reload({ waitUntil: 'commit' });
     await this.waitForLoading();
+    // Ensure the page has fully rendered after reload
+    await expect(this.createMenuButton).toBeVisible({ timeout: 15000 });
     await listFetch;
   }
 
@@ -118,7 +123,9 @@ export class OnlineMenusPage extends BasePage {
    * Create a new menu (optimized - no redundant waits)
    */
   async createMenu(name: string, description: string = '') {
-    // Click create button
+    // Ensure the create button is visible and ready before clicking
+    // Under concurrency (12 workers), the page may still be settling after deactivateAllMenus()
+    await expect(this.createMenuButton).toBeVisible({ timeout: 15000 });
     await this.createMenuButton.click();
 
     // Wait for editor to appear
@@ -502,6 +509,8 @@ export class OnlineMenusPage extends BasePage {
   async deactivateAllMenus() {
     await this.page.reload({ waitUntil: 'commit' });
     await this.waitForLoading();
+    // Ensure the page has fully rendered after reload before checking for active menus
+    await expect(this.createMenuButton).toBeVisible({ timeout: 15000 });
 
     const statusSelector = testIdSelector(TestIds.MENU_CARD_STATUS_BADGE);
     let attempts = 0;
@@ -540,6 +549,7 @@ export class OnlineMenusPage extends BasePage {
         console.warn('Active menu detected but deactivate button is not visible, refreshing...');
         await this.page.reload({ waitUntil: 'commit' });
         await this.waitForLoading();
+        await expect(this.createMenuButton).toBeVisible({ timeout: 15000 });
         continue;
       }
 

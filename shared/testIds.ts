@@ -150,14 +150,16 @@ export const TestIds = {
   NOTIFICATION_TOAST_CONTAINER: 'notification-toast-container',
   NOTIFICATION_TOAST: 'notification-toast',
   NOTIFICATION_TOAST_DISMISS: 'notification-toast-dismiss',
-  // Notification Preferences (for future implementation)
-  NOTIFICATION_PREFERENCES_SCREEN: 'notification-preferences-screen',
-  NOTIFICATION_PREFERENCES_EMAIL_TOGGLE: 'notification-preferences-email-toggle',
-  NOTIFICATION_PREFERENCES_PUSH_TOGGLE: 'notification-preferences-push-toggle',
-  NOTIFICATION_PREFERENCES_DISPLAY_SELECTOR: 'notification-preferences-display-selector',
-  NOTIFICATION_PREFERENCES_SAVE_BUTTON: 'notification-preferences-save-button',
+  // Notification Permission
   NOTIFICATION_PERMISSION_BANNER: 'notification-permission-banner',
-  ENABLE_NOTIFICATIONS_BUTTON: 'enable-notifications-button',
+  NOTIFICATION_PERMISSION_ENABLE_BUTTON: 'notification-permission-enable-button',
+  NOTIFICATION_PERMISSION_LATER_BUTTON: 'notification-permission-later-button',
+
+  // Notification Preferences
+  NOTIFICATION_PREFERENCES_SCREEN: 'notification-preferences-screen',
+  NOTIFICATION_PREFERENCES_SAVE_BUTTON: 'notification-preferences-save-button',
+  NOTIFICATION_PREFERENCE_DROPDOWN: 'notification-preference-dropdown',
+  NOTIFICATION_SETTINGS_BUTTON: 'notification-settings-button',
 
   // Content Upload Components
   CONTENT_UPLOADER: 'content-uploader',

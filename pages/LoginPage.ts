@@ -30,6 +30,8 @@ export class LoginPage extends BasePage {
    */
   async login(username: string, password: string) {
     await this.dismissOverlay();
+    // Wait for React to render the login form (dev builds can take 10+ seconds)
+    await this.usernameInput.waitFor({ state: 'visible', timeout: 30000 });
     await this.usernameInput.fill(username);
     await this.passwordInput.fill(password);
     await this.loginButton.click();

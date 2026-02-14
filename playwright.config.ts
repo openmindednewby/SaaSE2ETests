@@ -5,6 +5,15 @@ import path from 'path';
 // Load environment-specific config
 dotenv.config({ path: path.resolve(__dirname, '.env.local') });
 
+// Fix Git Bash env var casing on Windows: Git Bash uppercases SYSTEMROOT but
+// Node.js child_process.spawn looks for mixed-case SystemRoot to resolve cmd.exe.
+// Without this, Playwright workers fail with "spawn cmd.exe ENOENT".
+if (process.platform === 'win32') {
+  if (!process.env.SystemRoot && process.env.SYSTEMROOT) {
+    process.env.SystemRoot = process.env.SYSTEMROOT;
+  }
+}
+
 const BASE_URL = process.env.BASE_URL || 'http://localhost:8082';
 
 // Script to copy auth state from localStorage to sessionStorage on page load
@@ -280,12 +289,9 @@ export default defineConfig({
     },
   ],
 
-  // Web server configuration - starts the client app if not running
-  webServer: process.env.CI ? undefined : {
-    command: 'npm run start:test',
-    cwd: '../OnlineMenuSaaS/clients/OnlineMenuClientApp',
-    url: BASE_URL,
-    reuseExistingServer: true,
-    timeout: 120 * 1000,
-  },
+  // Web server configuration - disabled since frontend runs via Tilt.
+  // The old path '../OnlineMenuSaaS/clients/OnlineMenuClientApp' no longer exists;
+  // the frontend is now at '../BaseClient'. Spawning npm from Git Bash also fails
+  // with cmd.exe ENOENT. Instead, ensure frontend is running before tests.
+  webServer: undefined,
 });

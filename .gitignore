@@ -21,3 +21,5 @@ playwright-report/
 # OS
 .DS_Store
 Thumbs.db
+qa-screenshots/*
+debug-login.png

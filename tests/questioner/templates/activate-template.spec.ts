@@ -50,7 +50,13 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
   });
 
   test.beforeEach(async () => {
-    await templatesPage.goto();
+    try {
+      await templatesPage.goto();
+    } catch {
+      // Retry once on navigation failure (common under heavy parallel load)
+      await page.waitForTimeout(2000);
+      await templatesPage.goto();
+    }
   });
 
   async function ensureNoActiveTemplates() {
@@ -58,7 +64,8 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
     await templatesPage.refetchTemplatesList();
   }
 
-  test.afterAll(async () => {
+  test.afterAll(async ({}, testInfo) => {
+    testInfo.setTimeout(120000);
     // Cleanup - deactivate first if active, then delete
     try {
       await templatesPage.goto();

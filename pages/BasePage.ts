@@ -44,10 +44,10 @@ export abstract class BasePage {
 
   /**
    * Navigate to a specific path.
-   * Uses 'commit' for fastest navigation - let assertions wait for elements.
+   * Waits for 'load' to ensure the JS bundle is downloaded before proceeding.
    */
   async goto(path: string) {
-    await this.page.goto(path, { waitUntil: 'commit' });
+    await this.page.goto(path, { waitUntil: 'load', timeout: 30000 });
     // Run dismissOverlay and restoreAuth in parallel for speed
     await Promise.all([
       this.dismissOverlay(),

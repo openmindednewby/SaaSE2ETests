@@ -39,7 +39,8 @@ test.describe.serial('Token Session Tests @identity @auth', () => {
   let context: BrowserContext;
   let page: Page;
 
-  test.beforeAll(async ({ browser }) => {
+  test.beforeAll(async ({ browser }, testInfo) => {
+    testInfo.setTimeout(60000);
     const username = process.env.TEST_USER_USERNAME;
     const password = process.env.TEST_USER_PASSWORD;
 
@@ -92,17 +93,17 @@ test.describe.serial('Token Session Tests @identity @auth', () => {
 
   test('should maintain session with valid token', async () => {
     // Navigate to protected area
-    await page.goto('/quiz-templates', { waitUntil: 'domcontentloaded' });
+    await page.goto('/quiz-templates', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
     // Verify we're on a protected route (not redirected to login)
     await expect(page).toHaveURL(/quiz-templates/, { timeout: 10000 });
 
     // Wait for the page to be stable before navigating again
     // This prevents ERR_ABORTED errors from concurrent navigations
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Navigate to another protected page
-    await page.goto('/quiz-answers', { waitUntil: 'domcontentloaded' });
+    await page.goto('/quiz-answers', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
     // Should still be authenticated
     await expect(page).toHaveURL(/quiz-answers/);
@@ -113,11 +114,11 @@ test.describe.serial('Token Session Tests @identity @auth', () => {
     const routes = ['/quiz-templates', '/quiz-active', '/quiz-answers'];
 
     for (const route of routes) {
-      await page.goto(route, { waitUntil: 'domcontentloaded' });
+      await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 30000 });
       // Should not be redirected to login
       await expect(page).not.toHaveURL(/\/login/);
       // Wait for page to be stable before next navigation
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
     }
   });
 });
@@ -130,7 +131,7 @@ test.describe('Expired Token Handling @identity @auth', () => {
 
     try {
       // Go to app and set invalid tokens in the Redux persist storage
-      await page.goto('/', { waitUntil: 'domcontentloaded' });
+      await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       await page.evaluate(() => {
         // Set invalid auth state in the persist:auth key
@@ -144,7 +145,7 @@ test.describe('Expired Token Handling @identity @auth', () => {
 
       // Try to access protected route - this might abort or redirect
       try {
-        await page.goto('/quiz-templates', { waitUntil: 'domcontentloaded', timeout: 10000 });
+        await page.goto('/quiz-templates', { waitUntil: 'domcontentloaded', timeout: 30000 });
       } catch (navigationError: any) {
         // Navigation errors (like ERR_ABORTED) are expected when the app redirects
         // during navigation due to invalid auth state

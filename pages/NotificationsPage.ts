@@ -222,7 +222,11 @@ export class NotificationsPage extends BasePage {
    * Get all visible toasts
    */
   getToasts(): Locator {
-    return this.page.locator(`[data-testid^="${TestIds.NOTIFICATION_TOAST}-"]`);
+    return this.page.locator(
+      `[data-testid^="${TestIds.NOTIFICATION_TOAST}-"]` +
+      `:not([data-testid="${TestIds.NOTIFICATION_TOAST_CONTAINER}"])` +
+      `:not([data-testid^="${TestIds.NOTIFICATION_TOAST_DISMISS}-"])`
+    );
   }
 
   /**
@@ -333,6 +337,23 @@ export class NotificationsPage extends BasePage {
   // ==================== Test Helpers ====================
 
   /**
+   * Wait for the notification test API store to be registered.
+   * The API object is created at module level but the store is
+   * registered asynchronously when TestApiRegistration mounts.
+   */
+  async waitForTestApiReady(timeout: number = NOTIFICATION_TIMEOUT_MS): Promise<void> {
+    await this.page.waitForFunction(
+      () => {
+        const api = (window as unknown as {
+          __NOTIFICATION_TEST_API__?: { isStoreReady?: () => boolean };
+        }).__NOTIFICATION_TEST_API__;
+        return api?.isStoreReady?.() === true;
+      },
+      { timeout }
+    );
+  }
+
+  /**
    * Mock notification data interface
    */
   private createMockNotificationData(notification: {
@@ -358,6 +379,7 @@ export class NotificationsPage extends BasePage {
     type?: string;
     actionUrl?: string;
   }): Promise<void> {
+    await this.waitForTestApiReady();
     const { data, id } = this.createMockNotificationData(notification);
 
     await this.page.evaluate(
@@ -405,6 +427,7 @@ export class NotificationsPage extends BasePage {
     type?: string;
     actionUrl?: string;
   }): Promise<void> {
+    await this.waitForTestApiReady();
     const { data, id } = this.createMockNotificationData(notification);
 
     await this.page.evaluate(
