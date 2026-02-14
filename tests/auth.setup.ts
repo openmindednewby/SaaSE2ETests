@@ -5,7 +5,7 @@ import path from 'path';
 
 const authFile = path.resolve(__dirname, '../playwright/.auth/user.json');
 
-setup('authenticate', async ({ page, baseURL }) => {
+setup('authenticate', async ({ page, baseURL: _baseURL }) => {
   const username = process.env.TEST_USER_USERNAME;
   const password = process.env.TEST_USER_PASSWORD;
 
@@ -25,7 +25,6 @@ setup('authenticate', async ({ page, baseURL }) => {
         item.name === 'persist:auth'
       );
       if (hasAuth) {
-        console.log('Using existing auth state');
         return;
       }
     }
@@ -49,7 +48,7 @@ setup('authenticate', async ({ page, baseURL }) => {
 
     // The app stores auth state in sessionStorage under 'persist:auth' key (Redux persist).
     // Copy to localStorage so Playwright can persist it between tests.
-    const authState = await page.evaluate(() => {
+    await page.evaluate(() => {
       const raw = sessionStorage.getItem('persist:auth');
       if (raw) {
         // Copy to localStorage for Playwright persistence
@@ -57,11 +56,6 @@ setup('authenticate', async ({ page, baseURL }) => {
         return JSON.parse(raw);
       }
       return null;
-    });
-
-    console.log('Auth state found:', {
-      hasAccessToken: !!authState?.accessToken,
-      hasRefreshToken: !!authState?.refreshToken
     });
 
     // Ensure the auth directory exists
@@ -73,16 +67,8 @@ setup('authenticate', async ({ page, baseURL }) => {
     // Save storage state for reuse
     await page.context().storageState({ path: authFile });
 
-    // Verify the file was saved
-    if (fs.existsSync(authFile)) {
-      const savedData = JSON.parse(fs.readFileSync(authFile, 'utf-8'));
-      console.log('Auth file saved with', savedData.origins?.length || 0, 'origins');
-    }
-
-    console.log('Auth setup complete - storage state saved to:', authFile);
   } catch (error: any) {
     // If login fails, skip dependent tests rather than failing
-    console.error('Auth setup failed:', error.message);
     setup.skip(true, `Login failed: ${error.message}`);
   }
 });

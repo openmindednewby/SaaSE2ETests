@@ -146,15 +146,13 @@ test.describe('Expired Token Handling @identity @auth', () => {
       // Try to access protected route - this might abort or redirect
       try {
         await page.goto('/quiz-templates', { waitUntil: 'domcontentloaded', timeout: 30000 });
-      } catch (navigationError: any) {
+      } catch (_navigationError: any) {
         // Navigation errors (like ERR_ABORTED) are expected when the app redirects
         // during navigation due to invalid auth state
-        console.log('Navigation error (expected):', navigationError.message);
       }
 
       // Wait for any redirects or error handling to complete
-      // Use a safe timeout that handles page closure
-      await page.waitForTimeout(2000).catch(() => {});
+      await page.waitForLoadState('domcontentloaded').catch(() => {});
 
       // Try to get current URL, handling case where page might be closed
       let currentUrl = '';

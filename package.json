@@ -45,14 +45,20 @@
     "tilt:online-menus": "node scripts/tilt-e2e.mjs playwright-e2e-online-menus-all",
     "tilt:content": "node scripts/tilt-e2e.mjs playwright-e2e-content-all",
     "tilt:notification": "node scripts/tilt-e2e.mjs playwright-e2e-notification-all",
-    "tilt:theme-studio": "node scripts/tilt-e2e.mjs theme-studio-e2e --port 10351"
+    "tilt:theme-studio": "node scripts/tilt-e2e.mjs theme-studio-e2e --port 10351",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
+    "@eslint/js": "^9.0.0",
     "@playwright/test": "^1.48.0",
     "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
     "axios": "^1.7.0",
     "cross-env": "^10.1.0",
     "dotenv": "^16.4.0",
+    "eslint": "^9.0.0",
     "typescript": "^5.6.0"
   }
 }

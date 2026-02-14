@@ -138,8 +138,8 @@ test.describe.serial('Menu Color Scheme Editing @menu-styling @online-menus', ()
     if (inputCount > 0) {
       const firstInput = colorInputs.first();
 
-      // Get the current value
-      const originalValue = await firstInput.inputValue();
+      // Get the current value (read for potential future comparison)
+      const _originalValue = await firstInput.inputValue();
 
       // Set a new color value
       const newColor = '#FF5500';
@@ -162,8 +162,9 @@ test.describe.serial('Menu Color Scheme Editing @menu-styling @online-menus', ()
     const colorInputs = page.locator('[data-testid="color-scheme-input"]');
     const inputCount = await colorInputs.count();
 
-    if (inputCount > 1) {
-      const secondInput = colorInputs.nth(1);
+    const TEXT_COLOR_INDEX = 1;
+    if (inputCount > TEXT_COLOR_INDEX) {
+      const secondInput = colorInputs.nth(TEXT_COLOR_INDEX);
 
       // Set a new color value
       const newColor = '#333333';
@@ -201,18 +202,17 @@ test.describe.serial('Menu Color Scheme Editing @menu-styling @online-menus', ()
       await stylingPage.waitForLoading();
 
       // Verify at least one color changed (preset was applied)
-      let hasChanged = false;
+      let _hasChanged = false;
       for (let i = 0; i < Math.min(inputCount, 3); i++) {
         const newValue = await colorInputs.nth(i).inputValue();
         if (newValue.toLowerCase() !== originalColors[i].toLowerCase()) {
-          hasChanged = true;
+          _hasChanged = true;
           break;
         }
       }
 
       // Note: If no change, the preset might be the same as current colors
       // This is acceptable behavior
-      console.log(`Preset applied, colors changed: ${hasChanged}`);
     }
   });
 
@@ -249,7 +249,7 @@ test.describe.serial('Menu Color Scheme Editing @menu-styling @online-menus', ()
     if (resetVisible) {
       // Get current colors
       const colorInputs = page.locator('[data-testid="color-scheme-input"]');
-      const firstColorBefore = await colorInputs.first().inputValue();
+      const _firstColorBefore = await colorInputs.first().inputValue();
 
       // Click reset
       await resetButton.click();
@@ -257,7 +257,6 @@ test.describe.serial('Menu Color Scheme Editing @menu-styling @online-menus', ()
 
       // Note: Colors should be reset to defaults
       // We can't easily verify the exact default values without knowing them
-      console.log(`Reset colors from: ${firstColorBefore}`);
     }
   });
 

@@ -73,7 +73,7 @@ export class QuizTemplatesPage extends BasePage {
       { timeout: 10000 }
     ).catch(() => null);
 
-    await this.page.reload({ waitUntil: 'load', timeout: 30000 });
+    await this.page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
     await this.waitForPageReady();
     await listFetch;
   }
@@ -100,16 +100,7 @@ export class QuizTemplatesPage extends BasePage {
 
     await this.saveButton.click({ force: true });
 
-    const response = await responsePromise;
-    if (response) {
-      if (response.ok()) {
-        console.log(`Template "${name}" created successfully.`);
-      } else {
-        console.warn(`Template creation API returned status ${response.status()}`);
-      }
-    } else {
-      console.warn('No POST /questionerTemplates API call detected for template creation');
-    }
+    await responsePromise;
 
     // React Query auto-invalidates - just wait for loading indicator to clear
     await this.waitForLoading();
@@ -232,20 +223,12 @@ export class QuizTemplatesPage extends BasePage {
     // Wait for the delete API call to complete
     const response = await deletePromise;
     if (response) {
-      if (response.status() === 404) {
-        console.warn(`Template deletion API returned 404 for "${name}" (already removed?).`);
-      } else if (!response.ok()) {
+      if (response.status() !== 404 && !response.ok()) {
         const errorMsg = `Template deletion API returned status ${response.status()}`;
         if (throwOnError) {
           throw new Error(errorMsg);
-        } else {
-          console.warn(errorMsg);
         }
-      } else {
-        console.log(`Template "${name}" deleted successfully.`);
       }
-    } else {
-      console.warn('No DELETE /questionerTemplates API call detected, but continuing check...');
     }
 
     // Wait for UI to update
@@ -264,7 +247,6 @@ export class QuizTemplatesPage extends BasePage {
       if (throwOnError) {
         throw new Error(`Template "${name}" still visible after deletion`);
       }
-      console.warn(`Template "${name}" still visible after deletion attempt`);
     }
   }
 
@@ -279,7 +261,6 @@ export class QuizTemplatesPage extends BasePage {
     const statusLabel = row.locator(testIdSelector(TestIds.STATUS_LABEL));
     const statusBefore = (await statusLabel.textContent().catch(() => '')).trim();
     const wasActive = /^(active|enabled)$/i.test(statusBefore);
-    console.log(`Template "${name}" status before: "${statusBefore}" (wasActive: ${wasActive})`);
 
     // Set up response listener (could be Activate (PUT) or Deactivate (PUT/DELETE))
     const apiPromise = this.page.waitForResponse(
@@ -289,12 +270,9 @@ export class QuizTemplatesPage extends BasePage {
 
     const activateBtn = row.getByRole('button', { name: /activate|deactivate/i });
     if (await activateBtn.isVisible({ timeout: 2000 })) {
-      const text = await activateBtn.textContent();
-      console.log(`Clicking activation button: "${text}"`);
       await activateBtn.click({ force: true });
     } else {
       // Fallback to finding the button with the emoji/text
-      console.log('Clicking activation button via text fallback');
       await row.locator('text=/activate|🔁/i').first().click({ force: true });
     }
 
@@ -302,21 +280,8 @@ export class QuizTemplatesPage extends BasePage {
     const response = await apiPromise;
     let apiSuccess = false;
 
-    if (response) {
-      const requestUrl = response.url();
-      console.log(`API request URL: ${requestUrl}`);
-      if (response.ok()) {
-        console.log(`Template "${name}" activation toggled successfully.`);
-        apiSuccess = true;
-      } else {
-        const responseBody = await response.text().catch(() => '');
-        console.warn(`Template activation API returned status ${response.status()}: ${responseBody}`);
-        if (response.status() === 409) {
-          console.log('409 Conflict: Another template is already active');
-        }
-      }
-    } else {
-      console.warn('No PUT /questionerTemplates API call detected');
+    if (response?.ok()) {
+      apiSuccess = true;
     }
 
     // React Query auto-invalidates - just wait for loading indicator to clear
@@ -325,10 +290,7 @@ export class QuizTemplatesPage extends BasePage {
     // Wait for status to change using web-first assertion (auto-retries for 5s)
     if (apiSuccess) {
       const expectedStatus = wasActive ? /inactive|disabled/i : /active|enabled/i;
-      await expect(statusLabel).toHaveText(expectedStatus, { timeout: 5000 }).catch(async () => {
-        const statusAfter = await statusLabel.textContent().catch(() => '');
-        console.log(`Template "${name}" status after: "${statusAfter}" (expected change from wasActive=${wasActive})`);
-      });
+      await expect(statusLabel).toHaveText(expectedStatus, { timeout: 5000 }).catch(() => {});
     }
 
     return apiSuccess;
@@ -359,7 +321,6 @@ export class QuizTemplatesPage extends BasePage {
         return;
       } catch (error) {
         if (attempt >= 3) throw error;
-        console.log(`expectTemplateActive: "${name}" not "${active ? 'active' : 'inactive'}" yet, refetching list (attempt ${attempt})...`);
         await this.refetchTemplatesList();
       }
     }
@@ -426,12 +387,9 @@ export class QuizTemplatesPage extends BasePage {
       try {
         const body = await response.json();
         deletedCount = body.deletedCount ?? 0;
-        console.log(`Deleted ${deletedCount} inactive templates`);
       } catch {
-        console.warn('Could not parse delete inactive response');
+        // Could not parse delete inactive response
       }
-    } else {
-      console.warn(`Delete inactive API returned status ${response.status()}`);
     }
 
     // Wait for dialog to close and list to refresh
@@ -471,7 +429,7 @@ export class QuizTemplatesPage extends BasePage {
    */
   async deactivateAllTemplates() {
     // Reload to ensure we see current server state (not stale cache)
-    await this.page.reload({ waitUntil: 'load', timeout: 30000 });
+    await this.page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
     await this.waitForPageReady();
 
     const statusSelector = testIdSelector(TestIds.STATUS_LABEL);
@@ -485,7 +443,6 @@ export class QuizTemplatesPage extends BasePage {
       });
 
       const count = await activeRows.count();
-      console.log(`deactivateAllTemplates: Found ${count} active templates (attempt ${attempts})`);
 
       if (count === 0) {
         break;
@@ -493,9 +450,6 @@ export class QuizTemplatesPage extends BasePage {
 
       const row = activeRows.first();
       await row.scrollIntoViewIfNeeded().catch(() => {});
-      const templateName = await row.locator(testIdSelector(TestIds.HEADING_TEXT)).textContent().catch(() => 'unknown');
-      console.log(`Deactivating template: ${templateName}`);
-
       // Set up response listener
       const apiPromise = this.page.waitForResponse(
         response => response.url().includes('/questionerTemplates') && (response.request().method() === 'PUT' || response.request().method() === 'DELETE'),
@@ -510,28 +464,18 @@ export class QuizTemplatesPage extends BasePage {
       } else if (await activateFallback.isVisible({ timeout: 1000 }).catch(() => false)) {
         await activateFallback.click({ force: true });
       } else {
-        console.warn('Active template detected but activation button is not visible, refreshing...');
-        await this.page.reload({ waitUntil: 'load', timeout: 30000 });
+        await this.page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
         await this.waitForPageReady();
         continue;
       }
 
       // Wait for API response
-      const response = await apiPromise;
-      if (response?.ok()) {
-        console.log(`Deactivated template: ${templateName}`);
-      } else if (response?.status() === 404) {
-        console.warn(`Deactivation returned 404 for "${templateName}"`);
-      } else {
-        console.warn(`Failed to deactivate template: ${templateName}, status: ${response?.status()}`);
-      }
+      await apiPromise;
 
       // Just wait for loading - React Query auto-invalidates
       await this.waitForLoading();
     }
 
-    if (attempts >= maxAttempts) {
-      console.warn(`deactivateAllTemplates: Reached max attempts (${maxAttempts}), some templates may still be active`);
-    }
+    // Max attempts reached if attempts >= maxAttempts
   }
 }

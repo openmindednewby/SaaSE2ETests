@@ -28,7 +28,7 @@ async function restoreAuthToSessionStorage(page: Page) {
       if (refreshToken && !sessionStorage.getItem('refreshToken')) {
         sessionStorage.setItem('refreshToken', refreshToken);
       }
-    } catch (e) {
+    } catch (_e) {
       // Silently ignore errors in init script
     }
   });
@@ -52,6 +52,7 @@ export const test = base.extend<{
     await use(loginPage);
   },
 
+  // eslint-disable-next-line no-empty-pattern
   authHelper: async ({}, use) => {
     const authHelper = new AuthHelper();
     await use(authHelper);

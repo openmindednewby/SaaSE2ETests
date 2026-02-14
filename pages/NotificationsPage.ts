@@ -404,11 +404,6 @@ export class NotificationsPage extends BasePage {
             type: data.type,
             actionUrl: data.actionUrl,
           });
-        } else {
-          console.warn(
-            '[E2E Test] Notification test API not available. ' +
-            'Mock notification injection is not supported in this build.'
-          );
         }
       },
       { data, id }
@@ -452,11 +447,6 @@ export class NotificationsPage extends BasePage {
             type: data.type,
             actionUrl: data.actionUrl,
           });
-        } else {
-          console.warn(
-            '[E2E Test] Notification test API not available. ' +
-            'Mock toast injection is not supported in this build.'
-          );
         }
       },
       { data, id }

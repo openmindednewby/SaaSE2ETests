@@ -283,11 +283,6 @@ export async function mockSignalRNotification(
           type: notificationData.type,
           actionUrl: notificationData.actionUrl,
         });
-      } else {
-        console.warn(
-          '[E2E Test] Notification test API not available. ' +
-          'Mock notification injection is not supported in this build.'
-        );
       }
     },
     { notificationData: notification, id: notificationId }
@@ -331,11 +326,6 @@ export async function mockToastNotification(
           type: notificationData.type,
           actionUrl: notificationData.actionUrl,
         });
-      } else {
-        console.warn(
-          '[E2E Test] Notification test API not available. ' +
-          'Mock toast injection is not supported in this build.'
-        );
       }
     },
     { notificationData: notification, id: notificationId }

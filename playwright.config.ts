@@ -19,7 +19,7 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:8082';
 // Script to copy auth state from localStorage to sessionStorage on page load
 // This is needed because the app uses sessionStorage but Playwright only persists localStorage
 // The script runs before any page scripts, ensuring auth is available when the app initializes
-const authInitScript = `
+const _authInitScript = `
   (() => {
     try {
       // Copy the persist:auth key (Redux persist format) - this is the primary auth storage

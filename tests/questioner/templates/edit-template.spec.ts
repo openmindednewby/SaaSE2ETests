@@ -67,8 +67,8 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
             await templatesPage.deleteTemplate(testTemplateName, false);
           }
       }
-    } catch (e) {
-      console.log('Cleanup failed (expected if test crashed):', e);
+    } catch (_e) {
+      // Cleanup failed (expected if test crashed)
     } finally {
         await context?.close().catch(() => {});
     }

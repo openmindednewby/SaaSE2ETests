@@ -47,8 +47,7 @@ test.describe('Notification Preferences @notifications', () => {
       await expect(page).toHaveURL(/\/notifications\/preferences|\/settings\/notifications/i, { timeout: 5000 });
     } else {
       // Fallback: look for a settings/preferences link or button by role
-      const settingsLink = page.getByRole('link', { name: /settings|preferences/i })
-        .or(page.getByRole('button', { name: /settings|preferences/i }));
+      const settingsLink = page.locator('a, button').filter({ hasText: /settings|preferences/i });
 
       const hasSettingsLink = await settingsLink.count() > 0;
 
@@ -97,12 +96,13 @@ test.describe('Notification Preferences @notifications', () => {
       await preferenceDropdown.click();
 
       // Look for options in a dropdown menu
-      const options = page.getByRole('option').or(page.getByRole('radio'));
+      const options = page.locator('[role="option"], [role="radio"]');
       const optionCount = await options.count();
 
-      if (optionCount > 1) {
+      const SECOND_OPTION_INDEX = 1;
+      if (optionCount > SECOND_OPTION_INDEX) {
         // Click the second option (to change from current)
-        await options.nth(1).click();
+        await options.nth(SECOND_OPTION_INDEX).click();
       }
     }
   });
@@ -180,10 +180,11 @@ test.describe('Notification Preferences @notifications', () => {
     } else {
       initialValue = await preferenceDropdown.textContent();
       await preferenceDropdown.click();
-      const options = page.getByRole('option').or(page.getByRole('radio'));
+      const options = page.locator('[role="option"], [role="radio"]');
       const optionCount = await options.count();
-      if (optionCount > 1) {
-        await options.nth(1).click();
+      const SECOND_OPTION_INDEX = 1;
+      if (optionCount > SECOND_OPTION_INDEX) {
+        await options.nth(SECOND_OPTION_INDEX).click();
       }
     }
 
@@ -320,8 +321,7 @@ test.describe('Notification Preferences - Edge Cases @notifications', () => {
     await saveButton.click();
 
     // Should show error message
-    const errorIndicator = page.getByText(/error|failed|try again/i)
-      .or(page.locator('[role="alert"]').filter({ hasText: /error/i }));
+    const errorIndicator = page.getByText(/error|failed|try again/i).first();
 
     await expect(errorIndicator).toBeVisible({ timeout: 5000 });
 
@@ -348,8 +348,7 @@ test.describe('Notification Preferences - Edge Cases @notifications', () => {
 
     // Should show loading state or timeout error eventually
     // Most apps will have a loading indicator or will timeout after ~30 seconds
-    const loadingOrError = page.locator('[role="progressbar"]')
-      .or(page.getByText(/timeout|error|failed/i));
+    const loadingOrError = page.locator('[role="progressbar"], :text-matches("timeout|error|failed", "i")');
 
     // Wait a reasonable time for the loading to appear
     await expect(loadingOrError).toBeVisible({ timeout: 5000 }).catch(() => {

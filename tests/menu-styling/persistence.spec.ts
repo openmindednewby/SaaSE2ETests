@@ -139,7 +139,9 @@ test.describe.serial('Menu Styling Persistence @menu-styling @online-menus @crit
     const colorInputs = page.locator('[data-testid="color-scheme-input"]');
     const inputCount = await colorInputs.count();
 
-    if (inputCount >= 2) {
+    const TEXT_COLOR_INDEX = 1;
+    const MIN_COLOR_INPUTS = 2;
+    if (inputCount >= MIN_COLOR_INPUTS) {
       // Set background color
       await colorInputs.first().clear();
       await colorInputs.first().fill(appliedStyles.backgroundColor);
@@ -147,9 +149,9 @@ test.describe.serial('Menu Styling Persistence @menu-styling @online-menus @crit
       await stylingPage.waitForLoading();
 
       // Set text color
-      await colorInputs.nth(1).clear();
-      await colorInputs.nth(1).fill(appliedStyles.textColor);
-      await colorInputs.nth(1).blur();
+      await colorInputs.nth(TEXT_COLOR_INDEX).clear();
+      await colorInputs.nth(TEXT_COLOR_INDEX).fill(appliedStyles.textColor);
+      await colorInputs.nth(TEXT_COLOR_INDEX).blur();
       await stylingPage.waitForLoading();
     }
 
@@ -242,9 +244,11 @@ test.describe.serial('Menu Styling Persistence @menu-styling @online-menus @crit
     const colorInputs = page.locator('[data-testid="color-scheme-input"]');
     const inputCount = await colorInputs.count();
 
-    if (inputCount >= 2) {
+    const TEXT_COLOR_INDEX = 1;
+    const MIN_COLOR_INPUTS = 2;
+    if (inputCount >= MIN_COLOR_INPUTS) {
       const savedBgColor = await colorInputs.first().inputValue();
-      const savedTextColor = await colorInputs.nth(1).inputValue();
+      const savedTextColor = await colorInputs.nth(TEXT_COLOR_INDEX).inputValue();
 
       expect(savedBgColor.toLowerCase(), 'Background color should persist').toBe(
         appliedStyles.backgroundColor.toLowerCase()

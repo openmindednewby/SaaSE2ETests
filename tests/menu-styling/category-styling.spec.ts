@@ -293,9 +293,10 @@ test.describe.serial('Category Styling @menu-styling @online-menus', () => {
       const positionButtons = mediaEditor.locator('[data-testid^="media-position-button"]');
       const buttonCount = await positionButtons.count();
 
-      if (buttonCount > 1) {
+      const SECOND_POSITION_INDEX = 1;
+      if (buttonCount > SECOND_POSITION_INDEX) {
         // Click a different position (e.g., right)
-        await positionButtons.nth(1).click();
+        await positionButtons.nth(SECOND_POSITION_INDEX).click();
         await stylingPage.waitForLoading();
 
         // Verify preview updated

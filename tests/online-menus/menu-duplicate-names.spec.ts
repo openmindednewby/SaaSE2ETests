@@ -245,7 +245,7 @@ test.describe.serial('Menu Duplicate Names @online-menus @duplicate-names', () =
     const activated = await menusPage.activateMenu(testMenuName);
 
     if (!activated) {
-      console.warn('Could not activate test menu - skipping public view test');
+      // Could not activate test menu - skipping public view test
       test.skip(true, 'Menu activation failed');
       return;
     }
@@ -307,7 +307,7 @@ test.describe.serial('Menu Duplicate Names @online-menus @duplicate-names', () =
         ).filter({ hasText: 'Specials' });
 
         const categoryCount = await categoryElements.count();
-        console.log(`Public view shows ${categoryCount} categories named "Specials"`);
+        // Verify the expected count of categories named "Specials"
 
         // After BUG-MENU-007 fix, both categories should render
         expect(
@@ -315,7 +315,7 @@ test.describe.serial('Menu Duplicate Names @online-menus @duplicate-names', () =
           'Public view should render both duplicate-named categories'
         ).toBeGreaterThanOrEqual(2);
       } else {
-        console.log('Test menu not visible in public view - may need auth or different route');
+        // Test menu not visible in public view - may need auth or different route
       }
     } finally {
       await publicPage.close();

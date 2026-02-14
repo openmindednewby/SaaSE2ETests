@@ -70,7 +70,7 @@ test.describe('Submit Quiz @questioner', () => {
 
     while (currentPage < totalPages) {
       await quizActivePage.clickNext();
-      await page.waitForTimeout(500);
+      await quizActivePage.waitForLoading();
       const newPage = await quizActivePage.getCurrentPage();
       if (newPage === currentPage) {
         // Stuck - might have validation errors

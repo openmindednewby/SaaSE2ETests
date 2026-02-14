@@ -54,7 +54,6 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
       await templatesPage.goto();
     } catch {
       // Retry once on navigation failure (common under heavy parallel load)
-      await page.waitForTimeout(2000);
       await templatesPage.goto();
     }
   });
@@ -64,6 +63,7 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
     await templatesPage.refetchTemplatesList();
   }
 
+  // eslint-disable-next-line no-empty-pattern
   test.afterAll(async ({}, testInfo) => {
     testInfo.setTimeout(120000);
     // Cleanup - deactivate first if active, then delete

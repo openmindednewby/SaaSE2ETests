@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance } from 'axios';
+import { setTimeout as delay } from 'timers/promises';
 
 import { TEST_TENANTS, TEST_USERS } from '../fixtures/test-data.js';
 import { AuthHelper } from './auth-helper.js';
@@ -202,7 +203,8 @@ export async function ensureTenantsAndUsersExist(identityApiUrl: string, usernam
         return;
       } catch (e) {
         if (attempt === 3) throw e;
-        await new Promise((r) => setTimeout(r, 200 * attempt));
+        // Brief backoff before retry — no page context in this pure API utility
+        await delay(200 * attempt);
         const latestUsers = await listAllUsers().catch(() => []);
         for (const u of latestUsers) {
           if (typeof u.username === 'string' && u.username.length > 0) userByUsername.set(u.username.toLowerCase(), u);

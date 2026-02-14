@@ -22,13 +22,13 @@ test.describe('Login Flow @identity @auth', () => {
     await expect(loginPage.usernameInput).toBeVisible({ timeout: 15000 });
   });
 
-  test('should display login form elements', async ({ page }) => {
+  test('should display login form elements', async ({ page: _page }) => {
     // usernameInput already verified in beforeEach, check the rest
     await expect(loginPage.passwordInput).toBeVisible();
     await expect(loginPage.loginButton).toBeVisible();
   });
 
-  test('should login with valid credentials @critical', async ({ page }) => {
+  test('should login with valid credentials @critical', async ({ page: _page }) => {
     const username = process.env.TEST_USER_USERNAME;
     const password = process.env.TEST_USER_PASSWORD;
 
@@ -127,7 +127,7 @@ test.describe('Login Flow @identity @auth', () => {
     expect(dialogMessage.toLowerCase()).toContain('enter');
   });
 
-  test('should disable inputs while logging in', async ({ page }) => {
+  test('should disable inputs while logging in', async ({ page: _page }) => {
     const username = process.env.TEST_USER_USERNAME;
     const password = process.env.TEST_USER_PASSWORD;
 
@@ -142,7 +142,7 @@ test.describe('Login Flow @identity @auth', () => {
     await loginPage.loginButton.click();
 
     // During login, the loading indicator should appear
-    const isLoading = await loginPage.isLoading();
+    const _isLoading = await loginPage.isLoading();
     // Note: This might be too fast to catch, so we just verify the login completes
     await loginPage.expectToBeOnProtectedRoute();
   });

@@ -48,8 +48,7 @@ test.describe('Notification Screen @notifications', () => {
 
   test('notification screen displays header', async ({ page }) => {
     // Look for the notifications header/title
-    const header = page.getByRole('heading', { name: /notifications/i })
-      .or(page.getByText(/notifications/i).first());
+    const header = page.getByText(/notifications/i).first();
 
     await expect(header).toBeVisible();
   });
@@ -254,7 +253,7 @@ test.describe('Notification Screen - Navigation @notifications', () => {
     });
   });
 
-  test('can navigate to notifications via bell icon', async ({ page }) => {
+  test('can navigate to notifications via bell icon', async ({ page: _page }) => {
     // Start from a different page
     await notificationsPage.goto('/menus');
     await notificationsPage.waitForLoading();
@@ -298,7 +297,8 @@ test.describe('Notification Screen - Navigation @notifications', () => {
     }
 
     // Scroll down
-    await items.nth(4).scrollIntoViewIfNeeded();
+    const FIFTH_ITEM_INDEX = 4;
+    await items.nth(FIFTH_ITEM_INDEX).scrollIntoViewIfNeeded();
 
     // Navigate away
     await notificationsPage.goto('/menus');
@@ -337,7 +337,7 @@ test.describe('Notification Screen - Rendering @notifications', () => {
     });
   });
 
-  test('screen renders correctly', async ({ page }) => {
+  test('screen renders correctly', async ({ page: _page }) => {
     // Navigate to notifications page
     await notificationsPage.goto('/notifications');
     await notificationsPage.waitForLoading();
@@ -349,7 +349,7 @@ test.describe('Notification Screen - Rendering @notifications', () => {
     await expect(notificationsPage.notificationList).toBeVisible();
   });
 
-  test('shows empty state or notifications based on data', async ({ page }) => {
+  test('shows empty state or notifications based on data', async ({ page: _page }) => {
     // Navigate to notifications page
     await notificationsPage.goto('/notifications');
     await notificationsPage.waitForLoading();

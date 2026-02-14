@@ -59,8 +59,8 @@ test.describe.serial('Create Quiz Template @questioner @crud', () => {
     const saveButton = templatesPage.saveButton;
 
     // Check if form elements exist (they might be optional in this UI)
-    const hasNameInput = await nameInput.isVisible({ timeout: 5000 }).catch(() => false);
-    const hasSaveButton = await saveButton.isVisible({ timeout: 5000 }).catch(() => false);
+    const _hasNameInput = await nameInput.isVisible({ timeout: 5000 }).catch(() => false);
+    const _hasSaveButton = await saveButton.isVisible({ timeout: 5000 }).catch(() => false);
 
     // At least one form element should be visible, or the page should be loaded
     await expect(page).toHaveURL(/quiz-templates/);

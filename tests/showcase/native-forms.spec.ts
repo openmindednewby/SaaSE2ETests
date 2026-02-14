@@ -511,11 +511,15 @@ test.describe('CSS Animations @showcase @native-forms', () => {
     await expect(formCards).toHaveCount(EXPECTED_FORM_CARDS);
 
     // Each card should be visible (opacity: 1 after animation)
+    const FIRST_CARD = 0;
+    const SECOND_CARD = 1;
+    const THIRD_CARD = 2;
+    const FOURTH_CARD = 3;
     await Promise.all([
-      expect(formCards.nth(0)).toBeVisible(),
-      expect(formCards.nth(1)).toBeVisible(),
-      expect(formCards.nth(2)).toBeVisible(),
-      expect(formCards.nth(3)).toBeVisible(),
+      expect(formCards.nth(FIRST_CARD)).toBeVisible(),
+      expect(formCards.nth(SECOND_CARD)).toBeVisible(),
+      expect(formCards.nth(THIRD_CARD)).toBeVisible(),
+      expect(formCards.nth(FOURTH_CARD)).toBeVisible(),
     ]);
   });
 

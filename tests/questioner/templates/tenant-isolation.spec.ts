@@ -10,6 +10,7 @@ import { AuthHelper } from '../../../helpers/auth-helper.js';
  * are not visible to other tenants.
  */
 test.describe('Tenant Isolation @questioner @security', () => {
+  // eslint-disable-next-line no-empty-pattern
   test.beforeEach(async ({}, testInfo) => {
     const isChromium = (testInfo.project.name || '').toLowerCase().includes('chromium');
     testInfo.skip(!isChromium, 'Runs once (chromium) to avoid cross-project tenant collisions');
@@ -181,7 +182,7 @@ test.describe('Tenant Isolation @questioner @security', () => {
         if (exists) {
           await templatesPage.deleteTemplate(templateName);
           // This test should be reviewed - might need to check backend permissions
-          console.warn('Warning: Non-admin was able to create template - check backend permissions');
+          // Warning: Non-admin was able to create template - check backend permissions
         }
       }
       
@@ -247,7 +248,7 @@ test.describe('Tenant Isolation @questioner @security', () => {
       expect(listBResp.ok()).toBe(true);
       const listB = (await listBResp.json()) as { questionerTemplates?: Array<{ externalId?: string; name?: string }> };
       const namesB = (listB.questionerTemplates ?? []).map((t) => t.name).filter((n): n is string => typeof n === 'string');
-      console.log(`Templates visible to TenantB: ${namesB.join(', ')}`);
+      // Templates visible to TenantB verified via assertion below
       expect(namesB).not.toContain(isolationTemplateName);
     } finally {
       if (typeof createdId === 'string' && createdId.length > 0) {

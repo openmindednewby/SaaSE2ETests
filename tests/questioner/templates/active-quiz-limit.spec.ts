@@ -1,9 +1,9 @@
 
-import { test, expect } from '../../../fixtures/index.js';
+import { test } from '../../../fixtures/index.js';
 import { getProjectUsers } from '../../../fixtures/test-data.js';
 import { LoginPage } from '../../../pages/LoginPage';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage';
-import { activateTemplateAndWait, createTemplateAndWait } from '../../../flows/quiz-templates.flow.js';
+import { createTemplateAndWait } from '../../../flows/quiz-templates.flow.js';
 
 test.describe('Active Quiz Limit @questioner', () => {
   // Increase timeout for this test suite since it involves multiple operations
@@ -14,7 +14,7 @@ test.describe('Active Quiz Limit @questioner', () => {
   let templatesPage: QuizTemplatesPage;
   let context: any;
 
-  test.beforeAll(async ({ browser }) => {
+  test.beforeAll(async ({ browser: _browser }) => {
     // Shared context for speed if separate tests, but we'll do one flow here
     // Actually standard is separate tests, but this is a sequence
   });

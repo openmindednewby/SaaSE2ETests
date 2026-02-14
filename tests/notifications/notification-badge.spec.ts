@@ -195,7 +195,7 @@ test.describe('Notification Badge @notifications', () => {
     await expect(badge).toHaveText('99+');
   });
 
-  test('badge is accessible', async ({ page }) => {
+  test('badge is accessible', async ({ page: _page }) => {
     // Verify the badge has proper accessibility attributes
     const badge = notificationsPage.notificationBadge;
 

@@ -29,7 +29,7 @@ async function runBatches<T>(items: T[], batchSize: number, fn: (item: T) => Pro
   }
 }
 
-async function globalTeardown(config: FullConfig) {
+async function globalTeardown(_config: FullConfig) {
   const username = process.env.TEST_USER_USERNAME;
   const password = process.env.TEST_USER_PASSWORD;
   const identityApiUrl = process.env.IDENTITY_API_URL || 'http://localhost:5002';
@@ -84,7 +84,7 @@ async function globalTeardown(config: FullConfig) {
     const usersToDelete = Array.isArray(setupState.users) ? setupState.users : [];
     const tenantsToDelete = Array.isArray(setupState.tenants) ? setupState.tenants : [];
 
-    const toLower = (v: unknown): string => (typeof v === 'string' ? v.toLowerCase() : '');
+    const _toLower = (v: unknown): string => (typeof v === 'string' ? v.toLowerCase() : '');
 
     // List tenants (needed both for tenant deletion and to scope user listing by tenantId).
     let allTenants: Array<{ tenantId?: string; name?: string }> = [];

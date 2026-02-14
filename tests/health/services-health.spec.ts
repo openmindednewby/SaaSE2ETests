@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { APIRequestContext, APIResponse } from '@playwright/test';
+import { setTimeout as delay } from 'timers/promises';
 
 type Service = {
   name: string;
@@ -50,7 +51,7 @@ async function waitForHealthy(
       if (attempt.response.ok()) return attempt;
     }
 
-    await new Promise(r => setTimeout(r, 750));
+    await delay(750);
   }
 
   const details = lastUrl

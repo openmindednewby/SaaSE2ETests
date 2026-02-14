@@ -123,19 +123,10 @@ export class UsersPage extends BasePage {
       await modal.locator('text=/^Create$/i').first().click();
     }
 
-    const response = await responsePromise;
-    if (response) {
-      if (!response.ok()) {
-        const errorText = await response.text();
-        console.warn(`User creation API returned status ${response.status()}: ${errorText}`);
-      }
-    } else {
-      console.warn('No API call detected for user creation within timeout');
-    }
+    await responsePromise;
 
     // Wait for modal to disappear (this is crucial)
     await expect(modal).not.toBeVisible({ timeout: 10000 }).catch(async () => {
-      console.warn('Modal did not disappear after clicking Create. checking for error messages...');
       const errorMsg = this.page.locator('[data-testid="error-message"], .error-text, text=/error|failed/i').first();
       if (await errorMsg.isVisible()) {
         const text = await errorMsg.textContent();
@@ -193,10 +184,7 @@ export class UsersPage extends BasePage {
 
     await row.getByRole('button', { name: /delete/i }).click({ force: true });
 
-    const response = await deletePromise;
-    if (response && !response.ok()) {
-      console.warn(`User deletion API returned status ${response.status()}`);
-    }
+    await deletePromise;
 
     await this.waitForLoading();
 

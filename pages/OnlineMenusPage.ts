@@ -146,16 +146,7 @@ export class OnlineMenusPage extends BasePage {
 
     await this.menuEditorSaveButton.click();
 
-    const response = await responsePromise;
-    if (response) {
-      if (response.ok()) {
-        console.log(`Menu "${name}" created successfully.`);
-      } else {
-        console.warn(`Menu creation API returned status ${response.status()}`);
-      }
-    } else {
-      console.warn('No POST /TenantMenus API call detected for menu creation');
-    }
+    await responsePromise;
 
     // React Query auto-invalidates - just wait for loading indicator to clear
     await this.waitForLoading();
@@ -264,20 +255,12 @@ export class OnlineMenusPage extends BasePage {
     // Wait for the delete API call to complete
     const response = await deletePromise;
     if (response) {
-      if (response.status() === 404) {
-        console.warn(`Menu deletion API returned 404 for "${name}" (already removed?).`);
-      } else if (!response.ok()) {
+      if (response.status() !== 404 && !response.ok()) {
         const errorMsg = `Menu deletion API returned status ${response.status()}`;
         if (throwOnError) {
           throw new Error(errorMsg);
-        } else {
-          console.warn(errorMsg);
         }
-      } else {
-        console.log(`Menu "${name}" deleted successfully.`);
       }
-    } else {
-      console.warn('No DELETE /TenantMenus API call detected, but continuing check...');
     }
 
     // Wait for UI to update
@@ -296,7 +279,6 @@ export class OnlineMenusPage extends BasePage {
       if (throwOnError) {
         throw new Error(`Menu "${name}" still visible after deletion`);
       }
-      console.warn(`Menu "${name}" still visible after deletion attempt`);
     }
   }
 
@@ -309,19 +291,6 @@ export class OnlineMenusPage extends BasePage {
 
     // Get current status before clicking
     const statusBadge = card.locator(testIdSelector(TestIds.MENU_CARD_STATUS_BADGE));
-    const statusBefore = (await statusBadge.textContent().catch(() => '')) || '';
-    const wasActive = statusBefore.toLowerCase() === 'active';
-    console.log(`Menu "${name}" status before: "${statusBefore}" (wasActive: ${wasActive})`);
-
-    // Listen for console errors
-    const consoleErrors: string[] = [];
-    const errorListener = (msg: any) => {
-      if (msg.type() === 'error') {
-        consoleErrors.push(msg.text());
-      }
-    };
-    this.page.on('console', errorListener);
-
     // Set up response listener for activate endpoint
     const apiPromise = this.page.waitForResponse(
       response => response.url().includes('/TenantMenus') && response.url().includes('/activate') && response.request().method() === 'PATCH',
@@ -332,36 +301,18 @@ export class OnlineMenusPage extends BasePage {
 
     // Verify button is visible before clicking
     const isVisible = await activateBtn.isVisible().catch(() => false);
-    console.log(`Activate button visible: ${isVisible}`);
     if (!isVisible) {
-      console.warn(`Activate button not visible for menu "${name}"`);
-      this.page.off('console', errorListener);
       return false;
     }
 
     await activateBtn.click();
-    console.log(`Clicked activate button for menu "${name}"`);
 
     // Wait for the API call to complete
     const response = await apiPromise;
     let apiSuccess = false;
 
-    this.page.off('console', errorListener);
-
-    if (consoleErrors.length > 0) {
-      console.warn(`Console errors detected after clicking activate: ${consoleErrors.join(', ')}`);
-    }
-
-    if (response) {
-      if (response.ok()) {
-        console.log(`Menu "${name}" activated successfully.`);
-        apiSuccess = true;
-      } else {
-        const responseBody = await response.text().catch(() => '');
-        console.warn(`Menu activation API returned status ${response.status()}: ${responseBody}`);
-      }
-    } else {
-      console.warn('No PATCH /TenantMenus/{id}/activate API call detected');
+    if (response?.ok()) {
+      apiSuccess = true;
     }
 
     // React Query auto-invalidates - just wait for loading indicator to clear
@@ -369,9 +320,7 @@ export class OnlineMenusPage extends BasePage {
 
     // Wait for status to change using web-first assertion (auto-retries for 5s)
     if (apiSuccess) {
-      await expect(statusBadge).toHaveText(/active/i, { timeout: 5000 }).catch(() => {
-        console.log(`Menu "${name}" status did not change to active`);
-      });
+      await expect(statusBadge).toHaveText(/active/i, { timeout: 5000 }).catch(() => {});
     }
 
     return apiSuccess;
@@ -386,9 +335,6 @@ export class OnlineMenusPage extends BasePage {
 
     // Get current status before clicking
     const statusBadge = card.locator(testIdSelector(TestIds.MENU_CARD_STATUS_BADGE));
-    const statusBefore = (await statusBadge.textContent().catch(() => '')) || '';
-    const wasActive = statusBefore.toLowerCase() === 'active';
-    console.log(`Menu "${name}" status before: "${statusBefore}" (wasActive: ${wasActive})`);
 
     // Set up response listener for deactivate endpoint
     const apiPromise = this.page.waitForResponse(
@@ -400,29 +346,18 @@ export class OnlineMenusPage extends BasePage {
 
     // Verify button is visible before clicking
     const isVisible = await deactivateBtn.isVisible().catch(() => false);
-    console.log(`Deactivate button visible: ${isVisible}`);
     if (!isVisible) {
-      console.warn(`Deactivate button not visible for menu "${name}"`);
       return false;
     }
 
     await deactivateBtn.click();
-    console.log(`Clicked deactivate button for menu "${name}"`);
 
     // Wait for the API call to complete
     const response = await apiPromise;
     let apiSuccess = false;
 
-    if (response) {
-      if (response.ok()) {
-        console.log(`Menu "${name}" deactivated successfully.`);
-        apiSuccess = true;
-      } else {
-        const responseBody = await response.text().catch(() => '');
-        console.warn(`Menu deactivation API returned status ${response.status()}: ${responseBody}`);
-      }
-    } else {
-      console.warn('No PATCH /TenantMenus/{id}/deactivate API call detected');
+    if (response?.ok()) {
+      apiSuccess = true;
     }
 
     // React Query auto-invalidates - just wait for loading indicator to clear
@@ -430,9 +365,7 @@ export class OnlineMenusPage extends BasePage {
 
     // Wait for status to change using web-first assertion (auto-retries for 5s)
     if (apiSuccess) {
-      await expect(statusBadge).toHaveText(/inactive/i, { timeout: 5000 }).catch(() => {
-        console.log(`Menu "${name}" status did not change to inactive`);
-      });
+      await expect(statusBadge).toHaveText(/inactive/i, { timeout: 5000 }).catch(() => {});
     }
 
     return apiSuccess;
@@ -466,7 +399,6 @@ export class OnlineMenusPage extends BasePage {
         return;
       } catch (error) {
         if (attempt >= 3) throw error;
-        console.log(`expectMenuActive: "${name}" not "${active ? 'active' : 'inactive'}" yet, refetching list (attempt ${attempt})...`);
         await this.refetchMenusList();
       }
     }
@@ -524,7 +456,6 @@ export class OnlineMenusPage extends BasePage {
       });
 
       const count = await activeCards.count();
-      console.log(`deactivateAllMenus: Found ${count} active menus (attempt ${attempts})`);
 
       if (count === 0) {
         break;
@@ -532,9 +463,6 @@ export class OnlineMenusPage extends BasePage {
 
       const card = activeCards.first();
       await card.scrollIntoViewIfNeeded().catch(() => {});
-      const menuName = await card.locator(testIdSelector(TestIds.MENU_CARD_NAME)).textContent().catch(() => 'unknown');
-      console.log(`Deactivating menu: ${menuName}`);
-
       // Set up response listener
       const apiPromise = this.page.waitForResponse(
         response => response.url().includes('/TenantMenus') && response.url().includes('/deactivate') && response.request().method() === 'PATCH',
@@ -546,7 +474,6 @@ export class OnlineMenusPage extends BasePage {
       if (await deactivateButton.isVisible({ timeout: 1000 }).catch(() => false)) {
         await deactivateButton.click();
       } else {
-        console.warn('Active menu detected but deactivate button is not visible, refreshing...');
         await this.page.reload({ waitUntil: 'commit' });
         await this.waitForLoading();
         await expect(this.createMenuButton).toBeVisible({ timeout: 15000 });
@@ -554,20 +481,13 @@ export class OnlineMenusPage extends BasePage {
       }
 
       // Wait for API response
-      const response = await apiPromise;
-      if (response?.ok()) {
-        console.log(`Deactivated menu: ${menuName}`);
-      } else {
-        console.warn(`Failed to deactivate menu: ${menuName}, status: ${response?.status()}`);
-      }
+      await apiPromise;
 
       // Just wait for loading - React Query auto-invalidates
       await this.waitForLoading();
     }
 
-    if (attempts >= maxAttempts) {
-      console.warn(`deactivateAllMenus: Reached max attempts (${maxAttempts}), some menus may still be active`);
-    }
+    // Max attempts reached if attempts >= maxAttempts
   }
 
   /**
@@ -657,7 +577,6 @@ export class OnlineMenusPage extends BasePage {
     // Check if button is enabled
     const isEnabled = await openExternalBtn.isEnabled({ timeout: 1000 }).catch(() => false);
     if (!isEnabled) {
-      console.log(`Open external button is disabled for menu "${name}"`);
       return null;
     }
 
@@ -671,9 +590,6 @@ export class OnlineMenusPage extends BasePage {
     if (newPage) {
       // Wait for the new page to load
       await newPage.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => {});
-      console.log(`New tab opened with URL: ${newPage.url()}`);
-    } else {
-      console.warn(`No new tab opened when clicking open external for menu "${name}"`);
     }
 
     return newPage;
@@ -1040,14 +956,7 @@ export class OnlineMenusPage extends BasePage {
 
     await this.menuEditorSaveButton.click();
 
-    const response = await savePromise;
-    if (response) {
-      if (response.ok()) {
-        console.log('Menu saved successfully');
-      } else {
-        console.warn(`Menu save API returned status ${response.status()}`);
-      }
-    }
+    await savePromise;
 
     await this.waitForLoading();
   }

@@ -167,21 +167,17 @@ test.describe.serial('Menu Content Upload @online-menus @content-upload', () => 
     // Expand the category
     await menusPage.expandCategory(0);
 
-    // Wait for content APIs to complete
-    await page.waitForLoadState('networkidle');
-
     // Firefox has issues with React Query state updates for dynamically loaded images
     // Force a page reload to get fresh React state - this ensures the Image component
     // receives the URL from the start rather than updating after initial render
     const browserName = page.context().browser()?.browserType().name() ?? '';
     if (browserName === 'firefox') {
-      await page.reload();
+      await page.reload({ waitUntil: 'domcontentloaded' });
       await menusPage.waitForLoading();
       // Re-edit the menu and expand category after reload
       await menusPage.editMenu(testMenuName);
       await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
       await menusPage.expandCategory(0);
-      await page.waitForLoadState('networkidle');
     }
 
     // Verify the image is still there
@@ -214,9 +210,6 @@ test.describe.serial('Menu Content Upload @online-menus @content-upload', () => 
     // Open the preview modal
     await menusPage.openPreview(testMenuName);
     await menusPage.expectPreviewModalVisible();
-
-    // Wait for any content API calls to complete
-    await page.waitForLoadState('networkidle');
 
     // Firefox has issues with React Native Web's Image component not updating
     // after dynamic data loads. For Firefox, we verify the preview opens successfully
@@ -404,18 +397,14 @@ test.describe('Create Menu with Category and Image @online-menus @content-upload
     // Expand the category
     await menusPage.expandCategory(0);
 
-    // Wait for content APIs to complete
-    await page.waitForLoadState('networkidle');
-
     // Firefox has issues with React Query state updates for dynamically loaded images
     const browserName = page.context().browser()?.browserType().name() ?? '';
     if (browserName === 'firefox') {
-      await page.reload();
+      await page.reload({ waitUntil: 'domcontentloaded' });
       await menusPage.waitForLoading();
       await menusPage.editMenu(testMenuName);
       await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
       await menusPage.expandCategory(0);
-      await page.waitForLoadState('networkidle');
     }
 
     // Verify the category name is correct
@@ -657,12 +646,11 @@ test.describe('Multiple Content Uploads @online-menus @content-upload', () => {
     // Force a page reload to get fresh React state
     const browserName = page.context().browser()?.browserType().name() ?? '';
     if (browserName === 'firefox') {
-      await page.reload();
+      await page.reload({ waitUntil: 'domcontentloaded' });
       await menusPage.waitForLoading();
       await menusPage.editMenu(testMenuName);
       await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
       await menusPage.expandCategory(0);
-      await page.waitForLoadState('networkidle');
     }
 
     // Verify images are visible

@@ -130,20 +130,15 @@ test.describe.serial('Public Menu Page Load @online-menus @public-viewer', () =>
 
     // After BUG-MENU-005/006 fix, there should be no render-time error spam
     // Filter out known non-critical errors (like network/CORS warnings)
-    const criticalErrors = consoleErrors.filter(err => {
+    const _criticalErrors = consoleErrors.filter(err => {
       const lower = err.toLowerCase();
-      // Filter out common non-critical browser warnings
+      // Filter out known non-critical browser warnings
       return !lower.includes('favicon') &&
         !lower.includes('manifest') &&
         !lower.includes('service worker') &&
         !lower.includes('cors') &&
         !lower.includes('csp');
     });
-
-    console.log(`Console errors during page load: ${consoleErrors.length} total, ${criticalErrors.length} critical`);
-    if (criticalErrors.length > 0) {
-      console.log('Critical errors:', criticalErrors);
-    }
 
     // Verify no duplicate error messages (the core bug was duplicate toasts)
     const errorCounts = new Map<string, number>();
@@ -152,9 +147,9 @@ test.describe.serial('Public Menu Page Load @online-menus @public-viewer', () =>
       errorCounts.set(err, count + 1);
     }
 
-    for (const [error, count] of errorCounts) {
+    for (const [_error, count] of errorCounts) {
       if (count > 1) {
-        console.warn(`Duplicate console error (${count}x): ${error}`);
+        // Duplicate console error detected — verified below via assertion
       }
     }
 
@@ -271,7 +266,7 @@ test.describe.serial('Public Menu Page Load @online-menus @public-viewer', () =>
     publicPage.off('console', errorListener);
 
     // After BUG-MENU-005/006 fix, viewer should load cleanly
-    const criticalErrors = consoleErrors.filter(err => {
+    const _criticalErrors = consoleErrors.filter(err => {
       const lower = err.toLowerCase();
       return !lower.includes('favicon') &&
         !lower.includes('manifest') &&
@@ -279,8 +274,6 @@ test.describe.serial('Public Menu Page Load @online-menus @public-viewer', () =>
         !lower.includes('cors') &&
         !lower.includes('csp');
     });
-
-    console.log(`Viewer console errors: ${consoleErrors.length} total, ${criticalErrors.length} critical`);
 
     // Verify no error overlay
     const errorOverlay = publicPage.locator('[data-testid="error-overlay"], .error-overlay');
@@ -375,10 +368,7 @@ test.describe.serial('Public Menu Page Load @online-menus @public-viewer', () =>
       }
     }
 
-    console.log(`Toast appearances across 3 navigations: ${toastAppearances.length}`);
-    if (toastAppearances.length > 0) {
-      console.log('Toast texts:', toastAppearances);
-    }
+    // Toast appearances across navigations tracked for assertion below
 
     // After BUG-MENU-005/006 fix, error toasts should not spam during normal navigation
     // A single error toast is acceptable, but duplicates indicate the old bug

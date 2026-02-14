@@ -587,10 +587,7 @@ export class MenuStylingPage extends BasePage {
 
     await this.menuEditorSaveButton.click();
 
-    const response = await responsePromise;
-    if (response?.ok()) {
-      console.log('Menu styling saved successfully');
-    }
+    await responsePromise;
 
     await this.waitForLoading();
   }

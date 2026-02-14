@@ -137,7 +137,7 @@ export class ContentPage extends BasePage {
    * Expect upload progress bar to show specific progress
    * Note: This is a placeholder - actual implementation depends on how progress is exposed
    */
-  async expectUploadProgress(minProgress: number) {
+  async expectUploadProgress(_minProgress: number) {
     await expect(this.progressBar).toBeVisible();
     // Additional progress assertions would depend on how the component exposes progress value
   }

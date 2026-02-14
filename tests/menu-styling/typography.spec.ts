@@ -161,8 +161,8 @@ test.describe.serial('Menu Typography Settings @menu-styling @online-menus', () 
     if (inputCount > 0) {
       const firstSizeInput = sizeInputs.first();
 
-      // Get the current value
-      const originalValue = await firstSizeInput.inputValue();
+      // Get the current value (read for potential future comparison)
+      const _originalValue = await firstSizeInput.inputValue();
 
       // Set a new font size (larger than typical default)
       const newSize = '24';
@@ -198,7 +198,8 @@ test.describe.serial('Menu Typography Settings @menu-styling @online-menus', () 
 
       if (optionCount > 0) {
         // Select a different option (second one if available)
-        const targetOption = optionCount > 1 ? options.nth(1) : options.first();
+        const SECOND_OPTION_INDEX = 1;
+        const targetOption = optionCount > SECOND_OPTION_INDEX ? options.nth(SECOND_OPTION_INDEX) : options.first();
         await targetOption.click();
         await stylingPage.waitForLoading();
       } else {
@@ -289,13 +290,13 @@ test.describe.serial('Menu Typography Settings @menu-styling @online-menus', () 
     if (resetVisible) {
       // Get current font size
       const sizeInputs = page.locator('[data-testid="typography-size-input"]');
-      const sizeBefore = await sizeInputs.first().inputValue().catch(() => '');
+      const _sizeBefore = await sizeInputs.first().inputValue().catch(() => '');
 
       // Click reset
       await resetButton.click();
       await stylingPage.waitForLoading();
 
-      console.log(`Reset typography from size: ${sizeBefore}`);
+      // Typography was reset from the previous size
     }
   });
 

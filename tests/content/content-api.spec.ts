@@ -94,7 +94,8 @@ async function waitForHealthy(
       lastError = 'Connection failed';
     }
 
-    // Wait before retry
+    // Wait before retry — API-only polling, no Page object available
+    // eslint-disable-next-line no-set-timeout-in-promise/no-set-timeout-in-promise
     await new Promise((r) => setTimeout(r, 750));
   }
 
@@ -163,17 +164,17 @@ test.describe('Content Service API Endpoints @content-api', () => {
       expect(result.response.status()).toBe(401);
     });
 
-    test('POST /api/content/upload-url should validate request body', async ({ request }) => {
+    test('POST /api/content/upload-url should validate request body', async ({ request: _request }) => {
       // This test would need authentication - placeholder for when auth is available
       test.skip(true, 'Requires authentication setup for Content Service');
     });
 
-    test('POST /api/content/upload-url should reject invalid file types', async ({ request }) => {
+    test('POST /api/content/upload-url should reject invalid file types', async ({ request: _request }) => {
       // This test would need authentication - placeholder for when auth is available
       test.skip(true, 'Requires authentication setup for Content Service');
     });
 
-    test('POST /api/content/upload-url should enforce file size limits', async ({ request }) => {
+    test('POST /api/content/upload-url should enforce file size limits', async ({ request: _request }) => {
       // This test would need authentication - placeholder for when auth is available
       test.skip(true, 'Requires authentication setup for Content Service');
     });
@@ -201,7 +202,7 @@ test.describe('Content Service API Endpoints @content-api', () => {
     });
 
     test('POST /api/content/upload-complete should validate content ID exists', async ({
-      request,
+      request: _request,
     }) => {
       // This test would need authentication - placeholder for when auth is available
       test.skip(true, 'Requires authentication setup for Content Service');

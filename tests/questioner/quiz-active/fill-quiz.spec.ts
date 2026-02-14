@@ -131,7 +131,7 @@ test.describe.serial('Fill Active Quiz @questioner', () => {
 
     // Should show validation error or move to next page (if no required fields)
     // This test verifies the form doesn't crash
-    const hasError = await quizActivePage.hasValidationError();
+    const _hasError = await quizActivePage.hasValidationError();
     // Test passes regardless - we're just checking the page doesn't crash
     expect(true).toBe(true);
   });

@@ -163,7 +163,7 @@ test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
     const exportRequest = await exportRequestPromise;
     if (exportRequest) {
       const requestUrl = exportRequest.url();
-      console.log(`Export request URL: ${requestUrl}`);
+      // Export request URL verified via assertion below
 
       // After BUG-QUIZ-015 fix, the export URL should include the search parameter
       const urlIncludesSearch = requestUrl.toLowerCase().includes('search') ||
@@ -179,7 +179,7 @@ test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
     // Handle download if triggered
     const download = await downloadPromise;
     if (download) {
-      console.log(`Download triggered: ${download.suggestedFilename()}`);
+      // Download triggered successfully
       // Cancel the download to avoid file system side effects
       await download.cancel().catch(() => {});
     }
@@ -227,7 +227,7 @@ test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
     const exportRequest = await exportRequestPromise;
     if (exportRequest) {
       const requestUrl = exportRequest.url();
-      console.log(`Export request URL (no filter): ${requestUrl}`);
+      // Export request URL (no filter) verified via assertion below
 
       // Without search, the URL should not include a search parameter
       // or the search parameter should be empty
@@ -241,7 +241,7 @@ test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
     // Handle download if triggered
     const download = await downloadPromise;
     if (download) {
-      console.log(`Download triggered: ${download.suggestedFilename()}`);
+      // Download triggered successfully
       await download.cancel().catch(() => {});
     }
   });

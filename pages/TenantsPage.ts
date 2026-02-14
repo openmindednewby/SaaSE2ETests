@@ -46,15 +46,13 @@ export class TenantsPage extends BasePage {
     // Click Save button in the modal and wait for API response
     const saveBtn = modal.getByRole('button', { name: /save|create/i });
     const btnCount = await saveBtn.count();
-    console.log(`Debug: Found ${btnCount} matching save/create buttons in modal`);
-    
+
     const responsePromise = this.page.waitForResponse(
       response => response.url().includes('/tenants') && response.request().method() === 'POST',
       { timeout: 15000 }
     );
 
     if (btnCount > 1) {
-      console.log('Using the last one...');
       await saveBtn.last().click();
     } else {
       await saveBtn.click();
@@ -63,16 +61,15 @@ export class TenantsPage extends BasePage {
     try {
       const response = await responsePromise;
       if (!response.ok()) {
-        const body = await response.text();
-        console.warn(`Tenant creation API returned status ${response.status()}: ${body}`);
+        // Tenant creation API returned non-ok status
       }
     } catch {
-      console.warn('No API call detected for tenant creation');
+      // No API call detected for tenant creation
     }
 
     await this.waitForLoading();
     // Wait for modal to disappear
-    await expect(modal).not.toBeVisible({ timeout: 5000 }).catch(() => console.warn('Modal did not disappear'));
+    await expect(modal).not.toBeVisible({ timeout: 5000 }).catch(() => {});
   }
 
   /**
@@ -126,11 +123,8 @@ export class TenantsPage extends BasePage {
         }
     }
 
-    // Verify response
-    const response = await deletePromise;
-    if (response && !response.ok()) {
-         console.warn(`Tenant deletion failed with status: ${response.status()}`);
-    }
+    // Wait for delete API call to complete
+    await deletePromise;
 
     await this.waitForLoading();
     await expect(row).not.toBeVisible({ timeout: 15000 });

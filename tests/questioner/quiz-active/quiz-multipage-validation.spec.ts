@@ -22,7 +22,7 @@ test.describe.serial('Multi-Page Quiz Validation @questioner @validation @critic
   let context: BrowserContext;
   let page: Page;
   let quizActivePage: QuizActivePage;
-  let templatesPage: QuizTemplatesPage;
+  let _templatesPage: QuizTemplatesPage;
 
   test.beforeAll(async ({ browser }, testInfo) => {
     testInfo.setTimeout(60000);
@@ -56,7 +56,7 @@ test.describe.serial('Multi-Page Quiz Validation @questioner @validation @critic
     });
 
     quizActivePage = new QuizActivePage(page);
-    templatesPage = new QuizTemplatesPage(page);
+    _templatesPage = new QuizTemplatesPage(page);
   });
 
   test.afterAll(async () => {
@@ -277,7 +277,7 @@ test.describe.serial('Multi-Page Quiz Validation @questioner @validation @critic
     } else {
       // Could not advance past page 1 - validation on page 1 prevented it
       // This is still valid behavior
-      const hasError = await quizActivePage.hasValidationError();
+      const _hasError = await quizActivePage.hasValidationError();
       // Test passes - validation is working
       expect(true).toBe(true);
     }

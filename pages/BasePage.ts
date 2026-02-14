@@ -47,7 +47,7 @@ export abstract class BasePage {
    * Waits for 'load' to ensure the JS bundle is downloaded before proceeding.
    */
   async goto(path: string) {
-    await this.page.goto(path, { waitUntil: 'load', timeout: 30000 });
+    await this.page.goto(path, { waitUntil: 'domcontentloaded', timeout: 30000 });
     // Run dismissOverlay and restoreAuth in parallel for speed
     await Promise.all([
       this.dismissOverlay(),

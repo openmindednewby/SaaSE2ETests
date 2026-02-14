@@ -19,7 +19,7 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
   let page: Page;
   let menusPage: OnlineMenusPage;
   let testMenuName: string;
-  let testMenuId: string;
+  let _testMenuId: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
@@ -82,7 +82,7 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
 
     // Get the menu ID from the card
     const card = menusPage.getMenuCard(testMenuName);
-    const cardHtml = await card.innerHTML();
+    const _cardHtml = await card.innerHTML();
     // The externalId is typically in the API response, but we'll need to navigate to edit to get it
     // For now, we'll store the name and rely on API calls in subsequent tests
   });
@@ -110,7 +110,7 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
       const categoryCount = await categoryElements.count();
 
       if (categoryCount > 0) {
-        console.log(`Live preview shows ${categoryCount} categories`);
+
         // Categories should be in displayOrder (implementation confirmed in MenuLivePreview.tsx)
         // The sorting logic is: sortCategoriesByDisplayOrder(contents.categories)
       }
@@ -138,7 +138,7 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
       const itemCount = await itemElements.count();
 
       if (itemCount > 0) {
-        console.log(`Live preview shows ${itemCount} menu items`);
+
         // Items should be sorted by displayOrder within their category
         // The sorting logic is: sortMenuItemsByDisplayOrder(category.items)
       }
@@ -171,8 +171,6 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
     const categoryElements = menusPage.previewModal.locator(testIdSelector(TestIds.PUBLIC_MENU_CATEGORY));
     const categoryCount = await categoryElements.count();
 
-    console.log(`Preview modal shows ${categoryCount} categories`);
-
     if (categoryCount > 0) {
       // Categories should be in ascending displayOrder
       // Implementation uses: sortCategoriesByDisplayOrder(contents.categories)
@@ -195,8 +193,6 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
     // Verify items are sorted by displayOrder within categories in the preview
     const itemElements = menusPage.previewModal.locator(testIdSelector(TestIds.PUBLIC_MENU_ITEM));
     const itemCount = await itemElements.count();
-
-    console.log(`Preview modal shows ${itemCount} menu items`);
 
     if (itemCount > 0) {
       // Items should be in ascending displayOrder within their category

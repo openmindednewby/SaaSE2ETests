@@ -130,9 +130,10 @@ test.describe.serial('Menu Layout Templates @menu-styling @online-menus', () => 
       const positionButtons = page.locator('[data-testid^="media-position-button"]');
       const buttonCount = await positionButtons.count();
 
-      if (buttonCount > 1) {
+      const SECOND_POSITION_INDEX = 1;
+      if (buttonCount > SECOND_POSITION_INDEX) {
         // Click the second position option
-        await positionButtons.nth(1).click();
+        await positionButtons.nth(SECOND_POSITION_INDEX).click();
         await stylingPage.waitForLoading();
       }
 

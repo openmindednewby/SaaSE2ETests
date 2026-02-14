@@ -173,7 +173,7 @@ test.describe.serial('View Quiz Answers @questioner', () => {
     await answersPage.search('definitelynonexistent123456789');
 
     // Should handle empty results gracefully (page doesn't crash)
-    await page.waitForTimeout(500);
+    await answersPage.waitForLoading();
     expect(true).toBe(true);
   });
 });

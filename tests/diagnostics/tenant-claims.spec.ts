@@ -24,6 +24,7 @@ function getTenantIdClaim(payload: Record<string, unknown>): string | undefined 
 }
 
 test.describe('Diagnostics: tenant claims', () => {
+  // eslint-disable-next-line no-empty-pattern
   test('prints decoded tenantId for the project admin', async ({}, testInfo) => {
     const { admin } = getProjectUsers(testInfo.project.name);
     const auth = new AuthHelper();
@@ -33,12 +34,10 @@ test.describe('Diagnostics: tenant claims', () => {
     const payload = decodeJwtPayload(tokens.accessToken!);
     const tenantId = getTenantIdClaim(payload);
 
-    console.log(`[diagnostics] project=${testInfo.project.name} user=${admin.username} tenantName=${admin.tenantName} tenantId=${tenantId ?? '<missing>'}`);
-    console.log(`[diagnostics] claims keys=${Object.keys(payload).sort().join(',')}`);
-
     expect(tenantId, 'Expected a tenantId claim in access token').toBeTruthy();
   });
 
+  // eslint-disable-next-line no-empty-pattern
   test('tenantId differs across TenantA/B/C admins', async ({}, testInfo) => {
     if (!testInfo.project.name.includes('diagnostics-chromium')) test.skip(true, 'Run once (chromium) only');
 
@@ -52,8 +51,6 @@ test.describe('Diagnostics: tenant claims', () => {
 
     const c = await auth.loginViaAPI(TEST_USERS.TENANT_C_ADMIN.username, TEST_USERS.TENANT_C_ADMIN.password);
     const cTenantId = getTenantIdClaim(decodeJwtPayload(c.accessToken!));
-
-    console.log(`[diagnostics] tenantIds: A=${aTenantId} B=${bTenantId} C=${cTenantId}`);
 
     expect(aTenantId, 'TenantA tenantId missing').toBeTruthy();
     expect(bTenantId, 'TenantB tenantId missing').toBeTruthy();
