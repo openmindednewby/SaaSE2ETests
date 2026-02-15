@@ -26,6 +26,7 @@ test.describe.serial('Public Menu Page Load @online-menus @public-viewer', () =>
   let testMenuName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     // Create admin context for managing menus

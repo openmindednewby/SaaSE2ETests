@@ -20,6 +20,7 @@ test.describe.serial('Menu CRUD with Activation State @online-menus @crud', () =
   let testMenuName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();

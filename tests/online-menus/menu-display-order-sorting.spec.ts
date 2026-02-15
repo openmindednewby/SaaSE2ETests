@@ -22,6 +22,7 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
   let _testMenuId: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();

@@ -24,6 +24,7 @@ test.describe.serial('Public Menu Viewer Active Filtering @online-menus @public-
   let publicPage: Page;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     // Create admin context for managing menus

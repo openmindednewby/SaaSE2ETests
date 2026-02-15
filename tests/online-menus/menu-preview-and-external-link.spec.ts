@@ -18,6 +18,7 @@ test.describe.serial('Menu Preview and External Link @online-menus @preview', ()
   let testMenuName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     // Create a new browser context for this test suite

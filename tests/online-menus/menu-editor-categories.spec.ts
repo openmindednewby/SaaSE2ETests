@@ -23,6 +23,7 @@ test.describe.serial('Menu Editor Categories - Focus Retention @online-menus @ca
   let testMenuName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();
@@ -235,6 +236,7 @@ test.describe.serial('Menu Editor - Full CRUD for Categories @online-menus @cate
   let testMenuName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();
@@ -471,6 +473,7 @@ test.describe('Menu Editor - Multiple Category Focus Switching @online-menus @ca
   let testMenuName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();

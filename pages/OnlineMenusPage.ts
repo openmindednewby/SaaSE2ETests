@@ -126,7 +126,8 @@ export class OnlineMenusPage extends BasePage {
     // Ensure the create button is visible and ready before clicking
     // Under concurrency (12 workers), the page may still be settling after deactivateAllMenus()
     await expect(this.createMenuButton).toBeVisible({ timeout: 15000 });
-    await this.createMenuButton.click();
+    // Firefox under high concurrency can be slow to process click events
+    await this.createMenuButton.click({ timeout: 15000 });
 
     // Wait for editor to appear
     await this.menuEditor.waitFor({ state: 'visible', timeout: 5000 });

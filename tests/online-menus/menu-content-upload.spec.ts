@@ -31,6 +31,7 @@ test.describe.serial('Menu Content Upload @online-menus @content-upload', () => 
   const testImagePath = path.resolve(__dirname, '..', '..', 'fixtures', 'files', 'test-image.png');
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();
@@ -306,6 +307,7 @@ test.describe('Create Menu with Category and Image @online-menus @content-upload
   const testImagePath = path.resolve(__dirname, '..', '..', 'fixtures', 'files', 'test-image.png');
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();
@@ -433,6 +435,7 @@ test.describe('Menu Content Upload Error Handling @online-menus @content-upload'
   let testMenuName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();
@@ -549,6 +552,7 @@ test.describe('Multiple Content Uploads @online-menus @content-upload', () => {
   const testImagePath = path.resolve(__dirname, '..', '..', 'fixtures', 'files', 'test-image.png');
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();

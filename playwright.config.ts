@@ -287,6 +287,29 @@ export default defineConfig({
       use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup', 'multi-tenant-setup'],
     },
+
+    // Tenant Themes batch (requires multi-tenant setup for authenticated access)
+    {
+      name: 'tenant-themes-chromium',
+      workers: 1,
+      testMatch: /tenant-themes\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
+    {
+      name: 'tenant-themes-mobile',
+      workers: 1,
+      testMatch: /tenant-themes\/.*\.spec\.ts/,
+      use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
+    {
+      name: 'tenant-themes-firefox',
+      workers: 1,
+      testMatch: /tenant-themes\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
   ],
 
   // Web server configuration - disabled since frontend runs via Tilt.

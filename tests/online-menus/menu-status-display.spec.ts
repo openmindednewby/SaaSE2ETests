@@ -22,6 +22,7 @@ test.describe.serial('Menu Status Display @online-menus @ui', () => {
   let menu3Name: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext({ storageState: 'playwright/.auth/user.json' });

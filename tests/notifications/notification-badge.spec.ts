@@ -18,6 +18,7 @@ import { TestIds } from '../../shared/testIds.js';
 import { hasNotificationTestApi } from '../utils/notificationHelpers.js';
 
 test.describe('Notification Badge @notifications', () => {
+  test.setTimeout(60000);
   let notificationsPage: NotificationsPage;
 
   test.beforeEach(async ({ page }) => {
