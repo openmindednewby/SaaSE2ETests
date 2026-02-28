@@ -9,9 +9,11 @@ export { OnlineMenusPage } from './OnlineMenusPage.js';
 export { QuizActivePage } from './QuizActivePage.js';
 export { QuizAnswersPage } from './QuizAnswersPage.js';
 export { QuizTemplatesPage } from './QuizTemplatesPage.js';
+export { SidebarPage } from './SidebarPage.js';
 export { StudioLoginPage } from './StudioLoginPage.js';
 export { StudioProductsPage } from './StudioProductsPage.js';
 export { TenantsPage } from './TenantsPage.js';
+export { TenantThemesPage } from './TenantThemesPage.js';
 export { ThemeSettingsPage } from './ThemeSettingsPage.js';
 export { UsersPage } from './UsersPage.js';
 

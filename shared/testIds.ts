@@ -348,6 +348,17 @@ export const TestIds = {
 
   // SyncfusionThemeStudio - Layout Settings
   STUDIO_LAYOUT_FULL_WIDTH_CHECKBOX: 'layout-full-width-checkbox',
+
+  // Tenant Theme Editor
+  TENANT_THEME_EDITOR_SCREEN: 'tenant-theme-editor-screen',
+  TENANT_THEME_EDITOR_LOADING: 'tenant-theme-editor-loading',
+  TENANT_THEME_EDITOR_SAVE: 'tenant-theme-editor-save',
+  TENANT_THEME_EDITOR_RESET: 'tenant-theme-editor-reset',
+  TENANT_THEME_COLOR_PRIMARY: 'tenant-theme-color-primary',
+  TENANT_THEME_COLOR_SECONDARY: 'tenant-theme-color-secondary',
+  TENANT_THEME_COLOR_ACCENT: 'tenant-theme-color-accent',
+  TENANT_THEME_PREVIEW: 'tenant-theme-preview',
+  TENANT_THEME_TYPOGRAPHY_SCALE: 'tenant-theme-typography-scale',
 } as const;
 
 // Type for testID values

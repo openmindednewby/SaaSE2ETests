@@ -310,6 +310,29 @@ export default defineConfig({
       use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup', 'multi-tenant-setup'],
     },
+
+    // Navigation batch (sidebar expandable sections, no multi-tenant setup required)
+    {
+      name: 'navigation-chromium',
+      workers: 1,
+      testMatch: /navigation\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'navigation-mobile',
+      workers: 1,
+      testMatch: /navigation\/.*\.spec\.ts/,
+      use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'navigation-firefox',
+      workers: 1,
+      testMatch: /navigation\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup'],
+    },
   ],
 
   // Web server configuration - disabled since frontend runs via Tilt.
