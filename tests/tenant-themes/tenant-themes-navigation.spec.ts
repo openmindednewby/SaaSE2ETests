@@ -54,8 +54,8 @@ test.describe.serial('Tenant Theme Editor Navigation @tenant-themes @navigation'
     await themesPage.expectPageLoaded();
   });
 
-  test('should display placeholder content', async () => {
-    await themesPage.expectPlaceholderVisible();
+  test('should display theme editor content', async () => {
+    await themesPage.expectPreviewVisible();
   });
 
   test('should show correct page title', async () => {

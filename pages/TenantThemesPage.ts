@@ -23,8 +23,10 @@ export class TenantThemesPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.pageTitle = page.getByText('Theme Editor').first();
+    // The Heading component reuses the same testId for all section headings.
+    // Scope to the first heading inside the editor screen to get the page title.
     this.editorScreen = page.locator(testIdSelector(TestIds.TENANT_THEME_EDITOR_SCREEN));
+    this.pageTitle = this.editorScreen.locator(testIdSelector(TestIds.HEADING_TEXT)).first();
     this.primaryColorInput = page.locator(testIdSelector(TestIds.TENANT_THEME_COLOR_PRIMARY));
     this.secondaryColorInput = page.locator(testIdSelector(TestIds.TENANT_THEME_COLOR_SECONDARY));
     this.accentColorInput = page.locator(testIdSelector(TestIds.TENANT_THEME_COLOR_ACCENT));
