@@ -58,7 +58,7 @@ test.describe.serial('Layout Full Width Toggle @showcase @layout @theme-settings
 
     themeSettingsPage = new ThemeSettingsPage(page);
 
-    // Navigate to a dashboard page to access the Theme Settings drawer
+    // Navigate to a protected page to access the Theme Settings drawer
     await themeSettingsPage.goto('/showcase/native-forms');
     await themeSettingsPage.openLayoutTab();
   });

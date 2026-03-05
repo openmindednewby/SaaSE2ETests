@@ -58,7 +58,7 @@ test.describe.serial('Theme Preset Cards @showcase @theme-presets @bug-fix', () 
 
     themeSettingsPage = new ThemeSettingsPage(page);
 
-    // Navigate to any dashboard page to access the Theme Settings drawer
+    // Navigate to a protected page to access the Theme Settings drawer
     await themeSettingsPage.goto('/showcase/native-forms');
     await themeSettingsPage.openPresetsTab();
   });
