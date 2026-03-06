@@ -359,6 +359,19 @@ export const TestIds = {
   TENANT_THEME_COLOR_ACCENT: 'tenant-theme-color-accent',
   TENANT_THEME_PREVIEW: 'tenant-theme-preview',
   TENANT_THEME_TYPOGRAPHY_SCALE: 'tenant-theme-typography-scale',
+
+  // Theme Settings (BaseClient Settings page)
+  THEME_SETTINGS_SCREEN: 'theme-settings-screen',
+  THEME_SETTINGS_LOADING: 'theme-settings-loading',
+  THEME_SWATCH_PRIMARY: 'theme-swatch-primary',
+  THEME_SWATCH_SECONDARY: 'theme-swatch-secondary',
+  THEME_SWATCH_ACCENT: 'theme-swatch-accent',
+  THEME_LOGO_PREVIEW: 'theme-logo-preview',
+  THEME_MODE_LIGHT: 'theme-mode-light',
+  THEME_MODE_DARK: 'theme-mode-dark',
+  THEME_CUSTOMIZE_BUTTON: 'theme-customize-button',
+  THEME_RESET_BUTTON: 'theme-reset-button',
+  THEME_LIVE_PREVIEW: 'theme-live-preview',
 } as const;
 
 // Type for testID values

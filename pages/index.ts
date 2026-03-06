@@ -13,6 +13,7 @@ export { StudioLoginPage } from './StudioLoginPage.js';
 export { StudioProductsPage } from './StudioProductsPage.js';
 export { TenantsPage } from './TenantsPage.js';
 export { TenantThemesPage } from './TenantThemesPage.js';
+export { ThemeSettingsAppPage } from './ThemeSettingsAppPage.js';
 export { ThemeSettingsPage } from './ThemeSettingsPage.js';
 export { UsersPage } from './UsersPage.js';
 

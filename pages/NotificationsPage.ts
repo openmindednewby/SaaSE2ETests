@@ -6,6 +6,8 @@
  * - Notification list screen
  * - Real-time toast notifications
  * - Mark as read functionality
+ * - Notification preferences screen
+ * - Bulk notification injection for stress tests
  */
 
 import { Locator, Page, expect } from '@playwright/test';
@@ -37,6 +39,12 @@ export class NotificationsPage extends BasePage {
   // Toast Container
   readonly toastContainer: Locator;
 
+  // Preferences Screen
+  readonly preferencesScreen: Locator;
+  readonly preferencesSaveButton: Locator;
+  readonly preferenceDropdown: Locator;
+  readonly settingsButton: Locator;
+
   constructor(page: Page) {
     super(page);
 
@@ -53,6 +61,12 @@ export class NotificationsPage extends BasePage {
 
     // Toast
     this.toastContainer = page.locator(testIdSelector(TestIds.NOTIFICATION_TOAST_CONTAINER));
+
+    // Preferences
+    this.preferencesScreen = page.locator(testIdSelector(TestIds.NOTIFICATION_PREFERENCES_SCREEN));
+    this.preferencesSaveButton = page.locator(testIdSelector(TestIds.NOTIFICATION_PREFERENCES_SAVE_BUTTON));
+    this.preferenceDropdown = page.locator(testIdSelector(TestIds.NOTIFICATION_PREFERENCE_DROPDOWN));
+    this.settingsButton = page.locator(testIdSelector(TestIds.NOTIFICATION_SETTINGS_BUTTON));
   }
 
   /**
@@ -451,5 +465,64 @@ export class NotificationsPage extends BasePage {
       },
       { data, id }
     );
+  }
+
+  // ==================== Preferences Methods ====================
+
+  /**
+   * Navigate to the notification preferences screen
+   */
+  async navigateToPreferences(): Promise<void> {
+    await this.goto('/notifications/preferences');
+  }
+
+  /**
+   * Check if the preferences screen is available
+   */
+  async isPreferencesAvailable(): Promise<boolean> {
+    return await this.preferencesScreen
+      .isVisible({ timeout: 3000 })
+      .catch(() => false);
+  }
+
+  /**
+   * Save notification preferences and wait for API response
+   */
+  async savePreferences(): Promise<void> {
+    await expect(this.preferencesSaveButton).toBeVisible({
+      timeout: NOTIFICATION_TIMEOUT_MS,
+    });
+    const responsePromise = this.page.waitForResponse(
+      (response) =>
+        response.url().includes('/preferences') &&
+        (response.request().method() === 'PUT' ||
+          response.request().method() === 'POST'),
+      { timeout: 10000 }
+    ).catch(() => null);
+
+    await this.preferencesSaveButton.click();
+    await responsePromise;
+    await this.waitForLoading();
+  }
+
+  /**
+   * Expect the preferences screen to be visible
+   */
+  async expectPreferencesScreen(): Promise<void> {
+    await expect(this.preferencesScreen).toBeVisible({
+      timeout: NOTIFICATION_TIMEOUT_MS,
+    });
+  }
+
+  /**
+   * Check if the test API is available and ready
+   */
+  async hasTestApi(): Promise<boolean> {
+    try {
+      await this.waitForTestApiReady();
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

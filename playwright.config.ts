@@ -243,25 +243,41 @@ export default defineConfig({
     },
 
     // Notifications batch (requires multi-tenant setup)
+    // Excludes stress tests which have their own project
     {
       name: 'notifications-chromium',
       workers: 1,
-      testMatch: /notifications\/.*\.spec\.ts/,
+      testMatch: /notifications\/(?!stress).*\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup', 'multi-tenant-setup'],
     },
     {
       name: 'notifications-mobile',
       workers: 1,
-      testMatch: /notifications\/.*\.spec\.ts/,
+      testMatch: /notifications\/(?!stress).*\.spec\.ts/,
       use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup', 'multi-tenant-setup'],
     },
     {
       name: 'notifications-firefox',
       workers: 1,
-      testMatch: /notifications\/.*\.spec\.ts/,
+      testMatch: /notifications\/(?!stress).*\.spec\.ts/,
       use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
+
+    // Notification Stress Tests (Chromium only, generous timeouts)
+    {
+      name: 'notification-stress',
+      workers: 1,
+      testMatch: /notifications\/stress-.*\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'playwright/.auth/user.json',
+        actionTimeout: 30000,
+        navigationTimeout: 30000,
+      },
+      timeout: 120000, // 2 minutes per test
       dependencies: ['setup', 'multi-tenant-setup'],
     },
 
@@ -307,6 +323,29 @@ export default defineConfig({
       name: 'tenant-themes-firefox',
       workers: 1,
       testMatch: /tenant-themes\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
+
+    // Theme settings batch (requires multi-tenant setup for tenant isolation tests)
+    {
+      name: 'theme-chromium',
+      workers: 1,
+      testMatch: /theme\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
+    {
+      name: 'theme-mobile',
+      workers: 1,
+      testMatch: /theme\/.*\.spec\.ts/,
+      use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
+    {
+      name: 'theme-firefox',
+      workers: 1,
+      testMatch: /theme\/.*\.spec\.ts/,
       use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup', 'multi-tenant-setup'],
     },
