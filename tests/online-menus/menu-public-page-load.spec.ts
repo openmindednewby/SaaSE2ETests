@@ -345,11 +345,25 @@ test.describe.serial('Public Menu Page Load @online-menus @public-viewer', () =>
     const toastSelector = testIdSelector(TestIds.NOTIFICATION_TOAST);
     const toastContainer = testIdSelector(TestIds.NOTIFICATION_TOAST_CONTAINER);
 
-    // Navigate to public menus multiple times rapidly
+    // Navigate to public menus multiple times to check for toast spam.
+    // Use waitUntil:'commit' and catch ERR_ABORTED since rapid navigations
+    // can abort the previous page's load lifecycle — this is expected browser
+    // behavior and not a test concern (we only care about duplicate toasts).
     for (let i = 0; i < 3; i++) {
-      await publicPage.goto('/public/menus');
+      try {
+        await publicPage.goto('/public/menus', { waitUntil: 'commit' });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        // ERR_ABORTED is expected when a new navigation interrupts a pending one
+        if (!msg.includes('ERR_ABORTED')) {
+          throw err;
+        }
+      }
 
-      // Check for toasts immediately after load
+      // Wait for page content to appear before checking toasts
+      await publicPage.waitForLoadState('domcontentloaded');
+
+      // Check for toasts after load
       const toasts = publicPage.locator(`${toastSelector}, ${toastContainer} > *`);
       const toastCount = await toasts.count();
 

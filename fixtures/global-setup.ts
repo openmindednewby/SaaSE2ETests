@@ -86,12 +86,22 @@ async function globalSetup(config: FullConfig) {
       console.warn('   cd C:\\desktopContents\\projects\\SaaS\\OnlineMenuSaaS\\clients\\OnlineMenuClientApp');
       console.warn('   npm run start:dev\n');
 
-      // Still save the tokens for API-based tests
+      // Save tokens for API-based tests (include persist:auth so auth.setup.ts can skip)
+      const authState = {
+        accessToken: tokens.accessToken || null,
+        refreshToken: tokens.refreshToken || null,
+        isLoggedIn: Boolean(tokens.accessToken),
+        user: tokens.userInfo || null,
+        userInfo: tokens.userInfo || null,
+        loading: false,
+        refreshingUserInfo: false,
+      };
       fs.writeFileSync(authFile, JSON.stringify({
         cookies: [],
         origins: [{
           origin: baseURL,
           localStorage: [
+            { name: 'persist:auth', value: JSON.stringify(authState) },
             { name: 'userProfile', value: JSON.stringify(tokens.userInfo) }
           ]
         }]

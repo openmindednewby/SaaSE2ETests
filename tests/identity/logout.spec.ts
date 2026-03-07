@@ -195,10 +195,7 @@ test.describe.serial('Logout Flow @identity @auth', () => {
     await expectLoggedOut();
   });
 
-  test.skip('should clear session after logout', async () => {
-    // TODO: This test has timing issues with re-login after logout in serial mode
-    // The first logout test already verifies the core logout functionality
-    // Login again for this test (since previous test logged out)
+  test('should clear session after logout', async () => {
     const username = process.env.TEST_USER_USERNAME;
     const password = process.env.TEST_USER_PASSWORD;
 
@@ -207,34 +204,56 @@ test.describe.serial('Logout Flow @identity @auth', () => {
       return;
     }
 
+    // Clear stale localStorage from beforeAll so init script does not restore old tokens
+    await page.evaluate(() => {
+      localStorage.removeItem('persist:auth');
+      sessionStorage.clear();
+    });
+
+    // Re-login after previous test's logout
     const loginPage = new LoginPage(page);
     await loginPage.goto();
+    await expect(loginPage.usernameInput).toBeVisible({ timeout: 15000 });
     await loginPage.loginAndWait(username, password);
 
-    // After login, we're on a protected page. Wait for the logout button to appear.
+    // Persist new auth state so the init script can restore it across navigations
+    await page.evaluate(() => {
+      const persistAuth = sessionStorage.getItem('persist:auth');
+      if (persistAuth) {
+        localStorage.setItem('persist:auth', persistAuth);
+      }
+    });
+
+    // Navigate to protected route and wait for logout button
+    await page.goto('/quiz-templates', { waitUntil: 'domcontentloaded' });
     const logoutButton = page.locator(testIdSelector(TestIds.LOGOUT_BUTTON)).first();
     await logoutButton.waitFor({ state: 'visible', timeout: 15000 });
 
     await clickLogout();
     await expectLoggedOut();
 
-    // Verify session is cleared
-    const persisted = await page.evaluate(() => sessionStorage.getItem('persist:auth'));
-    if (persisted) {
-      const parsed = JSON.parse(persisted);
-      expect(parsed.accessToken).toBeFalsy();
-      expect(parsed.refreshToken).toBeFalsy();
-      expect(parsed.isLoggedIn).toBeFalsy();
-    } else {
-      // Storage key removed is also a valid "cleared session" state.
-      expect(persisted).toBeNull();
+    // Verify session storage is cleared of auth tokens
+    const authState = await page.evaluate(() => {
+      const raw = sessionStorage.getItem('persist:auth');
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    });
+
+    if (authState) {
+      // If persist:auth still exists, tokens must be cleared
+      const tokenIsFalsy = !authState.accessToken || authState.accessToken === 'null' || authState.accessToken === '';
+      const refreshIsFalsy = !authState.refreshToken || authState.refreshToken === 'null' || authState.refreshToken === '';
+      expect(tokenIsFalsy).toBe(true);
+      expect(refreshIsFalsy).toBe(true);
     }
+    // If authState is null, persist:auth was removed entirely -- also valid
   });
 
-  test.skip('should redirect to login when accessing protected route after logout', async () => {
-    // TODO: This test has timing issues with re-login after logout in serial mode
-    // The first logout test already verifies the core logout functionality
-    // Login again for this test
+  test('should redirect to login when accessing protected route after logout', async () => {
     const username = process.env.TEST_USER_USERNAME;
     const password = process.env.TEST_USER_PASSWORD;
 
@@ -243,25 +262,36 @@ test.describe.serial('Logout Flow @identity @auth', () => {
       return;
     }
 
-    const loginPage = new LoginPage(page);
-    await loginPage.goto();
-    await loginPage.loginAndWait(username, password);
-
-    // After login, we're on a protected page. Wait for the logout button to appear.
-    const logoutButton = page.locator(testIdSelector(TestIds.LOGOUT_BUTTON)).first();
-    await logoutButton.waitFor({ state: 'visible', timeout: 15000 });
-
-    // Clear auth manually to simulate logout
+    // Clear stale storage from previous test's logout
     await page.evaluate(() => {
-      sessionStorage.clear();
-      localStorage.removeItem('userProfile');
       localStorage.removeItem('persist:auth');
+      sessionStorage.clear();
     });
 
-    // Refresh the page
-    await page.reload();
+    // Re-login
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await expect(loginPage.usernameInput).toBeVisible({ timeout: 15000 });
+    await loginPage.loginAndWait(username, password);
 
-    // Should redirect to login
-    await expect(page).toHaveURL(/login/i, { timeout: 10000 });
+    // Navigate to protected route and confirm we are authenticated
+    await page.goto('/quiz-templates', { waitUntil: 'domcontentloaded' });
+    await expect(page).toHaveURL(/quiz-templates/, { timeout: 10000 });
+
+    // Simulate auth expiry by clearing all auth state
+    await page.evaluate(() => {
+      sessionStorage.clear();
+      localStorage.removeItem('persist:auth');
+      localStorage.removeItem('userProfile');
+    });
+
+    // Reload -- the app should detect missing auth and redirect to login
+    await page.reload({ waitUntil: 'domcontentloaded' });
+
+    // Verify redirect to login page
+    await Promise.race([
+      expect(page).toHaveURL(/login/i, { timeout: 15000 }),
+      expect(page.locator(testIdSelector(TestIds.LOGIN_FORM))).toBeVisible({ timeout: 15000 }),
+    ]);
   });
 });

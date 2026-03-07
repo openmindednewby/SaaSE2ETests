@@ -8,7 +8,7 @@
 
 import { expect, Page, Locator } from '@playwright/test';
 
-import { TestIds, testIdSelector } from '../../shared/testIds.js';
+import { TestIds, testIdSelector, testIdStartsWithSelector } from '../../shared/testIds.js';
 
 /** Default timeout for notification-related waits (5 seconds) */
 const NOTIFICATION_TIMEOUT_MS = 5000;
@@ -210,7 +210,7 @@ export function getNotificationList(page: Page): Locator {
  * Get all notification items in the list
  */
 export function getNotificationItems(page: Page): Locator {
-  return page.locator(testIdSelector(TestIds.NOTIFICATION_ITEM));
+  return page.locator(testIdStartsWithSelector(TestIds.NOTIFICATION_ITEM));
 }
 
 /**

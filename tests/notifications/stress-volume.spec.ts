@@ -13,6 +13,7 @@
 
 import { test, expect } from '@playwright/test';
 
+import { isNotificationServiceHealthy } from '../../helpers/notification.helpers.js';
 import { NotificationsPage } from '../../pages/NotificationsPage.js';
 import { hasNotificationTestApi } from '../utils/notificationHelpers.js';
 import {
@@ -31,6 +32,13 @@ const MAX_RENDER_TIME_MS = 2000;
 
 test.describe('Notification Volume Stress Tests @notifications @stress', () => {
   let notificationsPage: NotificationsPage;
+
+  /** Whether the NotificationService is reachable */
+  let serviceHealthy = false;
+
+  test.beforeAll(async () => {
+    serviceHealthy = await isNotificationServiceHealthy();
+  });
 
   test.beforeEach(async ({ page }) => {
     notificationsPage = new NotificationsPage(page);
@@ -60,6 +68,7 @@ test.describe('Notification Volume Stress Tests @notifications @stress', () => {
   }) => {
     test.setTimeout(STRESS_TIMEOUT_MS);
 
+    test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
@@ -94,6 +103,7 @@ test.describe('Notification Volume Stress Tests @notifications @stress', () => {
   }) => {
     test.setTimeout(STRESS_TIMEOUT_MS);
 
+    test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
@@ -132,6 +142,7 @@ test.describe('Notification Volume Stress Tests @notifications @stress', () => {
   test('should maintain correct unread count under load', async ({ page }) => {
     test.setTimeout(STRESS_TIMEOUT_MS);
 
+    test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
@@ -168,6 +179,7 @@ test.describe('Notification Volume Stress Tests @notifications @stress', () => {
   }) => {
     test.setTimeout(EXTREME_STRESS_TIMEOUT_MS);
 
+    test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
@@ -216,6 +228,7 @@ test.describe('Notification Volume Stress Tests @notifications @stress', () => {
   }) => {
     test.setTimeout(EXTREME_STRESS_TIMEOUT_MS);
 
+    test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 

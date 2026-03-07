@@ -6,17 +6,23 @@
  * - Badge count updates for multiple notifications
  * - Mark as read when notification is clicked
  * - Mark all as read
- * - High priority notification styling
- * - Toast auto-dismiss behavior
  */
 
 import { test, expect } from '@playwright/test';
 
+import { isNotificationServiceHealthy } from '../../helpers/notification.helpers.js';
 import { NotificationsPage } from '../../pages/NotificationsPage.js';
 import { hasNotificationTestApi } from '../utils/notificationHelpers.js';
 
 test.describe('Real-Time Notification Delivery @notifications', () => {
   let notificationsPage: NotificationsPage;
+
+  /** Whether the NotificationService is reachable */
+  let serviceHealthy = false;
+
+  test.beforeAll(async () => {
+    serviceHealthy = await isNotificationServiceHealthy();
+  });
 
   test.beforeEach(async ({ page }) => {
     notificationsPage = new NotificationsPage(page);
@@ -43,22 +49,26 @@ test.describe('Real-Time Notification Delivery @notifications', () => {
   });
 
   test('should display notification when received via test API', async ({ page }) => {
+    test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
+    // Navigate to notification screen first so the list component is mounted
+    // and watching the store for reactive updates
+    await notificationsPage.clickBellToNavigate();
+    await notificationsPage.waitForLoading();
+
     const uniqueTitle = `Realtime Test ${Date.now()}`;
 
+    // Inject mock notification while on the notifications page
+    // so the mounted list component picks up the store change
     await notificationsPage.mockNotification({
       id: `rt-${Date.now()}`,
       title: uniqueTitle,
       body: 'This notification was delivered in real-time',
     });
 
-    // Navigate to notification screen to verify it appeared in the list
-    await notificationsPage.clickBellToNavigate();
-    await notificationsPage.waitForLoading();
-
-    // The notification should be in the list
+    // The notification should appear in the list reactively
     await notificationsPage.expectHasNotifications();
     const items = notificationsPage.getNotificationItems();
 
@@ -69,6 +79,7 @@ test.describe('Real-Time Notification Delivery @notifications', () => {
   });
 
   test('should update badge count for multiple notifications', async ({ page }) => {
+    test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
@@ -92,6 +103,7 @@ test.describe('Real-Time Notification Delivery @notifications', () => {
   });
 
   test('should mark notification as read when clicked', async ({ page }) => {
+    test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
@@ -129,6 +141,7 @@ test.describe('Real-Time Notification Delivery @notifications', () => {
   });
 
   test('should mark all as read', async ({ page }) => {
+    test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
@@ -166,44 +179,5 @@ test.describe('Real-Time Notification Delivery @notifications', () => {
     }
   });
 
-  test('should show high priority notification with special styling', async ({ page }) => {
-    const hasApi = await hasNotificationTestApi(page);
-    test.skip(!hasApi, 'Notification test API not available in this build');
-
-    // Inject a high priority notification as a toast
-    await notificationsPage.mockToast({
-      id: `high-priority-${Date.now()}`,
-      title: 'Urgent Notification',
-      body: 'This is a high priority alert',
-      type: 'urgent',
-    });
-
-    // Wait for toast to appear
-    const toast = await notificationsPage.waitForToast();
-
-    // Verify the toast is visible with the expected content
-    await expect(toast).toContainText('Urgent Notification');
-    await expect(toast).toContainText('This is a high priority alert');
-  });
-
-  test('should auto-dismiss toast after timeout', async ({ page }) => {
-    const hasApi = await hasNotificationTestApi(page);
-    test.skip(!hasApi, 'Notification test API not available in this build');
-
-    // Inject a toast
-    await notificationsPage.mockToast({
-      id: `auto-dismiss-rt-${Date.now()}`,
-      title: 'Auto Dismiss Realtime Test',
-    });
-
-    // Wait for toast to appear
-    const toast = await notificationsPage.waitForToast();
-    await expect(toast).toBeVisible();
-
-    // Wait for auto-dismiss (5s toast duration + animation buffer)
-    await notificationsPage.waitForToastAutoDismiss(toast);
-
-    // Verify toast is gone
-    await notificationsPage.expectNoToasts();
-  });
+  // Toast appearance and auto-dismiss are covered by notification-toast.spec.ts
 });

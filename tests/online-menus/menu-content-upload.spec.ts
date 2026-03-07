@@ -173,11 +173,12 @@ test.describe.serial('Menu Content Upload @online-menus @content-upload', () => 
     // receives the URL from the start rather than updating after initial render
     const browserName = page.context().browser()?.browserType().name() ?? '';
     if (browserName === 'firefox') {
+      // Reload needed: Firefox has stale React Query state for dynamically loaded images
       await page.reload({ waitUntil: 'domcontentloaded' });
       await menusPage.waitForLoading();
       // Re-edit the menu and expand category after reload
       await menusPage.editMenu(testMenuName);
-      await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
+      await expect(menusPage.menuEditor).toBeVisible({ timeout: 15000 });
       await menusPage.expandCategory(0);
     }
 

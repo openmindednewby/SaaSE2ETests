@@ -229,7 +229,7 @@ export async function isNotificationServiceHealthy(): Promise<boolean> {
  * Get the SignalR hub URL for the notification service.
  */
 export function getSignalRHubUrl(): string {
-  return `${NOTIFICATION_SERVICE_URL}/notificationhub`;
+  return `${NOTIFICATION_SERVICE_URL}/hubs/notifications`;
 }
 
 /**

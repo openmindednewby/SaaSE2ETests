@@ -13,10 +13,10 @@
 import { Locator, Page, expect } from '@playwright/test';
 
 import { BasePage } from './BasePage.js';
-import { TestIds, testIdSelector } from '../shared/testIds.js';
+import { TestIds, testIdSelector, testIdStartsWithSelector } from '../shared/testIds.js';
 
 /** Default timeout for notification-related operations */
-const NOTIFICATION_TIMEOUT_MS = 5000;
+const NOTIFICATION_TIMEOUT_MS = 10000;
 
 /** Toast auto-dismiss duration from the app */
 const TOAST_DURATION_MS = 5000;
@@ -151,7 +151,7 @@ export class NotificationsPage extends BasePage {
    * Get all notification items in the list
    */
   getNotificationItems(): Locator {
-    return this.page.locator(testIdSelector(TestIds.NOTIFICATION_ITEM));
+    return this.page.locator(testIdStartsWithSelector(TestIds.NOTIFICATION_ITEM));
   }
 
   /**

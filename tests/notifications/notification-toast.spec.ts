@@ -14,12 +14,20 @@
 
 import { test, expect } from '@playwright/test';
 
+import { isNotificationServiceHealthy } from '../../helpers/notification.helpers.js';
 import { NotificationsPage } from '../../pages/NotificationsPage.js';
 import { TestIds } from '../../shared/testIds.js';
 import { hasNotificationTestApi } from '../utils/notificationHelpers.js';
 
 test.describe('Notification Toast @notifications', () => {
   let notificationsPage: NotificationsPage;
+
+  /** Whether the NotificationService is reachable */
+  let serviceHealthy = false;
+
+  test.beforeAll(async () => {
+    serviceHealthy = await isNotificationServiceHealthy();
+  });
 
   test.beforeEach(async ({ page }) => {
     notificationsPage = new NotificationsPage(page);
@@ -52,6 +60,7 @@ test.describe('Notification Toast @notifications', () => {
   test('toast appears when notification is received', async ({ page }) => {
     // Skip if notification test API is not available
     // This test requires the frontend to expose a test API for injecting notifications
+    test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
@@ -71,6 +80,7 @@ test.describe('Notification Toast @notifications', () => {
   });
 
   test('toast auto-dismisses after timeout', async ({ page }) => {
+    test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
@@ -92,6 +102,7 @@ test.describe('Notification Toast @notifications', () => {
   });
 
   test('toast can be manually dismissed', async ({ page }) => {
+    test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
@@ -113,6 +124,7 @@ test.describe('Notification Toast @notifications', () => {
   });
 
   test('clicking toast navigates to actionUrl', async ({ page }) => {
+    test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
@@ -136,6 +148,7 @@ test.describe('Notification Toast @notifications', () => {
   });
 
   test('multiple toasts stack correctly', async ({ page }) => {
+    test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
@@ -166,6 +179,7 @@ test.describe('Notification Toast @notifications', () => {
   });
 
   test('toast container appears when toasts are present', async ({ page }) => {
+    test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 
@@ -187,6 +201,7 @@ test.describe('Notification Toast @notifications', () => {
   });
 
   test('dismissing one toast does not affect others', async ({ page }) => {
+    test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);
     test.skip(!hasApi, 'Notification test API not available in this build');
 

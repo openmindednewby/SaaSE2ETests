@@ -372,6 +372,33 @@ export default defineConfig({
       use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup'],
     },
+
+    // ==================== OBSERVABILITY PROJECTS ====================
+    // Logging tests (API-only, no browser UI needed, no multi-tenant setup)
+    // Excludes stress tests which have their own project
+    {
+      name: 'logging',
+      workers: 1,
+      testMatch: /logging\/(?!stress).*\.spec\.ts/,
+      dependencies: ['setup'],
+    },
+
+    // Logging Stress Tests (generous timeouts, single worker)
+    {
+      name: 'logging-stress',
+      workers: 1,
+      testMatch: /logging\/stress-.*\.spec\.ts/,
+      timeout: 120000, // 2 minutes per test
+      dependencies: ['setup'],
+    },
+
+    // Monitoring tests (API-only, no browser UI needed)
+    {
+      name: 'monitoring',
+      workers: 1,
+      testMatch: /monitoring\/.*\.spec\.ts/,
+      dependencies: ['setup'],
+    },
   ],
 
   // Web server configuration - disabled since frontend runs via Tilt.

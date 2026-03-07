@@ -12,6 +12,7 @@
 
 import { test, expect, BrowserContext, Page } from '@playwright/test';
 
+import { isNotificationServiceHealthy } from '../../helpers/notification.helpers.js';
 import { NotificationsPage } from '../../pages/NotificationsPage.js';
 import { hasNotificationTestApi } from '../utils/notificationHelpers.js';
 
@@ -45,9 +46,18 @@ async function setupPageWithAuth(
 }
 
 test.describe('Cross-Tab Notification Sync @notifications', () => {
+  /** Whether the NotificationService is reachable */
+  let serviceHealthy = false;
+
+  test.beforeAll(async () => {
+    serviceHealthy = await isNotificationServiceHealthy();
+  });
+
   test('should sync notification received in one tab to another', async ({
     context,
   }) => {
+    test.skip(!serviceHealthy, 'NotificationService is not running');
+
     // Open Tab 1 on the menus page (where bell and toasts are visible)
     const tab1 = await setupPageWithAuth(context, '/menus');
 
@@ -96,6 +106,8 @@ test.describe('Cross-Tab Notification Sync @notifications', () => {
   test('should reflect mark as read from one tab in another', async ({
     context,
   }) => {
+    test.skip(!serviceHealthy, 'NotificationService is not running');
+
     // Open Tab 1 on a protected page
     const tab1 = await setupPageWithAuth(context, '/menus');
 
@@ -116,7 +128,7 @@ test.describe('Cross-Tab Notification Sync @notifications', () => {
 
     // Open Tab 2 on the notifications screen
     const tab2 = await setupPageWithAuth(context, '/notifications');
-    await expect(tab2.notificationsPage.notificationScreen).toBeVisible();
+    await expect(tab2.notificationsPage.notificationScreen).toBeVisible({ timeout: SYNC_TIMEOUT_MS });
 
     // Mark all as read in Tab 2
     const markAllVisible = await tab2.notificationsPage.markAllReadButton
@@ -155,6 +167,8 @@ test.describe('Cross-Tab Notification Sync @notifications', () => {
   test('should maintain independent page state across tabs', async ({
     context,
   }) => {
+    test.skip(!serviceHealthy, 'NotificationService is not running');
+
     // Open Tab 1 on notifications screen
     const tab1 = await setupPageWithAuth(context, '/notifications');
 

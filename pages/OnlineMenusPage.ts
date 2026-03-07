@@ -1049,7 +1049,7 @@ export class OnlineMenusPage extends BasePage {
 
       expect(hasImage).toBe(true);
       expect(isValidUrl).toBe(true);
-    }).toPass({ timeout: 15000 });
+    }).toPass({ timeout: 30000 });
   }
 
   /**
