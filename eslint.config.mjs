@@ -22,7 +22,8 @@ export default [
       'playwright/**',
       'scripts/**',
       'eslint-plugins/**',
-      'visual-qa-filter*.mjs',
+      '*.cjs',
+      '*.mjs',
     ],
   },
 

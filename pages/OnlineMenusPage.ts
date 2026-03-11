@@ -81,17 +81,13 @@ export class OnlineMenusPage extends BasePage {
    * Force a fresh fetch of the menus list (helps when React Query cache is stale).
    */
   async refetchMenusList() {
-    await this.waitForLoading();
-
     const listFetch = this.page.waitForResponse(
       (response) => response.url().includes('/TenantMenus') && response.request().method() === 'GET',
       { timeout: 10000 }
     ).catch(() => null);
 
-    await this.page.reload({ waitUntil: 'commit' });
-    await this.waitForLoading();
-    // Ensure the page has fully rendered after reload
-    await expect(this.createMenuButton).toBeVisible({ timeout: 15000 });
+    // Navigate instead of reload to ensure auth restoration and proper page setup
+    await this.goto();
     await listFetch;
   }
 
@@ -440,10 +436,8 @@ export class OnlineMenusPage extends BasePage {
    * Useful when a test needs to start from a clean state with no active menus.
    */
   async deactivateAllMenus() {
-    await this.page.reload({ waitUntil: 'commit' });
-    await this.waitForLoading();
-    // Ensure the page has fully rendered after reload before checking for active menus
-    await expect(this.createMenuButton).toBeVisible({ timeout: 15000 });
+    // Navigate instead of reload to ensure auth restoration and proper page setup
+    await this.goto();
 
     const statusSelector = testIdSelector(TestIds.MENU_CARD_STATUS_BADGE);
     let attempts = 0;
@@ -475,9 +469,7 @@ export class OnlineMenusPage extends BasePage {
       if (await deactivateButton.isVisible({ timeout: 1000 }).catch(() => false)) {
         await deactivateButton.click();
       } else {
-        await this.page.reload({ waitUntil: 'commit' });
-        await this.waitForLoading();
-        await expect(this.createMenuButton).toBeVisible({ timeout: 15000 });
+        await this.goto();
         continue;
       }
 

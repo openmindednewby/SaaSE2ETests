@@ -71,6 +71,19 @@ setup('authenticate', async ({ page, baseURL: _baseURL }) => {
     return;
   }
 
+  // Fail fast: check if IdentityService is reachable before attempting browser login.
+  // Without this, the browser login attempt times out after 30s on a clean environment.
+  const identityApiUrl = process.env.IDENTITY_API_URL || 'http://localhost:5002';
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    await fetch(identityApiUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
+  } catch {
+    setup.skip(true, `IdentityService not available at ${identityApiUrl}. Start backend services first.`);
+    return;
+  }
+
   // Check if frontend is available by navigating to the login page
   const loginPage = new LoginPage(page);
 
