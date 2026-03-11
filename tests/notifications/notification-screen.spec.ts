@@ -294,9 +294,11 @@ test.describe('Notification Screen - Navigation @notifications', () => {
   test('can navigate to notifications via bell icon', async ({ page: _page }) => {
     test.skip(!serviceHealthy, 'NotificationService is not running');
 
-    // Start from a different page
-    await notificationsPage.goto('/menus');
-    await notificationsPage.waitForLoading();
+    // Start from a different page — navigate without waiting for full page load
+    // since we only need the bell icon to be clickable, not the entire menus page
+    await notificationsPage.page.goto('/menus', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await notificationsPage.restoreAuth();
+    await notificationsPage.notificationBell.waitFor({ state: 'visible', timeout: 15000 });
 
     // Click the bell to navigate
     await notificationsPage.clickBellToNavigate();

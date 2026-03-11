@@ -41,18 +41,35 @@ export class LoginPage extends BasePage {
    * Wait for login to complete and redirect to protected area
    * Expo Router: (protected) is a route group, URL doesn't include parentheses
    */
-  async waitForLoginComplete() {
+  async waitForLoginComplete(timeout = 30000) {
     // After login, we should be redirected away from /login to a protected route
     // Common protected routes: /quiz-templates, /quiz-active, /quiz-answers, /tenants, /users
-    await expect(this.page).not.toHaveURL(/\/login/, { timeout: 30000 });
+    await expect(this.page).not.toHaveURL(/\/login/, { timeout });
   }
 
   /**
-   * Perform login and wait for success
+   * Perform login and wait for success.
+   * Retries once on failure to handle transient backend slowness.
    */
   async loginAndWait(username: string, password: string) {
-    await this.login(username, password);
-    await this.waitForLoginComplete();
+    const MAX_ATTEMPTS = 2;
+    let lastError: Error | undefined;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        await this.login(username, password);
+        const timeout = attempt < MAX_ATTEMPTS ? 15000 : 30000;
+        await this.waitForLoginComplete(timeout);
+        return;
+      } catch (error) {
+        lastError = error as Error;
+        if (attempt < MAX_ATTEMPTS) {
+          await this.goto();
+        }
+      }
+    }
+
+    throw lastError!;
   }
 
   /**

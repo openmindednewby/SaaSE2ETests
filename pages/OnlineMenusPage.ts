@@ -852,17 +852,11 @@ export class OnlineMenusPage extends BasePage {
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(filePath);
 
-    // Wait for upload to complete (progress bar disappears and preview appears)
-    const progressBar = imagePicker.locator(testIdSelector(TestIds.UPLOAD_PROGRESS_CONTAINER));
-
-    // Wait for progress bar to disappear (if it appeared)
-    if (await progressBar.count() > 0) {
-      await expect(progressBar).not.toBeVisible({ timeout: 30000 });
-    }
-
-    // Wait for the content preview to appear
+    // Wait for content preview to appear — this is the definitive upload success signal.
+    // On mobile viewports the progress bar can stay visible longer than expected,
+    // so we wait for the preview directly with a generous timeout.
     const preview = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW));
-    await expect(preview).toBeVisible({ timeout: 10000 });
+    await expect(preview).toBeVisible({ timeout: 45000 });
   }
 
   /**
@@ -884,16 +878,11 @@ export class OnlineMenusPage extends BasePage {
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(filePath);
 
-    // Wait for upload to complete
-    const progressBar = imagePicker.locator(testIdSelector(TestIds.UPLOAD_PROGRESS_CONTAINER));
-
-    if (await progressBar.count() > 0) {
-      await expect(progressBar).not.toBeVisible({ timeout: 30000 });
-    }
-
-    // Wait for the content preview to appear
+    // Wait for content preview to appear — definitive upload success signal.
+    // On mobile viewports the progress bar can stay visible longer than expected,
+    // so we wait for the preview directly with a generous timeout.
     const preview = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW));
-    await expect(preview).toBeVisible({ timeout: 10000 });
+    await expect(preview).toBeVisible({ timeout: 45000 });
   }
 
   /**

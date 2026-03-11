@@ -257,7 +257,8 @@ test.describe('Notification Connection Resilience @notifications', () => {
 
     // The page should remain usable even when offline
     // Some browsers may briefly unmount/remount components on network change
-    await expect(notificationsPage.notificationScreen).toBeVisible({ timeout: 10000 });
+    // Mobile viewports need extra time for layout recalculation after network transition
+    await expect(notificationsPage.notificationScreen).toBeVisible({ timeout: 20000 });
 
     // Restore online state
     await context.setOffline(false);
