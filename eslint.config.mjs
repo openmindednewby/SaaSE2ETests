@@ -11,6 +11,7 @@ import maxFileLinesPlugin from './eslint-plugins/max-file-lines.mjs';
 import noFragileSelectorsPlugin from './eslint-plugins/no-fragile-selectors.mjs';
 import noWaitUntilSlowPlugin from './eslint-plugins/no-wait-until-slow.mjs';
 import noRedundantVisibilityPlugin from './eslint-plugins/no-redundant-visibility.mjs';
+import maxTestsPerBatchPlugin from './eslint-plugins/max-tests-per-batch.mjs';
 
 export default [
   // Ignore patterns
@@ -68,6 +69,7 @@ export default [
       'no-fragile-selectors': noFragileSelectorsPlugin,
       'no-wait-until-slow': noWaitUntilSlowPlugin,
       'no-redundant-visibility': noRedundantVisibilityPlugin,
+      'max-tests-per-batch': maxTestsPerBatchPlugin,
     },
     rules: {
       // TypeScript handles undefined identifiers
@@ -102,6 +104,32 @@ export default [
       'no-page-reload/no-page-reload': 'warn',
       'max-file-lines/max-file-lines': ['warn', { max: 300 }],
       'no-redundant-visibility/no-redundant-visibility': 'warn',
+
+      // Batch size limit: max 100 total tests per Tilt E2E batch
+      // (uniqueTests × 3 browsers + 2 setup = max 100 → max 32 unique per batch)
+      'max-tests-per-batch/max-tests-per-batch': ['warn', {
+        max: 100,
+        browserMultiplier: 3,
+        setupOverhead: 2,
+        subBatches: {
+          'online-menus-crud': [
+            'menu-activation.spec.ts',
+            'menu-crud-with-activation.spec.ts',
+            'menu-status-display.spec.ts',
+            'menu-display-order-sorting.spec.ts',
+          ],
+          'online-menus-editor': [
+            'menu-editor-categories.spec.ts',
+            'menu-content-upload.spec.ts',
+            'menu-duplicate-names.spec.ts',
+          ],
+          'online-menus-public': [
+            'menu-preview-and-external-link.spec.ts',
+            'menu-public-page-load.spec.ts',
+            'public-viewer-active-filtering.spec.ts',
+          ],
+        },
+      }],
     },
   },
 
