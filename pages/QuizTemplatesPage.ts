@@ -128,6 +128,7 @@ export class QuizTemplatesPage extends BasePage {
         // Wait for any GET that was triggered, then wait before retrying
         await getPromise;
         await this.waitForLoading();
+        // eslint-disable-next-line no-wait-for-timeout/no-wait-for-timeout -- intentional backoff for rate-limit retry
         await this.page.waitForTimeout(2000 * attempt);
         continue;
       }
