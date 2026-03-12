@@ -2,9 +2,25 @@ import { Page } from '@playwright/test';
 
 export abstract class BasePage {
   readonly page: Page;
+  private cookieHandlerRegistered = false;
 
   constructor(page: Page) {
     this.page = page;
+  }
+
+  /**
+   * Register a locator handler that auto-dismisses the cookie consent banner
+   * whenever it blocks an action. Only registers once per page.
+   */
+  async registerCookieConsentHandler() {
+    if (this.cookieHandlerRegistered) return;
+    this.cookieHandlerRegistered = true;
+    await this.page.addLocatorHandler(
+      this.page.locator('[data-testid="cookie-consent-banner"]'),
+      async () => {
+        await this.page.locator('[data-testid="cookie-consent-accept-all"]').click();
+      },
+    );
   }
 
   /**
@@ -31,7 +47,8 @@ export abstract class BasePage {
   }
 
   /**
-   * Dismiss any blocking overlays (like PWA install prompts).
+   * Dismiss any blocking overlays (PWA install prompts).
+   * Cookie consent banner is handled automatically by addLocatorHandler.
    * Uses count() which is instant instead of isVisible() with timeout.
    */
   async dismissOverlay() {
@@ -47,6 +64,7 @@ export abstract class BasePage {
    * Waits for 'load' to ensure the JS bundle is downloaded before proceeding.
    */
   async goto(path: string) {
+    await this.registerCookieConsentHandler();
     await this.page.goto(path, { waitUntil: 'domcontentloaded', timeout: 30000 });
     // Run dismissOverlay and restoreAuth in parallel for speed
     await Promise.all([
