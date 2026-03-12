@@ -71,12 +71,20 @@ test.describe('Notification Toast @notifications', () => {
       body: 'This is a test notification body',
     });
 
-    // Wait for toast to appear
-    const toast = await notificationsPage.waitForToast();
+    // Wait for toast to appear with the expected title text.
+    // Using waitForToastWithText instead of waitForToast avoids a race
+    // condition where the toast element is visible in the DOM (animation
+    // starting) but React has not yet rendered the text content.
+    const toast = await notificationsPage.waitForToastWithText(
+      'Test Notification'
+    );
 
-    // Verify toast content
-    await expect(toast).toContainText('Test Notification');
-    await expect(toast).toContainText('This is a test notification body');
+    // Verify toast content — use toPass to retry in case the body text
+    // renders slightly after the title due to async React state updates
+    await expect(async () => {
+      await expect(toast).toContainText('Test Notification');
+      await expect(toast).toContainText('This is a test notification body');
+    }).toPass({ timeout: 10000 });
   });
 
   test('toast auto-dismisses after timeout', async ({ page }) => {

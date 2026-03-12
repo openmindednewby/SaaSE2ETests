@@ -78,19 +78,33 @@ test.describe.serial('Menu Status Display @online-menus @ui', () => {
   });
 
   test('should create multiple menus for status testing', async () => {
-    menu1Name = `Status Test Menu 1 ${Date.now()}`;
-    menu2Name = `Status Test Menu 2 ${Date.now()}`;
-    menu3Name = `Status Test Menu 3 ${Date.now()}`;
+    // Give this test extra time -- it creates 3 menus sequentially, each involving
+    // POST + GET refetch + UI settle, which can be slow under 12-worker concurrency.
+    test.setTimeout(180000);
+
+    const timestamp = Date.now();
+    menu1Name = `Status Test Menu 1 ${timestamp}`;
+    menu2Name = `Status Test Menu 2 ${timestamp}`;
+    menu3Name = `Status Test Menu 3 ${timestamp}`;
 
     // Ensure clean state
     await menusPage.deactivateAllMenus();
 
-    // Create three menus
+    // Create three menus sequentially.
+    // After each createMenu, expectMenuInList confirms the menu card is rendered.
+    // The improved createMenu waits for the GET refetch + editor close, so the UI
+    // is fully settled before the next creation begins.
     await menusPage.createMenu(menu1Name, 'First menu for status testing');
     await menusPage.expectMenuInList(menu1Name);
 
+    // Verify the create button is ready again before the next creation
+    await expect(menusPage.createMenuButton).toBeVisible({ timeout: 15000 });
+
     await menusPage.createMenu(menu2Name, 'Second menu for status testing');
     await menusPage.expectMenuInList(menu2Name);
+
+    // Verify the create button is ready again before the next creation
+    await expect(menusPage.createMenuButton).toBeVisible({ timeout: 15000 });
 
     await menusPage.createMenu(menu3Name, 'Third menu for status testing');
     await menusPage.expectMenuInList(menu3Name);

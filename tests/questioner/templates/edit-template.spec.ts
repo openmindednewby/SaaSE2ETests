@@ -57,6 +57,13 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
     await templatesPage.refetchTemplatesList();
   }
 
+  /** Re-create the test template if it was deleted by another test's deleteInactiveTemplates */
+  async function ensureTemplateExists() {
+    if (!await templatesPage.templateExists(testTemplateName)) {
+      await templatesPage.createTemplate(testTemplateName, 'Original description');
+    }
+  }
+
   test.afterAll(async () => {
     // Cleanup - try to delete the template if it exists
     try {
@@ -83,6 +90,7 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
 
   test('should open edit modal when clicking edit @critical', async () => {
     expect(testTemplateName, 'Test template name not set; did the create test run?').toBeTruthy();
+    await ensureTemplateExists();
     await templatesPage.expectTemplateInList(testTemplateName);
     await templatesPage.editTemplate(testTemplateName);
 
@@ -99,6 +107,7 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
 
   test('should pre-populate name field with existing template name @critical', async () => {
     expect(testTemplateName, 'Test template name not set; did the create test run?').toBeTruthy();
+    await ensureTemplateExists();
     await templatesPage.expectTemplateInList(testTemplateName);
     await templatesPage.editTemplate(testTemplateName);
 
@@ -119,6 +128,7 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
 
   test('should update template name', async () => {
     expect(testTemplateName, 'Test template name not set; did the create test run?').toBeTruthy();
+    await ensureTemplateExists();
     await templatesPage.expectTemplateInList(testTemplateName);
     const newName = `Updated ${Date.now()}`;
 
@@ -147,6 +157,7 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
 
   test('should cancel edit without saving', async () => {
     expect(testTemplateName, 'Test template name not set; did the create test run?').toBeTruthy();
+    await ensureTemplateExists();
     await templatesPage.expectTemplateInList(testTemplateName);
     await templatesPage.editTemplate(testTemplateName);
 

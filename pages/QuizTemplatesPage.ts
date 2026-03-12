@@ -79,31 +79,66 @@ export class QuizTemplatesPage extends BasePage {
   }
 
   /**
-   * Create a new template (optimized - no redundant waits)
+   * Create a new template and wait for the list to reflect the new item.
+   *
+   * After the POST succeeds, React Query auto-invalidates the list query which
+   * triggers a GET refetch. We set up the GET listener BEFORE clicking Save so
+   * we never miss the refetch response.
+   *
+   * If the POST returns 429 (rate limited), the method retries up to 3 times
+   * with a short backoff. Non-OK responses other than 429 are silently ignored
+   * to match the original behavior (callers check templateExists separately).
    */
   async createTemplate(name: string, description: string = '') {
-    // Ensure form is visible (locator auto-retries, no need for waitForLoading)
-    await this.templateNameInput.waitFor({ state: 'visible', timeout: 15000 });
+    const MAX_RETRIES = 3;
 
-    // Fill name (fill() clears first, no need for separate clear)
-    await this.templateNameInput.fill(name);
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      // Ensure form is visible (locator auto-retries, no need for waitForLoading)
+      await this.templateNameInput.waitFor({ state: 'visible', timeout: 15000 });
 
-    if (description) {
-      await this.templateDescriptionInput.fill(description);
+      // Fill name (fill() clears first, no need for separate clear)
+      await this.templateNameInput.fill(name);
+
+      if (description) {
+        await this.templateDescriptionInput.fill(description);
+      }
+
+      // Set up BOTH response listeners BEFORE clicking Save:
+      // 1. POST (the create call)
+      // 2. GET (the list refetch triggered by React Query cache invalidation)
+      const postPromise = this.page.waitForResponse(
+        response => response.url().includes('/questionerTemplates') && response.request().method() === 'POST',
+        { timeout: 15000 }
+      ).catch(() => null);
+
+      const getPromise = this.page.waitForResponse(
+        response =>
+          response.url().includes('/questionerTemplates') &&
+          response.request().method() === 'GET',
+        { timeout: 15000 }
+      ).catch(() => null);
+
+      await this.saveButton.click({ force: true });
+
+      // Wait for POST to complete
+      const postResponse = await postPromise;
+
+      // On 429 (rate limited), wait and retry
+      if (postResponse && postResponse.status() === 429 && attempt < MAX_RETRIES) {
+        // Wait for any GET that was triggered, then wait before retrying
+        await getPromise;
+        await this.waitForLoading();
+        await this.page.waitForTimeout(2000 * attempt);
+        continue;
+      }
+
+      // Wait for the list refetch GET to complete
+      await getPromise;
+
+      // Wait for any loading indicator to clear after the refetch
+      await this.waitForLoading();
+      return;
     }
-
-    // Click Save button and wait for API response
-    const responsePromise = this.page.waitForResponse(
-      response => response.url().includes('/questionerTemplates') && response.request().method() === 'POST',
-      { timeout: 15000 }
-    ).catch(() => null);
-
-    await this.saveButton.click({ force: true });
-
-    await responsePromise;
-
-    // React Query auto-invalidates - just wait for loading indicator to clear
-    await this.waitForLoading();
   }
 
   /**
@@ -126,17 +161,29 @@ export class QuizTemplatesPage extends BasePage {
   async templateExists(name: string): Promise<boolean> {
     await this.waitForLoading();
     const template = this.getTemplateRow(name);
-    return await template.waitFor({ state: 'visible', timeout: 5000 })
+    return await template.waitFor({ state: 'visible', timeout: 15000 })
       .then(() => true)
       .catch(() => false);
   }
 
   /**
-   * Expect template to be visible in the list
+   * Expect template to be visible in the list.
+   * Retries with a page refetch if the template is not found on the first attempt,
+   * guarding against stale React Query cache or slow list re-renders.
    */
   async expectTemplateInList(name: string) {
     const template = this.getTemplateRow(name);
-    await expect(template).toBeVisible({ timeout: 10000 });
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await expect(template).toBeVisible({ timeout: 15000 });
+        return;
+      } catch (error) {
+        if (attempt >= 3) throw error;
+        // Refetch the list and try again
+        await this.refetchTemplatesList();
+      }
+    }
   }
 
   /**
@@ -144,6 +191,7 @@ export class QuizTemplatesPage extends BasePage {
    */
   async editTemplate(name: string) {
     const row = this.getTemplateRow(name);
+    await expect(row).toBeVisible({ timeout: 20000 });
     await row.scrollIntoViewIfNeeded();
 
     const editBtn = row.getByRole('button', { name: /edit/i });
@@ -189,9 +237,18 @@ export class QuizTemplatesPage extends BasePage {
     };
     this.page.once('dialog', dialogHandler);
 
-    // Set up response listener for delete API call
+    // Set up BOTH response listeners BEFORE clicking:
+    // 1. DELETE (the delete call)
+    // 2. GET (the list refetch triggered by React Query cache invalidation)
     const deletePromise = this.page.waitForResponse(
       response => response.url().includes('/questionerTemplates') && response.request().method() === 'DELETE',
+      { timeout: 15000 }
+    ).catch(() => null);
+
+    const getPromise = this.page.waitForResponse(
+      response =>
+        response.url().includes('/questionerTemplates') &&
+        response.request().method() === 'GET',
       { timeout: 15000 }
     ).catch(() => null);
 
@@ -231,14 +288,9 @@ export class QuizTemplatesPage extends BasePage {
       }
     }
 
-    // Wait for UI to update
+    // Wait for the list refetch GET to complete
+    await getPromise;
     await this.waitForLoading();
-
-    // Wait for the list to refetch
-    await this.page.waitForResponse(
-      response => response.url().includes('/questionerTemplates') && response.request().method() === 'GET',
-      { timeout: 10000 }
-    ).catch(() => null);
 
     // Wait for the item to disappear using expect with retry
     try {
@@ -255,6 +307,7 @@ export class QuizTemplatesPage extends BasePage {
    */
   async activateTemplate(name: string) {
     const row = this.getTemplateRow(name);
+    await expect(row).toBeVisible({ timeout: 20000 });
     await row.scrollIntoViewIfNeeded();
 
     // Get current status before clicking
@@ -262,9 +315,18 @@ export class QuizTemplatesPage extends BasePage {
     const statusBefore = (await statusLabel.textContent().catch(() => '')).trim();
     const wasActive = /^(active|enabled)$/i.test(statusBefore);
 
-    // Set up response listener (could be Activate (PUT) or Deactivate (PUT/DELETE))
+    // Set up BOTH response listeners BEFORE clicking:
+    // 1. PUT/DELETE (the activate/deactivate call)
+    // 2. GET (the list refetch triggered by React Query cache invalidation)
     const apiPromise = this.page.waitForResponse(
       response => response.url().includes('/questionerTemplates') && (response.request().method() === 'PUT' || response.request().method() === 'DELETE'),
+      { timeout: 15000 }
+    ).catch(() => null);
+
+    const getPromise = this.page.waitForResponse(
+      response =>
+        response.url().includes('/questionerTemplates') &&
+        response.request().method() === 'GET',
       { timeout: 15000 }
     ).catch(() => null);
 
@@ -282,9 +344,11 @@ export class QuizTemplatesPage extends BasePage {
 
     if (response?.ok()) {
       apiSuccess = true;
+      // Only wait for list refetch if the mutation succeeded (React Query only
+      // invalidates cache on successful mutations, not on 409/error responses)
+      await getPromise;
     }
 
-    // React Query auto-invalidates - just wait for loading indicator to clear
     await this.waitForLoading();
 
     // Wait for status to change using web-first assertion (auto-retries for 5s)
@@ -370,13 +434,22 @@ export class QuizTemplatesPage extends BasePage {
    * @returns The number of deleted templates from the API response
    */
   async confirmDeleteInactive(): Promise<number> {
-    // Set up response listener for delete inactive API call
+    // Set up BOTH response listeners BEFORE clicking confirm:
+    // 1. DELETE (the delete-inactive call)
+    // 2. GET (the list refetch triggered by React Query cache invalidation)
     const deletePromise = this.page.waitForResponse(
       response =>
         response.url().includes('/questionerTemplates/delete/inactive') &&
         response.request().method() === 'DELETE',
       { timeout: 15000 }
     );
+
+    const getPromise = this.page.waitForResponse(
+      response =>
+        response.url().includes('/questionerTemplates') &&
+        response.request().method() === 'GET',
+      { timeout: 15000 }
+    ).catch(() => null);
 
     await this.confirmButton.click();
 
@@ -394,13 +467,8 @@ export class QuizTemplatesPage extends BasePage {
 
     // Wait for dialog to close and list to refresh
     await expect(this.confirmDialog).not.toBeVisible({ timeout: 5000 });
+    await getPromise;
     await this.waitForLoading();
-    await this.page.waitForResponse(
-      response =>
-        response.url().includes('/questionerTemplates') &&
-        response.request().method() === 'GET',
-      { timeout: 10000 }
-    ).catch(() => null);
 
     return deletedCount;
   }
@@ -450,9 +518,17 @@ export class QuizTemplatesPage extends BasePage {
 
       const row = activeRows.first();
       await row.scrollIntoViewIfNeeded().catch(() => {});
-      // Set up response listener
+
+      // Set up BOTH listeners BEFORE clicking
       const apiPromise = this.page.waitForResponse(
         response => response.url().includes('/questionerTemplates') && (response.request().method() === 'PUT' || response.request().method() === 'DELETE'),
+        { timeout: 10000 }
+      ).catch(() => null);
+
+      const getPromise = this.page.waitForResponse(
+        response =>
+          response.url().includes('/questionerTemplates') &&
+          response.request().method() === 'GET',
         { timeout: 10000 }
       ).catch(() => null);
 
@@ -469,10 +545,9 @@ export class QuizTemplatesPage extends BasePage {
         continue;
       }
 
-      // Wait for API response
+      // Wait for API response and list refetch
       await apiPromise;
-
-      // Just wait for loading - React Query auto-invalidates
+      await getPromise;
       await this.waitForLoading();
     }
 

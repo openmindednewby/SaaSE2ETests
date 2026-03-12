@@ -237,8 +237,13 @@ test.describe('Notification Connection Resilience @notifications', () => {
     await notificationsPage.goto('/notifications');
     await notificationsPage.waitForLoading();
 
-    // Go offline
+    // Verify the notification screen is visible before going offline
+    await expect(notificationsPage.notificationScreen).toBeVisible();
+
+    // Go offline — Playwright's setOffline doesn't always fire browser
+    // online/offline events, so dispatch manually for consistent behavior
     await context.setOffline(true);
+    await page.evaluate(() => window.dispatchEvent(new Event('offline')));
 
     // The connection status banner may appear
     const connectionBanner = page.locator(
@@ -255,13 +260,21 @@ test.describe('Notification Connection Resilience @notifications', () => {
       await expect(connectionBanner).toContainText(/connect|offline|status/i);
     }
 
-    // The page should remain usable even when offline
-    // Some browsers may briefly unmount/remount components on network change
-    // Mobile viewports need extra time for layout recalculation after network transition
-    await expect(notificationsPage.notificationScreen).toBeVisible({ timeout: 20000 });
+    // The page should remain usable even when offline.
+    // The app's NotificationProvider may unmount/remount components when it
+    // detects the offline event, so use a retrying assertion to handle the
+    // brief gap where the screen element is removed from the DOM.
+    await expect(async () => {
+      await expect(notificationsPage.notificationScreen).toBeVisible();
+    }).toPass({ timeout: CONNECTION_TIMEOUT_MS });
 
     // Restore online state
     await context.setOffline(false);
     await page.evaluate(() => window.dispatchEvent(new Event('online')));
+
+    // Wait for the page to stabilize after coming back online
+    await expect(notificationsPage.notificationScreen).toBeVisible({
+      timeout: CONNECTION_TIMEOUT_MS,
+    });
   });
 });

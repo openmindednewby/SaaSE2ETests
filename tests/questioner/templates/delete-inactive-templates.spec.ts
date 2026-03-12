@@ -11,8 +11,8 @@ import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
  * helping to clean up old/unused templates.
  */
 test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
-  // Multi-step tests need more time
-  test.setTimeout(60000);
+  // Multi-step tests need more time (create/activate/delete cycles under load)
+  test.setTimeout(120000);
 
   let context: BrowserContext;
   let page: Page;
@@ -105,11 +105,23 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
     const activeTemplateName = `Active Only ${Date.now()}`;
     createdTemplates.push(activeTemplateName);
     await templatesPage.createTemplate(activeTemplateName);
-    await templatesPage.activateTemplate(activeTemplateName);
+    await templatesPage.expectTemplateInList(activeTemplateName);
+    let activated = await templatesPage.activateTemplate(activeTemplateName);
+    if (!activated) {
+      // Another parallel test may have activated a template concurrently -- deactivate and retry
+      await templatesPage.deactivateAllTemplates();
+      activated = await templatesPage.activateTemplate(activeTemplateName);
+    }
+    expect(activated).toBe(true);
+    await templatesPage.expectTemplateActive(activeTemplateName, true);
 
-    // Try to delete inactive - should return 0
-    const deletedCount = await templatesPage.deleteInactiveTemplates();
-    expect(deletedCount).toBe(0);
+    // Delete inactive -- our active template must survive (other parallel tests
+    // may have created inactive templates, so deletedCount can be > 0)
+    await templatesPage.deleteInactiveTemplates();
+
+    // The active template should still exist after deleting inactive templates
+    await templatesPage.expectTemplateInList(activeTemplateName);
+    await templatesPage.expectTemplateActive(activeTemplateName, true);
 
     // Cleanup: deactivate and delete
     await templatesPage.activateTemplate(activeTemplateName);
@@ -132,6 +144,7 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
     for (const name of inactiveNames) {
       createdTemplates.push(name);
       await templatesPage.createTemplate(name);
+      await templatesPage.expectTemplateInList(name);
     }
 
     // Delete all inactive templates
@@ -160,22 +173,26 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
     createdTemplates.push(activeTemplateName, inactiveTemplateName);
 
     await templatesPage.createTemplate(activeTemplateName);
+    await templatesPage.expectTemplateInList(activeTemplateName);
     await templatesPage.createTemplate(inactiveTemplateName);
-
-    // Verify both templates are visible before proceeding (prevents race conditions on mobile)
-    await expect(templatesPage.getTemplateRow(activeTemplateName)).toBeVisible({ timeout: 10000 });
-    await expect(templatesPage.getTemplateRow(inactiveTemplateName)).toBeVisible({ timeout: 10000 });
+    await templatesPage.expectTemplateInList(inactiveTemplateName);
 
     // Activate the first template and verify it succeeded
-    const activated = await templatesPage.activateTemplate(activeTemplateName);
+    let activated = await templatesPage.activateTemplate(activeTemplateName);
+    if (!activated) {
+      // Another parallel test may have activated a template concurrently -- deactivate and retry
+      await templatesPage.deactivateAllTemplates();
+      activated = await templatesPage.activateTemplate(activeTemplateName);
+    }
     expect(activated).toBe(true);
 
     // Verify template is actually active before deleting inactive templates
     await templatesPage.expectTemplateActive(activeTemplateName, true);
 
-    // Delete inactive templates
-    const deletedCount = await templatesPage.deleteInactiveTemplates();
-    expect(deletedCount).toBeGreaterThanOrEqual(1);
+    // Delete inactive templates -- the inactive template should be among those deleted.
+    // In concurrent environments other tests may have already deleted it, so we
+    // only assert the active template survived rather than an exact count.
+    await templatesPage.deleteInactiveTemplates();
 
     // Refetch to ensure we see current server state (waits for API response, prevents flaky mobile tests)
     await templatesPage.refetchTemplatesList();

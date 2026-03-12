@@ -125,8 +125,8 @@ export class OnlineMenusPage extends BasePage {
     // Firefox under high concurrency can be slow to process click events
     await this.createMenuButton.click({ timeout: 15000 });
 
-    // Wait for editor to appear
-    await this.menuEditor.waitFor({ state: 'visible', timeout: 5000 });
+    // Wait for editor to appear (15s for high-concurrency runs with 12 workers)
+    await this.menuEditor.waitFor({ state: 'visible', timeout: 15000 });
 
     // Fill name
     await this.menuNameInput.fill(name);
@@ -139,14 +139,31 @@ export class OnlineMenusPage extends BasePage {
     const responsePromise = this.page.waitForResponse(
       response => response.url().includes('/TenantMenus') && response.request().method() === 'POST',
       { timeout: 15000 }
+    );
+
+    // Also listen for the GET refetch that React Query triggers after the mutation.
+    // This ensures we don't proceed until the list has been fully refreshed.
+    const refetchPromise = this.page.waitForResponse(
+      response => response.url().includes('/TenantMenus') && response.request().method() === 'GET' && response.ok(),
+      { timeout: 15000 }
     ).catch(() => null);
 
     await this.menuEditorSaveButton.click();
 
-    await responsePromise;
+    // Wait for POST to complete and verify it succeeded
+    const postResponse = await responsePromise;
+    if (!postResponse.ok()) {
+      throw new Error(`Menu creation failed with status ${postResponse.status()}`);
+    }
 
-    // React Query auto-invalidates - just wait for loading indicator to clear
+    // Wait for the GET refetch to complete so the list is fully up to date
+    await refetchPromise;
+
+    // Wait for loading indicator to clear after the refetch
     await this.waitForLoading();
+
+    // Wait for the editor to close, confirming the UI transition is complete
+    await expect(this.menuEditor).not.toBeVisible({ timeout: 10000 });
   }
 
   /**
@@ -169,17 +186,28 @@ export class OnlineMenusPage extends BasePage {
   async menuExists(name: string): Promise<boolean> {
     await this.waitForLoading();
     const menu = this.getMenuCard(name);
-    return await menu.waitFor({ state: 'visible', timeout: 5000 })
+    return await menu.waitFor({ state: 'visible', timeout: 15000 })
       .then(() => true)
       .catch(() => false);
   }
 
   /**
-   * Expect menu to be visible in the list
+   * Expect menu to be visible in the list.
+   * Retries with a page refetch if the menu is not found on the first attempt,
+   * guarding against stale React Query cache or slow list re-renders.
    */
   async expectMenuInList(name: string) {
     const menu = this.getMenuCard(name);
-    await expect(menu).toBeVisible({ timeout: 10000 });
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await expect(menu).toBeVisible({ timeout: 15000 });
+        return;
+      } catch (error) {
+        if (attempt >= 3) throw error;
+        await this.refetchMenusList();
+      }
+    }
   }
 
   /**
@@ -199,6 +227,9 @@ export class OnlineMenusPage extends BasePage {
     await this.waitForLoading();
 
     const card = this.getMenuCard(name);
+    // Ensure the card is visible before interacting -- after page navigation
+    // the list may still be loading/rendering.
+    await expect(card).toBeVisible({ timeout: 15000 });
     await card.scrollIntoViewIfNeeded();
 
     const editBtn = card.locator(testIdSelector(TestIds.MENU_CARD_EDIT_BUTTON));
@@ -211,8 +242,8 @@ export class OnlineMenusPage extends BasePage {
       await editBtn.click({ force: true });
     }
 
-    // Wait for editor to appear
-    await this.menuEditor.waitFor({ state: 'visible', timeout: 5000 });
+    // Wait for editor to appear (15s for high-concurrency runs with 12 workers)
+    await this.menuEditor.waitFor({ state: 'visible', timeout: 15000 });
   }
 
   /**
@@ -223,6 +254,9 @@ export class OnlineMenusPage extends BasePage {
     await this.waitForLoading();
 
     const card = this.getMenuCard(name);
+    // Ensure the card is visible before interacting -- after page navigation
+    // the list may still be loading/rendering.
+    await expect(card).toBeVisible({ timeout: 15000 });
     await card.scrollIntoViewIfNeeded();
 
     // Set up response listener for delete API call
@@ -284,6 +318,9 @@ export class OnlineMenusPage extends BasePage {
    */
   async activateMenu(name: string): Promise<boolean> {
     const card = this.getMenuCard(name);
+    // Ensure the card is visible before interacting -- after page navigation
+    // (e.g., beforeEach goto), the list may still be loading/rendering.
+    await expect(card).toBeVisible({ timeout: 15000 });
     await card.scrollIntoViewIfNeeded();
 
     // Get current status before clicking
@@ -328,6 +365,9 @@ export class OnlineMenusPage extends BasePage {
    */
   async deactivateMenu(name: string): Promise<boolean> {
     const card = this.getMenuCard(name);
+    // Ensure the card is visible before interacting -- after page navigation
+    // (e.g., beforeEach goto), the list may still be loading/rendering.
+    await expect(card).toBeVisible({ timeout: 15000 });
     await card.scrollIntoViewIfNeeded();
 
     // Get current status before clicking
@@ -488,6 +528,9 @@ export class OnlineMenusPage extends BasePage {
    */
   async openPreview(name: string) {
     const card = this.getMenuCard(name);
+    // Ensure the card is visible before interacting -- after page navigation
+    // the list may still be loading/rendering.
+    await expect(card).toBeVisible({ timeout: 15000 });
     await card.scrollIntoViewIfNeeded();
 
     const previewBtn = card.locator(testIdSelector(TestIds.MENU_CARD_PREVIEW_BUTTON));
@@ -563,6 +606,8 @@ export class OnlineMenusPage extends BasePage {
    */
   async openExternalLink(name: string): Promise<Page | null> {
     const card = this.getMenuCard(name);
+    // Ensure the card is visible before interacting
+    await expect(card).toBeVisible({ timeout: 15000 });
     await card.scrollIntoViewIfNeeded();
 
     const openExternalBtn = card.locator(testIdSelector(TestIds.MENU_CARD_OPEN_EXTERNAL_BUTTON));

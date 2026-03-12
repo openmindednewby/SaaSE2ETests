@@ -79,14 +79,11 @@ test.describe.serial('Create Quiz Template @questioner @crud', () => {
 
     await templatesPage.createTemplate(templateName, templateDescription);
 
-    // Verify template appears in the list
-    const exists = await templatesPage.templateExists(templateName);
-    expect(exists).toBe(true);
+    // Verify template appears in the list (retries with refetch for reliability)
+    await templatesPage.expectTemplateInList(templateName);
 
     // Cleanup
-    if (exists) {
-      await templatesPage.deleteTemplate(templateName, false);
-    }
+    await templatesPage.deleteTemplate(templateName, false);
   });
 
   test('should create template with only name', async () => {

@@ -77,15 +77,29 @@ test.describe('Active Quiz Limit @questioner', () => {
   test('Should only allow one active quiz at a time', async () => {
     // Note: deactivateAllTemplates() already called in beforeEach - no need to call again
 
+    // Helper: ensure template exists (parallel tests may delete inactive templates)
+    async function ensureExists(name: string, desc: string) {
+      if (!await templatesPage.templateExists(name)) {
+        await templatesPage.createTemplate(name, desc);
+        await templatesPage.expectTemplateInList(name);
+      }
+    }
+
     // 1. Create two templates
     await createTemplateAndWait(templatesPage, t1Name, 'T1 Desc');
     await createTemplateAndWait(templatesPage, t2Name, 'T2 Desc');
 
     // 2. Activate T1
-    await templatesPage.activateTemplate(t1Name);
+    let t1Activated = await templatesPage.activateTemplate(t1Name);
+    if (!t1Activated) {
+      await templatesPage.deactivateAllTemplates();
+      await ensureExists(t1Name, 'T1 Desc');
+      t1Activated = await templatesPage.activateTemplate(t1Name);
+    }
     await templatesPage.expectTemplateActive(t1Name, true);
 
     // 3. Try to activate T2 -> Should fail (409 Conflict)
+    await ensureExists(t2Name, 'T2 Desc');
     await templatesPage.activateTemplate(t2Name);
     // T1 should still be active, T2 should still be inactive
     await templatesPage.expectTemplateActive(t1Name, true);
@@ -96,11 +110,12 @@ test.describe('Active Quiz Limit @questioner', () => {
     await templatesPage.expectTemplateActive(t1Name, false);
 
     // 5. Now activate T2 -> Should succeed
-    // Note: May need retry if there's a race condition with the deactivation
+    await ensureExists(t2Name, 'T2 Desc');
     let t2Activated = await templatesPage.activateTemplate(t2Name);
     if (!t2Activated) {
       // Retry once after a short wait for backend to catch up
       await templatesPage.refetchTemplatesList();
+      await ensureExists(t2Name, 'T2 Desc');
       t2Activated = await templatesPage.activateTemplate(t2Name);
     }
     await templatesPage.expectTemplateActive(t2Name, true);

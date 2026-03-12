@@ -89,10 +89,17 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
 
   test('should activate a template @critical', async () => {
     expect(testTemplateName, 'Test template name not set; did the create test run?').toBeTruthy();
+
+    // Ensure clean state first, then verify/recreate template
+    await ensureNoActiveTemplates();
+
+    // Re-create template if it was deleted by another test's deleteInactiveTemplates
+    if (!await templatesPage.templateExists(testTemplateName)) {
+      await templatesPage.createTemplate(testTemplateName, 'Template for activation test');
+    }
     await templatesPage.expectTemplateInList(testTemplateName);
 
     // Activate the template
-    await ensureNoActiveTemplates();
     const activated = await templatesPage.activateTemplate(testTemplateName);
     if (!activated) {
       // Common flake: another test in the same tenant activated something concurrently.
