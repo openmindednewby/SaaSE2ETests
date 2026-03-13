@@ -52,10 +52,10 @@ export abstract class BasePage {
    * Uses count() which is instant instead of isVisible() with timeout.
    */
   async dismissOverlay() {
-    const dismissButton = this.page.getByRole('button', { name: /continue in browser/i });
-    // count() is instant - no timeout wait if element doesn't exist
-    if (await dismissButton.count() > 0) {
-      await dismissButton.click();
+    // PWA install toast — dismiss if present
+    const pwaDismiss = this.page.locator('[data-testid="pwa-cancel-button"]');
+    if (await pwaDismiss.count() > 0) {
+      await pwaDismiss.click();
     }
   }
 
