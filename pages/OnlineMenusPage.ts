@@ -22,6 +22,18 @@ export class OnlineMenusPage extends BasePage {
   // Preview Modal
   readonly previewModal: Locator;
 
+  // QR Code Modal
+  readonly qrCodeModal: Locator;
+  readonly qrCodeDisplay: Locator;
+  readonly qrCodeMenuName: Locator;
+  readonly qrCodeUrlText: Locator;
+  readonly qrCodeFgColorInput: Locator;
+  readonly qrCodeBgColorInput: Locator;
+  readonly qrCodeDownloadPngButton: Locator;
+  readonly qrCodeDownloadSvgButton: Locator;
+  readonly qrCodeCopyLinkButton: Locator;
+  readonly qrCodeCloseButton: Locator;
+
   // Category Management
   readonly categoryAddButton: Locator;
   readonly categoryList: Locator;
@@ -53,6 +65,18 @@ export class OnlineMenusPage extends BasePage {
 
     // Preview Modal
     this.previewModal = page.locator(testIdSelector(TestIds.MENU_PREVIEW_MODAL));
+
+    // QR Code Modal
+    this.qrCodeModal = page.locator(testIdSelector(TestIds.QR_CODE_MODAL));
+    this.qrCodeDisplay = page.locator(testIdSelector(TestIds.QR_CODE_DISPLAY));
+    this.qrCodeMenuName = page.locator(testIdSelector(TestIds.QR_CODE_MENU_NAME));
+    this.qrCodeUrlText = page.locator(testIdSelector(TestIds.QR_CODE_URL_TEXT));
+    this.qrCodeFgColorInput = page.locator(testIdSelector(TestIds.QR_CODE_FG_COLOR_INPUT));
+    this.qrCodeBgColorInput = page.locator(testIdSelector(TestIds.QR_CODE_BG_COLOR_INPUT));
+    this.qrCodeDownloadPngButton = page.locator(testIdSelector(TestIds.QR_CODE_DOWNLOAD_PNG_BUTTON));
+    this.qrCodeDownloadSvgButton = page.locator(testIdSelector(TestIds.QR_CODE_DOWNLOAD_SVG_BUTTON));
+    this.qrCodeCopyLinkButton = page.locator(testIdSelector(TestIds.QR_CODE_COPY_LINK_BUTTON));
+    this.qrCodeCloseButton = page.locator(testIdSelector(TestIds.QR_CODE_CLOSE_BUTTON));
 
     // Category Management
     this.categoryAddButton = page.locator(testIdSelector(TestIds.CATEGORY_ADD_BUTTON));
@@ -579,6 +603,123 @@ export class OnlineMenusPage extends BasePage {
   getPreviewButton(name: string): Locator {
     const card = this.getMenuCard(name);
     return card.locator(testIdSelector(TestIds.MENU_CARD_PREVIEW_BUTTON));
+  }
+
+  // ==================== QR CODE METHODS ====================
+
+  /**
+   * Get the QR code button for a menu card
+   */
+  getQrCodeButton(name: string): Locator {
+    const card = this.getMenuCard(name);
+    return card.locator(testIdSelector(TestIds.MENU_CARD_QR_CODE_BUTTON));
+  }
+
+  /**
+   * Open the QR code modal for a menu
+   */
+  async openQrCodeModal(name: string) {
+    const card = this.getMenuCard(name);
+    await expect(card).toBeVisible({ timeout: 15000 });
+    await card.scrollIntoViewIfNeeded();
+
+    const qrButton = card.locator(testIdSelector(TestIds.MENU_CARD_QR_CODE_BUTTON));
+    await qrButton.click();
+
+    // Wait for QR code modal to appear
+    await expect(this.qrCodeModal).toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Close the QR code modal
+   */
+  async closeQrCodeModal() {
+    await this.qrCodeCloseButton.click();
+    await expect(this.qrCodeModal).not.toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Expect the QR code modal to be visible with correct content
+   */
+  async expectQrCodeModalVisible() {
+    await expect(this.qrCodeModal).toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Expect the QR code modal to not be visible
+   */
+  async expectQrCodeModalNotVisible() {
+    await expect(this.qrCodeModal).not.toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Expect the QR code display area to be visible (contains the SVG QR code)
+   */
+  async expectQrCodeDisplayVisible() {
+    await expect(this.qrCodeDisplay).toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Expect the menu name to be displayed in the QR code modal
+   */
+  async expectQrCodeMenuName(name: string) {
+    await expect(this.qrCodeMenuName).toContainText(name, { timeout: 5000 });
+  }
+
+  /**
+   * Expect the URL text to be displayed in the QR code modal
+   */
+  async expectQrCodeUrlVisible() {
+    await expect(this.qrCodeUrlText).toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Get the foreground color input value
+   */
+  async getQrCodeFgColor(): Promise<string> {
+    return await this.qrCodeFgColorInput.inputValue();
+  }
+
+  /**
+   * Get the background color input value
+   */
+  async getQrCodeBgColor(): Promise<string> {
+    return await this.qrCodeBgColorInput.inputValue();
+  }
+
+  /**
+   * Set the foreground color for the QR code
+   */
+  async setQrCodeFgColor(color: string) {
+    await this.qrCodeFgColorInput.fill(color);
+  }
+
+  /**
+   * Set the background color for the QR code
+   */
+  async setQrCodeBgColor(color: string) {
+    await this.qrCodeBgColorInput.fill(color);
+  }
+
+  /**
+   * Click the copy link button in the QR code modal
+   */
+  async clickCopyLink() {
+    await this.qrCodeCopyLinkButton.click();
+  }
+
+  /**
+   * Click the download PNG button in the QR code modal
+   */
+  async clickDownloadPng() {
+    await this.qrCodeDownloadPngButton.click();
+  }
+
+  /**
+   * Click the download SVG button in the QR code modal
+   */
+  async clickDownloadSvg() {
+    await this.qrCodeDownloadSvgButton.click();
   }
 
   /**

@@ -287,6 +287,19 @@ export const TestIds = {
   ITEM_STYLING_HEADER: 'item-styling-header',
   ITEM_STYLING_CONTENT: 'item-styling-content',
 
+  // QR Code
+  MENU_CARD_QR_CODE_BUTTON: 'menu-card-qr-code-button',
+  QR_CODE_MODAL: 'qr-code-modal',
+  QR_CODE_DISPLAY: 'qr-code-display',
+  QR_CODE_URL_TEXT: 'qr-code-url-text',
+  QR_CODE_MENU_NAME: 'qr-code-menu-name',
+  QR_CODE_DOWNLOAD_PNG_BUTTON: 'qr-code-download-png-button',
+  QR_CODE_DOWNLOAD_SVG_BUTTON: 'qr-code-download-svg-button',
+  QR_CODE_COPY_LINK_BUTTON: 'qr-code-copy-link-button',
+  QR_CODE_CLOSE_BUTTON: 'qr-code-close-button',
+  QR_CODE_FG_COLOR_INPUT: 'qr-code-fg-color-input',
+  QR_CODE_BG_COLOR_INPUT: 'qr-code-bg-color-input',
+
   // Menu Content View (Display)
   MENU_CONTENT_VIEW: 'menu-content-view',
   MENU_CONTENT_VIEW_HEADER: 'menu-content-view-header',
