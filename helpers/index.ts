@@ -9,6 +9,15 @@ export {
   getSignalRHubUrl,
   getNotificationServiceUrl,
 } from './notification.helpers.js';
+export {
+  clearMailpit,
+  getMessages as getMailpitMessages,
+  getMessage as getMailpitMessage,
+  waitForEmail,
+  waitForEmailContent,
+  isMailpitHealthy,
+  getMailpitUrl,
+} from './mailpit.helpers.js';
 export { LokiClient } from './loki-client.js';
 export type { LokiQueryResult, LokiStream } from './loki-client.js';
 export { PrometheusClient } from './prometheus-client.js';
