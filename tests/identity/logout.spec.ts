@@ -186,10 +186,13 @@ test.describe.serial('Logout Flow @identity @auth', () => {
     // Start on protected route (using authenticated state)
     await page.goto('/quiz-templates', { waitUntil: 'domcontentloaded' });
 
-    // Wait for React to hydrate and render the page content
-    // The sidebar or topbar should contain the logout button
+    // Wait for React to hydrate. On desktop the logout button is directly
+    // visible in the sidebar/topbar. On mobile it's hidden inside the
+    // MobileTopbar drawer behind a "Menu" button. Wait for either the
+    // logout button or the menu button to appear, then proceed.
     const logoutButton = page.locator(testIdSelector(TestIds.LOGOUT_BUTTON)).first();
-    await logoutButton.waitFor({ state: 'visible', timeout: 15000 });
+    const menuButton = page.locator(testIdSelector(TestIds.NAV_MENU));
+    await expect(logoutButton.or(menuButton)).toBeVisible({ timeout: 15000 });
 
     await clickLogout();
     await expectLoggedOut();
@@ -224,10 +227,11 @@ test.describe.serial('Logout Flow @identity @auth', () => {
       }
     });
 
-    // Navigate to protected route and wait for logout button
+    // Navigate to protected route and wait for logout button or menu button (mobile)
     await page.goto('/quiz-templates', { waitUntil: 'domcontentloaded' });
     const logoutButton = page.locator(testIdSelector(TestIds.LOGOUT_BUTTON)).first();
-    await logoutButton.waitFor({ state: 'visible', timeout: 15000 });
+    const menuButton = page.locator(testIdSelector(TestIds.NAV_MENU));
+    await expect(logoutButton.or(menuButton)).toBeVisible({ timeout: 15000 });
 
     await clickLogout();
     await expectLoggedOut();

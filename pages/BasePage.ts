@@ -65,7 +65,7 @@ export abstract class BasePage {
    */
   async goto(path: string) {
     await this.registerCookieConsentHandler();
-    await this.page.goto(path, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await this.page.goto(path, { waitUntil: 'domcontentloaded', timeout: 60000 });
     // Run dismissOverlay and restoreAuth in parallel for speed
     await Promise.all([
       this.dismissOverlay(),

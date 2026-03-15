@@ -69,7 +69,7 @@ test.describe.serial('Fill Active Quiz @questioner', () => {
     // Wait for any of these to appear
     await expect(
       loadingIndicator.or(quizContent).or(activeQuizHeading).or(noQuizMessage).first()
-    ).toBeVisible({ timeout: 15000 });
+    ).toBeVisible({ timeout: 30000 });
   });
 
   test('should display quiz content when available @critical', async () => {

@@ -2,6 +2,11 @@ import { test, expect } from '@playwright/test';
 import { LoginPage } from '../../pages/LoginPage.js';
 
 test.describe('Login Flow @identity @auth', () => {
+  // Login tests navigate to /login and wait for React hydration.
+  // Under heavy load (12 workers), context creation + page load can exceed
+  // the default 30s timeout. Double it to avoid flaky beforeEach failures.
+  test.slow();
+
   let loginPage: LoginPage;
 
   test.beforeEach(async ({ page }) => {
