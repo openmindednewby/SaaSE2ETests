@@ -151,4 +151,37 @@ test.describe('Login Flow @identity @auth', () => {
     // Note: This might be too fast to catch, so we just verify the login completes
     await loginPage.expectToBeOnProtectedRoute();
   });
+
+  test('should have no console errors on login page', async ({ page }) => {
+    const errors: string[] = [];
+
+    // Collect console errors and uncaught exceptions
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+    page.on('pageerror', error => {
+      errors.push(error.message);
+    });
+
+    // Navigate fresh to login page (beforeEach already navigated, but we need
+    // the listeners registered before navigation to catch all errors)
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+    await expect(loginPage.usernameInput).toBeVisible({ timeout: 15000 });
+
+    // Wait for the page to fully settle so deferred errors surface
+    await page.waitForLoadState('domcontentloaded');
+    await expect(loginPage.usernameInput).toBeVisible();
+
+    // Filter out benign/expected errors
+    const criticalErrors = errors.filter(e =>
+      !e.includes('net::') &&
+      !e.includes('Failed to fetch') &&
+      !e.includes('NetworkError') &&
+      !e.includes('favicon.ico'),
+    );
+
+    expect(criticalErrors, `Unexpected console errors on login page:\n${criticalErrors.join('\n')}`).toHaveLength(0);
+  });
 });
