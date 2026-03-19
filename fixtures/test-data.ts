@@ -21,7 +21,7 @@ export const TEST_USERS = {
     firstName: 'TenantA',
     lastName: 'Admin',
     tenantName: TEST_TENANTS.TENANT_A,
-    roles: ['admin'],
+    roles: ['admin', 'user'],
   },
   TENANT_A_USER: {
     username: 'e2e-tenantA-user',
@@ -39,7 +39,7 @@ export const TEST_USERS = {
     firstName: 'TenantB',
     lastName: 'Admin',
     tenantName: TEST_TENANTS.TENANT_B,
-    roles: ['admin'],
+    roles: ['admin', 'user'],
   },
   TENANT_B_USER: {
     username: 'e2e-tenantB-user',
@@ -57,7 +57,7 @@ export const TEST_USERS = {
     firstName: 'TenantC',
     lastName: 'Admin',
     tenantName: TEST_TENANTS.TENANT_C,
-    roles: ['admin'],
+    roles: ['admin', 'user'],
   },
   TENANT_C_USER: {
     username: 'e2e-tenantC-user',

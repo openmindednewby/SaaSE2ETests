@@ -1,4 +1,5 @@
 export { AuthHelper } from './auth-helper.js';
+export { ensureProSubscriptions } from './subscription-admin.js';
 export {
   triggerNotification,
   triggerBulkNotifications,

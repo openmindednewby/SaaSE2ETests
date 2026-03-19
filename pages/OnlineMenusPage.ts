@@ -832,8 +832,8 @@ export class OnlineMenusPage extends BasePage {
       await this.switchToContentTab();
     }
 
-    // Check if already expanded by looking for input fields
-    const nameInput = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_NAME_INPUT, categoryIndex));
+    // Check if already expanded by looking for full input fields
+    const nameInput = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_NAME_FULL_INPUT, categoryIndex));
     if (await nameInput.count() === 0) {
       // Click on the category toggle button to expand it
       const toggleButton = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_TOGGLE_BUTTON, categoryIndex));
@@ -847,8 +847,8 @@ export class OnlineMenusPage extends BasePage {
    * Collapse a category by clicking on its header
    */
   async collapseCategory(categoryIndex: number) {
-    // Check if already collapsed by looking for input fields
-    const nameInput = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_NAME_INPUT, categoryIndex));
+    // Check if already collapsed by looking for full input fields
+    const nameInput = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_NAME_FULL_INPUT, categoryIndex));
     if (await nameInput.count() > 0) {
       // Click on the category toggle button to collapse it
       const toggleButton = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_TOGGLE_BUTTON, categoryIndex));
@@ -862,7 +862,7 @@ export class OnlineMenusPage extends BasePage {
    * Update category name
    */
   async updateCategoryName(categoryIndex: number, name: string) {
-    const nameInput = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_NAME_INPUT, categoryIndex));
+    const nameInput = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_NAME_FULL_INPUT, categoryIndex));
     await nameInput.fill(name);
   }
 
@@ -897,14 +897,14 @@ export class OnlineMenusPage extends BasePage {
    * Get the category name input field
    */
   getCategoryNameInput(categoryIndex: number): Locator {
-    return this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_NAME_INPUT, categoryIndex));
+    return this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_NAME_FULL_INPUT, categoryIndex));
   }
 
   /**
    * Get the menu item name input field
    */
   getMenuItemNameInput(categoryIndex: number, itemIndex: number): Locator {
-    return this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_NAME_INPUT, categoryIndex, itemIndex));
+    return this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_NAME_FULL_INPUT, categoryIndex, itemIndex));
   }
 
   /**
@@ -977,7 +977,7 @@ export class OnlineMenusPage extends BasePage {
    * Update menu item name
    */
   async updateMenuItemName(categoryIndex: number, itemIndex: number, name: string) {
-    const nameInput = this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_NAME_INPUT, categoryIndex, itemIndex));
+    const nameInput = this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_NAME_FULL_INPUT, categoryIndex, itemIndex));
     await nameInput.fill(name);
   }
 
@@ -1102,7 +1102,8 @@ export class OnlineMenusPage extends BasePage {
   async deleteMenuItemImage(categoryIndex: number, itemIndex: number) {
     const imagePicker = this.getMenuItemImagePicker(categoryIndex, itemIndex);
     const deleteButton = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW_DELETE_BUTTON));
-    await deleteButton.click();
+    await deleteButton.scrollIntoViewIfNeeded();
+    await deleteButton.dispatchEvent('click');
 
     // Wait for preview to disappear and upload button to appear
     const preview = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW));

@@ -1,4 +1,5 @@
 export { BasePage } from './BasePage.js';
+export { BillingPage } from './BillingPage.js';
 export { ContentPage } from './ContentPage.js';
 export { LoginPage } from './LoginPage.js';
 export { MenuStylingPage } from './MenuStylingPage.js';
