@@ -73,7 +73,7 @@ test.describe('Correlation Tracking @logging', () => {
 
     // Hit an endpoint that produces log output
     await request
-      .get(`${ONLINEMENU_URL}/api/menus`, {
+      .get(`${ONLINEMENU_URL}/api/v1/menus`, {
         headers: { [CORRELATION_HEADER]: correlationId },
         timeout: 10000,
       })
@@ -105,7 +105,7 @@ test.describe('Correlation Tracking @logging', () => {
     // Trigger a cross-service request by calling an endpoint that calls other services.
     // The menus endpoint on OnlineMenuService may interact with IdentityService for auth.
     const response = await request
-      .get(`${ONLINEMENU_URL}/api/menus`, {
+      .get(`${ONLINEMENU_URL}/api/v1/menus`, {
         headers: { [CORRELATION_HEADER]: correlationId },
         timeout: 10000,
       })

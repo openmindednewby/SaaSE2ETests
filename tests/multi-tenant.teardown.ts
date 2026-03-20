@@ -63,9 +63,9 @@ async function globalTeardown(_config: FullConfig) {
     const authHelper = new AuthHelper(identityApiUrl);
     await authHelper.loginViaAPI(username, password);
 
-    // Ensure trailing slash so relative request URLs resolve under /api/ (axios URL resolution treats
+    // Ensure trailing slash so relative request URLs resolve under /api/v1/ (axios URL resolution treats
     // baseURL without trailing slash like a "file").
-    const apiBase = identityApiUrl.endsWith('/api') ? `${identityApiUrl}/` : `${identityApiUrl}/api/`;
+    const apiBase = identityApiUrl.endsWith('/api/v1') ? `${identityApiUrl}/` : `${identityApiUrl}/api/v1/`;
     const accessToken = authHelper.getAccessToken();
     if (typeof accessToken !== 'string' || accessToken.length === 0) {
       throw new Error('Failed to acquire access token for teardown');

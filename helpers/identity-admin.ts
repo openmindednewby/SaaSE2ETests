@@ -29,11 +29,11 @@ type ListUsersResponse = { users?: UserListItem[] };
 type CreateUserResponse = { userId?: string; success?: boolean; errorMessage?: string };
 
 function normalizeIdentityApiBase(identityApiUrl: string): string {
-  // Ensure trailing slash so relative URLs resolve under /api/ correctly.
+  // Ensure trailing slash so relative URLs resolve under /api/v1/ correctly.
   // axios treats baseURL without trailing slash like a "file".
-  if (identityApiUrl.endsWith('/api/')) return identityApiUrl;
-  if (identityApiUrl.endsWith('/api')) return `${identityApiUrl}/`;
-  return `${identityApiUrl}/api/`;
+  if (identityApiUrl.endsWith('/api/v1/')) return identityApiUrl;
+  if (identityApiUrl.endsWith('/api/v1')) return `${identityApiUrl}/`;
+  return `${identityApiUrl}/api/v1/`;
 }
 
 export function createIdentityAdminClient(identityApiUrl: string, accessToken: string): AxiosInstance {

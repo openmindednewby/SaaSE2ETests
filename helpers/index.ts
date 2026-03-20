@@ -1,4 +1,6 @@
 export { AuthHelper } from './auth-helper.js';
+export { createAuthenticatedContext } from './serial-auth.js';
+export type { AuthenticatedContext } from './serial-auth.js';
 export { ensureProSubscriptions } from './subscription-admin.js';
 export {
   triggerNotification,

@@ -196,7 +196,7 @@ test.describe.serial('QR Code Generation @online-menus @qr-code', () => {
       const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
       expect(clipboardText).toBeTruthy();
       // The copied URL should contain the public menus path or the menu identifier
-      expect(clipboardText).toMatch(/\/public\/menu|\/api\/qr/);
+      expect(clipboardText).toMatch(/\/public\/menu|\/api\/v1\/qr/);
     } catch {
       // Clipboard API not available in this browser - verify the copy button was clickable
       await expect(menusPage.qrCodeCopyLinkButton).toBeEnabled();
@@ -227,7 +227,7 @@ test.describe.serial('QR Code Generation @online-menus @qr-code', () => {
     // Make a direct API request to the QR tracking endpoint
     // The endpoint should return a 302 redirect to the public menu page
     const onlineMenuApiUrl = process.env.ONLINEMENU_API_URL || 'http://localhost:5006';
-    const trackingUrl = `${onlineMenuApiUrl}/api/qr/${menuId}`;
+    const trackingUrl = `${onlineMenuApiUrl}/api/v1/qr/${menuId}`;
 
     try {
       const response = await page.request.get(trackingUrl, {

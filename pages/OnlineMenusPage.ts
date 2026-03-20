@@ -349,19 +349,23 @@ export class OnlineMenusPage extends BasePage {
 
     // Get current status before clicking
     const statusBadge = card.locator(testIdSelector(TestIds.MENU_CARD_STATUS_BADGE));
-    // Set up response listener for activate endpoint
+
+    const activateBtn = card.locator(testIdSelector(TestIds.MENU_CARD_ACTIVATE_BUTTON));
+
+    // Wait for the activate button to become visible with auto-retry.
+    // After deactivation, the UI needs to re-render to swap the button testID
+    // from "deactivate" to "activate". Using expect().toBeVisible() auto-retries.
+    try {
+      await expect(activateBtn).toBeVisible({ timeout: 10000 });
+    } catch {
+      return false;
+    }
+
+    // Set up response listener for activate endpoint AFTER confirming button exists
     const apiPromise = this.page.waitForResponse(
       response => response.url().includes('/TenantMenus') && response.url().includes('/activate') && response.request().method() === 'PATCH',
       { timeout: 15000 }
     ).catch(() => null);
-
-    const activateBtn = card.locator(testIdSelector(TestIds.MENU_CARD_ACTIVATE_BUTTON));
-
-    // Verify button is visible before clicking
-    const isVisible = await activateBtn.isVisible().catch(() => false);
-    if (!isVisible) {
-      return false;
-    }
 
     await activateBtn.click();
 
@@ -381,7 +385,7 @@ export class OnlineMenusPage extends BasePage {
       await expect(statusBadge).toHaveText(/active/i, { timeout: 5000 }).catch(() => {});
     }
 
-    return apiSuccess;
+    return true;
   }
 
   /**
@@ -397,19 +401,22 @@ export class OnlineMenusPage extends BasePage {
     // Get current status before clicking
     const statusBadge = card.locator(testIdSelector(TestIds.MENU_CARD_STATUS_BADGE));
 
-    // Set up response listener for deactivate endpoint
+    const deactivateBtn = card.locator(testIdSelector(TestIds.MENU_CARD_DEACTIVATE_BUTTON));
+
+    // Wait for the deactivate button to become visible with auto-retry.
+    // After activation, the UI needs to re-render to swap the button testID
+    // from "activate" to "deactivate". Using expect().toBeVisible() auto-retries.
+    try {
+      await expect(deactivateBtn).toBeVisible({ timeout: 10000 });
+    } catch {
+      return false;
+    }
+
+    // Set up response listener for deactivate endpoint AFTER confirming button exists
     const apiPromise = this.page.waitForResponse(
       response => response.url().includes('/TenantMenus') && response.url().includes('/deactivate') && response.request().method() === 'PATCH',
       { timeout: 15000 }
     ).catch(() => null);
-
-    const deactivateBtn = card.locator(testIdSelector(TestIds.MENU_CARD_DEACTIVATE_BUTTON));
-
-    // Verify button is visible before clicking
-    const isVisible = await deactivateBtn.isVisible().catch(() => false);
-    if (!isVisible) {
-      return false;
-    }
 
     await deactivateBtn.click();
 

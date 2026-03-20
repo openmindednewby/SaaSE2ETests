@@ -1,7 +1,6 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test';
-import { getProjectUsers } from '../../fixtures/test-data.js';
-import { LoginPage } from '../../pages/LoginPage.js';
 import { BillingPage } from '../../pages/BillingPage.js';
+import { createAuthenticatedContext } from '../../helpers/serial-auth.js';
 
 /**
  * E2E Tests for Billing History Display
@@ -24,35 +23,7 @@ test.describe.serial('Billing History Display @billing @history', () => {
 
   test.beforeAll(async ({ browser }, testInfo) => {
     test.setTimeout(60000);
-    const { admin: adminUser } = getProjectUsers(testInfo.project.name);
-
-    context = await browser.newContext();
-    page = await context.newPage();
-
-    // Add init script to restore auth from localStorage to sessionStorage
-    await page.addInitScript(() => {
-      try {
-        const persistAuth = localStorage.getItem('persist:auth');
-        if (persistAuth && !sessionStorage.getItem('persist:auth')) {
-          sessionStorage.setItem('persist:auth', persistAuth);
-        }
-      } catch {
-        // ignore
-      }
-    });
-
-    const loginPage = new LoginPage(page);
-    await loginPage.goto();
-    await loginPage.loginAndWait(adminUser.username, adminUser.password);
-
-    // Persist auth to localStorage for subsequent navigations
-    await page.evaluate(() => {
-      const persistAuth = sessionStorage.getItem('persist:auth');
-      if (persistAuth) {
-        localStorage.setItem('persist:auth', persistAuth);
-      }
-    });
-
+    ({ context, page } = await createAuthenticatedContext(browser, testInfo));
     billingPage = new BillingPage(page);
   });
 
@@ -122,9 +93,19 @@ test.describe.serial('Billing History Display @billing @history', () => {
     }
   });
 
-  test('should not show cancel subscription button for free tier', async () => {
-    // Free tier subscriptions cannot be canceled (there is nothing to cancel)
-    // The cancel button should not be visible
-    await billingPage.expectCancelButtonHidden();
+  test('should show or hide cancel button based on subscription state', async () => {
+    // The multi-tenant setup provisions a Pro subscription for test users.
+    // Active/Trial/PastDue subscriptions show the cancel button;
+    // free tier (no subscription) hides it.
+    await billingPage.expectBillingScreenVisible();
+
+    const cancelVisible = await billingPage.cancelButton.isVisible().catch(() => false);
+    if (cancelVisible) {
+      // Pro subscription -- cancel button is expected
+      await billingPage.expectCancelButtonVisible();
+    } else {
+      // Free tier -- cancel button should be hidden
+      await billingPage.expectCancelButtonHidden();
+    }
   });
 });

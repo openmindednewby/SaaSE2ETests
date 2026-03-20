@@ -99,7 +99,7 @@ test.describe('Log Verification @logging', () => {
 
   test('logs include TenantId when authenticated', async ({ request }) => {
     // Make an authenticated API request that should produce a log with TenantId
-    const response = await request.get('/api/menus', {
+    const response = await request.get('/api/v1/menus', {
       timeout: 10000,
     }).catch(() => null);
 
@@ -125,7 +125,7 @@ test.describe('Log Verification @logging', () => {
   test('error logs are captured with proper level', async ({ request }) => {
     // Trigger an error by requesting a non-existent resource
     const response = await request
-      .get('/api/menus/non-existent-id-for-e2e-test', { timeout: 10000 })
+      .get('/api/v1/menus/non-existent-id-for-e2e-test', { timeout: 10000 })
       .catch(() => null);
 
     // The request may return 404 or fail entirely; either generates error-level logs

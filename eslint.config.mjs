@@ -112,6 +112,7 @@ export default [
         browserMultiplier: 3,
         setupOverhead: 2,
         subBatches: {
+          // Online Menus (existing sub-batches)
           'online-menus-crud': [
             'menu-activation.spec.ts',
             'menu-crud-with-activation.spec.ts',
@@ -127,6 +128,91 @@ export default [
             'menu-preview-and-external-link.spec.ts',
             'menu-public-page-load.spec.ts',
             'public-viewer-active-filtering.spec.ts',
+          ],
+          'online-menus-qr': [
+            'menu-qr-code.spec.ts',
+          ],
+
+          // Questioner sub-batches (49 total tests across 3 sub-batches)
+          'questioner-active': [
+            'fill-quiz.spec.ts',
+            'quiz-multipage-validation.spec.ts',
+            'submit-quiz.spec.ts',
+          ],
+          'questioner-answers': [
+            'quiz-answers-export-filter.spec.ts',
+            'view-answers.spec.ts',
+          ],
+          'questioner-templates': [
+            'activate-template.spec.ts',
+            'active-quiz-limit.spec.ts',
+            'create-template.spec.ts',
+            'delete-inactive-templates.spec.ts',
+            'edit-template.spec.ts',
+            'tenant-isolation.spec.ts',
+          ],
+
+          // Showcase sub-batches (67 total tests across 3 sub-batches)
+          'showcase-native-forms-a': [
+            'native-forms-combobox.spec.ts',
+            'native-forms-validation.spec.ts',
+            'native-forms-fields.spec.ts',
+          ],
+          'showcase-native-forms-b': [
+            'native-forms-animations.spec.ts',
+            'native-forms-dark-theme.spec.ts',
+          ],
+          'showcase-other': [
+            'layout-full-width.spec.ts',
+            'native-components.spec.ts',
+            'native-forms.spec.ts',
+            'products-api.spec.ts',
+            'theme-preset-cards.spec.ts',
+          ],
+
+          // Billing sub-batches (37 total tests across 2 sub-batches)
+          'billing-subscription': [
+            'billing-subscription.spec.ts',
+            'billing-subscription-flow.spec.ts',
+            'billing-cancellation.spec.ts',
+          ],
+          'billing-pricing': [
+            'billing-pricing-page.spec.ts',
+            'billing-upgrade-downgrade.spec.ts',
+            'billing-history.spec.ts',
+          ],
+
+          // Theme-Studio sub-batches (109 total tests across 4 sub-batches)
+          'theme-studio-dialogs': [
+            'dialog-accessibility-custom.spec.ts',
+            'dialog-accessibility-hook.spec.ts',
+            'button-functionality-pricing.spec.ts',
+          ],
+          'theme-studio-dark': [
+            'dark-mode-flash.spec.ts',
+            'dark-mode-toggle.spec.ts',
+            'dark-mode-badges.spec.ts',
+            'semantic-dark-mode-badges-admin.spec.ts',
+            'semantic-dark-mode-badges-roles.spec.ts',
+          ],
+          'theme-studio-navigation': [
+            'settings-tab-navigation.spec.ts',
+            'button-functionality-login.spec.ts',
+          ],
+          'theme-studio-misc': [
+            'accessibility-labels.spec.ts',
+            'breadcrumb-keys.spec.ts',
+            'button-functionality.spec.ts',
+            'chat-signalr.spec.ts',
+            'dark-mode.spec.ts',
+            'dark-mode-theme.spec.ts',
+            'dialog-accessibility.spec.ts',
+            'externallink-sizing.spec.ts',
+            'integration-aria-labels.spec.ts',
+            'landing-footer-semantic.spec.ts',
+            'pricing-overflow.spec.ts',
+            'semantic-dark-mode-badges.spec.ts',
+            'toast-duration.spec.ts',
           ],
         },
       }],

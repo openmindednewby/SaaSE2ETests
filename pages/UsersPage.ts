@@ -178,7 +178,7 @@ export class UsersPage extends BasePage {
     });
 
     const deletePromise = this.page.waitForResponse(
-      resp => resp.request().method() === 'DELETE' && /\/api\/users\b/i.test(resp.url()),
+      resp => resp.request().method() === 'DELETE' && /\/api\/v1\/users\b/i.test(resp.url()),
       { timeout: 15000 }
     ).catch(() => null);
 

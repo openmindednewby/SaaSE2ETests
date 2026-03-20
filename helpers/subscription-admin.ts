@@ -14,7 +14,7 @@ type SubscriptionResult = {
 
 /**
  * Provision a Pro subscription for a single tenant by logging in as the given
- * user and calling POST /api/subscriptions on the PaymentService.
+ * user and calling POST /api/v1/subscriptions on the PaymentService.
  *
  * The endpoint returns:
  *   201 — subscription created (trial or active depending on Stripe config)
@@ -46,7 +46,7 @@ async function provisionProSubscription(
   }
 
   const client = axios.create({
-    baseURL: paymentApiUrl.endsWith('/api') ? paymentApiUrl : `${paymentApiUrl}/api`,
+    baseURL: paymentApiUrl.endsWith('/api/v1') ? paymentApiUrl : `${paymentApiUrl}/api/v1`,
     timeout: 30000,
     headers: {
       'Content-Type': 'application/json',

@@ -142,7 +142,7 @@ test.describe('Content Service Health Probes @content-api @health', () => {
 test.describe('Content Service API Endpoints @content-api', () => {
   test.describe('Upload URL Request', () => {
     test('POST /api/content/upload-url should require authentication', async ({ request }) => {
-      const result = await tryRequest(request, '/api/content/upload-url', {
+      const result = await tryRequest(request, '/api/v1/content/upload-url', {
         method: 'POST',
         data: {
           fileName: 'test-image.png',
@@ -167,7 +167,7 @@ test.describe('Content Service API Endpoints @content-api', () => {
 
   test.describe('Upload Complete', () => {
     test('POST /api/content/upload-complete should require authentication', async ({ request }) => {
-      const result = await tryRequest(request, '/api/content/upload-complete', {
+      const result = await tryRequest(request, '/api/v1/content/upload-complete', {
         method: 'POST',
         data: {
           contentId: 'test-content-id',
@@ -189,7 +189,7 @@ test.describe('Content Service API Endpoints @content-api', () => {
 
   test.describe('Content Retrieval', () => {
     test('GET /api/content/{id} should require authentication', async ({ request }) => {
-      const result = await tryRequest(request, '/api/content/test-content-id');
+      const result = await tryRequest(request, '/api/v1/content/test-content-id');
 
       if (!result) {
         test.skip(true, 'Content Service not available');
@@ -201,7 +201,7 @@ test.describe('Content Service API Endpoints @content-api', () => {
     });
 
     test('GET /api/content/{id}/url should require authentication', async ({ request }) => {
-      const result = await tryRequest(request, '/api/content/test-content-id/url');
+      const result = await tryRequest(request, '/api/v1/content/test-content-id/url');
 
       if (!result) {
         test.skip(true, 'Content Service not available');
@@ -213,7 +213,7 @@ test.describe('Content Service API Endpoints @content-api', () => {
     });
 
     test('GET /api/content should require authentication', async ({ request }) => {
-      const result = await tryRequest(request, '/api/content');
+      const result = await tryRequest(request, '/api/v1/content');
 
       if (!result) {
         test.skip(true, 'Content Service not available');
@@ -227,7 +227,7 @@ test.describe('Content Service API Endpoints @content-api', () => {
 
   test.describe('Content Deletion', () => {
     test('DELETE /api/content/{id} should require authentication', async ({ request }) => {
-      const result = await tryRequest(request, '/api/content/test-content-id', {
+      const result = await tryRequest(request, '/api/v1/content/test-content-id', {
         method: 'DELETE',
       });
 
@@ -244,7 +244,7 @@ test.describe('Content Service API Endpoints @content-api', () => {
 
 test.describe('Content API Request Validation @content-api', () => {
   test('should reject malformed JSON in upload-url request', async ({ request }) => {
-    const result = await tryRequest(request, '/api/content/upload-url', {
+    const result = await tryRequest(request, '/api/v1/content/upload-url', {
       method: 'POST',
       data: 'not valid json',
       headers: {
@@ -262,7 +262,7 @@ test.describe('Content API Request Validation @content-api', () => {
   });
 
   test('should handle missing Content-Type header', async ({ request }) => {
-    const result = await tryRequest(request, '/api/content/upload-url', {
+    const result = await tryRequest(request, '/api/v1/content/upload-url', {
       method: 'POST',
       data: {
         fileName: 'test.png',

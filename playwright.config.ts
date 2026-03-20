@@ -373,6 +373,29 @@ export default defineConfig({
       dependencies: ['setup'],
     },
 
+    // Billing batch (requires multi-tenant setup for subscription state)
+    {
+      name: 'billing-chromium',
+      workers: 1,
+      testMatch: /billing\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
+    {
+      name: 'billing-mobile',
+      workers: 1,
+      testMatch: /billing\/.*\.spec\.ts/,
+      use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
+    {
+      name: 'billing-firefox',
+      workers: 1,
+      testMatch: /billing\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
+      dependencies: ['setup', 'multi-tenant-setup'],
+    },
+
     // ==================== OBSERVABILITY PROJECTS ====================
     // Logging tests (API-only, no browser UI needed, no multi-tenant setup)
     // Excludes stress tests which have their own project

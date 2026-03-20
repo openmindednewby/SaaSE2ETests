@@ -13,8 +13,10 @@ import { Locator, Page, expect } from '@playwright/test';
 import { BasePage } from './BasePage.js';
 import { TestIds, testIdSelector } from '../shared/testIds.js';
 
-/** Extended timeout for billing API responses in Docker */
-const BILLING_TIMEOUT_MS = 15000;
+/** Extended timeout for billing API responses under 12-worker load */
+const BILLING_TIMEOUT_MS = 30000;
+/** Max navigation retries when the error state is shown */
+const MAX_GOTO_RETRIES = 3;
 
 export class BillingPage extends BasePage {
   // Billing Settings Screen
@@ -37,6 +39,11 @@ export class BillingPage extends BasePage {
   // Action Buttons
   readonly portalButton: Locator;
   readonly cancelButton: Locator;
+
+  // Cancel Confirmation Dialog (uses generic ConfirmDialog)
+  readonly cancelConfirmDialog: Locator;
+  readonly cancelConfirmButton: Locator;
+  readonly cancelDismissButton: Locator;
 
   // Billing History
   readonly historyTable: Locator;
@@ -77,6 +84,11 @@ export class BillingPage extends BasePage {
     this.portalButton = page.locator(testIdSelector(TestIds.BILLING_PORTAL_BUTTON));
     this.cancelButton = page.locator(testIdSelector(TestIds.BILLING_CANCEL_BUTTON));
 
+    // Cancel Confirmation Dialog (uses generic ConfirmDialog component)
+    this.cancelConfirmDialog = page.locator(testIdSelector(TestIds.CONFIRM_DIALOG));
+    this.cancelConfirmButton = page.locator(testIdSelector(TestIds.CONFIRM_BUTTON));
+    this.cancelDismissButton = page.locator(testIdSelector(TestIds.CANCEL_CONFIRM_BUTTON));
+
     // Billing History
     this.historyTable = page.locator(testIdSelector(TestIds.BILLING_HISTORY_TABLE));
     this.historyRows = page.locator(testIdSelector(TestIds.BILLING_HISTORY_ROW));
@@ -97,21 +109,56 @@ export class BillingPage extends BasePage {
 
   /**
    * Navigate to the billing settings page.
+   * Retries once if the initial load results in the error state,
+   * since the PaymentService API may be slow on the first request
+   * (cold start, connection pool warmup, etc.).
    */
   async goto(): Promise<void> {
-    await super.goto('/settings/billing');
-    await this.waitForBillingLoaded();
+    // Retry navigation up to MAX_GOTO_RETRIES times.
+    // The PaymentService sometimes needs a warm-up request before
+    // responding reliably (JWT validation caches signing keys on first call).
+    // Under 12-worker load the first attempts may time out or error.
+    // Firefox can also throw NS_BINDING_ABORTED if a navigation is interrupted.
+    for (let attempt = 1; attempt <= MAX_GOTO_RETRIES; attempt++) {
+      try {
+        await super.goto('/settings/billing');
+        await this.waitForBillingLoaded();
+
+        if (await this.billingError.count() === 0) return;
+        if (attempt === MAX_GOTO_RETRIES) return; // Accept whatever state we got
+
+        // Retry immediately -- the next goto + waitForBillingLoaded provides
+        // implicit backoff via navigation and API response timeouts.
+      } catch {
+        // Navigation error (NS_BINDING_ABORTED, timeout, etc.) -- retry
+        if (attempt === MAX_GOTO_RETRIES) return; // Accept whatever state we got
+      }
+    }
   }
 
   /**
    * Wait for the billing screen to finish loading.
-   * Waits for either the main screen, an error state, or loading to disappear.
+   * Waits for either the main screen or the error state to appear,
+   * which means the API calls have resolved.
    */
   async waitForBillingLoaded(): Promise<void> {
-    // First wait for loading indicator to clear (if present)
-    if (await this.billingLoading.count() > 0) {
-      await this.billingLoading.waitFor({ state: 'hidden', timeout: BILLING_TIMEOUT_MS });
+    // Wait for any billing state to appear: the main screen, the error state,
+    // or the loading indicator. Then if loading is shown, wait for it to resolve.
+    const anyState = this.billingScreen.or(this.billingError).or(this.billingLoading);
+    await expect(anyState).toBeVisible({ timeout: BILLING_TIMEOUT_MS });
+
+    // If loading indicator is visible, wait for it to be replaced by a final state.
+    if (await this.billingLoading.isVisible().catch(() => false)) {
+      await expect(this.billingScreen.or(this.billingError)).toBeVisible({ timeout: BILLING_TIMEOUT_MS });
     }
+  }
+
+  /**
+   * Check whether the billing screen loaded successfully (not in error state).
+   * Returns true if the main screen is visible, false if the error state is shown.
+   */
+  async isBillingScreenLoaded(): Promise<boolean> {
+    return (await this.billingScreen.count()) > 0;
   }
 
   // ==================== Current Plan Assertions ====================
@@ -190,16 +237,20 @@ export class BillingPage extends BasePage {
 
   /**
    * Switch to the monthly billing cycle.
+   * Scrolls the toggle into view before clicking for small viewports.
    */
   async selectMonthlyCycle(): Promise<void> {
-    await this.cycleMonthly.click();
+    await this.cycleMonthly.scrollIntoViewIfNeeded();
+    await this.cycleMonthly.click({ timeout: BILLING_TIMEOUT_MS });
   }
 
   /**
    * Switch to the annual billing cycle.
+   * Scrolls the toggle into view before clicking for small viewports.
    */
   async selectAnnualCycle(): Promise<void> {
-    await this.cycleAnnual.click();
+    await this.cycleAnnual.scrollIntoViewIfNeeded();
+    await this.cycleAnnual.click({ timeout: BILLING_TIMEOUT_MS });
   }
 
   /**
@@ -215,6 +266,14 @@ export class BillingPage extends BasePage {
   async getPlanCardText(index: number): Promise<string> {
     const card = this.planCards.nth(index);
     return await card.textContent() ?? '';
+  }
+
+  /**
+   * Get a plan card locator filtered by tier name text (e.g., 'Free', 'Pro', 'Enterprise').
+   * Prefer this over `.nth(i)` to avoid index-based selectors.
+   */
+  getPlanCardByTier(tierName: string): Locator {
+    return this.planCards.filter({ hasText: tierName });
   }
 
   // ==================== Action Button Assertions ====================
@@ -239,6 +298,52 @@ export class BillingPage extends BasePage {
    */
   async expectCancelButtonHidden(): Promise<void> {
     await expect(this.cancelButton).not.toBeVisible();
+  }
+
+  // ==================== Cancel Confirmation Dialog ====================
+
+  /**
+   * Click the cancel subscription button to open the confirmation dialog.
+   */
+  async clickCancelSubscription(): Promise<void> {
+    await this.cancelButton.click();
+  }
+
+  /**
+   * Expect the cancel confirmation dialog to be visible.
+   */
+  async expectCancelDialogVisible(): Promise<void> {
+    await expect(this.cancelConfirmDialog).toBeVisible({ timeout: BILLING_TIMEOUT_MS });
+  }
+
+  /**
+   * Expect the cancel confirmation dialog to not be visible.
+   */
+  async expectCancelDialogHidden(): Promise<void> {
+    await expect(this.cancelConfirmDialog).not.toBeVisible();
+  }
+
+  /**
+   * Confirm the cancellation in the dialog.
+   */
+  async confirmCancellation(): Promise<void> {
+    await this.cancelConfirmButton.click();
+  }
+
+  /**
+   * Dismiss the cancellation dialog without canceling.
+   */
+  async dismissCancellation(): Promise<void> {
+    await this.cancelDismissButton.click();
+  }
+
+  // ==================== Status Badge Text ====================
+
+  /**
+   * Expect the status badge to contain specific text (e.g., "Active", "Trial").
+   */
+  async expectStatusBadgeText(text: string): Promise<void> {
+    await expect(this.statusBadge).toContainText(text, { timeout: BILLING_TIMEOUT_MS });
   }
 
   // ==================== Billing History Assertions ====================

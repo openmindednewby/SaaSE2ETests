@@ -150,7 +150,8 @@ test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
     await page.goto('/quiz-templates', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/quiz-templates/);
 
-    // Refresh the page
+    // Reload to verify auth persists after a hard refresh (testing persistence)
+    // eslint-disable-next-line no-page-reload/no-page-reload
     await page.reload();
     await page.waitForLoadState('domcontentloaded');
 

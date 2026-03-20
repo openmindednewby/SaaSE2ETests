@@ -25,10 +25,10 @@ export class AuthHelper {
   private tokens: TokenResponse | null = null;
 
   constructor(baseUrl?: string) {
-    // The IdentityService uses /api prefix for all endpoints
+    // The IdentityService uses /api/v1 prefix for all endpoints
     const apiBase = baseUrl || process.env.IDENTITY_API_URL || 'http://localhost:5002';
     this.apiClient = axios.create({
-      baseURL: apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`,
+      baseURL: apiBase.endsWith('/api/v1') ? apiBase : `${apiBase}/api/v1`,
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',

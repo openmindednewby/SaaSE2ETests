@@ -40,7 +40,7 @@ test.describe('PII Masking @logging', () => {
     // Trigger a request that would log an email address
     // Use a login attempt (expected to fail) which should log the email
     await request
-      .post(`${IDENTITY_URL}/api/auth/login`, {
+      .post(`${IDENTITY_URL}/api/v1/auth/login`, {
         data: {
           method: 0,
           username: TEST_EMAIL,
@@ -102,7 +102,7 @@ test.describe('PII Masking @logging', () => {
     // Trigger a request that would log a phone number
     // Attempt a user lookup by phone (may not exist, but triggers logging)
     await request
-      .post(`${IDENTITY_URL}/api/users/lookup`, {
+      .post(`${IDENTITY_URL}/api/v1/users/lookup`, {
         data: { phone: TEST_PHONE },
         timeout: 10000,
       })
@@ -110,7 +110,7 @@ test.describe('PII Masking @logging', () => {
 
     // Also try registration which may log phone numbers
     await request
-      .post(`${IDENTITY_URL}/api/auth/register`, {
+      .post(`${IDENTITY_URL}/api/v1/auth/register`, {
         data: {
           username: 'e2e-pii-phone-test',
           password: 'invalid',

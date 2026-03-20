@@ -179,7 +179,11 @@ test.describe('Login Flow @identity @auth', () => {
       !e.includes('net::') &&
       !e.includes('Failed to fetch') &&
       !e.includes('NetworkError') &&
-      !e.includes('favicon.ico'),
+      !e.includes('favicon.ico') &&
+      // React ErrorBoundary recovery messages (not application errors)
+      !e.includes('error boundary') &&
+      !e.includes('ErrorBoundary') &&
+      !e.includes('recreate this component tree'),
     );
 
     expect(criticalErrors, `Unexpected console errors on login page:\n${criticalErrors.join('\n')}`).toHaveLength(0);

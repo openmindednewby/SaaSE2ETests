@@ -53,7 +53,7 @@ export async function generateBulkLogs(
   // Try the dedicated stress endpoint first
   try {
     const response = await axios.post(
-      `${baseUrl}/api/diagnostics/stress-log`,
+      `${baseUrl}/api/v1/diagnostics/stress-log`,
       { count },
       { timeout: 30000 }
     );

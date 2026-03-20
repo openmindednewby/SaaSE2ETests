@@ -32,7 +32,7 @@ test.describe.serial('Logout Flow @identity @auth', () => {
 
   async function clickLogout() {
     const logoutApi = page
-      .waitForResponse((r) => r.url().includes('/api/auth/logout') && r.request().method() === 'POST', { timeout: 8000 })
+      .waitForResponse((r) => r.url().includes('/api/v1/auth/logout') && r.request().method() === 'POST', { timeout: 8000 })
       .catch(() => null);
 
     const logoutButtons = page.locator(testIdSelector(TestIds.LOGOUT_BUTTON));

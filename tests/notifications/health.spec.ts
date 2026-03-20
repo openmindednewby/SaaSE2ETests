@@ -146,7 +146,7 @@ test.describe('Notification Service Health @notifications @health', () => {
 
     // Check if the notifications API base endpoint is accessible
     const response = await request.get(
-      `${NOTIFICATION_SERVICE_URL}/api/notifications`,
+      `${NOTIFICATION_SERVICE_URL}/api/v1/notifications`,
       { timeout: HEALTH_TIMEOUT_MS }
     ).catch(() => null);
 
@@ -169,7 +169,7 @@ test.describe('Notification Service Health @notifications @health', () => {
     test.skip(!serviceReachable, 'NotificationService is not running');
 
     const response = await request.get(
-      `${NOTIFICATION_SERVICE_URL}/api/notifications/preferences`,
+      `${NOTIFICATION_SERVICE_URL}/api/v1/notifications/preferences`,
       { timeout: HEALTH_TIMEOUT_MS }
     ).catch(() => null);
 

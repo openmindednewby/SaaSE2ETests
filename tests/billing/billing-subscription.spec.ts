@@ -1,7 +1,6 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test';
-import { getProjectUsers } from '../../fixtures/test-data.js';
-import { LoginPage } from '../../pages/LoginPage.js';
 import { BillingPage } from '../../pages/BillingPage.js';
+import { createAuthenticatedContext } from '../../helpers/serial-auth.js';
 
 /**
  * E2E Tests for Billing Subscription Management
@@ -25,35 +24,7 @@ test.describe.serial('Billing Subscription Management @billing @subscription', (
 
   test.beforeAll(async ({ browser }, testInfo) => {
     test.setTimeout(60000);
-    const { admin: adminUser } = getProjectUsers(testInfo.project.name);
-
-    context = await browser.newContext();
-    page = await context.newPage();
-
-    // Add init script to restore auth from localStorage to sessionStorage
-    await page.addInitScript(() => {
-      try {
-        const persistAuth = localStorage.getItem('persist:auth');
-        if (persistAuth && !sessionStorage.getItem('persist:auth')) {
-          sessionStorage.setItem('persist:auth', persistAuth);
-        }
-      } catch {
-        // ignore
-      }
-    });
-
-    const loginPage = new LoginPage(page);
-    await loginPage.goto();
-    await loginPage.loginAndWait(adminUser.username, adminUser.password);
-
-    // Persist auth to localStorage for subsequent navigations
-    await page.evaluate(() => {
-      const persistAuth = sessionStorage.getItem('persist:auth');
-      if (persistAuth) {
-        localStorage.setItem('persist:auth', persistAuth);
-      }
-    });
-
+    ({ context, page } = await createAuthenticatedContext(browser, testInfo));
     billingPage = new BillingPage(page);
   });
 

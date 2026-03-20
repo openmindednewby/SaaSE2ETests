@@ -83,7 +83,7 @@ export async function triggerNotification(
   const client = createNotificationClient(accessToken);
 
   try {
-    const response = await client.post('/api/notifications/test/trigger', {
+    const response = await client.post('/api/v1/notifications/test/trigger', {
       userId: params.userId,
       title: params.title,
       body: params.body ?? '',
@@ -118,7 +118,7 @@ export async function triggerBulkNotifications(
 
   try {
     // Try the bulk endpoint first
-    const response = await client.post('/api/notifications/test/bulk', {
+    const response = await client.post('/api/v1/notifications/test/bulk', {
       userId: params.userId,
       titlePrefix: prefix,
       body: params.body ?? '',
@@ -165,7 +165,7 @@ export async function getNotifications(
   const client = createNotificationClient(accessToken);
 
   try {
-    const response = await client.get(`/api/notifications`, {
+    const response = await client.get(`/api/v1/notifications`, {
       params: { userId },
     });
 
@@ -190,7 +190,7 @@ export async function clearNotifications(
   const client = createNotificationClient(accessToken);
 
   try {
-    await client.delete(`/api/notifications/test/clear`, {
+    await client.delete(`/api/v1/notifications/test/clear`, {
       params: { userId },
     });
     return true;

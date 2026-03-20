@@ -108,7 +108,7 @@ test.describe('Logging Resilience Stress Tests @logging @stress', () => {
         promises.push(
           axios
             .get(
-              `${service.url}/api/nonexistent-endpoint-e2e-stress-${i}`,
+              `${service.url}/api/v1/nonexistent-endpoint-e2e-stress-${i}`,
               { timeout: 5000 }
             )
             .then(() => undefined)

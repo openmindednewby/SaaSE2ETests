@@ -20,7 +20,7 @@ async function getFirstTenantId(): Promise<string | null> {
   try {
     const auth = new AuthHelper();
     await auth.loginViaAPI(username, password);
-    const client = auth.createAuthenticatedClient(`${IDENTITY_API_URL}/api`);
+    const client = auth.createAuthenticatedClient(`${IDENTITY_API_URL}/api/v1`);
     const response = await client.get('/tenants');
     if (Array.isArray(response.data) && response.data.length > 0) {
       return response.data[0].tenantId ?? null;
@@ -37,7 +37,7 @@ async function getFirstTenantId(): Promise<string | null> {
  */
 async function sendOtp(email: string, tenantId: string) {
   const response = await axios.post(
-    `${IDENTITY_API_URL}/api/auth/send-otp`,
+    `${IDENTITY_API_URL}/api/v1/auth/send-otp`,
     { type: 1, identifier: email, tenantId },
     { timeout: 15000 },
   );
