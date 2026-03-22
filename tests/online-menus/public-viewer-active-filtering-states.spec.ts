@@ -115,41 +115,20 @@ test.describe.serial('Public Viewer Active Filtering - States @online-menus @pub
     await menusPage.activateMenu(inactiveMenuName);
     await menusPage.expectMenuActive(inactiveMenuName, true);
 
+    await publicPage.goto('/public/menus');
+
+    const publicMenuList = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_LIST));
+    await expect(publicMenuList).toBeVisible({ timeout: 15000 });
+
+    const loadingIndicator = publicPage.locator('[role="progressbar"]');
+    if (await loadingIndicator.count() > 0) {
+      await loadingIndicator.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
+    }
+
     const activatedMenuCard = publicPage.locator(testIdStartsWithSelector(TestIds.PUBLIC_MENU_CARD)).filter({
       hasText: inactiveMenuName,
     });
-
-    // Retry loop: the public API may have server-side caching in Docker,
-    // so the newly activated menu can take several seconds to appear.
-    const maxAttempts = 5;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      await publicPage.goto('/public/menus');
-
-      const publicMenuList = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_LIST));
-      await expect(publicMenuList).toBeVisible({ timeout: 15000 });
-
-      const loadingIndicator = publicPage.locator('[role="progressbar"]');
-      if (await loadingIndicator.count() > 0) {
-        await loadingIndicator.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
-      }
-
-      const isVisible = await activatedMenuCard.isVisible().catch(() => false);
-      if (isVisible) break;
-
-      if (attempt < maxAttempts) {
-        await publicPage.reload({ waitUntil: 'domcontentloaded' });
-      }
-    }
-
-    // If the menu still does not appear after retries, skip as a known
-    // backend caching issue rather than failing the test suite.
-    const menuVisible = await activatedMenuCard.isVisible().catch(() => false);
-    if (!menuVisible) {
-      test.skip(true, 'Public menu list did not reflect activation in time — backend caching issue');
-      return;
-    }
-
-    await expect(activatedMenuCard).toBeVisible();
+    await expect(activatedMenuCard).toBeVisible({ timeout: 15000 });
   });
 
   test('should show multiple active menus in public list', async () => {
@@ -166,37 +145,22 @@ test.describe.serial('Public Viewer Active Filtering - States @online-menus @pub
       await menusPage.expectMenuActive(activeMenuName, true);
     }
 
+    await publicPage.goto('/public/menus');
+
+    const publicMenuList = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_LIST));
+    await expect(publicMenuList).toBeVisible({ timeout: 15000 });
+
+    const loadingIndicator = publicPage.locator('[role="progressbar"]');
+    if (await loadingIndicator.count() > 0) {
+      await loadingIndicator.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
+    }
+
     const firstMenuCard = publicPage.locator(testIdStartsWithSelector(TestIds.PUBLIC_MENU_CARD)).filter({
       hasText: activeMenuName,
     });
     const secondMenuCard = publicPage.locator(testIdStartsWithSelector(TestIds.PUBLIC_MENU_CARD)).filter({
       hasText: inactiveMenuName,
     });
-
-    // Retry loop for public API cache staleness
-    const maxAttempts = 5;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      await publicPage.goto('/public/menus');
-
-      const publicMenuList = publicPage.locator(testIdSelector(TestIds.PUBLIC_MENU_LIST));
-      await expect(publicMenuList).toBeVisible({ timeout: 15000 });
-
-      const loadingIndicator = publicPage.locator('[role="progressbar"]');
-      if (await loadingIndicator.count() > 0) {
-        await loadingIndicator.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
-      }
-
-      const bothVisible = await Promise.all([
-        firstMenuCard.isVisible().catch(() => false),
-        secondMenuCard.isVisible().catch(() => false),
-      ]).then(([a, b]) => a && b);
-
-      if (bothVisible) break;
-
-      if (attempt < maxAttempts) {
-        await publicPage.reload({ waitUntil: 'domcontentloaded' });
-      }
-    }
 
     await expect(firstMenuCard).toBeVisible({ timeout: 15000 });
     await expect(secondMenuCard).toBeVisible({ timeout: 15000 });
