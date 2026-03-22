@@ -20,9 +20,9 @@ import { execSync, spawn } from 'node:child_process';
 const VALID_RESOURCES = [
   'playwright-e2e-health',
   'playwright-e2e-identity-all',
-  'playwright-e2e-questioner-all',
-  'playwright-e2e-questioner-templates-all',
-  'playwright-e2e-questioner-quiz-all',
+  'playwright-e2e-questioner-templates',
+  'playwright-e2e-questioner-active',
+  'playwright-e2e-questioner-answers',
   'playwright-e2e-online-menus-crud',
   'playwright-e2e-online-menus-editor',
   'playwright-e2e-online-menus-public',

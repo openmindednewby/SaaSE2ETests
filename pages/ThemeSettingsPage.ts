@@ -8,11 +8,7 @@ const MIN_COLOR_SWATCHES_PER_PRESET = 2;
 const DEFAULT_CONTENT_MAX_WIDTH = '1440px';
 const FULL_WIDTH_CONTENT_MAX_WIDTH = 'none';
 
-/**
- * Page object for the SyncfusionThemeStudio Theme Settings Drawer.
- * Handles opening the drawer, navigating to the Presets tab,
- * and verifying preset card rendering.
- */
+/** Page object for the SyncfusionThemeStudio Theme Settings Drawer. */
 export class ThemeSettingsPage extends BasePage {
   readonly drawer: Locator;
   readonly closeButton: Locator;
@@ -41,10 +37,7 @@ export class ThemeSettingsPage extends BasePage {
 
   // ==================== ACTIONS ====================
 
-  /**
-   * Open the theme settings drawer by clicking the toggle button.
-   * The drawer starts collapsed; clicking the toggle expands it.
-   */
+  /** Open the theme settings drawer by clicking the toggle button. */
   async openDrawer() {
     // The close/toggle button is always visible even when collapsed
     await expect(this.closeButton).toBeVisible({ timeout: DRAWER_LOAD_TIMEOUT });

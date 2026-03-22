@@ -2,6 +2,12 @@ import { Locator, Page, expect } from '@playwright/test';
 import { TestIds, testIdSelector } from '../shared/testIds.js';
 import { BasePage } from './BasePage.js';
 
+/**
+ * Page object for quiz template CRUD operations.
+ * Handles navigation, creating, editing, deleting, and listing templates.
+ *
+ * For activation/deactivation and bulk operations, use QuizTemplatesQuizPage.
+ */
 export class QuizTemplatesPage extends BasePage {
   readonly pageHeader: Locator;
   readonly templateNameInput: Locator;
@@ -10,40 +16,22 @@ export class QuizTemplatesPage extends BasePage {
   readonly templateList: Locator;
   readonly loadingIndicator: Locator;
   readonly deleteInactiveButton: Locator;
-  readonly confirmDialog: Locator;
-  readonly confirmButton: Locator;
-  readonly cancelConfirmButton: Locator;
 
   constructor(page: Page) {
     super(page);
-    // Based on quiz-templates/index.tsx
     this.pageHeader = page.getByText(/quiz templates/i);
-    // TemplateForm component inputs - use direct testID selectors for better reliability
     this.templateNameInput = page.locator(testIdSelector(TestIds.TEMPLATE_NAME_INPUT));
     this.templateDescriptionInput = page.getByPlaceholder(/description/i);
-    // Find save button within the create form container
     const creationForm = page.locator(testIdSelector(TestIds.CREATE_TEMPLATE_FORM));
     this.saveButton = creationForm.getByRole('button', { name: /save/i });
     this.templateList = page.locator(testIdSelector(TestIds.TEMPLATE_LIST));
     this.loadingIndicator = page.locator('[role="progressbar"]');
-    // Delete inactive templates
     this.deleteInactiveButton = page.locator(testIdSelector(TestIds.DELETE_INACTIVE_BUTTON));
-    this.confirmDialog = page.locator(testIdSelector(TestIds.CONFIRM_DIALOG));
-    this.confirmButton = page.locator(testIdSelector(TestIds.CONFIRM_BUTTON));
-    this.cancelConfirmButton = page.locator(testIdSelector(TestIds.CANCEL_CONFIRM_BUTTON));
   }
 
-  /**
-   * Wait for a concrete page element to confirm React has rendered.
-   * waitForLoading() alone can return instantly if React hasn't mounted yet
-   * because count() returns 0 on an empty DOM.
-   */
   private async waitForPageReady() {
-    // Ensure JS bundle has fully loaded so React can mount
     await this.page.waitForLoadState('load');
-    // Dismiss any PWA overlay that may cover page content
     await this.dismissOverlay();
-    // Wait for React to render page content (either element confirms the page loaded)
     // 60s timeout accounts for slow dev builds under concurrent browser load
     const PAGE_READY_TIMEOUT = 60000;
     await Promise.race([
@@ -53,18 +41,11 @@ export class QuizTemplatesPage extends BasePage {
     await this.waitForLoading();
   }
 
-  /**
-   * Navigate to quiz templates page
-   * Expo Router: (protected) is a route group, URL is just /quiz-templates
-   */
   async goto() {
     await super.goto('/quiz-templates');
     await this.waitForPageReady();
   }
 
-  /**
-   * Force a fresh fetch of the templates list (helps when React Query cache is stale).
-   */
   async refetchTemplatesList() {
     await this.waitForLoading();
 
@@ -73,22 +54,12 @@ export class QuizTemplatesPage extends BasePage {
       { timeout: 10000 }
     ).catch(() => null);
 
+    // eslint-disable-next-line no-page-reload/no-page-reload -- Force fresh server state to avoid stale cache
     await this.page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
     await this.waitForPageReady();
     await listFetch;
   }
 
-  /**
-   * Create a new template and wait for the list to reflect the new item.
-   *
-   * After the POST succeeds, React Query auto-invalidates the list query which
-   * triggers a GET refetch. We set up the GET listener BEFORE clicking Save so
-   * we never miss the refetch response.
-   *
-   * If the POST returns 429 (rate limited), the method retries up to 3 times
-   * with a short backoff. Non-OK responses other than 429 are silently ignored
-   * to match the original behavior (callers check templateExists separately).
-   */
   async createTemplate(name: string, description: string = '') {
     const MAX_RETRIES = 3;
 
@@ -142,9 +113,6 @@ export class QuizTemplatesPage extends BasePage {
     }
   }
 
-  /**
-   * Get template row by name
-   */
   getTemplateRows(name: string): Locator {
     return this.page.locator(testIdSelector(TestIds.TENANT_LIST_ITEM)).filter({
       has: this.page.locator(testIdSelector(TestIds.HEADING_TEXT), { hasText: name }),
@@ -152,13 +120,9 @@ export class QuizTemplatesPage extends BasePage {
   }
 
   getTemplateRow(name: string): Locator {
-    // Find the template item that contains a heading with the specified name
     return this.getTemplateRows(name).first();
   }
 
-  /**
-   * Check if a template exists in the list
-   */
   async templateExists(name: string): Promise<boolean> {
     await this.waitForLoading();
     const template = this.getTemplateRow(name);
@@ -167,11 +131,6 @@ export class QuizTemplatesPage extends BasePage {
       .catch(() => false);
   }
 
-  /**
-   * Expect template to be visible in the list.
-   * Retries with a page refetch if the template is not found on the first attempt,
-   * guarding against stale React Query cache or slow list re-renders.
-   */
   async expectTemplateInList(name: string) {
     const template = this.getTemplateRow(name);
 
@@ -187,9 +146,6 @@ export class QuizTemplatesPage extends BasePage {
     }
   }
 
-  /**
-   * Click edit button for a template
-   */
   async editTemplate(name: string) {
     const row = this.getTemplateRow(name);
     await expect(row).toBeVisible({ timeout: 20000 });
@@ -202,45 +158,29 @@ export class QuizTemplatesPage extends BasePage {
       await row.locator('text=/edit/i').first().click();
     }
 
-    // Wait for modal to appear - modal is lazy loaded, give it time to render
     // React Native Modal creates two dialog elements (outer wrapper + inner content)
-    // Use first() to handle strict mode violation
     await expect(this.page.getByRole('dialog').first()).toBeVisible({ timeout: 10000 });
   }
 
-  /**
-   * Get the edit modal locator
-   * React Native Modal creates two dialog elements (outer wrapper + inner content)
-   * Use first() to get the outer dialog which contains all modal content
-   */
   getEditModal(): Locator {
     return this.page.getByRole('dialog').first();
   }
 
   async waitForModalToClose() {
-    // React Native Modal creates two dialog elements - wait for first one to close
     await expect(this.page.getByRole('dialog').first()).not.toBeVisible({ timeout: 10000 });
   }
 
-  /**
-   * Click delete button for a template
-   * @param throwOnError - If false, won't throw on API errors (useful for cleanup)
-   */
   async deleteTemplate(name: string, throwOnError: boolean = true) {
     const rows = this.getTemplateRows(name);
     const row = rows.first();
-    // Scroll to row
     await row.scrollIntoViewIfNeeded();
 
-    // Set up dialog handler
     const dialogHandler = async (dialog: any) => {
       await dialog.accept();
     };
     this.page.once('dialog', dialogHandler);
 
-    // Set up BOTH response listeners BEFORE clicking:
     // 1. DELETE (the delete call)
-    // 2. GET (the list refetch triggered by React Query cache invalidation)
     const deletePromise = this.page.waitForResponse(
       response => response.url().includes('/questionerTemplates') && response.request().method() === 'DELETE',
       { timeout: 15000 }
@@ -253,7 +193,6 @@ export class QuizTemplatesPage extends BasePage {
       { timeout: 15000 }
     ).catch(() => null);
 
-    // Try multiple selectors for the delete button
     const deleteBtn = row.getByRole('button', { name: /delete/i });
     const deleteBtnByText = row.locator('text=Delete').first();
     const deleteBtnByEmoji = row.locator('text=🗑️').first();
@@ -268,7 +207,6 @@ export class QuizTemplatesPage extends BasePage {
       await row.locator('[data-testid], [role="button"]').filter({ hasText: /delete/i }).first().click({ force: true });
     }
 
-    // Most quiz template deletes are immediate (no confirmation modal).
     // If a custom modal is present, only click within that modal (never a global fallback).
     const dialog = this.page.locator('[role="dialog"]');
     if (await dialog.isVisible({ timeout: 1000 }).catch(() => false)) {
@@ -278,7 +216,6 @@ export class QuizTemplatesPage extends BasePage {
       }
     }
 
-    // Wait for the delete API call to complete
     const response = await deletePromise;
     if (response) {
       if (response.status() !== 404 && !response.ok()) {
@@ -289,11 +226,9 @@ export class QuizTemplatesPage extends BasePage {
       }
     }
 
-    // Wait for the list refetch GET to complete
     await getPromise;
     await this.waitForLoading();
 
-    // Wait for the item to disappear using expect with retry
     try {
       await expect(rows).toHaveCount(0, { timeout: 5000 });
     } catch {
@@ -303,101 +238,9 @@ export class QuizTemplatesPage extends BasePage {
     }
   }
 
-  /**
-   * Click activate button for a template (optimized - no redundant waits)
-   */
-  async activateTemplate(name: string) {
-    const row = this.getTemplateRow(name);
-    await expect(row).toBeVisible({ timeout: 20000 });
-    await row.scrollIntoViewIfNeeded();
-
-    // Get current status before clicking
-    const statusLabel = row.locator(testIdSelector(TestIds.STATUS_LABEL));
-    const statusBefore = (await statusLabel.textContent().catch(() => '')).trim();
-    const wasActive = /^(active|enabled)$/i.test(statusBefore);
-
-    // Set up BOTH response listeners BEFORE clicking:
-    // 1. PUT/DELETE (the activate/deactivate call)
-    // 2. GET (the list refetch triggered by React Query cache invalidation)
-    const apiPromise = this.page.waitForResponse(
-      response => response.url().includes('/questionerTemplates') && (response.request().method() === 'PUT' || response.request().method() === 'DELETE'),
-      { timeout: 15000 }
-    ).catch(() => null);
-
-    const getPromise = this.page.waitForResponse(
-      response =>
-        response.url().includes('/questionerTemplates') &&
-        response.request().method() === 'GET',
-      { timeout: 15000 }
-    ).catch(() => null);
-
-    const activateBtn = row.getByRole('button', { name: /activate|deactivate/i });
-    if (await activateBtn.isVisible({ timeout: 2000 })) {
-      await activateBtn.click({ force: true });
-    } else {
-      // Fallback to finding the button with the emoji/text
-      await row.locator('text=/activate|🔁/i').first().click({ force: true });
-    }
-
-    // Wait for the API call to complete
-    const response = await apiPromise;
-    let apiSuccess = false;
-
-    if (response?.ok()) {
-      apiSuccess = true;
-      // Only wait for list refetch if the mutation succeeded (React Query only
-      // invalidates cache on successful mutations, not on 409/error responses)
-      await getPromise;
-    }
-
-    await this.waitForLoading();
-
-    // Wait for status to change using web-first assertion (auto-retries for 5s)
-    if (apiSuccess) {
-      const expectedStatus = wasActive ? /inactive|disabled/i : /active|enabled/i;
-      await expect(statusLabel).toHaveText(expectedStatus, { timeout: 5000 }).catch(() => {});
-    }
-
-    return apiSuccess;
-  }
-
-  /**
-   * Check if template is active
-   */
-  async isTemplateActive(name: string): Promise<boolean> {
-    const row = this.getTemplateRow(name);
-    const statusLabel = row.locator(testIdSelector(TestIds.STATUS_LABEL));
-    const statusText = (await statusLabel.textContent().catch(() => '')).trim();
-
-    // Status should be "Active" or "Enabled" (exact match to avoid matching "Inactive")
-    return /^(active|enabled)$/i.test(statusText);
-  }
-
-  async expectTemplateActive(name: string, active: boolean = true) {
-    const expected = active ? /active|enabled/i : /inactive|disabled/i;
-
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      await this.waitForLoading();
-      const row = this.getTemplateRow(name);
-      const statusLabel = row.locator(testIdSelector(TestIds.STATUS_LABEL));
-
-      try {
-        await expect(statusLabel).toHaveText(expected, { timeout: 10000 });
-        return;
-      } catch (error) {
-        if (attempt >= 3) throw error;
-        await this.refetchTemplatesList();
-      }
-    }
-  }
-
-  /**
-   * Get all template names
-   */
   async getTemplateNames(): Promise<string[]> {
     await this.waitForLoading();
     const items = this.page.locator(testIdSelector(TestIds.TENANT_LIST_ITEM));
-    // Wait for at least one item if any
     await items.first().waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
 
     const count = await items.count();
@@ -420,138 +263,4 @@ export class QuizTemplatesPage extends BasePage {
     return names;
   }
 
-  /**
-   * Click the Delete Inactive button to open the confirmation dialog
-   */
-  async clickDeleteInactive(): Promise<void> {
-    await this.waitForLoading();
-    await this.deleteInactiveButton.waitFor({ state: 'visible', timeout: 5000 });
-    await this.deleteInactiveButton.click();
-    await this.confirmDialog.waitFor({ state: 'visible', timeout: 5000 });
-  }
-
-  /**
-   * Confirm the delete inactive dialog and wait for API response
-   * @returns The number of deleted templates from the API response
-   */
-  async confirmDeleteInactive(): Promise<number> {
-    // Set up BOTH response listeners BEFORE clicking confirm:
-    // 1. DELETE (the delete-inactive call)
-    // 2. GET (the list refetch triggered by React Query cache invalidation)
-    const deletePromise = this.page.waitForResponse(
-      response =>
-        response.url().includes('/questionerTemplates/delete/inactive') &&
-        response.request().method() === 'DELETE',
-      { timeout: 15000 }
-    );
-
-    const getPromise = this.page.waitForResponse(
-      response =>
-        response.url().includes('/questionerTemplates') &&
-        response.request().method() === 'GET',
-      { timeout: 15000 }
-    ).catch(() => null);
-
-    await this.confirmButton.click();
-
-    const response = await deletePromise;
-    let deletedCount = 0;
-
-    if (response.ok()) {
-      try {
-        const body = await response.json();
-        deletedCount = body.deletedCount ?? 0;
-      } catch {
-        // Could not parse delete inactive response
-      }
-    }
-
-    // Wait for dialog to close and list to refresh
-    await expect(this.confirmDialog).not.toBeVisible({ timeout: 5000 });
-    await getPromise;
-    await this.waitForLoading();
-
-    return deletedCount;
-  }
-
-  /**
-   * Cancel the delete inactive confirmation dialog
-   */
-  async cancelDeleteInactive(): Promise<void> {
-    await this.cancelConfirmButton.click();
-    // Wait for dialog to close
-    await expect(this.confirmDialog).not.toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Delete all inactive templates and return the count
-   * Combines clickDeleteInactive and confirmDeleteInactive
-   */
-  async deleteInactiveTemplates(): Promise<number> {
-    await this.clickDeleteInactive();
-    return await this.confirmDeleteInactive();
-  }
-
-  /**
-   * Deactivate any templates that are currently marked as active/enabled (optimized).
-   * Useful when a test needs to start from a clean state with no active quizzes.
-   */
-  async deactivateAllTemplates() {
-    // Reload to ensure we see current server state (not stale cache)
-    await this.page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
-    await this.waitForPageReady();
-
-    const statusSelector = testIdSelector(TestIds.STATUS_LABEL);
-    let attempts = 0;
-    const maxAttempts = 5;
-
-    while (attempts < maxAttempts) {
-      attempts++;
-      const activeRows = this.page.locator(testIdSelector(TestIds.TENANT_LIST_ITEM)).filter({
-        has: this.page.locator(statusSelector, { hasText: /^(active|enabled)$/i })
-      });
-
-      const count = await activeRows.count();
-
-      if (count === 0) {
-        break;
-      }
-
-      const row = activeRows.first();
-      await row.scrollIntoViewIfNeeded().catch(() => {});
-
-      // Set up BOTH listeners BEFORE clicking
-      const apiPromise = this.page.waitForResponse(
-        response => response.url().includes('/questionerTemplates') && (response.request().method() === 'PUT' || response.request().method() === 'DELETE'),
-        { timeout: 10000 }
-      ).catch(() => null);
-
-      const getPromise = this.page.waitForResponse(
-        response =>
-          response.url().includes('/questionerTemplates') &&
-          response.request().method() === 'GET',
-        { timeout: 10000 }
-      ).catch(() => null);
-
-      const activateButton = row.getByRole('button', { name: /activate|deactivate/i }).first();
-      const activateFallback = row.locator('text=/activate|🔁|⚡/i').first();
-
-      if (await activateButton.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await activateButton.click({ force: true });
-      } else if (await activateFallback.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await activateFallback.click({ force: true });
-      } else {
-        await this.page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
-        await this.waitForPageReady();
-        continue;
-      }
-
-      // Wait for API response and list refetch
-      await apiPromise;
-      await getPromise;
-      await this.waitForLoading();
-    }
-
-    // Max attempts reached if attempts >= maxAttempts
-  }
 }

@@ -112,17 +112,15 @@ test.describe.serial('Logout Flow @identity @auth', () => {
       }, { timeout: 20000 })
       .toMatchObject({ loggedOut: true });
 
-    // Wait for navigation to login page - either URL changes or login form becomes visible
-    // The app should redirect to login after logout
+    // Wait for redirect to login page
     await Promise.race([
       expect(page).toHaveURL(/login/i, { timeout: 15000 }).catch(() => {}),
       expect(page.locator(testIdSelector(TestIds.LOGIN_FORM))).toBeVisible({ timeout: 15000 }).catch(() => {}),
     ]);
-
-    // If still on a protected route, force navigation to login by refreshing
+    // If still on a protected route, force refresh to trigger auth redirect
     const currentUrl = page.url();
     if (!currentUrl.includes('login')) {
-      // The app might need a refresh to trigger the auth redirect
+      // eslint-disable-next-line no-page-reload/no-page-reload -- Testing that auth state clears after browser refresh
       await page.reload({ waitUntil: 'domcontentloaded' });
       await expect(page).toHaveURL(/login/i, { timeout: 10000 });
     }
@@ -289,7 +287,7 @@ test.describe.serial('Logout Flow @identity @auth', () => {
       localStorage.removeItem('userProfile');
     });
 
-    // Reload -- the app should detect missing auth and redirect to login
+    // eslint-disable-next-line no-page-reload/no-page-reload -- Testing that auth state clears after browser refresh
     await page.reload({ waitUntil: 'domcontentloaded' });
 
     // Verify redirect to login page

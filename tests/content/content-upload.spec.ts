@@ -13,7 +13,9 @@ import path from 'path';
  * - Accessibility contracts
  *
  * NOTE: Full UI integration tests are in:
- * - tests/online-menus/menu-content-upload.spec.ts
+ * - tests/online-menus/menu-content-upload-basic.spec.ts
+ * - tests/online-menus/menu-content-upload-create.spec.ts
+ * - tests/online-menus/menu-content-upload-advanced.spec.ts
  *
  * That file contains comprehensive tests for:
  * - Image upload to menu items and categories
@@ -120,7 +122,9 @@ test.describe('Content Upload - Test Fixtures @content-upload', () => {
 
 /**
  * NOTE: UI integration tests have been moved to:
- * tests/online-menus/menu-content-upload.spec.ts
+ * tests/online-menus/menu-content-upload-basic.spec.ts
+ * tests/online-menus/menu-content-upload-create.spec.ts
+ * tests/online-menus/menu-content-upload-advanced.spec.ts
  *
  * That file contains comprehensive tests for the complete upload flow
  * including image upload, save, reload, CORS handling, and deletion.

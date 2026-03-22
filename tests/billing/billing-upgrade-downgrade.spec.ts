@@ -1,5 +1,6 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { BillingPage } from '../../pages/BillingPage.js';
+import { BillingPricingPage } from '../../pages/BillingPricingPage.js';
 import { createAuthenticatedContext } from '../../helpers/serial-auth.js';
 import { TestIds, testIdSelector } from '../../shared/testIds.js';
 
@@ -21,11 +22,13 @@ test.describe.serial('Billing Upgrade and Downgrade Options @billing @upgrade-do
   let context: BrowserContext;
   let page: Page;
   let billingPage: BillingPage;
+  let pricingPage: BillingPricingPage;
 
   test.beforeAll(async ({ browser }, testInfo) => {
     test.setTimeout(60000);
     ({ context, page } = await createAuthenticatedContext(browser, testInfo));
     billingPage = new BillingPage(page);
+    pricingPage = new BillingPricingPage(page);
   });
 
   test.beforeEach(async () => {
@@ -37,10 +40,10 @@ test.describe.serial('Billing Upgrade and Downgrade Options @billing @upgrade-do
   });
 
   test('should show Enterprise plan card with a select button', async () => {
-    await billingPage.expectPlanCardsVisible();
+    await pricingPage.expectPlanCardsVisible();
 
     // Enterprise card should be visible and have a select button
-    const enterpriseCard = billingPage.getPlanCardByTier('Enterprise');
+    const enterpriseCard = pricingPage.getPlanCardByTier('Enterprise');
     await expect(enterpriseCard).toBeVisible();
 
     const selectButton = enterpriseCard.locator(
@@ -51,10 +54,10 @@ test.describe.serial('Billing Upgrade and Downgrade Options @billing @upgrade-do
   });
 
   test('should show Free plan card with a select button', async () => {
-    await billingPage.expectPlanCardsVisible();
+    await pricingPage.expectPlanCardsVisible();
 
     // Free card should be visible
-    const freeCard = billingPage.getPlanCardByTier('Free');
+    const freeCard = pricingPage.getPlanCardByTier('Free');
     await expect(freeCard).toBeVisible();
 
     // Free card always shows "Select Plan" (even for free tier the Free price is $0,
@@ -66,12 +69,12 @@ test.describe.serial('Billing Upgrade and Downgrade Options @billing @upgrade-do
   });
 
   test('should mark one plan as current when subscription is loaded', async () => {
-    await billingPage.expectPlanCardsVisible();
+    await pricingPage.expectPlanCardsVisible();
 
     // When the subscription is loaded, exactly one plan card shows "Current" badge
     // and does not have a select button. Under heavy load the subscription API
     // may not return data, so we verify the structure is correct when it does.
-    const proCard = billingPage.getPlanCardByTier('Pro');
+    const proCard = pricingPage.getPlanCardByTier('Pro');
     await expect(proCard).toBeVisible();
 
     const proText = await proCard.textContent() ?? '';
@@ -86,17 +89,17 @@ test.describe.serial('Billing Upgrade and Downgrade Options @billing @upgrade-do
       expect(await selectButton.count()).toBe(0);
     } else {
       // Subscription not loaded -- all cards show select buttons (acceptable under load)
-      const totalSelectButtons = await billingPage.planSelectButtons.count();
-      const totalCards = await billingPage.getPlanCardCount();
+      const totalSelectButtons = await pricingPage.planSelectButtons.count();
+      const totalCards = await pricingPage.getPlanCardCount();
       expect(totalSelectButtons).toBe(totalCards);
     }
   });
 
   test('should show select buttons enabled on non-current plans', async () => {
-    await billingPage.expectPlanCardsVisible();
+    await pricingPage.expectPlanCardsVisible();
 
     // All select buttons on non-current cards should be enabled (not disabled)
-    const selectButtons = billingPage.planSelectButtons;
+    const selectButtons = pricingPage.planSelectButtons;
     const buttonCount = await selectButtons.count();
 
     expect(buttonCount).toBeGreaterThan(0);
@@ -108,15 +111,15 @@ test.describe.serial('Billing Upgrade and Downgrade Options @billing @upgrade-do
 
   test('should show upgrade options in both monthly and annual cycles', async () => {
     // Verify select buttons are present in monthly mode
-    await billingPage.selectMonthlyCycle();
-    await billingPage.expectPlanCardsVisible();
-    const monthlyButtonCount = await billingPage.planSelectButtons.count();
+    await pricingPage.selectMonthlyCycle();
+    await pricingPage.expectPlanCardsVisible();
+    const monthlyButtonCount = await pricingPage.planSelectButtons.count();
     expect(monthlyButtonCount).toBeGreaterThan(0);
 
     // Verify select buttons are also present in annual mode
-    await billingPage.selectAnnualCycle();
-    await billingPage.expectPlanCardsVisible();
-    const annualButtonCount = await billingPage.planSelectButtons.count();
+    await pricingPage.selectAnnualCycle();
+    await pricingPage.expectPlanCardsVisible();
+    const annualButtonCount = await pricingPage.planSelectButtons.count();
     expect(annualButtonCount).toBeGreaterThan(0);
 
     // Same number of upgrade options in both modes

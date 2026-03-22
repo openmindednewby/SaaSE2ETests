@@ -14,6 +14,7 @@ import { test, expect, BrowserContext, Page } from '@playwright/test';
 
 import { isNotificationServiceHealthy } from '../../helpers/notification.helpers.js';
 import { NotificationsPage } from '../../pages/NotificationsPage.js';
+import { NotificationsStressPage } from '../../pages/NotificationsStressPage.js';
 import { hasNotificationTestApi } from '../utils/notificationHelpers.js';
 
 /** Extended timeout for cross-tab sync */
@@ -25,9 +26,10 @@ const SYNC_TIMEOUT_MS = 15000;
 async function setupPageWithAuth(
   context: BrowserContext,
   targetPath: string
-): Promise<{ page: Page; notificationsPage: NotificationsPage }> {
+): Promise<{ page: Page; notificationsPage: NotificationsPage; stressPage: NotificationsStressPage }> {
   const page = await context.newPage();
   const notificationsPage = new NotificationsPage(page);
+  const stressPage = new NotificationsStressPage(page);
 
   await page.addInitScript(() => {
     try {
@@ -42,7 +44,7 @@ async function setupPageWithAuth(
   await notificationsPage.goto(targetPath);
   await notificationsPage.waitForLoading();
 
-  return { page, notificationsPage };
+  return { page, notificationsPage, stressPage };
 }
 
 test.describe('Cross-Tab Notification Sync @notifications', () => {
@@ -71,7 +73,7 @@ test.describe('Cross-Tab Notification Sync @notifications', () => {
 
     // Inject a notification via Tab 1's test API
     const uniqueTitle = `Cross-Tab Sync ${Date.now()}`;
-    await tab1.notificationsPage.mockNotification({
+    await tab1.stressPage.mockNotification({
       id: `cross-tab-${Date.now()}`,
       title: uniqueTitle,
       body: 'Injected from Tab 1',
@@ -117,7 +119,7 @@ test.describe('Cross-Tab Notification Sync @notifications', () => {
     test.skip(!hasApi, 'Notification test API not available in this build');
 
     // Inject a notification in Tab 1
-    await tab1.notificationsPage.mockNotification({
+    await tab1.stressPage.mockNotification({
       id: `mark-read-cross-${Date.now()}`,
       title: 'Cross-Tab Read Test',
     });

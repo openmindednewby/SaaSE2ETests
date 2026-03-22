@@ -82,7 +82,7 @@ test.describe('Email OTP Flow @identity @email', () => {
     expect(email).not.toBeNull();
     expect(email!.Subject).toBe('Your Verification Code');
     expect(email!.To[0].Address).toBe(testEmail);
-    expect(email!.From.Address).toBe('noreply@localhost');
+    expect(email!.From.Address).toBe('noreply@saas.local');
 
     const bodyText = email!.Text || email!.HTML;
     expect(bodyText).toMatch(/verification code/i);
@@ -113,7 +113,7 @@ test.describe('Email OTP Flow @identity @email', () => {
 
     const email = await waitForEmailContent(testEmail);
     expect(email).not.toBeNull();
-    expect(email!.From.Address).toBe('noreply@localhost');
+    expect(email!.From.Address).toBe('noreply@saas.local');
     expect(email!.From.Name).toBe('SaaS Platform');
   });
 

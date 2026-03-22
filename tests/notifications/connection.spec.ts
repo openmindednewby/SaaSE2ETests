@@ -9,6 +9,13 @@
  *
  * These tests exercise the connection status indicator and verify
  * the UI recovers gracefully from network disruptions.
+ *
+ * STATUS: All tests are marked fixme — the notification list screen
+ * (/notifications) has not been implemented yet. The testIds
+ * NOTIFICATION_SCREEN, NOTIFICATION_LIST, and NOTIFICATION_CONNECTION_STATUS
+ * are defined in shared/testIds but no frontend component renders them.
+ * Once the notification screen is built, remove the fixme annotations
+ * and these tests should work as designed.
  */
 
 import { test, expect } from '@playwright/test';
@@ -52,6 +59,10 @@ test.describe('Notification Connection Resilience @notifications', () => {
   });
 
   test('should establish connection on page load', async ({ page }) => {
+    test.fixme(
+      true,
+      'Notification screen not implemented — no component renders testID="notification-screen"'
+    );
     test.skip(!serviceHealthy, 'NotificationService is not running');
 
     // Navigate to notifications screen
@@ -81,6 +92,10 @@ test.describe('Notification Connection Resilience @notifications', () => {
   });
 
   test('should reconnect after network loss', async ({ page, context }) => {
+    test.fixme(
+      true,
+      'Notification screen not implemented — no component renders testID="notification-screen"'
+    );
     test.skip(!serviceHealthy, 'NotificationService is not running');
 
     // Navigate to a page with notifications
@@ -131,6 +146,10 @@ test.describe('Notification Connection Resilience @notifications', () => {
   });
 
   test('should disconnect on logout', async ({ page }) => {
+    test.fixme(
+      true,
+      'Notification screen not implemented — logout disconnection cannot be verified without notification UI indicators'
+    );
     test.skip(!serviceHealthy, 'NotificationService is not running');
 
     // Start from a protected page
@@ -179,6 +198,10 @@ test.describe('Notification Connection Resilience @notifications', () => {
     page,
     context,
   }) => {
+    test.fixme(
+      true,
+      'Notification screen not implemented — no component renders testID="notification-screen"'
+    );
     test.skip(!serviceHealthy, 'NotificationService is not running');
 
     // Navigate to notifications
@@ -231,6 +254,10 @@ test.describe('Notification Connection Resilience @notifications', () => {
     page,
     context,
   }) => {
+    test.fixme(
+      true,
+      'Notification screen not implemented — no component renders testID="notification-screen"'
+    );
     test.skip(!serviceHealthy, 'NotificationService is not running');
 
     // Navigate to notifications

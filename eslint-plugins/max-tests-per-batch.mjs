@@ -7,7 +7,7 @@
  *
  * Default: max 100 total tests per batch → max 32 unique tests per batch directory.
  *
- * Batches map to Tilt resources (e.g., playwright-e2e-questioner-all).
+ * Batches map to Tilt resources (e.g., playwright-e2e-questioner-templates).
  * By default, the batch boundary is the first-level directory under tests/.
  * Directories split into sub-batches (like online-menus) can define custom
  * batch groupings via the `subBatches` option.

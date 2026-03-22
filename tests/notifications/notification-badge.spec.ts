@@ -15,12 +15,14 @@ import { test, expect } from '@playwright/test';
 
 import { isNotificationServiceHealthy } from '../../helpers/notification.helpers.js';
 import { NotificationsPage } from '../../pages/NotificationsPage.js';
+import { NotificationsStressPage } from '../../pages/NotificationsStressPage.js';
 import { TestIds } from '../../shared/testIds.js';
 import { hasNotificationTestApi } from '../utils/notificationHelpers.js';
 
 test.describe('Notification Badge @notifications', () => {
   test.setTimeout(60000);
   let notificationsPage: NotificationsPage;
+  let stressPage: NotificationsStressPage;
 
   /** Whether the NotificationService is reachable */
   let serviceHealthy = false;
@@ -31,6 +33,7 @@ test.describe('Notification Badge @notifications', () => {
 
   test.beforeEach(async ({ page }) => {
     notificationsPage = new NotificationsPage(page);
+    stressPage = new NotificationsStressPage(page);
 
     // Copy auth from localStorage (set by storageState) to sessionStorage
     // The app reads persist:auth from sessionStorage, but Playwright's
@@ -113,7 +116,7 @@ test.describe('Notification Badge @notifications', () => {
     const initialCount = await notificationsPage.getUnreadCount();
 
     // Inject a new notification
-    await notificationsPage.mockNotification({
+    await stressPage.mockNotification({
       id: `badge-test-${Date.now()}`,
       title: 'Badge Update Test',
       body: 'Testing badge increment',
@@ -138,7 +141,7 @@ test.describe('Notification Badge @notifications', () => {
       test.skip(!hasApi, 'No unread notifications and test API not available');
 
       // Inject a notification to have something to mark as read
-      await notificationsPage.mockNotification({
+      await stressPage.mockNotification({
         id: `read-test-${Date.now()}`,
         title: 'Read Test Notification',
       });

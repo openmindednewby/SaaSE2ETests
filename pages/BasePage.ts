@@ -2,25 +2,50 @@ import { Page } from '@playwright/test';
 
 export abstract class BasePage {
   readonly page: Page;
-  private cookieHandlerRegistered = false;
+  private overlayHandlersRegistered = false;
 
   constructor(page: Page) {
     this.page = page;
   }
 
   /**
-   * Register a locator handler that auto-dismisses the cookie consent banner
-   * whenever it blocks an action. Only registers once per page.
+   * Register locator handlers that auto-dismiss blocking overlays
+   * (cookie consent banner) whenever they block an action.
+   * Only registers once per page.
    */
-  async registerCookieConsentHandler() {
-    if (this.cookieHandlerRegistered) return;
-    this.cookieHandlerRegistered = true;
+  async registerOverlayHandlers() {
+    if (this.overlayHandlersRegistered) return;
+    this.overlayHandlersRegistered = true;
+
+    // Cookie consent banner
     await this.page.addLocatorHandler(
       this.page.locator('[data-testid="cookie-consent-banner"]'),
       async () => {
-        await this.page.locator('[data-testid="cookie-consent-accept-all"]').click();
+        // Use noWaitAfter + try/catch: the banner can be detached mid-navigation
+        try {
+          await this.page.locator('[data-testid="cookie-consent-accept-all"]').click({ noWaitAfter: true, timeout: 5000 });
+        } catch {
+          // Banner disappeared during navigation — safe to ignore
+        }
       },
     );
+  }
+
+  /**
+   * Mark all tooltip tours as "seen" in localStorage so they never appear during tests.
+   * This prevents the tooltip overlay from blocking Playwright interactions.
+   */
+  async suppressTooltipTours() {
+    try {
+      await this.page.evaluate(() => {
+        const tourIds = ['dashboard', 'editor', 'public-menu'];
+        for (const id of tourIds) {
+          localStorage.setItem(`menuflow_tour_seen_${id}`, 'true');
+        }
+      });
+    } catch {
+      // Ignore errors if page context is not ready
+    }
   }
 
   /**
@@ -61,15 +86,16 @@ export abstract class BasePage {
 
   /**
    * Navigate to a specific path.
-   * Waits for 'load' to ensure the JS bundle is downloaded before proceeding.
+   * Waits for 'domcontentloaded' to ensure the JS bundle is downloaded before proceeding.
    */
   async goto(path: string) {
-    await this.registerCookieConsentHandler();
+    await this.registerOverlayHandlers();
     await this.page.goto(path, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    // Run dismissOverlay and restoreAuth in parallel for speed
+    // Run dismissOverlay, restoreAuth, and suppressTooltipTours in parallel for speed
     await Promise.all([
       this.dismissOverlay(),
       !path.includes('/login') ? this.restoreAuth() : Promise.resolve(),
+      this.suppressTooltipTours(),
     ]);
   }
 

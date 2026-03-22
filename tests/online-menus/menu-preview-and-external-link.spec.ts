@@ -2,6 +2,7 @@ import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { getProjectUsers } from '../../fixtures/test-data.js';
 import { LoginPage } from '../../pages/LoginPage.js';
 import { OnlineMenusPage } from '../../pages/OnlineMenusPage.js';
+import { OnlineMenusPublicPage } from '../../pages/OnlineMenusPublicPage.js';
 
 /**
  * E2E Tests for Menu Preview and Open External Link Features
@@ -15,6 +16,7 @@ test.describe.serial('Menu Preview and External Link @online-menus @preview', ()
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;
+  let publicPage: OnlineMenusPublicPage;
   let testMenuName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
@@ -53,6 +55,7 @@ test.describe.serial('Menu Preview and External Link @online-menus @preview', ()
 
     // Initialize page objects
     menusPage = new OnlineMenusPage(page);
+    publicPage = new OnlineMenusPublicPage(page);
   });
 
   test.beforeEach(async () => {
@@ -94,44 +97,44 @@ test.describe.serial('Menu Preview and External Link @online-menus @preview', ()
     await menusPage.expectMenuActive(testMenuName, false);
 
     // Click preview button
-    await menusPage.openPreview(testMenuName);
+    await publicPage.openPreview(testMenuName);
 
     // Verify modal is visible
-    await menusPage.expectPreviewModalVisible();
+    await publicPage.expectPreviewModalVisible();
   });
 
   test('should show menu name in preview modal', async () => {
     expect(testMenuName, 'Test menu name not set').toBeTruthy();
 
     // Open preview (modal may still be open from previous test, but let's ensure it's open)
-    const previewBtn = menusPage.getPreviewButton(testMenuName);
+    const previewBtn = publicPage.getPreviewButton(testMenuName);
 
     // Close any existing modal first
-    if (await menusPage.previewModal.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await menusPage.closePreview();
+    if (await publicPage.previewModal.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await publicPage.closePreview();
     }
 
     await previewBtn.click();
-    await menusPage.expectPreviewModalVisible();
+    await publicPage.expectPreviewModalVisible();
 
     // Verify the menu name appears in the modal
-    await expect(menusPage.previewModal).toContainText(testMenuName, { timeout: 5000 });
+    await expect(publicPage.previewModal).toContainText(testMenuName, { timeout: 5000 });
   });
 
   test('should close preview modal when clicking close button', async () => {
     expect(testMenuName, 'Test menu name not set').toBeTruthy();
 
     // Open preview if not already open
-    if (!await menusPage.previewModal.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await menusPage.openPreview(testMenuName);
-      await menusPage.expectPreviewModalVisible();
+    if (!await publicPage.previewModal.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await publicPage.openPreview(testMenuName);
+      await publicPage.expectPreviewModalVisible();
     }
 
     // Close the modal
-    await menusPage.closePreview();
+    await publicPage.closePreview();
 
     // Verify modal is closed
-    await menusPage.expectPreviewModalNotVisible();
+    await publicPage.expectPreviewModalNotVisible();
   });
 
   test('should open preview modal for active menu', async () => {
@@ -142,14 +145,14 @@ test.describe.serial('Menu Preview and External Link @online-menus @preview', ()
     await menusPage.expectMenuActive(testMenuName, true);
 
     // Open preview
-    await menusPage.openPreview(testMenuName);
+    await publicPage.openPreview(testMenuName);
 
     // Verify modal is visible
-    await menusPage.expectPreviewModalVisible();
+    await publicPage.expectPreviewModalVisible();
 
     // Close the modal
-    await menusPage.closePreview();
-    await menusPage.expectPreviewModalNotVisible();
+    await publicPage.closePreview();
+    await publicPage.expectPreviewModalNotVisible();
   });
 
   // ============================================
@@ -167,7 +170,7 @@ test.describe.serial('Menu Preview and External Link @online-menus @preview', ()
     }
 
     // Check that the open external button is enabled
-    const isEnabled = await menusPage.isOpenExternalButtonEnabled(testMenuName);
+    const isEnabled = await publicPage.isOpenExternalButtonEnabled(testMenuName);
     expect(isEnabled, 'Open external button should be enabled for active menu').toBe(true);
   });
 
@@ -182,7 +185,7 @@ test.describe.serial('Menu Preview and External Link @online-menus @preview', ()
     }
 
     // Click open external and get the new page
-    const newPage = await menusPage.openExternalLink(testMenuName);
+    const newPage = await publicPage.openExternalLink(testMenuName);
 
     // Verify a new tab was opened
     expect(newPage, 'New tab should open when clicking open external on active menu').not.toBeNull();
@@ -205,7 +208,7 @@ test.describe.serial('Menu Preview and External Link @online-menus @preview', ()
     await menusPage.expectMenuActive(testMenuName, false);
 
     // Check that the open external button is disabled
-    const isEnabled = await menusPage.isOpenExternalButtonEnabled(testMenuName);
+    const isEnabled = await publicPage.isOpenExternalButtonEnabled(testMenuName);
     expect(isEnabled, 'Open external button should be disabled for inactive menu').toBe(false);
   });
 
@@ -216,7 +219,7 @@ test.describe.serial('Menu Preview and External Link @online-menus @preview', ()
     await menusPage.expectMenuActive(testMenuName, false);
 
     // Try to click open external
-    const newPage = await menusPage.openExternalLink(testMenuName);
+    const newPage = await publicPage.openExternalLink(testMenuName);
 
     // Verify no new tab was opened
     expect(newPage, 'No new tab should open when clicking open external on inactive menu').toBeNull();
@@ -234,13 +237,13 @@ test.describe.serial('Menu Preview and External Link @online-menus @preview', ()
     await menusPage.expectMenuActive(testMenuName, true);
 
     // Test preview works
-    await menusPage.openPreview(testMenuName);
-    await menusPage.expectPreviewModalVisible();
-    await menusPage.closePreview();
-    await menusPage.expectPreviewModalNotVisible();
+    await publicPage.openPreview(testMenuName);
+    await publicPage.expectPreviewModalVisible();
+    await publicPage.closePreview();
+    await publicPage.expectPreviewModalNotVisible();
 
     // Test external link works
-    const newPage = await menusPage.openExternalLink(testMenuName);
+    const newPage = await publicPage.openExternalLink(testMenuName);
     expect(newPage, 'External link should work for active menu').not.toBeNull();
 
     if (newPage) {
@@ -256,13 +259,13 @@ test.describe.serial('Menu Preview and External Link @online-menus @preview', ()
     await menusPage.expectMenuActive(testMenuName, false);
 
     // Test preview still works for inactive menu
-    await menusPage.openPreview(testMenuName);
-    await menusPage.expectPreviewModalVisible();
-    await menusPage.closePreview();
-    await menusPage.expectPreviewModalNotVisible();
+    await publicPage.openPreview(testMenuName);
+    await publicPage.expectPreviewModalVisible();
+    await publicPage.closePreview();
+    await publicPage.expectPreviewModalNotVisible();
 
     // Test external link is disabled for inactive menu
-    const isEnabled = await menusPage.isOpenExternalButtonEnabled(testMenuName);
+    const isEnabled = await publicPage.isOpenExternalButtonEnabled(testMenuName);
     expect(isEnabled, 'Open external should be disabled after deactivation').toBe(false);
   });
 });

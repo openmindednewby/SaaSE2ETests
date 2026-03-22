@@ -1,5 +1,6 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { BillingPage } from '../../pages/BillingPage.js';
+import { BillingPricingPage } from '../../pages/BillingPricingPage.js';
 import { createAuthenticatedContext } from '../../helpers/serial-auth.js';
 
 /**
@@ -20,11 +21,13 @@ test.describe.serial('Billing History Display @billing @history', () => {
   let context: BrowserContext;
   let page: Page;
   let billingPage: BillingPage;
+  let pricingPage: BillingPricingPage;
 
   test.beforeAll(async ({ browser }, testInfo) => {
     test.setTimeout(60000);
     ({ context, page } = await createAuthenticatedContext(browser, testInfo));
     billingPage = new BillingPage(page);
+    pricingPage = new BillingPricingPage(page);
   });
 
   test.beforeEach(async () => {
@@ -40,22 +43,22 @@ test.describe.serial('Billing History Display @billing @history', () => {
     await billingPage.expectBillingScreenVisible();
 
     // Either the empty state or the table should be visible
-    const emptyCount = await billingPage.historyEmpty.count();
-    const tableCount = await billingPage.historyTable.count();
+    const emptyCount = await pricingPage.historyEmpty.count();
+    const tableCount = await pricingPage.historyTable.count();
     expect(emptyCount + tableCount).toBeGreaterThan(0);
   });
 
   test('should show empty state for free tier with no transactions', async () => {
     // For the default free tier, there should be no billing history
     // Check if we have the empty state (expected for free tier)
-    const hasEmptyState = await billingPage.historyEmpty.count() > 0;
-    const hasHistoryRows = await billingPage.historyRows.count() > 0;
+    const hasEmptyState = await pricingPage.historyEmpty.count() > 0;
+    const hasHistoryRows = await pricingPage.historyRows.count() > 0;
 
     if (hasEmptyState) {
-      await billingPage.expectHistoryEmpty();
+      await pricingPage.expectHistoryEmpty();
     } else if (hasHistoryRows) {
       // If there are history rows, the table should be visible
-      await billingPage.expectHistoryTableVisible();
+      await pricingPage.expectHistoryTableVisible();
     }
 
     // At minimum, the billing screen should be loaded
@@ -64,32 +67,32 @@ test.describe.serial('Billing History Display @billing @history', () => {
 
   test('should show correct column headers when history table is rendered', async () => {
     // If the history table is visible, verify it has header cells
-    const tableVisible = await billingPage.historyTable.count() > 0;
+    const tableVisible = await pricingPage.historyTable.count() > 0;
 
     if (tableVisible) {
-      await billingPage.expectHistoryTableVisible();
+      await pricingPage.expectHistoryTableVisible();
 
       // The table should contain Date, Description, Amount, and Status headers
-      const tableText = await billingPage.historyTable.textContent() ?? '';
+      const tableText = await pricingPage.historyTable.textContent() ?? '';
       expect(tableText.length).toBeGreaterThan(0);
     } else {
       // Empty state is shown instead -- this is valid for free tier
-      await billingPage.expectHistoryEmpty();
+      await pricingPage.expectHistoryEmpty();
     }
   });
 
   test('should render pagination controls when history has entries', async () => {
-    const hasHistoryRows = await billingPage.historyRows.count() > 0;
+    const hasHistoryRows = await pricingPage.historyRows.count() > 0;
 
     if (hasHistoryRows) {
       // When there are history entries, pagination controls should be visible
-      await billingPage.expectPaginationVisible();
+      await pricingPage.expectPaginationVisible();
 
       // On the first page, the previous button should be disabled
-      await billingPage.expectPrevPageDisabled();
+      await pricingPage.expectPrevPageDisabled();
     } else {
       // No history entries -- empty state is expected for free tier
-      await billingPage.expectHistoryEmpty();
+      await pricingPage.expectHistoryEmpty();
     }
   });
 

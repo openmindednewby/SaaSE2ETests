@@ -1,3 +1,4 @@
+/* eslint-disable max-file-lines/max-file-lines -- Shared constants barrel; splitting would break imports across all test files */
 /**
  * Shared testID constants for E2E testing
  *
@@ -106,6 +107,8 @@ export const TestIds = {
   CATEGORY_EDIT_BUTTON: 'category-edit-button',
   CATEGORY_DELETE_BUTTON: 'category-delete-button',
   CATEGORY_DRAG_HANDLE: 'category-drag-handle',
+  CATEGORY_OVERFLOW_BUTTON: 'category-overflow-button',
+  CATEGORY_OVERFLOW_MENU: 'category-overflow-menu',
   CATEGORY_IMAGE_PICKER: 'category-image-picker',
   CATEGORY_VIDEO_PICKER: 'category-video-picker',
 
@@ -162,6 +165,11 @@ export const TestIds = {
   NOTIFICATION_PREFERENCES_SAVE_BUTTON: 'notification-preferences-save-button',
   NOTIFICATION_PREFERENCE_DROPDOWN: 'notification-preference-dropdown',
   NOTIFICATION_SETTINGS_BUTTON: 'notification-settings-button',
+
+  // Image Crop Modal
+  CROP_MODAL: 'crop-modal',
+  CROP_MODAL_APPLY: 'crop-modal-apply',
+  CROP_MODAL_CANCEL: 'crop-modal-cancel',
 
   // Content Upload Components
   CONTENT_UPLOADER: 'content-uploader',

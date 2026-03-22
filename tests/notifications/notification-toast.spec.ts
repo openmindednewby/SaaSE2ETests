@@ -16,11 +16,13 @@ import { test, expect } from '@playwright/test';
 
 import { isNotificationServiceHealthy } from '../../helpers/notification.helpers.js';
 import { NotificationsPage } from '../../pages/NotificationsPage.js';
+import { NotificationsStressPage } from '../../pages/NotificationsStressPage.js';
 import { TestIds } from '../../shared/testIds.js';
 import { hasNotificationTestApi } from '../utils/notificationHelpers.js';
 
 test.describe('Notification Toast @notifications', () => {
   let notificationsPage: NotificationsPage;
+  let stressPage: NotificationsStressPage;
 
   /** Whether the NotificationService is reachable */
   let serviceHealthy = false;
@@ -31,6 +33,7 @@ test.describe('Notification Toast @notifications', () => {
 
   test.beforeEach(async ({ page }) => {
     notificationsPage = new NotificationsPage(page);
+    stressPage = new NotificationsStressPage(page);
 
     // Copy auth from localStorage (set by storageState) to sessionStorage
     // The app reads persist:auth from sessionStorage, but Playwright's
@@ -65,7 +68,7 @@ test.describe('Notification Toast @notifications', () => {
     test.skip(!hasApi, 'Notification test API not available in this build');
 
     // Inject a mock toast notification
-    await notificationsPage.mockToast({
+    await stressPage.mockToast({
       id: 'test-notification-1',
       title: 'Test Notification',
       body: 'This is a test notification body',
@@ -93,7 +96,7 @@ test.describe('Notification Toast @notifications', () => {
     test.skip(!hasApi, 'Notification test API not available in this build');
 
     // Inject a mock toast notification
-    await notificationsPage.mockToast({
+    await stressPage.mockToast({
       id: 'test-auto-dismiss',
       title: 'Auto Dismiss Test',
     });
@@ -115,7 +118,7 @@ test.describe('Notification Toast @notifications', () => {
     test.skip(!hasApi, 'Notification test API not available in this build');
 
     // Inject a mock toast notification
-    await notificationsPage.mockToast({
+    await stressPage.mockToast({
       id: 'test-manual-dismiss',
       title: 'Manual Dismiss Test',
     });
@@ -137,7 +140,7 @@ test.describe('Notification Toast @notifications', () => {
     test.skip(!hasApi, 'Notification test API not available in this build');
 
     // Inject a toast notification with an actionUrl
-    await notificationsPage.mockToast({
+    await stressPage.mockToast({
       id: 'test-action-url',
       title: 'Action Notification',
       body: 'Click to navigate',
@@ -161,17 +164,17 @@ test.describe('Notification Toast @notifications', () => {
     test.skip(!hasApi, 'Notification test API not available in this build');
 
     // Inject multiple toast notifications
-    await notificationsPage.mockToast({
+    await stressPage.mockToast({
       id: 'test-stack-1',
       title: 'First Notification',
     });
 
-    await notificationsPage.mockToast({
+    await stressPage.mockToast({
       id: 'test-stack-2',
       title: 'Second Notification',
     });
 
-    await notificationsPage.mockToast({
+    await stressPage.mockToast({
       id: 'test-stack-3',
       title: 'Third Notification',
     });
@@ -199,7 +202,7 @@ test.describe('Notification Toast @notifications', () => {
     await expect(container).not.toBeVisible();
 
     // Inject a toast notification
-    await notificationsPage.mockToast({
+    await stressPage.mockToast({
       id: 'test-container',
       title: 'Container Test',
     });
@@ -214,12 +217,12 @@ test.describe('Notification Toast @notifications', () => {
     test.skip(!hasApi, 'Notification test API not available in this build');
 
     // Inject two toast notifications
-    await notificationsPage.mockToast({
+    await stressPage.mockToast({
       id: 'test-multi-1',
       title: 'Keep This Toast',
     });
 
-    await notificationsPage.mockToast({
+    await stressPage.mockToast({
       id: 'test-multi-2',
       title: 'Dismiss This Toast',
     });

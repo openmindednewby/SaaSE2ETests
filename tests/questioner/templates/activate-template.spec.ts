@@ -4,6 +4,7 @@ import { getProjectUsers } from '../../../fixtures/test-data.js';
 import { LoginPage } from '../../../pages/LoginPage.js';
 import { QuizActivePage } from '../../../pages/QuizActivePage.js';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
+import { QuizTemplatesQuizPage } from '../../../pages/QuizTemplatesQuizPage.js';
 
 // Use serial mode so tests run in order and share the same browser context
 test.describe.serial('Activate Quiz Template @questioner @crud', () => {
@@ -11,6 +12,7 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
   let context: BrowserContext;
   let page: Page;
   let templatesPage: QuizTemplatesPage;
+  let quizPage: QuizTemplatesQuizPage;
   let testTemplateName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
@@ -47,6 +49,7 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
 
     // Initialize page objects
     templatesPage = new QuizTemplatesPage(page);
+    quizPage = new QuizTemplatesQuizPage(page);
   });
 
   test.beforeEach(async () => {
@@ -59,7 +62,7 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
   });
 
   async function ensureNoActiveTemplates() {
-    await templatesPage.deactivateAllTemplates();
+    await quizPage.deactivateAllTemplates();
     await templatesPage.refetchTemplatesList();
   }
 
@@ -69,7 +72,7 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
     // Cleanup - deactivate first if active, then delete
     try {
       await templatesPage.goto();
-      await templatesPage.deactivateAllTemplates();
+      await quizPage.deactivateAllTemplates();
       if (testTemplateName && await templatesPage.templateExists(testTemplateName)) {
         await templatesPage.deleteTemplate(testTemplateName, false);
       }
@@ -100,34 +103,34 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
     await templatesPage.expectTemplateInList(testTemplateName);
 
     // Activate the template
-    const activated = await templatesPage.activateTemplate(testTemplateName);
+    const activated = await quizPage.activateTemplate(testTemplateName);
     if (!activated) {
       // Common flake: another test in the same tenant activated something concurrently.
       // Deactivate again and retry once.
       await ensureNoActiveTemplates();
-      await templatesPage.activateTemplate(testTemplateName);
+      await quizPage.activateTemplate(testTemplateName);
     }
 
     // Check if it shows as active
-    await templatesPage.expectTemplateActive(testTemplateName, true);
+    await quizPage.expectTemplateActive(testTemplateName, true);
   });
 
   test('should deactivate an active template', async () => {
     expect(testTemplateName, 'Test template name not set; did the create test run?').toBeTruthy();
     // Template should already be active from previous test
-    await templatesPage.expectTemplateActive(testTemplateName, true);
+    await quizPage.expectTemplateActive(testTemplateName, true);
 
     // Deactivate (click activate again to toggle)
-    await templatesPage.activateTemplate(testTemplateName);
+    await quizPage.activateTemplate(testTemplateName);
 
     // Check if it's now inactive
-    await templatesPage.expectTemplateActive(testTemplateName, false);
+    await quizPage.expectTemplateActive(testTemplateName, false);
   });
 
   test('should show active template on quiz-active page', async () => {
     expect(testTemplateName, 'Test template name not set; did the create test run?').toBeTruthy();
     // Activate the template again
-    await templatesPage.activateTemplate(testTemplateName);
+    await quizPage.activateTemplate(testTemplateName);
 
     // Navigate to quiz active page
     const quizActivePage = new QuizActivePage(page);

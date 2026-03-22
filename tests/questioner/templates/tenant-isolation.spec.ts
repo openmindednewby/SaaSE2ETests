@@ -228,7 +228,7 @@ test.describe('Tenant Isolation @questioner @security', () => {
     let createdId: string | undefined;
     try {
       // Create template as TenantA admin
-      const createResp = await apiA.post('/questionerTemplates', {
+      const createResp = await apiA.post('/api/v1/questionerTemplates', {
         data: { name: isolationTemplateName, description: 'For isolation test' },
       });
       expect(createResp.ok()).toBe(true);
@@ -237,14 +237,14 @@ test.describe('Tenant Isolation @questioner @security', () => {
       expect(createdId).toBeTruthy();
 
       // Verify TenantA can see it
-      const listAResp = await apiA.get('/questionerTemplates/list');
+      const listAResp = await apiA.get('/api/v1/questionerTemplates/list');
       expect(listAResp.ok()).toBe(true);
       const listA = (await listAResp.json()) as { questionerTemplates?: Array<{ externalId?: string; name?: string }> };
       const namesA = (listA.questionerTemplates ?? []).map((t) => t.name).filter((n): n is string => typeof n === 'string');
       expect(namesA).toContain(isolationTemplateName);
 
       // Verify TenantB cannot see it
-      const listBResp = await apiB.get('/questionerTemplates/list');
+      const listBResp = await apiB.get('/api/v1/questionerTemplates/list');
       expect(listBResp.ok()).toBe(true);
       const listB = (await listBResp.json()) as { questionerTemplates?: Array<{ externalId?: string; name?: string }> };
       const namesB = (listB.questionerTemplates ?? []).map((t) => t.name).filter((n): n is string => typeof n === 'string');
@@ -252,7 +252,7 @@ test.describe('Tenant Isolation @questioner @security', () => {
       expect(namesB).not.toContain(isolationTemplateName);
     } finally {
       if (typeof createdId === 'string' && createdId.length > 0) {
-        await apiA.delete(`/questionerTemplates/${createdId}`).catch(() => {});
+        await apiA.delete(`/api/v1/questionerTemplates/${createdId}`).catch(() => {});
       }
       await apiA.dispose();
       await apiB.dispose();

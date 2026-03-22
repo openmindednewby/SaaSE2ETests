@@ -1,7 +1,17 @@
 import { Locator, Page, expect } from '@playwright/test';
-import { TestIds, testIdSelector, indexedTestIdSelector, testIdStartsWithSelector } from '../shared/testIds.js';
+import { TestIds, testIdSelector } from '../shared/testIds.js';
 import { BasePage } from './BasePage.js';
+import { OnlineMenusContentPage } from './OnlineMenusContentPage.js';
+import { OnlineMenusEditorPage } from './OnlineMenusEditorPage.js';
 
+/**
+ * Page object for core Online Menus list operations.
+ * Handles navigation, menu CRUD, activation/deactivation, and status queries.
+ *
+ * For editor operations (categories, items), use OnlineMenusEditorPage.
+ * For content upload operations, use OnlineMenusContentPage.
+ * For preview, QR code, and external link, use OnlineMenusPublicPage.
+ */
 export class OnlineMenusPage extends BasePage {
   readonly pageHeader: Locator;
   readonly menuList: Locator;
@@ -19,32 +29,6 @@ export class OnlineMenusPage extends BasePage {
   readonly menuEditorSaveButton: Locator;
   readonly menuEditorCancelButton: Locator;
 
-  // Preview Modal
-  readonly previewModal: Locator;
-
-  // QR Code Modal
-  readonly qrCodeModal: Locator;
-  readonly qrCodeDisplay: Locator;
-  readonly qrCodeMenuName: Locator;
-  readonly qrCodeUrlText: Locator;
-  readonly qrCodeFgColorInput: Locator;
-  readonly qrCodeBgColorInput: Locator;
-  readonly qrCodeDownloadPngButton: Locator;
-  readonly qrCodeDownloadSvgButton: Locator;
-  readonly qrCodeCopyLinkButton: Locator;
-  readonly qrCodeCloseButton: Locator;
-
-  // Category Management
-  readonly categoryAddButton: Locator;
-  readonly categoryList: Locator;
-
-  // Content Upload
-  readonly contentUploader: Locator;
-  readonly contentUploaderButton: Locator;
-  readonly contentPreview: Locator;
-  readonly contentPreviewImage: Locator;
-  readonly uploadProgressContainer: Locator;
-
   constructor(page: Page) {
     super(page);
     this.pageHeader = page.getByText(/menus/i);
@@ -56,187 +40,90 @@ export class OnlineMenusPage extends BasePage {
     this.confirmButton = page.locator(testIdSelector(TestIds.CONFIRM_BUTTON));
     this.cancelConfirmButton = page.locator(testIdSelector(TestIds.CANCEL_CONFIRM_BUTTON));
 
-    // Menu Editor
-    this.menuEditor = page.locator(testIdSelector(TestIds.MENU_EDITOR));
+    this.menuEditor = page.getByRole('dialog');
     this.menuNameInput = page.locator(testIdSelector(TestIds.MENU_EDITOR_NAME_INPUT));
     this.menuDescriptionInput = page.locator(testIdSelector(TestIds.MENU_EDITOR_DESCRIPTION_INPUT));
     this.menuEditorSaveButton = page.locator(testIdSelector(TestIds.MENU_EDITOR_SAVE_BUTTON));
     this.menuEditorCancelButton = page.locator(testIdSelector(TestIds.MENU_EDITOR_CANCEL_BUTTON));
-
-    // Preview Modal
-    this.previewModal = page.locator(testIdSelector(TestIds.MENU_PREVIEW_MODAL));
-
-    // QR Code Modal
-    this.qrCodeModal = page.locator(testIdSelector(TestIds.QR_CODE_MODAL));
-    this.qrCodeDisplay = page.locator(testIdSelector(TestIds.QR_CODE_DISPLAY));
-    this.qrCodeMenuName = page.locator(testIdSelector(TestIds.QR_CODE_MENU_NAME));
-    this.qrCodeUrlText = page.locator(testIdSelector(TestIds.QR_CODE_URL_TEXT));
-    this.qrCodeFgColorInput = page.locator(testIdSelector(TestIds.QR_CODE_FG_COLOR_INPUT));
-    this.qrCodeBgColorInput = page.locator(testIdSelector(TestIds.QR_CODE_BG_COLOR_INPUT));
-    this.qrCodeDownloadPngButton = page.locator(testIdSelector(TestIds.QR_CODE_DOWNLOAD_PNG_BUTTON));
-    this.qrCodeDownloadSvgButton = page.locator(testIdSelector(TestIds.QR_CODE_DOWNLOAD_SVG_BUTTON));
-    this.qrCodeCopyLinkButton = page.locator(testIdSelector(TestIds.QR_CODE_COPY_LINK_BUTTON));
-    this.qrCodeCloseButton = page.locator(testIdSelector(TestIds.QR_CODE_CLOSE_BUTTON));
-
-    // Category Management
-    this.categoryAddButton = page.locator(testIdSelector(TestIds.CATEGORY_ADD_BUTTON));
-    this.categoryList = page.locator(testIdSelector(TestIds.CATEGORY_LIST));
-
-    // Content Upload
-    this.contentUploader = page.locator(testIdSelector(TestIds.CONTENT_UPLOADER));
-    this.contentUploaderButton = page.locator(testIdSelector(TestIds.CONTENT_UPLOADER_BUTTON));
-    this.contentPreview = page.locator(testIdSelector(TestIds.CONTENT_PREVIEW));
-    this.contentPreviewImage = page.locator(testIdSelector(TestIds.CONTENT_PREVIEW_IMAGE));
-    this.uploadProgressContainer = page.locator(testIdSelector(TestIds.UPLOAD_PROGRESS_CONTAINER));
   }
 
-  /**
-   * Navigate to online menus page
-   */
   async goto() {
-    await super.goto('/menus');
-    await this.waitForLoading();
-    // Wait for the page header or create button to confirm the menus page has rendered.
-    // Under concurrency, the page may take longer to hydrate after auth restoration.
-    await expect(this.createMenuButton).toBeVisible({ timeout: 15000 });
-  }
-
-  /**
-   * Force a fresh fetch of the menus list (helps when React Query cache is stale).
-   */
-  async refetchMenusList() {
-    const listFetch = this.page.waitForResponse(
-      (response) => response.url().includes('/TenantMenus') && response.request().method() === 'GET',
-      { timeout: 10000 }
-    ).catch(() => null);
-
-    // Navigate instead of reload to ensure auth restoration and proper page setup
-    await this.goto();
-    await listFetch;
-  }
-
-  /**
-   * Click the refresh button to reload the menus list.
-   * Uses the new refresh button in the page header for a more targeted refresh
-   * without a full page reload.
-   */
-  async refresh() {
-    await this.waitForLoading();
-
-    // Set up listener for the API call
-    const listFetch = this.page.waitForResponse(
-      (response) => response.url().includes('/TenantMenus') && response.request().method() === 'GET',
-      { timeout: 10000 }
-    ).catch(() => null);
-
-    // Click the refresh button
-    await this.refreshButton.click();
-
-    // Wait for loading indicator to appear and disappear
-    await this.waitForLoading();
-
-    // Wait for the API response
-    await listFetch;
-  }
-
-  /**
-   * Create a new menu (optimized - no redundant waits)
-   */
-  async createMenu(name: string, description: string = '') {
-    // Ensure the create button is visible and ready before clicking
-    // Under concurrency (12 workers), the page may still be settling after deactivateAllMenus()
-    await expect(this.createMenuButton).toBeVisible({ timeout: 15000 });
-    // Firefox under high concurrency can be slow to process click events
-    await this.createMenuButton.click({ timeout: 15000 });
-
-    // Wait for editor to appear (15s for high-concurrency runs with 12 workers)
-    await this.menuEditor.waitFor({ state: 'visible', timeout: 15000 });
-
-    // Fill name
-    await this.menuNameInput.fill(name);
-
-    if (description) {
-      await this.menuDescriptionInput.fill(description);
-    }
-
-    // Click Save button and wait for API response
-    const responsePromise = this.page.waitForResponse(
-      response => response.url().includes('/TenantMenus') && response.request().method() === 'POST',
-      { timeout: 15000 }
-    );
-
-    // Also listen for the GET refetch that React Query triggers after the mutation.
-    // This ensures we don't proceed until the list has been fully refreshed.
-    const refetchPromise = this.page.waitForResponse(
-      response => response.url().includes('/TenantMenus') && response.request().method() === 'GET' && response.ok(),
-      { timeout: 15000 }
-    ).catch(() => null);
-
-    await this.menuEditorSaveButton.click();
-
-    // Wait for POST to complete and verify it succeeded
-    const postResponse = await responsePromise;
-    if (!postResponse.ok()) {
-      throw new Error(`Menu creation failed with status ${postResponse.status()}`);
-    }
-
-    // Wait for the GET refetch to complete so the list is fully up to date
-    await refetchPromise;
-
-    // Wait for loading indicator to clear after the refetch
-    await this.waitForLoading();
-
-    // Wait for the editor to close, confirming the UI transition is complete
-    await expect(this.menuEditor).not.toBeVisible({ timeout: 10000 });
-  }
-
-  /**
-   * Get menu card by exact name match
-   * Uses regex with ^ and $ anchors to ensure exact match
-   */
-  getMenuCard(name: string): Locator {
-    // Escape special regex characters in the menu name
-    const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    // Use regex with anchors for exact match to avoid "Active Menu" matching "Inactive Menu"
-    const exactRegex = new RegExp(`^${escapedName}$`);
-    return this.page.locator(testIdSelector(TestIds.MENU_CARD)).filter({
-      has: this.page.locator(testIdSelector(TestIds.MENU_CARD_NAME), { hasText: exactRegex }),
-    }).first();
-  }
-
-  /**
-   * Check if a menu exists in the list
-   */
-  async menuExists(name: string): Promise<boolean> {
-    await this.waitForLoading();
-    const menu = this.getMenuCard(name);
-    return await menu.waitFor({ state: 'visible', timeout: 15000 })
-      .then(() => true)
-      .catch(() => false);
-  }
-
-  /**
-   * Expect menu to be visible in the list.
-   * Retries with a page refetch if the menu is not found on the first attempt,
-   * guarding against stale React Query cache or slow list re-renders.
-   */
-  async expectMenuInList(name: string) {
-    const menu = this.getMenuCard(name);
-
     for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        await expect(menu).toBeVisible({ timeout: 15000 });
-        return;
-      } catch (error) {
-        if (attempt >= 3) throw error;
-        await this.refetchMenusList();
+      await super.goto('/menus');
+      await this.waitForLoading();
+      await expect(this.createMenuButton).toBeVisible({ timeout: 15000 });
+      const errorText = this.page.getByText(/failed to load/i);
+      const hasError = await errorText.isVisible({ timeout: 1000 }).catch(() => false);
+      if (!hasError) return;
+      if (attempt < 3) {
+        await this.page.getByRole('button', { name: /refresh/i }).click().catch(() => {});
+        await this.waitForLoading();
       }
     }
   }
 
-  /**
-   * Expect menu to not be in the list
-   */
+  async refetchMenusList() {
+    const listFetch = this.page.waitForResponse(
+      (r) => r.url().includes('/TenantMenus') && r.request().method() === 'GET',
+      { timeout: 10000 }
+    ).catch(() => null);
+    await this.goto();
+    await listFetch;
+  }
+
+  async refresh() {
+    await this.waitForLoading();
+    const listFetch = this.page.waitForResponse(
+      (r) => r.url().includes('/TenantMenus') && r.request().method() === 'GET',
+      { timeout: 10000 }
+    ).catch(() => null);
+    await this.refreshButton.click();
+    await this.waitForLoading();
+    await listFetch;
+  }
+
+  async createMenu(name: string, description: string = '') {
+    await expect(this.createMenuButton).toBeVisible({ timeout: 15000 });
+    await this.createMenuButton.click({ timeout: 15000 });
+    await this.menuEditor.waitFor({ state: 'visible', timeout: 15000 });
+    await this.menuNameInput.fill(name);
+    if (description) await this.menuDescriptionInput.fill(description);
+
+    const postPromise = this.page.waitForResponse(
+      r => r.url().includes('/TenantMenus') && r.request().method() === 'POST', { timeout: 15000 }
+    );
+    const refetchPromise = this.page.waitForResponse(
+      r => r.url().includes('/TenantMenus') && r.request().method() === 'GET' && r.ok(), { timeout: 15000 }
+    ).catch(() => null);
+
+    await this.menuEditorSaveButton.click();
+    const postResponse = await postPromise;
+    if (!postResponse.ok()) throw new Error(`Menu creation failed with status ${postResponse.status()}`);
+    await refetchPromise;
+    await this.waitForLoading();
+    await expect(this.menuEditor).not.toBeVisible({ timeout: 10000 });
+  }
+
+  getMenuCard(name: string): Locator {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return this.page.locator(testIdSelector(TestIds.MENU_CARD)).filter({
+      has: this.page.locator(testIdSelector(TestIds.MENU_CARD_NAME), { hasText: new RegExp(`^${escaped}$`) }),
+    }).first();
+  }
+
+  async menuExists(name: string): Promise<boolean> {
+    await this.waitForLoading();
+    return await this.getMenuCard(name).waitFor({ state: 'visible', timeout: 15000 }).then(() => true).catch(() => false);
+  }
+
+  async expectMenuInList(name: string) {
+    const menu = this.getMenuCard(name);
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try { await expect(menu).toBeVisible({ timeout: 15000 }); return; }
+      catch (e) { if (attempt >= 3) throw e; await this.refetchMenusList(); }
+    }
+  }
+
   async expectMenuNotInList(name: string) {
     const menus = this.page.locator(testIdSelector(TestIds.MENU_CARD)).filter({
       has: this.page.locator(testIdSelector(TestIds.MENU_CARD_NAME), { hasText: name }),
@@ -244,1033 +131,165 @@ export class OnlineMenusPage extends BasePage {
     await expect(menus).toHaveCount(0, { timeout: 10000 });
   }
 
-  /**
-   * Click edit button for a menu
-   */
   async editMenu(name: string) {
     await this.waitForLoading();
-
     const card = this.getMenuCard(name);
-    // Ensure the card is visible before interacting -- after page navigation
-    // the list may still be loading/rendering.
     await expect(card).toBeVisible({ timeout: 15000 });
     await card.scrollIntoViewIfNeeded();
-
     const editBtn = card.locator(testIdSelector(TestIds.MENU_CARD_EDIT_BUTTON));
-
-    // Try normal click first, fall back to force click if overlay intercepts
-    try {
-      await editBtn.click({ timeout: 5000 });
-    } catch {
-      // Force click bypasses overlay interception (e.g., toast notifications)
-      await editBtn.click({ force: true });
-    }
-
-    // Wait for editor to appear (15s for high-concurrency runs with 12 workers)
+    try { await editBtn.click({ timeout: 5000 }); } catch { await editBtn.click({ force: true }); }
     await this.menuEditor.waitFor({ state: 'visible', timeout: 15000 });
   }
 
-  /**
-   * Click delete button for a menu
-   * @param throwOnError - If false, won't throw on API errors (useful for cleanup)
-   */
   async deleteMenu(name: string, throwOnError: boolean = true) {
     await this.waitForLoading();
-
     const card = this.getMenuCard(name);
-    // Ensure the card is visible before interacting -- after page navigation
-    // the list may still be loading/rendering.
     await expect(card).toBeVisible({ timeout: 15000 });
     await card.scrollIntoViewIfNeeded();
-
-    // Set up response listener for delete API call
     const deletePromise = this.page.waitForResponse(
-      response => response.url().includes('/TenantMenus') && response.request().method() === 'DELETE',
-      { timeout: 15000 }
+      r => r.url().includes('/TenantMenus') && r.request().method() === 'DELETE', { timeout: 15000 }
     ).catch(() => null);
-
     const deleteBtn = card.locator(testIdSelector(TestIds.MENU_CARD_DELETE_BUTTON));
-
-    // Try normal click first, fall back to force click if overlay intercepts
-    try {
-      await deleteBtn.click({ timeout: 5000 });
-    } catch {
-      await deleteBtn.click({ force: true });
-    }
-
-    // Handle confirmation dialog if present
+    try { await deleteBtn.click({ timeout: 5000 }); } catch { await deleteBtn.click({ force: true }); }
     const dialog = this.page.locator('[role="dialog"]');
     if (await dialog.isVisible({ timeout: 1000 }).catch(() => false)) {
-      const dialogConfirm = dialog.getByRole('button', { name: /confirm|ok|yes|delete/i }).last();
-      if (await dialogConfirm.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await dialogConfirm.click({ timeout: 5000 }).catch(() => {});
-      }
+      const confirm = dialog.getByRole('button', { name: /confirm|ok|yes|delete/i }).last();
+      if (await confirm.isVisible({ timeout: 1000 }).catch(() => false)) await confirm.click({ timeout: 5000 }).catch(() => {});
     }
-
-    // Wait for the delete API call to complete
     const response = await deletePromise;
-    if (response) {
-      if (response.status() !== 404 && !response.ok()) {
-        const errorMsg = `Menu deletion API returned status ${response.status()}`;
-        if (throwOnError) {
-          throw new Error(errorMsg);
-        }
-      }
-    }
-
-    // Wait for UI to update
+    if (response && response.status() !== 404 && !response.ok() && throwOnError)
+      throw new Error(`Menu deletion API returned status ${response.status()}`);
     await this.waitForLoading();
-
-    // Wait for the list to refetch
     await this.page.waitForResponse(
-      response => response.url().includes('/TenantMenus') && response.request().method() === 'GET',
-      { timeout: 10000 }
+      r => r.url().includes('/TenantMenus') && r.request().method() === 'GET', { timeout: 10000 }
     ).catch(() => null);
-
-    // Wait for the item to disappear using expect with retry
-    try {
-      await this.expectMenuNotInList(name);
-    } catch {
-      if (throwOnError) {
-        throw new Error(`Menu "${name}" still visible after deletion`);
-      }
-    }
+    try { await this.expectMenuNotInList(name); } catch { if (throwOnError) throw new Error(`Menu "${name}" still visible after deletion`); }
   }
 
-  /**
-   * Click activate button for a menu
-   */
   async activateMenu(name: string): Promise<boolean> {
     const card = this.getMenuCard(name);
-    // Ensure the card is visible before interacting -- after page navigation
-    // (e.g., beforeEach goto), the list may still be loading/rendering.
     await expect(card).toBeVisible({ timeout: 15000 });
     await card.scrollIntoViewIfNeeded();
-
-    // Get current status before clicking
     const statusBadge = card.locator(testIdSelector(TestIds.MENU_CARD_STATUS_BADGE));
-
     const activateBtn = card.locator(testIdSelector(TestIds.MENU_CARD_ACTIVATE_BUTTON));
-
-    // Wait for the activate button to become visible with auto-retry.
-    // After deactivation, the UI needs to re-render to swap the button testID
-    // from "deactivate" to "activate". Using expect().toBeVisible() auto-retries.
-    try {
-      await expect(activateBtn).toBeVisible({ timeout: 10000 });
-    } catch {
-      return false;
-    }
-
-    // Set up response listener for activate endpoint AFTER confirming button exists
+    try { await expect(activateBtn).toBeVisible({ timeout: 10000 }); } catch { return false; }
     const apiPromise = this.page.waitForResponse(
-      response => response.url().includes('/TenantMenus') && response.url().includes('/activate') && response.request().method() === 'PATCH',
-      { timeout: 15000 }
+      r => r.url().includes('/TenantMenus') && r.url().includes('/activate') && r.request().method() === 'PATCH', { timeout: 15000 }
     ).catch(() => null);
-
-    await activateBtn.click();
-
-    // Wait for the API call to complete
-    const response = await apiPromise;
-    let apiSuccess = false;
-
-    if (response?.ok()) {
-      apiSuccess = true;
-    }
-
-    // React Query auto-invalidates - just wait for loading indicator to clear
+    try { await activateBtn.click({ timeout: 5000 }); } catch { await activateBtn.click({ force: true }); }
+    const apiSuccess = (await apiPromise)?.ok() ?? false;
     await this.waitForLoading();
-
-    // Wait for status to change using web-first assertion (auto-retries for 5s)
-    if (apiSuccess) {
-      await expect(statusBadge).toHaveText(/active/i, { timeout: 5000 }).catch(() => {});
-    }
-
+    if (apiSuccess) await expect(statusBadge).toHaveText(/active/i, { timeout: 5000 }).catch(() => {});
     return true;
   }
 
-  /**
-   * Click deactivate button for a menu
-   */
   async deactivateMenu(name: string): Promise<boolean> {
     const card = this.getMenuCard(name);
-    // Ensure the card is visible before interacting -- after page navigation
-    // (e.g., beforeEach goto), the list may still be loading/rendering.
     await expect(card).toBeVisible({ timeout: 15000 });
     await card.scrollIntoViewIfNeeded();
-
-    // Get current status before clicking
     const statusBadge = card.locator(testIdSelector(TestIds.MENU_CARD_STATUS_BADGE));
-
     const deactivateBtn = card.locator(testIdSelector(TestIds.MENU_CARD_DEACTIVATE_BUTTON));
-
-    // Wait for the deactivate button to become visible with auto-retry.
-    // After activation, the UI needs to re-render to swap the button testID
-    // from "activate" to "deactivate". Using expect().toBeVisible() auto-retries.
-    try {
-      await expect(deactivateBtn).toBeVisible({ timeout: 10000 });
-    } catch {
-      return false;
-    }
-
-    // Set up response listener for deactivate endpoint AFTER confirming button exists
+    try { await expect(deactivateBtn).toBeVisible({ timeout: 10000 }); } catch { return false; }
     const apiPromise = this.page.waitForResponse(
-      response => response.url().includes('/TenantMenus') && response.url().includes('/deactivate') && response.request().method() === 'PATCH',
-      { timeout: 15000 }
+      r => r.url().includes('/TenantMenus') && r.url().includes('/deactivate') && r.request().method() === 'PATCH', { timeout: 15000 }
     ).catch(() => null);
-
-    await deactivateBtn.click();
-
-    // Wait for the API call to complete
-    const response = await apiPromise;
-    let apiSuccess = false;
-
-    if (response?.ok()) {
-      apiSuccess = true;
-    }
-
-    // React Query auto-invalidates - just wait for loading indicator to clear
+    try { await deactivateBtn.click({ timeout: 5000 }); } catch { await deactivateBtn.click({ force: true }); }
+    const apiSuccess = (await apiPromise)?.ok() ?? false;
     await this.waitForLoading();
-
-    // Wait for status to change using web-first assertion (auto-retries for 5s)
-    if (apiSuccess) {
-      await expect(statusBadge).toHaveText(/inactive/i, { timeout: 5000 }).catch(() => {});
-    }
-
+    if (apiSuccess) await expect(statusBadge).toHaveText(/inactive/i, { timeout: 5000 }).catch(() => {});
     return apiSuccess;
   }
 
-  /**
-   * Check if menu is active
-   */
   async isMenuActive(name: string): Promise<boolean> {
-    const card = this.getMenuCard(name);
-    const statusBadge = card.locator(testIdSelector(TestIds.MENU_CARD_STATUS_BADGE));
-    const statusText = (await statusBadge.textContent().catch(() => '')) || '';
-
-    const normalized = statusText.toLowerCase().trim();
-    return normalized === 'active';
+    const text = (await this.getMenuCard(name).locator(testIdSelector(TestIds.MENU_CARD_STATUS_BADGE)).textContent().catch(() => '')) || '';
+    return text.toLowerCase().trim() === 'active';
   }
 
-  /**
-   * Expect menu to have specific active status
-   */
   async expectMenuActive(name: string, active: boolean = true) {
     const expected = active ? /active/i : /inactive/i;
-
     for (let attempt = 1; attempt <= 3; attempt++) {
       await this.waitForLoading();
-      const card = this.getMenuCard(name);
-      const statusBadge = card.locator(testIdSelector(TestIds.MENU_CARD_STATUS_BADGE));
-
-      try {
-        await expect(statusBadge).toHaveText(expected, { timeout: 10000 });
-        return;
-      } catch (error) {
-        if (attempt >= 3) throw error;
-        await this.refetchMenusList();
-      }
+      const badge = this.getMenuCard(name).locator(testIdSelector(TestIds.MENU_CARD_STATUS_BADGE));
+      try { await expect(badge).toHaveText(expected, { timeout: 10000 }); return; }
+      catch (e) { if (attempt >= 3) throw e; await this.refetchMenusList(); }
     }
   }
 
-  /**
-   * Get status text for a menu
-   */
   async getMenuStatus(name: string): Promise<string> {
-    const card = this.getMenuCard(name);
-    const statusBadge = card.locator(testIdSelector(TestIds.MENU_CARD_STATUS_BADGE));
-    return (await statusBadge.textContent().catch(() => '')) || '';
+    return (await this.getMenuCard(name).locator(testIdSelector(TestIds.MENU_CARD_STATUS_BADGE)).textContent().catch(() => '')) || '';
   }
 
-  /**
-   * Get all menu names
-   */
   async getMenuNames(): Promise<string[]> {
     await this.waitForLoading();
     const cards = this.page.locator(testIdSelector(TestIds.MENU_CARD));
     await cards.first().waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
-
     const count = await cards.count();
     const names: string[] = [];
     for (let i = 0; i < count; i++) {
-      const card = cards.nth(i);
-      const nameElement = card.locator(testIdSelector(TestIds.MENU_CARD_NAME));
-      const text = await nameElement.textContent({ timeout: 1000 }).catch(() => null);
-      if (text) {
-        names.push(text.trim());
-      }
+      const text = await cards.nth(i).locator(testIdSelector(TestIds.MENU_CARD_NAME)).textContent({ timeout: 1000 }).catch(() => null);
+      if (text) names.push(text.trim());
     }
     return names;
   }
 
-  /**
-   * Deactivate all menus that are currently active.
-   * Useful when a test needs to start from a clean state with no active menus.
-   */
   async deactivateAllMenus() {
-    // Navigate instead of reload to ensure auth restoration and proper page setup
     await this.goto();
-
-    const statusSelector = testIdSelector(TestIds.MENU_CARD_STATUS_BADGE);
+    const statusSel = testIdSelector(TestIds.MENU_CARD_STATUS_BADGE);
     let attempts = 0;
-    const maxAttempts = 5;
-
-    while (attempts < maxAttempts) {
+    while (attempts < 5) {
       attempts++;
-      // Use exact match for "Active" to avoid matching "Inactive"
-      const activeCards = this.page.locator(testIdSelector(TestIds.MENU_CARD)).filter({
-        has: this.page.locator(statusSelector, { hasText: /^Active$/i })
+      const active = this.page.locator(testIdSelector(TestIds.MENU_CARD)).filter({
+        has: this.page.locator(statusSel, { hasText: /^Active$/i })
       });
-
-      const count = await activeCards.count();
-
-      if (count === 0) {
-        break;
-      }
-
-      const card = activeCards.first();
+      if (await active.count() === 0) break;
+      const card = active.first();
       await card.scrollIntoViewIfNeeded().catch(() => {});
-      // Set up response listener
-      const apiPromise = this.page.waitForResponse(
-        response => response.url().includes('/TenantMenus') && response.url().includes('/deactivate') && response.request().method() === 'PATCH',
-        { timeout: 10000 }
+      const api = this.page.waitForResponse(
+        r => r.url().includes('/TenantMenus') && r.url().includes('/deactivate') && r.request().method() === 'PATCH', { timeout: 10000 }
       ).catch(() => null);
-
-      const deactivateButton = card.locator(testIdSelector(TestIds.MENU_CARD_DEACTIVATE_BUTTON));
-
-      if (await deactivateButton.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await deactivateButton.click();
-      } else {
-        await this.goto();
-        continue;
-      }
-
-      // Wait for API response
-      await apiPromise;
-
-      // Just wait for loading - React Query auto-invalidates
+      const btn = card.locator(testIdSelector(TestIds.MENU_CARD_DEACTIVATE_BUTTON));
+      if (await btn.isVisible({ timeout: 1000 }).catch(() => false)) await btn.click();
+      else { await this.goto(); continue; }
+      await api;
       await this.waitForLoading();
     }
-
-    // Max attempts reached if attempts >= maxAttempts
   }
 
-  /**
-   * Click preview button for a menu to open the preview modal
-   */
-  async openPreview(name: string) {
-    const card = this.getMenuCard(name);
-    // Ensure the card is visible before interacting -- after page navigation
-    // the list may still be loading/rendering.
-    await expect(card).toBeVisible({ timeout: 15000 });
-    await card.scrollIntoViewIfNeeded();
-
-    const previewBtn = card.locator(testIdSelector(TestIds.MENU_CARD_PREVIEW_BUTTON));
-    await previewBtn.click();
-
-    // Wait for preview modal to appear
-    await expect(this.previewModal).toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Close the preview modal
-   */
-  async closePreview() {
-    // Look for close button within the modal (could be X button or Close text)
-    const closeButton = this.previewModal.getByRole('button', { name: /close|cancel|x/i }).first();
-
-    // Check if there's a visible close button
-    if (await closeButton.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await closeButton.click();
-    } else {
-      // Try clicking outside the modal or pressing Escape
-      await this.page.keyboard.press('Escape');
-    }
-
-    // Wait for modal to disappear
-    await expect(this.previewModal).not.toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Expect the preview modal to be visible
-   */
-  async expectPreviewModalVisible() {
-    await expect(this.previewModal).toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Expect the preview modal to not be visible
-   */
-  async expectPreviewModalNotVisible() {
-    await expect(this.previewModal).not.toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Get the preview button for a menu
-   */
-  getPreviewButton(name: string): Locator {
-    const card = this.getMenuCard(name);
-    return card.locator(testIdSelector(TestIds.MENU_CARD_PREVIEW_BUTTON));
-  }
-
-  // ==================== QR CODE METHODS ====================
-
-  /**
-   * Get the QR code button for a menu card
-   */
-  getQrCodeButton(name: string): Locator {
-    const card = this.getMenuCard(name);
-    return card.locator(testIdSelector(TestIds.MENU_CARD_QR_CODE_BUTTON));
-  }
-
-  /**
-   * Open the QR code modal for a menu
-   */
-  async openQrCodeModal(name: string) {
-    const card = this.getMenuCard(name);
-    await expect(card).toBeVisible({ timeout: 15000 });
-    await card.scrollIntoViewIfNeeded();
-
-    const qrButton = card.locator(testIdSelector(TestIds.MENU_CARD_QR_CODE_BUTTON));
-    await qrButton.click();
-
-    // Wait for QR code modal to appear
-    await expect(this.qrCodeModal).toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Close the QR code modal
-   */
-  async closeQrCodeModal() {
-    await this.qrCodeCloseButton.click();
-    await expect(this.qrCodeModal).not.toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Expect the QR code modal to be visible with correct content
-   */
-  async expectQrCodeModalVisible() {
-    await expect(this.qrCodeModal).toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Expect the QR code modal to not be visible
-   */
-  async expectQrCodeModalNotVisible() {
-    await expect(this.qrCodeModal).not.toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Expect the QR code display area to be visible (contains the SVG QR code)
-   */
-  async expectQrCodeDisplayVisible() {
-    await expect(this.qrCodeDisplay).toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Expect the menu name to be displayed in the QR code modal
-   */
-  async expectQrCodeMenuName(name: string) {
-    await expect(this.qrCodeMenuName).toContainText(name, { timeout: 5000 });
-  }
-
-  /**
-   * Expect the URL text to be displayed in the QR code modal
-   */
-  async expectQrCodeUrlVisible() {
-    await expect(this.qrCodeUrlText).toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Get the foreground color input value
-   */
-  async getQrCodeFgColor(): Promise<string> {
-    return await this.qrCodeFgColorInput.inputValue();
-  }
-
-  /**
-   * Get the background color input value
-   */
-  async getQrCodeBgColor(): Promise<string> {
-    return await this.qrCodeBgColorInput.inputValue();
-  }
-
-  /**
-   * Set the foreground color for the QR code
-   */
-  async setQrCodeFgColor(color: string) {
-    await this.qrCodeFgColorInput.fill(color);
-  }
-
-  /**
-   * Set the background color for the QR code
-   */
-  async setQrCodeBgColor(color: string) {
-    await this.qrCodeBgColorInput.fill(color);
-  }
-
-  /**
-   * Click the copy link button in the QR code modal
-   */
-  async clickCopyLink() {
-    await this.qrCodeCopyLinkButton.click();
-  }
-
-  /**
-   * Click the download PNG button in the QR code modal
-   */
-  async clickDownloadPng() {
-    await this.qrCodeDownloadPngButton.click();
-  }
-
-  /**
-   * Click the download SVG button in the QR code modal
-   */
-  async clickDownloadSvg() {
-    await this.qrCodeDownloadSvgButton.click();
-  }
-
-  /**
-   * Get the open external link button for a menu
-   */
-  getOpenExternalButton(name: string): Locator {
-    const card = this.getMenuCard(name);
-    return card.locator(testIdSelector(TestIds.MENU_CARD_OPEN_EXTERNAL_BUTTON));
-  }
-
-  /**
-   * Check if the open external button is enabled/clickable for a menu
-   */
-  async isOpenExternalButtonEnabled(name: string): Promise<boolean> {
-    const openExternalBtn = this.getOpenExternalButton(name);
-
-    // Check if button exists and is enabled
-    const isEnabled = await openExternalBtn.isEnabled({ timeout: 1000 }).catch(() => false);
-    return isEnabled;
-  }
-
-  /**
-   * Click open external button for a menu and return the new page that opens
-   * Returns the new page/tab if successful, null if it didn't open
-   */
-  async openExternalLink(name: string): Promise<Page | null> {
-    const card = this.getMenuCard(name);
-    // Ensure the card is visible before interacting
-    await expect(card).toBeVisible({ timeout: 15000 });
-    await card.scrollIntoViewIfNeeded();
-
-    const openExternalBtn = card.locator(testIdSelector(TestIds.MENU_CARD_OPEN_EXTERNAL_BUTTON));
-
-    // Check if button is enabled
-    const isEnabled = await openExternalBtn.isEnabled({ timeout: 1000 }).catch(() => false);
-    if (!isEnabled) {
-      return null;
-    }
-
-    // Listen for new page/tab to open
-    const pagePromise = this.page.context().waitForEvent('page', { timeout: 10000 }).catch(() => null);
-
-    await openExternalBtn.click();
-
-    const newPage = await pagePromise;
-
-    if (newPage) {
-      // Wait for the new page to load
-      await newPage.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => {});
-    }
-
-    return newPage;
-  }
-
-  /**
-   * Get the external ID of a menu from its card (if available)
-   */
-  async getMenuExternalId(name: string): Promise<string | null> {
-    const card = this.getMenuCard(name);
-    const idElement = card.locator(testIdSelector(TestIds.MENU_CARD_ID));
-
-    // Try to get the ID from the card
-    const idText = await idElement.textContent({ timeout: 1000 }).catch(() => null);
-    return idText?.trim() || null;
-  }
-
-  // ==================== MENU CONTENT EDITOR METHODS ====================
-
-  /**
-   * Switch to the Content tab in the menu editor (FullMenuEditor).
-   * The editor opens on the "Details" tab by default, so we need to click
-   * the "Content" tab to access categories and items.
-   */
-  async switchToContentTab() {
-    // Find the Content tab button by its text
-    const contentTab = this.menuEditor.getByRole('tab', { name: /content/i });
-    await contentTab.click();
-    // Wait for the category add button to be visible (indicates we're on the Content tab)
-    await expect(this.categoryAddButton).toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Add a new category to the menu
-   */
-  async addCategory() {
-    // Ensure we're on the Content tab first
-    const isContentTabActive = await this.categoryAddButton.isVisible({ timeout: 1000 }).catch(() => false);
-    if (!isContentTabActive) {
-      await this.switchToContentTab();
-    }
-    await this.categoryAddButton.click();
-    // Wait for the category to appear in the list
-    await this.waitForLoading();
-  }
-
-  /**
-   * Get a category item by index
-   */
-  getCategoryItem(categoryIndex: number): Locator {
-    return this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_ITEM, categoryIndex));
-  }
-
-  /**
-   * Expand a category to show its items
-   */
-  async expandCategory(categoryIndex: number) {
-    // Ensure we're on the Content tab first
-    const isContentTabActive = await this.categoryAddButton.isVisible({ timeout: 1000 }).catch(() => false);
-    if (!isContentTabActive) {
-      await this.switchToContentTab();
-    }
-
-    // Check if already expanded by looking for full input fields
-    const nameInput = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_NAME_FULL_INPUT, categoryIndex));
-    if (await nameInput.count() === 0) {
-      // Click on the category toggle button to expand it
-      const toggleButton = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_TOGGLE_BUTTON, categoryIndex));
-      await toggleButton.click();
-    }
-    // Wait for the expansion animation
-    await expect(nameInput).toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Collapse a category by clicking on its header
-   */
-  async collapseCategory(categoryIndex: number) {
-    // Check if already collapsed by looking for full input fields
-    const nameInput = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_NAME_FULL_INPUT, categoryIndex));
-    if (await nameInput.count() > 0) {
-      // Click on the category toggle button to collapse it
-      const toggleButton = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_TOGGLE_BUTTON, categoryIndex));
-      await toggleButton.click();
-    }
-    // Wait for the collapse animation
-    await expect(nameInput).not.toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Update category name
-   */
-  async updateCategoryName(categoryIndex: number, name: string) {
-    const nameInput = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_NAME_FULL_INPUT, categoryIndex));
-    await nameInput.fill(name);
-  }
-
-  /**
-   * Add a menu item to a category
-   */
-  async addMenuItem(categoryIndex: number) {
-    const addItemButton = this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_ADD_BUTTON, categoryIndex));
-    await addItemButton.click();
-    await this.waitForLoading();
-  }
-
-  /**
-   * Delete a category by index
-   */
-  async deleteCategory(categoryIndex: number) {
-    const deleteButton = this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_DELETE_BUTTON, categoryIndex));
-    await deleteButton.click();
-    await this.waitForLoading();
-  }
-
-  /**
-   * Delete a menu item by category and item index
-   */
-  async deleteMenuItem(categoryIndex: number, itemIndex: number) {
-    const deleteButton = this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_DELETE_BUTTON, categoryIndex, itemIndex));
-    await deleteButton.click();
-    await this.waitForLoading();
-  }
-
-  /**
-   * Get the category name input field
-   */
-  getCategoryNameInput(categoryIndex: number): Locator {
-    return this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_NAME_FULL_INPUT, categoryIndex));
-  }
-
-  /**
-   * Get the menu item name input field
-   */
-  getMenuItemNameInput(categoryIndex: number, itemIndex: number): Locator {
-    return this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_NAME_FULL_INPUT, categoryIndex, itemIndex));
-  }
-
-  /**
-   * Get the menu item description input field
-   */
-  getMenuItemDescriptionInput(categoryIndex: number, itemIndex: number): Locator {
-    return this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_DESCRIPTION_INPUT, categoryIndex, itemIndex));
-  }
-
-  /**
-   * Get the menu item price input field
-   */
-  getMenuItemPriceInput(categoryIndex: number, itemIndex: number): Locator {
-    return this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_PRICE_INPUT, categoryIndex, itemIndex));
-  }
-
-  /**
-   * Count the number of categories in the editor
-   */
-  async getCategoryCount(): Promise<number> {
-    // Ensure we're on the Content tab first
-    const isContentTabActive = await this.categoryAddButton.isVisible({ timeout: 1000 }).catch(() => false);
-    if (!isContentTabActive) {
-      await this.switchToContentTab();
-    }
-    const categories = this.page.locator(testIdStartsWithSelector(TestIds.CATEGORY_ITEM));
-    return await categories.count();
-  }
-
-  /**
-   * Count the number of items in a category
-   */
-  async getItemCount(categoryIndex: number): Promise<number> {
-    const items = this.page.locator(`[data-testid^="${TestIds.MENU_ITEM}-${categoryIndex}-"]`);
-    return await items.count();
-  }
-
-  /**
-   * Get the value of the category name input
-   */
-  async getCategoryNameValue(categoryIndex: number): Promise<string> {
-    const nameInput = this.getCategoryNameInput(categoryIndex);
-    return await nameInput.inputValue();
-  }
-
-  /**
-   * Get the value of the menu item name input
-   */
-  async getMenuItemNameValue(categoryIndex: number, itemIndex: number): Promise<string> {
-    const nameInput = this.getMenuItemNameInput(categoryIndex, itemIndex);
-    return await nameInput.inputValue();
-  }
-
-  /**
-   * Get the value of the menu item price input
-   */
-  async getMenuItemPriceValue(categoryIndex: number, itemIndex: number): Promise<string> {
-    const priceInput = this.getMenuItemPriceInput(categoryIndex, itemIndex);
-    return await priceInput.inputValue();
-  }
-
-  /**
-   * Get a menu item by category and item index
-   */
-  getMenuItem(categoryIndex: number, itemIndex: number): Locator {
-    return this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM, categoryIndex, itemIndex));
-  }
-
-  /**
-   * Update menu item name
-   */
-  async updateMenuItemName(categoryIndex: number, itemIndex: number, name: string) {
-    const nameInput = this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_NAME_FULL_INPUT, categoryIndex, itemIndex));
-    await nameInput.fill(name);
-  }
-
-  /**
-   * Update menu item price
-   */
-  async updateMenuItemPrice(categoryIndex: number, itemIndex: number, price: string) {
-    const priceInput = this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_PRICE_INPUT, categoryIndex, itemIndex));
-    await priceInput.fill(price);
-  }
-
-  /**
-   * Get the image picker wrapper for a menu item
-   */
-  getMenuItemImagePicker(categoryIndex: number, itemIndex: number): Locator {
-    return this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_IMAGE_PICKER, categoryIndex, itemIndex));
-  }
-
-  /**
-   * Get the video picker wrapper for a menu item
-   */
-  getMenuItemVideoPicker(categoryIndex: number, itemIndex: number): Locator {
-    return this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_VIDEO_PICKER, categoryIndex, itemIndex));
-  }
-
-  /**
-   * Get the document picker wrapper for a menu item
-   */
-  getMenuItemDocumentPicker(categoryIndex: number, itemIndex: number): Locator {
-    return this.page.locator(indexedTestIdSelector(TestIds.MENU_ITEM_DOCUMENT_PICKER, categoryIndex, itemIndex));
-  }
-
-  /**
-   * Get the image picker wrapper for a category
-   */
-  getCategoryImagePicker(categoryIndex: number): Locator {
-    return this.page.locator(indexedTestIdSelector(TestIds.CATEGORY_IMAGE_PICKER, categoryIndex));
-  }
-
-  /**
-   * Upload an image to a menu item
-   * Uses file chooser to handle the native file picker
-   */
-  async uploadImageToMenuItem(categoryIndex: number, itemIndex: number, filePath: string) {
-    const imagePicker = this.getMenuItemImagePicker(categoryIndex, itemIndex);
-
-    // Find the upload button within the image picker wrapper
-    const uploadButton = imagePicker.locator(testIdSelector(TestIds.CONTENT_UPLOADER_BUTTON));
-    await expect(uploadButton).toBeVisible({ timeout: 5000 });
-
-    // Set up the file chooser promise before clicking
-    const fileChooserPromise = this.page.waitForEvent('filechooser', { timeout: 10000 });
-
-    // Click the upload button
-    await uploadButton.click();
-
-    // Handle the file chooser
-    const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles(filePath);
-
-    // Wait for content preview to appear — this is the definitive upload success signal.
-    // On mobile viewports the progress bar can stay visible longer than expected,
-    // so we wait for the preview directly with a generous timeout.
-    const preview = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW));
-    await expect(preview).toBeVisible({ timeout: 45000 });
-  }
-
-  /**
-   * Upload an image to a category
-   */
-  async uploadImageToCategory(categoryIndex: number, filePath: string) {
-    const imagePicker = this.getCategoryImagePicker(categoryIndex);
-
-    // Find the upload button within the image picker wrapper
-    const uploadButton = imagePicker.locator(testIdSelector(TestIds.CONTENT_UPLOADER_BUTTON));
-
-    // Set up the file chooser promise before clicking
-    const fileChooserPromise = this.page.waitForEvent('filechooser', { timeout: 10000 });
-
-    // Click the upload button
-    await uploadButton.click();
-
-    // Handle the file chooser
-    const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles(filePath);
-
-    // Wait for content preview to appear — definitive upload success signal.
-    // On mobile viewports the progress bar can stay visible longer than expected,
-    // so we wait for the preview directly with a generous timeout.
-    const preview = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW));
-    await expect(preview).toBeVisible({ timeout: 45000 });
-  }
-
-  /**
-   * Verify that an image preview is visible for a menu item
-   */
-  async expectMenuItemImageVisible(categoryIndex: number, itemIndex: number) {
-    const imagePicker = this.getMenuItemImagePicker(categoryIndex, itemIndex);
-    const preview = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW));
-    await expect(preview).toBeVisible({ timeout: 10000 });
-
-    // Also verify the image element is present
-    const imageElement = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW_IMAGE));
-    await expect(imageElement).toBeVisible({ timeout: 10000 });
-  }
-
-  /**
-   * Verify that an image preview is visible for a category
-   */
-  async expectCategoryImageVisible(categoryIndex: number) {
-    const imagePicker = this.getCategoryImagePicker(categoryIndex);
-    const preview = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW));
-    await expect(preview).toBeVisible({ timeout: 10000 });
-
-    const imageElement = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW_IMAGE));
-    await expect(imageElement).toBeVisible({ timeout: 10000 });
-  }
-
-  /**
-   * Delete an uploaded image from a menu item
-   */
-  async deleteMenuItemImage(categoryIndex: number, itemIndex: number) {
-    const imagePicker = this.getMenuItemImagePicker(categoryIndex, itemIndex);
-    const deleteButton = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW_DELETE_BUTTON));
-    await deleteButton.scrollIntoViewIfNeeded();
-    await deleteButton.dispatchEvent('click');
-
-    // Wait for preview to disappear and upload button to appear
-    const preview = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW));
-    await expect(preview).not.toBeVisible({ timeout: 5000 });
-
-    const uploadButton = imagePicker.locator(testIdSelector(TestIds.CONTENT_UPLOADER_BUTTON));
-    await expect(uploadButton).toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Save the menu after editing content
-   */
-  async saveMenuEditor() {
-    // Set up listener for the PUT API call
-    const savePromise = this.page.waitForResponse(
-      response => response.url().includes('/TenantMenus') && response.request().method() === 'PUT',
-      { timeout: 15000 }
-    ).catch(() => null);
-
-    await this.menuEditorSaveButton.click();
-
-    await savePromise;
-
-    await this.waitForLoading();
-  }
-
-  /**
-   * Cancel the menu editor without saving
-   */
-  async cancelMenuEditor() {
-    await this.waitForLoading();
-
-    // Wait for cancel button to be enabled (may be disabled during operations)
-    try {
-      await expect(this.menuEditorCancelButton).toBeEnabled({ timeout: 5000 });
-      await this.menuEditorCancelButton.click();
-    } catch {
-      // If button stays disabled, try pressing Escape as fallback
-      await this.page.keyboard.press('Escape');
-    }
-
-    await expect(this.menuEditor).not.toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Get the image URL from a menu item's content preview
-   * Useful for verifying CORS by checking if the image loaded
-   */
-  async getMenuItemImageUrl(categoryIndex: number, itemIndex: number): Promise<string | null> {
-    const imagePicker = this.getMenuItemImagePicker(categoryIndex, itemIndex);
-    const imageElement = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW_IMAGE));
-
-    if (await imageElement.count() === 0) {
-      return null;
-    }
-
-    // Get the src attribute from the image
-    const src = await imageElement.getAttribute('src');
-    return src;
-  }
-
-  /**
-   * Verify image loads successfully (no CORS errors)
-   * This checks if the image's naturalWidth is > 0, which indicates it loaded
-   * React Native Web may render Image as either:
-   * - An actual <img> tag
-   * - A <div role="img"> with background-image CSS
-   */
-  async expectImageLoaded(categoryIndex: number, itemIndex: number) {
-    const imagePicker = this.getMenuItemImagePicker(categoryIndex, itemIndex);
-    const previewContainer = imagePicker.locator(testIdSelector(TestIds.CONTENT_PREVIEW_IMAGE));
-
-    await expect(previewContainer).toBeVisible({ timeout: 10000 });
-
-    // React Native Web renders Image as a container div with:
-    // 1. An inner div with background-image CSS (for display)
-    // 2. An <img> element with css-accessibilityImage class (hidden, for a11y)
-    // We check the inner div's background-image since that's what users see
-
-    await expect(async () => {
-      const result = await previewContainer.evaluate((el: HTMLElement) => {
-        // Check for background-image on inner div (React Native Web's display layer)
-        const innerDiv = el.querySelector('div');
-        const innerStyle = innerDiv ? window.getComputedStyle(innerDiv) : null;
-        const bgImage = innerStyle?.backgroundImage ?? 'none';
-
-        // Also check for accessibility img with src
-        const accessibilityImg = el.querySelector('img');
-        const imgSrc = accessibilityImg?.getAttribute('src') ?? '';
-
-        return {
-          hasBackgroundImage: bgImage !== 'none' && bgImage !== '',
-          backgroundImage: bgImage,
-          hasImgSrc: imgSrc !== '',
-          imgSrc,
-        };
-      });
-
-      // Image should have either background-image on inner div OR src on img element
-      const hasImage = result.hasBackgroundImage || result.hasImgSrc;
-      if (!hasImage) {
-        throw new Error(`No image found: bg=${result.backgroundImage}, src=${result.imgSrc}`);
-      }
-
-      // Verify the URL is valid (http or data: URL)
-      const url = result.backgroundImage !== 'none' ? result.backgroundImage : result.imgSrc;
-      const isValidUrl = url.includes('http://') || url.includes('https://') || url.includes('data:');
-      if (!isValidUrl) {
-        throw new Error(`Invalid image URL: ${url}`);
-      }
-
-      expect(hasImage).toBe(true);
-      expect(isValidUrl).toBe(true);
-    }).toPass({ timeout: 30000 });
-  }
-
-  /**
-   * Verify images load in the preview modal (catches CORS issues)
-   * Handles both traditional img elements and React Native Web's Image component
-   * which renders as a div with background-image CSS
-   */
-  async expectPreviewImagesLoaded() {
-    await expect(this.previewModal).toBeVisible({ timeout: 5000 });
-
-    // React Native Web's Image renders as div with background-image
-    // Look for img elements with src or divs with background-image that contain valid URLs
-    await expect(async () => {
-      const result = await this.previewModal.evaluate((modal: HTMLElement) => {
-        // Check for traditional img elements with valid src
-        const images = modal.querySelectorAll('img');
-        const validImages: string[] = [];
-        images.forEach((img) => {
-          const src = img.getAttribute('src') ?? '';
-          if (src.startsWith('http://') || src.startsWith('https://')) {
-            validImages.push(src);
-          }
-        });
-
-        // Check for React Native Web Image components (divs with background-image)
-        const divs = modal.querySelectorAll('div');
-        divs.forEach((div) => {
-          const style = window.getComputedStyle(div);
-          const bgImage = style.backgroundImage;
-          if (bgImage !== 'none' && bgImage !== '') {
-            const urlMatch = bgImage.match(/url\(["']?([^"')]+)["']?\)/);
-            if (urlMatch?.[1]?.startsWith('http')) {
-              validImages.push(urlMatch[1]);
-            }
-          }
-        });
-
-        return { validImages, count: validImages.length };
-      });
-
-      // At least one image should be found and have a valid URL
-      if (result.count === 0) {
-        throw new Error('No images with valid URLs found in preview modal');
-      }
-
-      expect(result.count).toBeGreaterThan(0);
-    }).toPass({ timeout: 15000 });
-  }
+  // ==================== EDITOR DELEGATION ====================
+  // Delegate to OnlineMenusEditorPage so existing tests using
+  // menusPage.addCategory() etc. continue to work.
+
+  private get _editor(): OnlineMenusEditorPage { return new OnlineMenusEditorPage(this.page); }
+
+  async switchToContentTab() { return this._editor.switchToContentTab(); }
+  async addCategory() { return this._editor.addCategory(); }
+  async expandCategory(categoryIndex: number) { return this._editor.expandCategory(categoryIndex); }
+  async collapseCategory(categoryIndex: number) { return this._editor.collapseCategory(categoryIndex); }
+  async updateCategoryName(categoryIndex: number, name: string) { return this._editor.updateCategoryName(categoryIndex, name); }
+  async addMenuItem(categoryIndex: number) { return this._editor.addMenuItem(categoryIndex); }
+  async deleteCategory(categoryIndex: number) { return this._editor.deleteCategory(categoryIndex); }
+  async deleteMenuItem(categoryIndex: number, itemIndex: number) { return this._editor.deleteMenuItem(categoryIndex, itemIndex); }
+  async getCategoryCount() { return this._editor.getCategoryCount(); }
+  async getItemCount(categoryIndex: number) { return this._editor.getItemCount(categoryIndex); }
+  async getCategoryNameValue(categoryIndex: number) { return this._editor.getCategoryNameValue(categoryIndex); }
+  async getMenuItemNameValue(categoryIndex: number, itemIndex: number) { return this._editor.getMenuItemNameValue(categoryIndex, itemIndex); }
+  async getMenuItemPriceValue(categoryIndex: number, itemIndex: number) { return this._editor.getMenuItemPriceValue(categoryIndex, itemIndex); }
+  async updateMenuItemName(categoryIndex: number, itemIndex: number, name: string) { return this._editor.updateMenuItemName(categoryIndex, itemIndex, name); }
+  async updateMenuItemPrice(categoryIndex: number, itemIndex: number, price: string) { return this._editor.updateMenuItemPrice(categoryIndex, itemIndex, price); }
+  async saveMenuEditor() { return this._editor.saveMenuEditor(); }
+  async cancelMenuEditor() { return this._editor.cancelMenuEditor(); }
+
+  // ==================== CONTENT DELEGATION ====================
+  // Delegate to OnlineMenusContentPage so existing tests using
+  // menusPage.uploadImageToMenuItem() etc. continue to work.
+
+  private get _content(): OnlineMenusContentPage { return new OnlineMenusContentPage(this.page); }
+
+  async uploadImageToMenuItem(categoryIndex: number, itemIndex: number, filePath: string) { return this._content.uploadImageToMenuItem(categoryIndex, itemIndex, filePath); }
+  async uploadImageToCategory(categoryIndex: number, filePath: string) { return this._content.uploadImageToCategory(categoryIndex, filePath); }
+  async expectMenuItemImageVisible(categoryIndex: number, itemIndex: number) { return this._content.expectMenuItemImageVisible(categoryIndex, itemIndex); }
+  async expectCategoryImageVisible(categoryIndex: number) { return this._content.expectCategoryImageVisible(categoryIndex); }
+  async deleteMenuItemImage(categoryIndex: number, itemIndex: number) { return this._content.deleteMenuItemImage(categoryIndex, itemIndex); }
+  async expectImageLoaded(categoryIndex: number, itemIndex: number) { return this._content.expectImageLoaded(categoryIndex, itemIndex); }
+  async expectPreviewImagesLoaded() { return this._content.expectPreviewImagesLoaded(); }
 }

@@ -2,6 +2,7 @@ import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { getProjectUsers } from '../../fixtures/test-data.js';
 import { LoginPage } from '../../pages/LoginPage.js';
 import { OnlineMenusPage } from '../../pages/OnlineMenusPage.js';
+import { OnlineMenusPublicPage } from '../../pages/OnlineMenusPublicPage.js';
 import { TestIds, testIdSelector } from '../../shared/testIds.js';
 
 /**
@@ -18,6 +19,7 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;
+  let publicPage: OnlineMenusPublicPage;
   let testMenuName: string;
   let _testMenuId: string;
 
@@ -54,6 +56,7 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
     });
 
     menusPage = new OnlineMenusPage(page);
+    publicPage = new OnlineMenusPublicPage(page);
   });
 
   test.beforeEach(async () => {
@@ -163,13 +166,13 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
     // Open preview modal to view public menu content
-    await menusPage.openPreview(testMenuName);
+    await publicPage.openPreview(testMenuName);
 
     // Verify preview modal is visible
-    await expect(menusPage.previewModal).toBeVisible({ timeout: 5000 });
+    await expect(publicPage.previewModal).toBeVisible({ timeout: 5000 });
 
     // Verify categories are sorted by displayOrder in the preview
-    const categoryElements = menusPage.previewModal.locator(testIdSelector(TestIds.PUBLIC_MENU_CATEGORY));
+    const categoryElements = publicPage.previewModal.locator(testIdSelector(TestIds.PUBLIC_MENU_CATEGORY));
     const categoryCount = await categoryElements.count();
 
     if (categoryCount > 0) {
@@ -179,20 +182,20 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
     }
 
     // Close the preview modal
-    await menusPage.closePreview();
+    await publicPage.closePreview();
   });
 
   test('should verify menu items are sorted by displayOrder in public viewer @critical', async () => {
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
     // Open preview modal to view public menu content
-    await menusPage.openPreview(testMenuName);
+    await publicPage.openPreview(testMenuName);
 
     // Verify preview modal is visible
-    await expect(menusPage.previewModal).toBeVisible({ timeout: 5000 });
+    await expect(publicPage.previewModal).toBeVisible({ timeout: 5000 });
 
     // Verify items are sorted by displayOrder within categories in the preview
-    const itemElements = menusPage.previewModal.locator(testIdSelector(TestIds.PUBLIC_MENU_ITEM));
+    const itemElements = publicPage.previewModal.locator(testIdSelector(TestIds.PUBLIC_MENU_ITEM));
     const itemCount = await itemElements.count();
 
     if (itemCount > 0) {
@@ -202,6 +205,6 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
     }
 
     // Close the preview modal
-    await menusPage.closePreview();
+    await publicPage.closePreview();
   });
 });

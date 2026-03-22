@@ -12,10 +12,12 @@ import { test, expect } from '@playwright/test';
 
 import { isNotificationServiceHealthy } from '../../helpers/notification.helpers.js';
 import { NotificationsPage } from '../../pages/NotificationsPage.js';
+import { NotificationsStressPage } from '../../pages/NotificationsStressPage.js';
 import { hasNotificationTestApi } from '../utils/notificationHelpers.js';
 
 test.describe('Real-Time Notification Delivery @notifications', () => {
   let notificationsPage: NotificationsPage;
+  let stressPage: NotificationsStressPage;
 
   /** Whether the NotificationService is reachable */
   let serviceHealthy = false;
@@ -26,6 +28,7 @@ test.describe('Real-Time Notification Delivery @notifications', () => {
 
   test.beforeEach(async ({ page }) => {
     notificationsPage = new NotificationsPage(page);
+    stressPage = new NotificationsStressPage(page);
 
     await page.addInitScript(() => {
       try {
@@ -62,7 +65,7 @@ test.describe('Real-Time Notification Delivery @notifications', () => {
 
     // Inject mock notification while on the notifications page
     // so the mounted list component picks up the store change
-    await notificationsPage.mockNotification({
+    await stressPage.mockNotification({
       id: `rt-${Date.now()}`,
       title: uniqueTitle,
       body: 'This notification was delivered in real-time',
@@ -89,7 +92,7 @@ test.describe('Real-Time Notification Delivery @notifications', () => {
     // Inject 3 notifications
     const notificationCount = 3;
     for (let i = 0; i < notificationCount; i++) {
-      await notificationsPage.mockNotification({
+      await stressPage.mockNotification({
         id: `badge-update-${Date.now()}-${i}`,
         title: `Badge Update ${i + 1}`,
       });
@@ -108,7 +111,7 @@ test.describe('Real-Time Notification Delivery @notifications', () => {
     test.skip(!hasApi, 'Notification test API not available in this build');
 
     // Inject a notification
-    await notificationsPage.mockNotification({
+    await stressPage.mockNotification({
       id: `click-read-${Date.now()}`,
       title: 'Click to Read',
     });
@@ -148,7 +151,7 @@ test.describe('Real-Time Notification Delivery @notifications', () => {
     // Inject multiple notifications to ensure there are unread items
     const injectCount = 3;
     for (let i = 0; i < injectCount; i++) {
-      await notificationsPage.mockNotification({
+      await stressPage.mockNotification({
         id: `mark-all-${Date.now()}-${i}`,
         title: `Mark All Test ${i + 1}`,
       });

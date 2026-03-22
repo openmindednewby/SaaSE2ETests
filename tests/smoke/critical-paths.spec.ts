@@ -4,6 +4,7 @@ import { LoginPage } from '../../pages/LoginPage.js';
 import { QuizActivePage } from '../../pages/QuizActivePage.js';
 import { QuizAnswersPage } from '../../pages/QuizAnswersPage.js';
 import { QuizTemplatesPage } from '../../pages/QuizTemplatesPage.js';
+import { QuizTemplatesQuizPage } from '../../pages/QuizTemplatesQuizPage.js';
 
 // Use serial mode so tests run in order and share the same browser context
 test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
@@ -11,6 +12,7 @@ test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
   let context: BrowserContext;
   let page: Page;
   let templatesPage: QuizTemplatesPage;
+  let quizPage: QuizTemplatesQuizPage;
   let quizActivePage: QuizActivePage;
   let answersPage: QuizAnswersPage;
 
@@ -28,6 +30,7 @@ test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
 
     // Initialize page objects
     templatesPage = new QuizTemplatesPage(page);
+    quizPage = new QuizTemplatesQuizPage(page);
     quizActivePage = new QuizActivePage(page);
     answersPage = new QuizAnswersPage(page);
   });
@@ -39,7 +42,7 @@ test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
   test('complete user journey: create template -> activate -> view answers', async () => {
     // 1. Navigate to Quiz Templates
     await templatesPage.goto();
-    await templatesPage.deactivateAllTemplates();
+    await quizPage.deactivateAllTemplates();
 
     // Verify page loaded
     await expect(page).toHaveURL(/quiz-templates/);
@@ -50,7 +53,7 @@ test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
     await templatesPage.expectTemplateInList(templateName);
 
     // 3. Activate the template
-    await templatesPage.activateTemplate(templateName);
+    await quizPage.activateTemplate(templateName);
 
     // 4. Navigate to Quiz Active page
     await quizActivePage.goto();

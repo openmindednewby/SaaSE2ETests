@@ -3,6 +3,7 @@ import type { BrowserContext, Page } from '@playwright/test';
 import { getProjectUsers } from '../../../fixtures/test-data.js';
 import { LoginPage } from '../../../pages/LoginPage.js';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
+import { QuizTemplatesQuizPage } from '../../../pages/QuizTemplatesQuizPage.js';
 
 /**
  * Tests for the "Delete Inactive Templates" feature.
@@ -17,6 +18,7 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
   let context: BrowserContext;
   let page: Page;
   let templatesPage: QuizTemplatesPage;
+  let quizPage: QuizTemplatesQuizPage;
   const createdTemplates: string[] = [];
 
   test.beforeAll(async ({ browser }, testInfo) => {
@@ -53,6 +55,7 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
 
     // Initialize page objects
     templatesPage = new QuizTemplatesPage(page);
+    quizPage = new QuizTemplatesQuizPage(page);
   });
 
   test.afterAll(async () => {
@@ -81,57 +84,57 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
 
   test('should open confirmation dialog when clicking Delete Inactive', async () => {
     // Serial tests share context - already on page from previous test
-    await templatesPage.clickDeleteInactive();
-    await expect(templatesPage.confirmDialog).toBeVisible({ timeout: 5000 });
-    await expect(templatesPage.confirmButton).toBeVisible();
-    await expect(templatesPage.cancelConfirmButton).toBeVisible();
-    await templatesPage.cancelDeleteInactive();
+    await quizPage.clickDeleteInactive();
+    await expect(quizPage.confirmDialog).toBeVisible({ timeout: 5000 });
+    await expect(quizPage.confirmButton).toBeVisible();
+    await expect(quizPage.cancelConfirmButton).toBeVisible();
+    await quizPage.cancelDeleteInactive();
   });
 
   test('should close dialog when clicking Cancel', async () => {
     // Serial tests share context - already on page
-    await templatesPage.clickDeleteInactive();
-    await expect(templatesPage.confirmDialog).toBeVisible();
-    await templatesPage.cancelDeleteInactive();
-    await expect(templatesPage.confirmDialog).not.toBeVisible({ timeout: 5000 });
+    await quizPage.clickDeleteInactive();
+    await expect(quizPage.confirmDialog).toBeVisible();
+    await quizPage.cancelDeleteInactive();
+    await expect(quizPage.confirmDialog).not.toBeVisible({ timeout: 5000 });
   });
 
   test('should show "no inactive templates" message when all templates are active', async () => {
     // Clean slate: deactivate any active templates, delete all inactive
-    await templatesPage.deactivateAllTemplates();
-    await templatesPage.deleteInactiveTemplates();
+    await quizPage.deactivateAllTemplates();
+    await quizPage.deleteInactiveTemplates();
 
     // Create and activate a single template
     const activeTemplateName = `Active Only ${Date.now()}`;
     createdTemplates.push(activeTemplateName);
     await templatesPage.createTemplate(activeTemplateName);
     await templatesPage.expectTemplateInList(activeTemplateName);
-    let activated = await templatesPage.activateTemplate(activeTemplateName);
+    let activated = await quizPage.activateTemplate(activeTemplateName);
     if (!activated) {
       // Another parallel test may have activated a template concurrently -- deactivate and retry
-      await templatesPage.deactivateAllTemplates();
-      activated = await templatesPage.activateTemplate(activeTemplateName);
+      await quizPage.deactivateAllTemplates();
+      activated = await quizPage.activateTemplate(activeTemplateName);
     }
     expect(activated).toBe(true);
-    await templatesPage.expectTemplateActive(activeTemplateName, true);
+    await quizPage.expectTemplateActive(activeTemplateName, true);
 
     // Delete inactive -- our active template must survive (other parallel tests
     // may have created inactive templates, so deletedCount can be > 0)
-    await templatesPage.deleteInactiveTemplates();
+    await quizPage.deleteInactiveTemplates();
 
     // The active template should still exist after deleting inactive templates
     await templatesPage.expectTemplateInList(activeTemplateName);
-    await templatesPage.expectTemplateActive(activeTemplateName, true);
+    await quizPage.expectTemplateActive(activeTemplateName, true);
 
     // Cleanup: deactivate and delete
-    await templatesPage.activateTemplate(activeTemplateName);
-    await templatesPage.deleteInactiveTemplates();
+    await quizPage.activateTemplate(activeTemplateName);
+    await quizPage.deleteInactiveTemplates();
     createdTemplates.pop();
   });
 
   test('should delete multiple inactive templates and show count @critical', async () => {
     // Ensure clean state
-    await templatesPage.deactivateAllTemplates();
+    await quizPage.deactivateAllTemplates();
 
     // Create 3 inactive templates (templates are inactive by default)
     const timestamp = Date.now();
@@ -148,7 +151,7 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
     }
 
     // Delete all inactive templates
-    const deletedCount = await templatesPage.deleteInactiveTemplates();
+    const deletedCount = await quizPage.deleteInactiveTemplates();
     expect(deletedCount).toBeGreaterThanOrEqual(3);
 
     // Verify templates are gone (use web-first assertion)
@@ -164,7 +167,7 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
     await templatesPage.goto();
 
     // Ensure clean state
-    await templatesPage.deactivateAllTemplates();
+    await quizPage.deactivateAllTemplates();
 
     // Create one active and one inactive template
     const timestamp = Date.now();
@@ -178,21 +181,21 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
     await templatesPage.expectTemplateInList(inactiveTemplateName);
 
     // Activate the first template and verify it succeeded
-    let activated = await templatesPage.activateTemplate(activeTemplateName);
+    let activated = await quizPage.activateTemplate(activeTemplateName);
     if (!activated) {
       // Another parallel test may have activated a template concurrently -- deactivate and retry
-      await templatesPage.deactivateAllTemplates();
-      activated = await templatesPage.activateTemplate(activeTemplateName);
+      await quizPage.deactivateAllTemplates();
+      activated = await quizPage.activateTemplate(activeTemplateName);
     }
     expect(activated).toBe(true);
 
     // Verify template is actually active before deleting inactive templates
-    await templatesPage.expectTemplateActive(activeTemplateName, true);
+    await quizPage.expectTemplateActive(activeTemplateName, true);
 
     // Delete inactive templates -- the inactive template should be among those deleted.
     // In concurrent environments other tests may have already deleted it, so we
     // only assert the active template survived rather than an exact count.
-    await templatesPage.deleteInactiveTemplates();
+    await quizPage.deleteInactiveTemplates();
 
     // Refetch to ensure we see current server state (waits for API response, prevents flaky mobile tests)
     await templatesPage.refetchTemplatesList();
@@ -202,7 +205,7 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
     await expect(templatesPage.getTemplateRow(inactiveTemplateName)).not.toBeVisible({ timeout: 5000 });
 
     // Cleanup: deactivate (toggle off) and delete
-    await templatesPage.activateTemplate(activeTemplateName);
+    await quizPage.activateTemplate(activeTemplateName);
     await templatesPage.deleteTemplate(activeTemplateName, false);
     createdTemplates.splice(createdTemplates.indexOf(activeTemplateName), 1);
     createdTemplates.splice(createdTemplates.indexOf(inactiveTemplateName), 1);
@@ -218,7 +221,7 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
     await expect(templatesPage.getTemplateRow(templateName)).toBeVisible();
 
     // Delete inactive - list should auto-refresh
-    await templatesPage.deleteInactiveTemplates();
+    await quizPage.deleteInactiveTemplates();
 
     // Template should be gone (web-first assertion auto-retries)
     await expect(templatesPage.getTemplateRow(templateName)).not.toBeVisible({ timeout: 5000 });

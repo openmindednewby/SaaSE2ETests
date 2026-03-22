@@ -2,46 +2,29 @@ import { Locator, Page, expect } from '@playwright/test';
 import { TestIds, testIdSelector } from '../shared/testIds.js';
 import { BasePage } from './BasePage.js';
 
-/**
- * Page object for the Native Forms Showcase page.
- * Handles interactions with form fields, combobox dropdowns,
- * validation assertions, and theme toggling.
- */
+/** Page object for the Native Forms Showcase page. */
 export class NativeFormsPage extends BasePage {
-  // Page container
   readonly pageContainer: Locator;
-
-  // Login form
   readonly loginEmailInput: Locator;
   readonly loginPasswordInput: Locator;
   readonly loginPasswordToggle: Locator;
   readonly loginRememberCheckbox: Locator;
   readonly loginSubmitButton: Locator;
-
-  // Registration form
   readonly registerNameInput: Locator;
   readonly registerEmailInput: Locator;
   readonly registerPasswordInput: Locator;
   readonly registerConfirmPasswordInput: Locator;
   readonly registerSubmitButton: Locator;
-
-  // Contact form
   readonly contactNameInput: Locator;
   readonly contactEmailInput: Locator;
   readonly contactSubjectCombobox: Locator;
   readonly contactMessageTextarea: Locator;
   readonly contactSubmitButton: Locator;
-
-  // Newsletter form
   readonly newsletterEmailInput: Locator;
   readonly newsletterSubmitButton: Locator;
-
-  // Combobox dropdown elements (scoped to page)
   readonly comboboxDropdown: Locator;
   readonly comboboxOptions: Locator;
   readonly comboboxNoResults: Locator;
-
-  // Error messages
   readonly errorMessages: Locator;
 
   constructor(page: Page) {
@@ -94,100 +77,41 @@ export class NativeFormsPage extends BasePage {
     await expect(this.pageContainer).toBeVisible({ timeout: 10000 });
   }
 
-  // ==================== COMBOBOX INTERACTION METHODS ====================
+  // ==================== COMBOBOX METHODS ====================
 
-  /**
-   * Type text into the contact subject combobox to filter options.
-   */
   async typeInSubjectCombobox(text: string) {
     await this.contactSubjectCombobox.click();
     await this.contactSubjectCombobox.fill(text);
   }
 
-  /**
-   * Open the subject combobox dropdown by focusing the input.
-   */
-  async openSubjectDropdown() {
-    await this.contactSubjectCombobox.click();
-  }
+  async openSubjectDropdown() { await this.contactSubjectCombobox.click(); }
 
-  /**
-   * Select a combobox option by its visible label text.
-   */
   async selectComboboxOption(label: string) {
-    const option = this.page.locator('.form-native-combobox-option').filter({
+    await this.page.locator('.form-native-combobox-option').filter({
       hasText: new RegExp(`^${label}$`, 'i'),
-    });
-    await option.click();
+    }).click();
   }
 
-  /**
-   * Use keyboard navigation to select an option in the combobox.
-   * Presses ArrowDown the specified number of times, then Enter.
-   */
   async selectComboboxOptionByKeyboard(arrowDownCount: number) {
-    for (let i = 0; i < arrowDownCount; i++) {
-      await this.contactSubjectCombobox.press('ArrowDown');
-    }
+    for (let i = 0; i < arrowDownCount; i++) await this.contactSubjectCombobox.press('ArrowDown');
     await this.contactSubjectCombobox.press('Enter');
   }
 
-  /**
-   * Press Escape to close the combobox dropdown.
-   */
-  async closeComboboxWithEscape() {
-    await this.contactSubjectCombobox.press('Escape');
-  }
+  async closeComboboxWithEscape() { await this.contactSubjectCombobox.press('Escape'); }
+  async closeComboboxByClickingOutside() { await this.page.locator('.showcase-page__title').click(); }
 
-  /**
-   * Click outside the combobox to close the dropdown.
-   */
-  async closeComboboxByClickingOutside() {
-    // Click on the page title which is always outside the combobox
-    await this.page.locator('.showcase-page__title').click();
-  }
+  // ==================== FORM METHODS ====================
 
-  // ==================== FORM SUBMISSION METHODS ====================
+  async submitLoginForm() { await this.loginSubmitButton.click(); }
+  async submitRegistrationForm() { await this.registerSubmitButton.click(); }
+  async submitContactForm() { await this.contactSubmitButton.click(); }
+  async submitNewsletterForm() { await this.newsletterSubmitButton.click(); }
 
-  /**
-   * Submit the login form.
-   */
-  async submitLoginForm() {
-    await this.loginSubmitButton.click();
-  }
-
-  /**
-   * Submit the registration form.
-   */
-  async submitRegistrationForm() {
-    await this.registerSubmitButton.click();
-  }
-
-  /**
-   * Submit the contact form.
-   */
-  async submitContactForm() {
-    await this.contactSubmitButton.click();
-  }
-
-  /**
-   * Submit the newsletter form.
-   */
-  async submitNewsletterForm() {
-    await this.newsletterSubmitButton.click();
-  }
-
-  /**
-   * Fill the login form with valid data.
-   */
   async fillLoginForm(email: string, password: string) {
     await this.loginEmailInput.fill(email);
     await this.loginPasswordInput.fill(password);
   }
 
-  /**
-   * Fill the registration form with valid data.
-   */
   async fillRegistrationForm(name: string, email: string, password: string, confirmPassword: string) {
     await this.registerNameInput.fill(name);
     await this.registerEmailInput.fill(email);
@@ -195,28 +119,19 @@ export class NativeFormsPage extends BasePage {
     await this.registerConfirmPasswordInput.fill(confirmPassword);
   }
 
-  /**
-   * Fill the contact form with valid data (excluding subject combobox).
-   */
   async fillContactFormFields(name: string, email: string, message: string) {
     await this.contactNameInput.fill(name);
     await this.contactEmailInput.fill(email);
     await this.contactMessageTextarea.fill(message);
   }
 
-  // ==================== ASSERTION METHODS ====================
+  // ==================== ASSERTIONS ====================
 
-  /**
-   * Expect the page to be visible and loaded.
-   */
   async expectPageLoaded() {
     await expect(this.pageContainer).toBeVisible();
     await expect(this.page.locator('.showcase-page__title')).toBeVisible();
   }
 
-  /**
-   * Expect all four form cards to be visible.
-   */
   async expectAllFormsVisible() {
     await Promise.all([
       expect(this.loginSubmitButton).toBeVisible(),
@@ -226,16 +141,10 @@ export class NativeFormsPage extends BasePage {
     ]);
   }
 
-  /**
-   * Expect the combobox dropdown to be visible.
-   */
   async expectDropdownVisible() {
     await expect(this.comboboxDropdown).toBeVisible();
   }
 
-  /**
-   * Expect the combobox dropdown to not be visible.
-   */
   async expectDropdownHidden() {
     await expect(this.comboboxDropdown).not.toBeVisible();
   }

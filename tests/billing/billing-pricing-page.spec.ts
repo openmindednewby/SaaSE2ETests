@@ -1,5 +1,6 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { BillingPage } from '../../pages/BillingPage.js';
+import { BillingPricingPage } from '../../pages/BillingPricingPage.js';
 import { createAuthenticatedContext } from '../../helpers/serial-auth.js';
 import { TestIds, testIdSelector } from '../../shared/testIds.js';
 
@@ -21,11 +22,13 @@ test.describe.serial('Billing Pricing Page @billing @pricing', () => {
   let context: BrowserContext;
   let page: Page;
   let billingPage: BillingPage;
+  let pricingPage: BillingPricingPage;
 
   test.beforeAll(async ({ browser }, testInfo) => {
     test.setTimeout(60000);
     ({ context, page } = await createAuthenticatedContext(browser, testInfo));
     billingPage = new BillingPage(page);
+    pricingPage = new BillingPricingPage(page);
   });
 
   test.beforeEach(async () => {
@@ -37,12 +40,12 @@ test.describe.serial('Billing Pricing Page @billing @pricing', () => {
   });
 
   test('should render exactly 3 plan cards for Free, Pro, and Enterprise tiers', async () => {
-    await billingPage.expectPlanCardCount(3);
+    await pricingPage.expectPlanCardCount(3);
 
     // Verify each tier name appears in a plan card
-    const freeCard = billingPage.getPlanCardByTier('Free');
-    const proCard = billingPage.getPlanCardByTier('Pro');
-    const enterpriseCard = billingPage.getPlanCardByTier('Enterprise');
+    const freeCard = pricingPage.getPlanCardByTier('Free');
+    const proCard = pricingPage.getPlanCardByTier('Pro');
+    const enterpriseCard = pricingPage.getPlanCardByTier('Enterprise');
 
     await expect(freeCard).toBeVisible();
     await expect(proCard).toBeVisible();
@@ -51,18 +54,18 @@ test.describe.serial('Billing Pricing Page @billing @pricing', () => {
 
   test('should update displayed prices when toggling between monthly and annual cycles', async () => {
     // Capture plan card text in monthly mode
-    await billingPage.selectMonthlyCycle();
-    await billingPage.expectPlanCardsVisible();
+    await pricingPage.selectMonthlyCycle();
+    await pricingPage.expectPlanCardsVisible();
 
-    const proCard = billingPage.getPlanCardByTier('Pro');
-    const enterpriseCard = billingPage.getPlanCardByTier('Enterprise');
+    const proCard = pricingPage.getPlanCardByTier('Pro');
+    const enterpriseCard = pricingPage.getPlanCardByTier('Enterprise');
 
     const monthlyProText = await proCard.textContent() ?? '';
     const monthlyEnterpriseText = await enterpriseCard.textContent() ?? '';
 
     // Switch to annual and capture again
-    await billingPage.selectAnnualCycle();
-    await billingPage.expectPlanCardsVisible();
+    await pricingPage.selectAnnualCycle();
+    await pricingPage.expectPlanCardsVisible();
 
     const annualProText = await proCard.textContent() ?? '';
     const annualEnterpriseText = await enterpriseCard.textContent() ?? '';
@@ -74,11 +77,11 @@ test.describe.serial('Billing Pricing Page @billing @pricing', () => {
   });
 
   test('should show "Current" badge on the current plan card without a select button', async () => {
-    await billingPage.expectPlanCardsVisible();
+    await pricingPage.expectPlanCardsVisible();
 
     // The current plan card renders "Current" badge text instead of a select button.
     // The Pro card should be marked as current (provisioned by multi-tenant setup).
-    const proCard = billingPage.getPlanCardByTier('Pro');
+    const proCard = pricingPage.getPlanCardByTier('Pro');
     await expect(proCard).toBeVisible();
     await expect(proCard).not.toContainText('Select Plan');
 
@@ -90,23 +93,23 @@ test.describe.serial('Billing Pricing Page @billing @pricing', () => {
   });
 
   test('should show select buttons on non-current plan cards', async () => {
-    await billingPage.expectPlanCardsVisible();
+    await pricingPage.expectPlanCardsVisible();
 
-    const cardCount = await billingPage.getPlanCardCount();
+    const cardCount = await pricingPage.getPlanCardCount();
     // With 3 plans and one being current, there should be at least 2 select buttons
-    const selectButtonCount = await billingPage.planSelectButtons.count();
+    const selectButtonCount = await pricingPage.planSelectButtons.count();
 
     // Current plan has no select button, so total select buttons = cardCount - 1
     expect(selectButtonCount).toBe(cardCount - 1);
   });
 
   test('should display feature lists within each plan card', async () => {
-    await billingPage.expectPlanCardsVisible();
+    await pricingPage.expectPlanCardsVisible();
 
     // Each tier card should have non-empty content including feature text
     const tierNames = ['Free', 'Pro', 'Enterprise'];
     for (const tier of tierNames) {
-      const card = billingPage.getPlanCardByTier(tier);
+      const card = pricingPage.getPlanCardByTier(tier);
       await expect(card).toBeVisible();
 
       const featureText = await card.textContent() ?? '';
@@ -116,16 +119,16 @@ test.describe.serial('Billing Pricing Page @billing @pricing', () => {
 
   test('should maintain plan card visibility after multiple cycle toggles', async () => {
     // Toggle rapidly between monthly and annual
-    await billingPage.selectAnnualCycle();
-    await billingPage.expectPlanCardsVisible();
+    await pricingPage.selectAnnualCycle();
+    await pricingPage.expectPlanCardsVisible();
 
-    await billingPage.selectMonthlyCycle();
-    await billingPage.expectPlanCardsVisible();
+    await pricingPage.selectMonthlyCycle();
+    await pricingPage.expectPlanCardsVisible();
 
-    await billingPage.selectAnnualCycle();
-    await billingPage.expectPlanCardsVisible();
+    await pricingPage.selectAnnualCycle();
+    await pricingPage.expectPlanCardsVisible();
 
     // Verify all 3 cards still render
-    await billingPage.expectPlanCardCount(3);
+    await pricingPage.expectPlanCardCount(3);
   });
 });

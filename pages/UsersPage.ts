@@ -191,6 +191,7 @@ export class UsersPage extends BasePage {
     // Sometimes the list doesn't re-render immediately; retry once after a refresh.
     const hidden = await row.isVisible({ timeout: 5000 }).then(v => !v).catch(() => false);
     if (!hidden) {
+      // eslint-disable-next-line no-page-reload/no-page-reload -- List may not re-render after delete; refresh ensures DOM reflects server state
       await this.page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
       await this.waitForLoading();
     }

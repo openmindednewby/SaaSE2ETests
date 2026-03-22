@@ -1,5 +1,6 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { BillingPage } from '../../pages/BillingPage.js';
+import { BillingPricingPage } from '../../pages/BillingPricingPage.js';
 import { createAuthenticatedContext } from '../../helpers/serial-auth.js';
 
 /**
@@ -21,11 +22,13 @@ test.describe.serial('Billing Subscription Flow @billing @subscription-flow', ()
   let context: BrowserContext;
   let page: Page;
   let billingPage: BillingPage;
+  let pricingPage: BillingPricingPage;
 
   test.beforeAll(async ({ browser }, testInfo) => {
     test.setTimeout(60000);
     ({ context, page } = await createAuthenticatedContext(browser, testInfo));
     billingPage = new BillingPage(page);
+    pricingPage = new BillingPricingPage(page);
   });
 
   test.afterAll(async () => {
@@ -58,14 +61,14 @@ test.describe.serial('Billing Subscription Flow @billing @subscription-flow', ()
 
   test('should hide the free tier watermark for a Pro subscriber', async () => {
     // Pro subscribers should not see the "Powered by MenuFlow" watermark
-    await billingPage.expectWatermarkHidden();
+    await pricingPage.expectWatermarkHidden();
   });
 
   test('should mark Pro as the current plan in the comparison grid', async () => {
-    await billingPage.expectPlanCardsVisible();
+    await pricingPage.expectPlanCardsVisible();
 
     // The Pro card should show "Current" badge text (not a "Select Plan" button)
-    const proCard = billingPage.getPlanCardByTier('Pro');
+    const proCard = pricingPage.getPlanCardByTier('Pro');
     await expect(proCard).toBeVisible();
     await expect(proCard).toContainText('Current');
     await expect(proCard).not.toContainText('Select Plan');
@@ -74,8 +77,8 @@ test.describe.serial('Billing Subscription Flow @billing @subscription-flow', ()
   test('should show select buttons for non-Pro plan cards', async () => {
     // Free and Enterprise cards should have select/upgrade buttons
     // while Pro (current) should not
-    const selectButtonCount = await billingPage.planSelectButtons.count();
-    const totalCards = await billingPage.getPlanCardCount();
+    const selectButtonCount = await pricingPage.planSelectButtons.count();
+    const totalCards = await pricingPage.getPlanCardCount();
 
     // Current plan card has no select button
     expect(selectButtonCount).toBe(totalCards - 1);

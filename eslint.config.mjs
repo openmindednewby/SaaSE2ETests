@@ -12,6 +12,7 @@ import noFragileSelectorsPlugin from './eslint-plugins/no-fragile-selectors.mjs'
 import noWaitUntilSlowPlugin from './eslint-plugins/no-wait-until-slow.mjs';
 import noRedundantVisibilityPlugin from './eslint-plugins/no-redundant-visibility.mjs';
 import maxTestsPerBatchPlugin from './eslint-plugins/max-tests-per-batch.mjs';
+import maxTestsPerFilePlugin from './eslint-plugins/max-tests-per-file.mjs';
 
 export default [
   // Ignore patterns
@@ -70,6 +71,7 @@ export default [
       'no-wait-until-slow': noWaitUntilSlowPlugin,
       'no-redundant-visibility': noRedundantVisibilityPlugin,
       'max-tests-per-batch': maxTestsPerBatchPlugin,
+      'max-tests-per-file': maxTestsPerFilePlugin,
     },
     rules: {
       // TypeScript handles undefined identifiers
@@ -105,6 +107,9 @@ export default [
       'max-file-lines/max-file-lines': ['warn', { max: 300 }],
       'no-redundant-visibility/no-redundant-visibility': 'warn',
 
+      // Per-file test count limit
+      'max-tests-per-file/max-tests-per-file': ['error', { max: 50 }],
+
       // Batch size limit: max 100 total tests per Tilt E2E batch
       // (uniqueTests × 3 browsers + 2 setup = max 100 → max 32 unique per batch)
       'max-tests-per-batch/max-tests-per-batch': ['warn', {
@@ -120,14 +125,20 @@ export default [
             'menu-display-order-sorting.spec.ts',
           ],
           'online-menus-editor': [
-            'menu-editor-categories.spec.ts',
-            'menu-content-upload.spec.ts',
+            'menu-editor-categories-focus.spec.ts',
+            'menu-editor-categories-crud.spec.ts',
+            'menu-editor-categories-switching.spec.ts',
+            'menu-content-upload-basic.spec.ts',
+            'menu-content-upload-create.spec.ts',
+            'menu-content-upload-advanced.spec.ts',
             'menu-duplicate-names.spec.ts',
           ],
           'online-menus-public': [
             'menu-preview-and-external-link.spec.ts',
-            'menu-public-page-load.spec.ts',
-            'public-viewer-active-filtering.spec.ts',
+            'menu-public-page-load-basic.spec.ts',
+            'menu-public-page-load-viewer.spec.ts',
+            'public-viewer-active-filtering-basic.spec.ts',
+            'public-viewer-active-filtering-states.spec.ts',
           ],
           'online-menus-qr': [
             'menu-qr-code.spec.ts',
@@ -137,6 +148,7 @@ export default [
           'questioner-active': [
             'fill-quiz.spec.ts',
             'quiz-multipage-validation.spec.ts',
+            'quiz-multipage-navigation.spec.ts',
             'submit-quiz.spec.ts',
           ],
           'questioner-answers': [
@@ -180,6 +192,41 @@ export default [
             'billing-pricing-page.spec.ts',
             'billing-upgrade-downgrade.spec.ts',
             'billing-history.spec.ts',
+          ],
+
+          // Notification sub-batches (142 total tests across 3 sub-batches)
+          'notification-ui': [
+            'notification-screen.spec.ts',
+            'notification-screen-navigation.spec.ts',
+            'health.spec.ts',
+          ],
+          'notification-alerts': [
+            'notification-toast.spec.ts',
+            'notification-badge.spec.ts',
+            'cross-tab.spec.ts',
+          ],
+          'notification-infra': [
+            'realtime.spec.ts',
+            'connection.spec.ts',
+            'stress-volume.spec.ts',
+            'stress-resilience.spec.ts',
+          ],
+
+          // Menu Styling sub-batches (61 total tests across 3 sub-batches)
+          'menu-styling-colors': [
+            'color-scheme.spec.ts',
+            'color-scheme-save.spec.ts',
+            'layout-templates.spec.ts',
+          ],
+          'menu-styling-typography': [
+            'typography.spec.ts',
+            'typography-advanced.spec.ts',
+            'persistence.spec.ts',
+            'persistence-reload.spec.ts',
+          ],
+          'menu-styling-category': [
+            'category-styling.spec.ts',
+            'category-styling-advanced.spec.ts',
           ],
 
           // Theme-Studio sub-batches (109 total tests across 4 sub-batches)

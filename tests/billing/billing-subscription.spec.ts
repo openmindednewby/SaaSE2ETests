@@ -1,5 +1,6 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { BillingPage } from '../../pages/BillingPage.js';
+import { BillingPricingPage } from '../../pages/BillingPricingPage.js';
 import { createAuthenticatedContext } from '../../helpers/serial-auth.js';
 
 /**
@@ -21,11 +22,13 @@ test.describe.serial('Billing Subscription Management @billing @subscription', (
   let context: BrowserContext;
   let page: Page;
   let billingPage: BillingPage;
+  let pricingPage: BillingPricingPage;
 
   test.beforeAll(async ({ browser }, testInfo) => {
     test.setTimeout(60000);
     ({ context, page } = await createAuthenticatedContext(browser, testInfo));
     billingPage = new BillingPage(page);
+    pricingPage = new BillingPricingPage(page);
   });
 
   test.beforeEach(async () => {
@@ -49,33 +52,33 @@ test.describe.serial('Billing Subscription Management @billing @subscription', (
   });
 
   test('should display plan comparison cards', async () => {
-    await billingPage.expectPlanCardsVisible();
+    await pricingPage.expectPlanCardsVisible();
 
     // The system has 3 tiers: Free, Pro, Enterprise
-    const cardCount = await billingPage.getPlanCardCount();
+    const cardCount = await pricingPage.getPlanCardCount();
     expect(cardCount).toBeGreaterThanOrEqual(1);
   });
 
   test('should show billing cycle toggle with monthly and annual options', async () => {
-    await billingPage.expectCycleToggleVisible();
+    await pricingPage.expectCycleToggleVisible();
 
     // Both cycle options should be present
-    await expect(billingPage.cycleMonthly).toBeVisible();
-    await expect(billingPage.cycleAnnual).toBeVisible();
+    await expect(pricingPage.cycleMonthly).toBeVisible();
+    await expect(pricingPage.cycleAnnual).toBeVisible();
   });
 
   test('should switch between monthly and annual billing cycles', async () => {
     // Start by clicking annual
-    await billingPage.selectAnnualCycle();
+    await pricingPage.selectAnnualCycle();
 
     // Plan cards should still be visible after toggle
-    await billingPage.expectPlanCardsVisible();
+    await pricingPage.expectPlanCardsVisible();
 
     // Switch back to monthly
-    await billingPage.selectMonthlyCycle();
+    await pricingPage.selectMonthlyCycle();
 
     // Plan cards should still be visible
-    await billingPage.expectPlanCardsVisible();
+    await pricingPage.expectPlanCardsVisible();
   });
 
   test('should display the manage payment button', async () => {
@@ -84,22 +87,22 @@ test.describe.serial('Billing Subscription Management @billing @subscription', (
 
   test('should display feature lists within plan cards', async () => {
     // Each plan card should contain feature text (checkmarks and feature names)
-    const firstCard = billingPage.planCards.first();
+    const firstCard = pricingPage.planCards.first();
     await expect(firstCard).toBeVisible();
 
     // Plan cards contain feature rows with checkmark symbols
-    const cardText = await billingPage.getPlanCardText(0);
+    const cardText = await pricingPage.getPlanCardText(0);
     expect(cardText.length).toBeGreaterThan(0);
   });
 
   test('should show select button on non-current plan cards', async () => {
     // At least one plan card should have a select button
     // (the current plan shows "Current Plan" text instead of a button)
-    const cardCount = await billingPage.getPlanCardCount();
+    const cardCount = await pricingPage.getPlanCardCount();
 
     if (cardCount > 1) {
       // With multiple plans, at least one should have a select button
-      const selectButtonCount = await billingPage.planSelectButtons.count();
+      const selectButtonCount = await pricingPage.planSelectButtons.count();
       expect(selectButtonCount).toBeGreaterThan(0);
     }
   });

@@ -2,6 +2,7 @@ import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { getProjectUsers } from '../../fixtures/test-data.js';
 import { LoginPage } from '../../pages/LoginPage.js';
 import { MenuStylingPage } from '../../pages/MenuStylingPage.js';
+import { MenuStylingAdvancedPage } from '../../pages/MenuStylingAdvancedPage.js';
 import { OnlineMenusPage } from '../../pages/OnlineMenusPage.js';
 
 /**
@@ -19,6 +20,7 @@ test.describe.serial('Menu Layout Templates @menu-styling @online-menus', () => 
   let page: Page;
   let menusPage: OnlineMenusPage;
   let stylingPage: MenuStylingPage;
+  let advancedStylingPage: MenuStylingAdvancedPage;
   let testMenuName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
@@ -53,6 +55,7 @@ test.describe.serial('Menu Layout Templates @menu-styling @online-menus', () => 
 
     menusPage = new OnlineMenusPage(page);
     stylingPage = new MenuStylingPage(page);
+    advancedStylingPage = new MenuStylingAdvancedPage(page);
   });
 
   test.afterAll(async () => {
@@ -113,7 +116,7 @@ test.describe.serial('Menu Layout Templates @menu-styling @online-menus', () => 
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
     // Verify preview is visible
-    await stylingPage.expectPreviewVisible();
+    await advancedStylingPage.expectPreviewVisible();
   });
 
   test('should update preview when changing media position settings', async () => {
@@ -123,7 +126,7 @@ test.describe.serial('Menu Layout Templates @menu-styling @online-menus', () => 
     await stylingPage.switchToMediaTab();
 
     // Check if media position editor is visible
-    const mediaEditorVisible = await stylingPage.mediaPositionEditor.isVisible().catch(() => false);
+    const mediaEditorVisible = await advancedStylingPage.mediaPositionEditor.isVisible().catch(() => false);
 
     if (mediaEditorVisible) {
       // Try to select a different media position
@@ -138,7 +141,7 @@ test.describe.serial('Menu Layout Templates @menu-styling @online-menus', () => 
       }
 
       // Verify preview is still visible after changes
-      await stylingPage.expectPreviewVisible();
+      await advancedStylingPage.expectPreviewVisible();
     }
   });
 
@@ -149,18 +152,18 @@ test.describe.serial('Menu Layout Templates @menu-styling @online-menus', () => 
     await stylingPage.switchToHeaderTab();
 
     // Check if header editor is visible
-    const headerEditorVisible = await stylingPage.headerEditor.isVisible().catch(() => false);
+    const headerEditorVisible = await advancedStylingPage.headerEditor.isVisible().catch(() => false);
 
     if (headerEditorVisible) {
       // Try to toggle menu name visibility
-      const showMenuNameToggle = stylingPage.showMenuNameToggle;
+      const showMenuNameToggle = advancedStylingPage.showMenuNameToggle;
       if (await showMenuNameToggle.isVisible().catch(() => false)) {
         await showMenuNameToggle.click();
         await stylingPage.waitForLoading();
       }
 
       // Verify preview is still visible after changes
-      await stylingPage.expectPreviewVisible();
+      await advancedStylingPage.expectPreviewVisible();
     }
   });
 

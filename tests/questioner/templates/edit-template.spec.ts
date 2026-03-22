@@ -3,6 +3,7 @@ import type { BrowserContext, Page } from '@playwright/test';
 import { getProjectUsers } from '../../../fixtures/test-data.js';
 import { LoginPage } from '../../../pages/LoginPage.js';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
+import { QuizTemplatesQuizPage } from '../../../pages/QuizTemplatesQuizPage.js';
 
 // Use serial mode so tests run in order and share the same browser context
 test.describe.serial('Edit Quiz Template @questioner @crud', () => {
@@ -10,6 +11,7 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
   let context: BrowserContext;
   let page: Page;
   let templatesPage: QuizTemplatesPage;
+  let quizPage: QuizTemplatesQuizPage;
   let testTemplateName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
@@ -46,6 +48,7 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
 
     // Initialize page objects
     templatesPage = new QuizTemplatesPage(page);
+    quizPage = new QuizTemplatesQuizPage(page);
   });
 
   test.beforeEach(async () => {
@@ -53,7 +56,7 @@ test.describe.serial('Edit Quiz Template @questioner @crud', () => {
   });
 
   async function ensureNoActiveTemplates() {
-    await templatesPage.deactivateAllTemplates();
+    await quizPage.deactivateAllTemplates();
     await templatesPage.refetchTemplatesList();
   }
 
