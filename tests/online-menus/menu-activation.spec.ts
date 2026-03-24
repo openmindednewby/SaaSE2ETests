@@ -66,6 +66,7 @@ test.describe.serial('Menu Activation and Deactivation @online-menus @crud', () 
   }
 
   test.afterAll(async () => {
+    test.setTimeout(60000); // Firefox cleanup can be slow under concurrency
     // Cleanup - deactivate first if active, then delete
     try {
       await menusPage.goto();

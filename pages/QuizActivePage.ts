@@ -19,10 +19,12 @@ export class QuizActivePage extends BasePage {
     this.quizTitle = page.locator('[data-testid="quiz-title"]');
     this.quizDescription = page.locator('[data-testid="quiz-description"]');
     this.nextButton = page.getByRole('button', { name: /next/i });
-    this.backButton = page.getByRole('button', { name: /back|previous/i });
+    // Use exact match for "Back" to avoid matching "Feedback" sidebar button
+    this.backButton = page.getByRole('button', { name: 'Back', exact: true });
     this.submitButton = page.getByRole('button', { name: /submit/i });
     this.loadingIndicator = page.locator('[role="progressbar"]');
-    this.progressIndicator = page.getByText(/page \d+ of \d+/i);
+    // Progress indicator renders as "Page 1 / 2" (using FM() localization)
+    this.progressIndicator = page.getByText(/page\s+\d+\s*[/|of]\s*\d+/i);
     this.thankYouMessage = page.getByText(/thank you/i);
   }
 
@@ -39,19 +41,35 @@ export class QuizActivePage extends BasePage {
    * Check if a quiz is loaded
    */
   async hasActiveQuiz(): Promise<boolean> {
+    // React Native Web renders TextInput as <input> and radio options as
+    // TouchableOpacity (role="button"). Look for the placeholder text or
+    // any input elements to detect a loaded quiz.
+    const quizInputs = this.page.getByPlaceholder(/enter your answer/i);
+    const questionFields = this.page.locator(
+      '[data-testid^="question-"], input, textarea'
+    );
     const noQuestionsText = this.page.getByText(/no questions found/i);
     const failedText = this.page.getByText(/failed to load/i);
 
-    if (await noQuestionsText.isVisible({ timeout: 2000 }).catch(() => false)) {
-      return false;
-    }
-    if (await failedText.isVisible({ timeout: 2000 }).catch(() => false)) {
+    // Wait up to 15 seconds for either quiz content or an error/empty state to appear
+    try {
+      await quizInputs.or(questionFields).or(noQuestionsText).or(failedText).first()
+        .waitFor({ state: 'visible', timeout: 15000 });
+    } catch {
+      // Neither quiz content nor error appeared -- treat as no quiz
       return false;
     }
 
-    // Check if there are any question fields
-    const questions = this.page.locator('[data-testid^="question-"]');
-    return await questions.count() > 0;
+    if (await noQuestionsText.isVisible({ timeout: 1000 }).catch(() => false)) {
+      return false;
+    }
+    if (await failedText.isVisible({ timeout: 1000 }).catch(() => false)) {
+      return false;
+    }
+
+    // Check for quiz inputs by placeholder or by element presence
+    if (await quizInputs.count() > 0) return true;
+    return await questionFields.count() > 0;
   }
 
   /**
@@ -136,18 +154,28 @@ export class QuizActivePage extends BasePage {
    * Get current page number
    */
   async getCurrentPage(): Promise<number> {
-    const progressText = await this.progressIndicator.textContent();
-    const match = progressText?.match(/page (\d+)/i);
-    return match ? parseInt(match[1], 10) : 1;
+    try {
+      const progressText = await this.progressIndicator.textContent({ timeout: 5000 });
+      // Matches "Page 1 / 2" or "Page 1 of 2"
+      const match = progressText?.match(/page\s+(\d+)/i);
+      return match ? parseInt(match[1], 10) : 1;
+    } catch {
+      return 1;
+    }
   }
 
   /**
    * Get total pages
    */
   async getTotalPages(): Promise<number> {
-    const progressText = await this.progressIndicator.textContent();
-    const match = progressText?.match(/of (\d+)/i);
-    return match ? parseInt(match[1], 10) : 1;
+    try {
+      const progressText = await this.progressIndicator.textContent({ timeout: 5000 });
+      // Matches "Page 1 / 2" or "Page 1 of 2"
+      const match = progressText?.match(/(\d+)\s*$/);
+      return match ? parseInt(match[1], 10) : 1;
+    } catch {
+      return 1;
+    }
   }
 
   /**

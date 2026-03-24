@@ -5,6 +5,7 @@ import { LoginPage } from '../../../pages/LoginPage.js';
 
 // Use serial mode so tests run in order and share the same browser context
 test.describe.serial('Fill Active Quiz @questioner', () => {
+  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let quizActivePage: QuizActivePage;

@@ -16,6 +16,11 @@ import { isNotificationServiceHealthy } from '../../helpers/notification.helpers
 import { NotificationsPage } from '../../pages/NotificationsPage.js';
 import { TestIds, testIdSelector } from '../../shared/testIds.js';
 
+/** Timeout for initial page render after navigation.
+ * Must be generous because overlay handlers (cookie consent) can
+ * consume several seconds of the default 5s expect timeout. */
+const PAGE_RENDER_TIMEOUT_MS = 15000;
+
 /** Whether the NotificationService is reachable (shared across all describe blocks) */
 let serviceHealthy = false;
 
@@ -67,7 +72,9 @@ test.describe('Notification Screen - Navigation @notifications', () => {
     await notificationsPage.clickBellToNavigate();
 
     // Verify we're on notifications screen
-    await expect(notificationsPage.notificationScreen).toBeVisible();
+    await expect(notificationsPage.notificationScreen).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
   });
 
   test('can navigate back from notifications', async ({ page }) => {
@@ -79,7 +86,9 @@ test.describe('Notification Screen - Navigation @notifications', () => {
 
     // Go to notifications
     await notificationsPage.clickBellToNavigate();
-    await expect(notificationsPage.notificationScreen).toBeVisible();
+    await expect(notificationsPage.notificationScreen).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
 
     // Navigate back
     await page.goBack();
@@ -101,7 +110,9 @@ test.describe('Notification Screen - Navigation @notifications', () => {
 
     if (count < 5) {
       // Not enough notifications to test scroll position - just verify page works
-      await expect(notificationsPage.notificationScreen).toBeVisible();
+      await expect(notificationsPage.notificationScreen).toBeVisible({
+        timeout: PAGE_RENDER_TIMEOUT_MS,
+      });
       return;
     }
 
@@ -119,11 +130,16 @@ test.describe('Notification Screen - Navigation @notifications', () => {
     // Note: Scroll position preservation depends on implementation
     // Some apps restore scroll, some don't
     // Just verify the page loaded correctly
-    await expect(notificationsPage.notificationScreen).toBeVisible();
+    await expect(notificationsPage.notificationScreen).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
   });
 });
 
 test.describe('Notification Screen - Rendering @notifications', () => {
+  // Each test navigates + waits for cookie consent + renders; 30s default can be tight
+  test.setTimeout(60000);
+
   // NOTE: The notification system uses SignalR for real-time data, not REST API.
   // The useNotifications() hook gets data from SignalR context, so HTTP mocking
   // doesn't affect what the component displays. These tests verify the UI renders
@@ -166,10 +182,14 @@ test.describe('Notification Screen - Rendering @notifications', () => {
     await notificationsPage.waitForLoading();
 
     // Screen should render
-    await expect(notificationsPage.notificationScreen).toBeVisible();
+    await expect(notificationsPage.notificationScreen).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
 
     // Notification list should be present
-    await expect(notificationsPage.notificationList).toBeVisible();
+    await expect(notificationsPage.notificationList).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
   });
 
   test('shows empty state or notifications based on data', async ({ page: _page }) => {
@@ -180,7 +200,9 @@ test.describe('Notification Screen - Rendering @notifications', () => {
     await notificationsPage.waitForLoading();
 
     // Screen should render
-    await expect(notificationsPage.notificationScreen).toBeVisible();
+    await expect(notificationsPage.notificationScreen).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
 
     // Either empty state or notification items should be visible
     const items = notificationsPage.getNotificationItems();
@@ -203,10 +225,14 @@ test.describe('Notification Screen - Rendering @notifications', () => {
     await notificationsPage.waitForLoading();
 
     // Screen should always render (component has fallback for disconnected state)
-    await expect(notificationsPage.notificationScreen).toBeVisible();
+    await expect(notificationsPage.notificationScreen).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
 
     // Notification list should be present
-    await expect(notificationsPage.notificationList).toBeVisible();
+    await expect(notificationsPage.notificationList).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
 
     // If disconnected, a connection status banner may be shown
     // The component shows this when connectionStatus !== 'connected'

@@ -16,6 +16,11 @@ import { isNotificationServiceHealthy } from '../../helpers/notification.helpers
 import { NotificationsPage } from '../../pages/NotificationsPage.js';
 import { TestIds, testIdSelector } from '../../shared/testIds.js';
 
+/** Timeout for initial page render after navigation.
+ * Must be generous because overlay handlers (cookie consent) can
+ * consume several seconds of the default 5s expect timeout. */
+const PAGE_RENDER_TIMEOUT_MS = 15000;
+
 /** Whether the NotificationService is reachable (shared across all describe blocks) */
 let serviceHealthy = false;
 
@@ -50,7 +55,9 @@ test.describe('Notification Screen @notifications', () => {
     test.skip(!serviceHealthy, 'NotificationService is not running');
 
     // Verify we're on the notifications screen
-    await expect(notificationsPage.notificationScreen).toBeVisible();
+    await expect(notificationsPage.notificationScreen).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
 
     // Verify URL
     await expect(page).toHaveURL(/\/notifications/);
@@ -62,21 +69,39 @@ test.describe('Notification Screen @notifications', () => {
     // Look for the notifications header/title
     const header = page.getByText(/notifications/i).first();
 
-    await expect(header).toBeVisible();
+    await expect(header).toBeVisible({ timeout: PAGE_RENDER_TIMEOUT_MS });
   });
 
   test('notification list is displayed', async () => {
     test.skip(!serviceHealthy, 'NotificationService is not running');
 
     // The notification list should be present (even if empty)
-    await expect(notificationsPage.notificationList).toBeVisible();
+    await expect(notificationsPage.notificationList).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
   });
 
   test('shows empty state when no notifications', async ({ page }) => {
     test.skip(!serviceHealthy, 'NotificationService is not running');
 
-    // Check if there are notifications
+    // Wait for the notification screen to fully render before checking items.
+    // The instant count() can return 0 before items have rendered, leading to
+    // a false "empty state" branch that then fails because neither the empty
+    // state nor the items have rendered yet.
+    await expect(notificationsPage.notificationScreen).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
+
+    // Wait for either notification items or empty state to appear
+    const emptyState = page.locator(testIdSelector(TestIds.NOTIFICATION_EMPTY_STATE));
     const items = notificationsPage.getNotificationItems();
+
+    await expect(async () => {
+      const itemCount = await items.count();
+      const emptyVisible = await emptyState.isVisible().catch(() => false);
+      expect(itemCount > 0 || emptyVisible).toBe(true);
+    }).toPass({ timeout: PAGE_RENDER_TIMEOUT_MS });
+
     const count = await items.count();
 
     if (count === 0) {
@@ -84,11 +109,9 @@ test.describe('Notification Screen @notifications', () => {
       await notificationsPage.expectEmptyState();
 
       // Empty state should have informative text
-      const emptyState = page.locator(testIdSelector(TestIds.NOTIFICATION_EMPTY_STATE));
       await expect(emptyState).toContainText(/no notification|empty|nothing/i);
     } else {
       // Empty state should NOT be visible when there are items
-      const emptyState = page.locator(testIdSelector(TestIds.NOTIFICATION_EMPTY_STATE));
       await expect(emptyState).not.toBeVisible();
     }
   });
@@ -141,7 +164,9 @@ test.describe('Notification Screen @notifications', () => {
 
     if (!isVisible) {
       // No unread notifications to test with, just verify the page works
-      await expect(notificationsPage.notificationScreen).toBeVisible();
+      await expect(notificationsPage.notificationScreen).toBeVisible({
+        timeout: PAGE_RENDER_TIMEOUT_MS,
+      });
       return;
     }
 
@@ -198,7 +223,9 @@ test.describe('Notification Screen @notifications', () => {
 
     if (count === 0) {
       // No notifications to interact with - just verify list is shown
-      await expect(notificationsPage.notificationList).toBeVisible();
+      await expect(notificationsPage.notificationList).toBeVisible({
+        timeout: PAGE_RENDER_TIMEOUT_MS,
+      });
       return;
     }
 
@@ -228,6 +255,9 @@ test.describe('Notification Screen @notifications', () => {
 
     // Check for proper accessibility structure
     const screen = notificationsPage.notificationScreen;
+
+    // Wait for screen to be visible before checking attributes
+    await expect(screen).toBeVisible({ timeout: PAGE_RENDER_TIMEOUT_MS });
 
     // Should have accessible landmark or label
     const hasRole = await screen.getAttribute('role');

@@ -23,7 +23,7 @@ test.describe.serial('Menu CRUD with Activation State @online-menus @crud', () =
     test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
-    context = await browser.newContext();
+    context = await browser.newContext({ storageState: 'playwright/.auth/user.json' });
     page = await context.newPage();
 
     // Add init script to restore auth from localStorage to sessionStorage on page load

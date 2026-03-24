@@ -51,15 +51,36 @@ export class OnlineMenusPage extends BasePage {
     for (let attempt = 1; attempt <= 3; attempt++) {
       await super.goto('/menus');
       await this.waitForLoading();
-      await expect(this.createMenuButton).toBeVisible({ timeout: 15000 });
-      const errorText = this.page.getByText(/failed to load/i);
-      const hasError = await errorText.isVisible({ timeout: 1000 }).catch(() => false);
-      if (!hasError) return;
+
+      // Use soft check: the page may not have loaded properly (e.g., auth redirect on Firefox)
+      const buttonVisible = await this.createMenuButton
+        .waitFor({ state: 'visible', timeout: 15000 })
+        .then(() => true)
+        .catch(() => false);
+
+      if (buttonVisible) {
+        const errorText = this.page.getByText(/failed to load/i);
+        const hasError = await errorText.isVisible({ timeout: 1000 }).catch(() => false);
+        if (!hasError) return;
+        // "Failed to load" shown -- click refresh if available
+        if (attempt < 3) {
+          await this.page.getByRole('button', { name: /refresh/i }).click().catch(() => {});
+          await this.waitForLoading();
+        }
+        continue;
+      }
+
+      // Button not visible -- likely redirected to login page (common on Firefox under concurrency).
+      // Force auth into both storages. If on the login page, restore auth and reload
+      // so the app picks up the session before the next navigation attempt.
       if (attempt < 3) {
-        await this.page.getByRole('button', { name: /refresh/i }).click().catch(() => {});
-        await this.waitForLoading();
+        await this.restoreAuth();
+        // eslint-disable-next-line no-page-reload/no-page-reload -- auth recovery after redirect to login
+        await this.page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
       }
     }
+    // Final assertion: if all retries exhausted, fail with clear message
+    await expect(this.createMenuButton).toBeVisible({ timeout: 15000 });
   }
 
   async refetchMenusList() {

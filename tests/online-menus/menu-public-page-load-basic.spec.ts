@@ -26,7 +26,7 @@ test.describe.serial('Public Menu Page Load - Basic @online-menus @public-viewer
     test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
-    context = await browser.newContext();
+    context = await browser.newContext({ storageState: 'playwright/.auth/user.json' });
     page = await context.newPage();
 
     await page.addInitScript(() => {
@@ -79,6 +79,7 @@ test.describe.serial('Public Menu Page Load - Basic @online-menus @public-viewer
   });
 
   test.afterAll(async () => {
+    test.setTimeout(60000); // Firefox cleanup can be slow under concurrency
     try {
       await menusPage.goto();
       await menusPage.deactivateAllMenus();
@@ -190,7 +191,8 @@ test.describe.serial('Public Menu Page Load - Basic @online-menus @public-viewer
     // Retry loop: the public API may have server-side caching in Docker,
     // so the newly activated menu can take several reload cycles to appear.
     // Firefox is particularly susceptible due to slower rendering.
-    const maxAttempts = 5;
+    const maxAttempts = 8;
+    const retryDelayMs = 2000;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       await publicPage.goto('/public/menus');
 
@@ -206,18 +208,11 @@ test.describe.serial('Public Menu Page Load - Basic @online-menus @public-viewer
       if (isVisible) break;
 
       if (attempt < maxAttempts) {
-        await publicPage.reload({ waitUntil: 'domcontentloaded' });
+        // eslint-disable-next-line no-wait-for-timeout/no-wait-for-timeout -- waiting for cache propagation between retries
+        await publicPage.waitForTimeout(retryDelayMs);
       }
     }
 
-    // If the menu card never appeared after retries, skip as a known
-    // backend caching issue rather than failing the test suite.
-    const cardVisible = await menuCard.isVisible().catch(() => false);
-    if (!cardVisible) {
-      test.skip(true, 'Public menu list did not reflect activation in time — backend caching issue');
-      return;
-    }
-
-    await expect(menuCard).toBeVisible();
+    await expect(menuCard).toBeVisible({ timeout: 10000 });
   });
 });

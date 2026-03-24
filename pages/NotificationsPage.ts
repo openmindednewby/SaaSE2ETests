@@ -4,6 +4,10 @@ import { BasePage } from './BasePage.js';
 import { TestIds, testIdSelector, testIdStartsWithSelector } from '../shared/testIds.js';
 
 const NOTIFICATION_TIMEOUT_MS = 10000;
+/** Timeout for page render after navigation.
+ * Must be generous because overlay handlers (cookie consent) can
+ * consume several seconds of the default action/expect timeout. */
+const PAGE_RENDER_TIMEOUT_MS = 15000;
 const TOAST_DURATION_MS = 5000;
 const ANIMATION_BUFFER_MS = 500;
 
@@ -42,8 +46,9 @@ export class NotificationsPage extends BasePage {
   }
 
   async clickBellToNavigate(): Promise<void> {
-    await this.notificationBell.click();
-    await expect(this.page).toHaveURL(/\/notifications/, { timeout: NOTIFICATION_TIMEOUT_MS });
+    await expect(this.notificationBell).toBeVisible({ timeout: PAGE_RENDER_TIMEOUT_MS });
+    await this.notificationBell.click({ timeout: PAGE_RENDER_TIMEOUT_MS });
+    await expect(this.page).toHaveURL(/\/notifications/, { timeout: PAGE_RENDER_TIMEOUT_MS });
   }
 
   // ==================== Badge Methods ====================

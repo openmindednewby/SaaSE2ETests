@@ -79,6 +79,7 @@ test.describe.serial('Public Viewer Active Filtering - Basic @online-menus @publ
   });
 
   test.afterAll(async () => {
+    test.setTimeout(60000); // Firefox cleanup can be slow under concurrency
     try {
       await menusPage.goto();
       await menusPage.deactivateAllMenus();

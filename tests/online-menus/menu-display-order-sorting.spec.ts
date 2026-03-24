@@ -27,7 +27,7 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
     test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
-    context = await browser.newContext();
+    context = await browser.newContext({ storageState: 'playwright/.auth/user.json' });
     page = await context.newPage();
 
     // Add init script to restore auth from localStorage to sessionStorage on page load
@@ -64,6 +64,7 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
   });
 
   test.afterAll(async () => {
+    test.setTimeout(60000); // Firefox cleanup can be slow under concurrency
     try {
       await menusPage.goto();
       await menusPage.deactivateAllMenus();

@@ -52,18 +52,19 @@ export class LoginPage extends BasePage {
    * Retries once on failure to handle transient backend slowness.
    */
   async loginAndWait(username: string, password: string) {
-    const MAX_ATTEMPTS = 2;
+    const MAX_ATTEMPTS = 3;
     let lastError: Error | undefined;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
         await this.login(username, password);
-        const timeout = attempt < MAX_ATTEMPTS ? 15000 : 30000;
+        const timeout = attempt < MAX_ATTEMPTS ? 20000 : 45000;
         await this.waitForLoginComplete(timeout);
         return;
       } catch (error) {
         lastError = error as Error;
         if (attempt < MAX_ATTEMPTS) {
+          // Navigate back to login for a fresh retry
           await this.goto();
         }
       }

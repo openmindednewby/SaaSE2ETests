@@ -27,6 +27,11 @@ const STRESS_TIMEOUT_MS = 60000;
 /** Extended timeout for the most demanding stress tests */
 const EXTREME_STRESS_TIMEOUT_MS = 120000;
 
+/** Timeout for initial page render after navigation.
+ * Must be generous because overlay handlers (cookie consent) can
+ * consume several seconds of the default 5s expect timeout. */
+const PAGE_RENDER_TIMEOUT_MS = 15000;
+
 /** Max acceptable render time for notification list (in ms) */
 const MAX_RENDER_TIME_MS = 2000;
 
@@ -214,8 +219,12 @@ test.describe('Notification Volume Stress Tests @notifications @stress', () => {
     await notificationsPage.clickBellToNavigate();
     await notificationsPage.waitForLoading();
 
-    await expect(notificationsPage.notificationScreen).toBeVisible();
-    await expect(notificationsPage.notificationList).toBeVisible();
+    await expect(notificationsPage.notificationScreen).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
+    await expect(notificationsPage.notificationList).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
 
     const renderTime =
       await measureNotificationListRenderTime(page);
@@ -236,7 +245,9 @@ test.describe('Notification Volume Stress Tests @notifications @stress', () => {
       await expect(items.nth(tenthItem)).toBeVisible();
     }
 
-    await expect(notificationsPage.notificationBell).toBeVisible();
+    await expect(notificationsPage.notificationBell).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
   });
 
   test('should handle notification flood without UI freeze', async ({
@@ -269,15 +280,21 @@ test.describe('Notification Volume Stress Tests @notifications @stress', () => {
       description: `Injected ${totalInjected}/${totalNotifications} notifications`,
     });
 
-    await expect(notificationsPage.notificationBell).toBeVisible();
+    await expect(notificationsPage.notificationBell).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
     await expect(notificationsPage.notificationBell).toBeEnabled();
     await notificationsPage.expectBadgeVisible();
 
     await notificationsPage.clickBellToNavigate();
     await notificationsPage.waitForLoading();
 
-    await expect(notificationsPage.notificationScreen).toBeVisible();
-    await expect(notificationsPage.notificationList).toBeVisible();
+    await expect(notificationsPage.notificationScreen).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
+    await expect(notificationsPage.notificationList).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
 
     const items = notificationsPage.getNotificationItems();
     const count = await items.count();

@@ -1,5 +1,7 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { getProjectUsers } from '../../../fixtures/test-data.js';
+import { createQuestionerApiHelper, QuestionerApiHelper } from '../../../helpers/questioner-admin.js';
+import { fillCurrentPageFields } from '../../../helpers/quiz-form-helpers.js';
 import { LoginPage } from '../../../pages/LoginPage.js';
 import { QuizActivePage } from '../../../pages/QuizActivePage.js';
 
@@ -9,6 +11,8 @@ import { QuizActivePage } from '../../../pages/QuizActivePage.js';
  * Continuation of BUG-QUIZ-004 validation tests. These tests verify:
  * 1. Cross-page validation catches empty required fields from earlier pages
  * 2. Back navigation preserves field values across pages
+ *
+ * Setup: Creates a multi-page quiz template via the API and activates it.
  */
 test.describe.serial('Multi-Page Quiz Navigation @questioner @validation @critical', () => {
   test.setTimeout(180000); // 3 minutes for multi-step tests
@@ -16,15 +20,17 @@ test.describe.serial('Multi-Page Quiz Navigation @questioner @validation @critic
   let context: BrowserContext;
   let page: Page;
   let quizActivePage: QuizActivePage;
+  let apiHelper: QuestionerApiHelper;
+  let templateExternalId: string | null = null;
 
   test.beforeAll(async ({ browser }, testInfo) => {
-    testInfo.setTimeout(60000);
+    testInfo.setTimeout(120000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
+    // 1. Browser login FIRST (before any API calls to avoid auth interference)
     context = await browser.newContext();
     page = await context.newPage();
 
-    // Add init script to restore auth from localStorage to sessionStorage
     await page.addInitScript(() => {
       try {
         const persistAuth = localStorage.getItem('persist:auth');
@@ -40,7 +46,6 @@ test.describe.serial('Multi-Page Quiz Navigation @questioner @validation @critic
     await loginPage.goto();
     await loginPage.loginAndWait(adminUser.username, adminUser.password);
 
-    // Save auth state to localStorage so it persists across page navigations
     await page.evaluate(() => {
       const persistAuth = sessionStorage.getItem('persist:auth');
       if (persistAuth) {
@@ -48,10 +53,21 @@ test.describe.serial('Multi-Page Quiz Navigation @questioner @validation @critic
       }
     });
 
+    // 2. Set up test data via the API: create and activate a multi-page template
+    apiHelper = createQuestionerApiHelper();
+    await apiHelper.login(adminUser.username, adminUser.password);
+    const template = await apiHelper.createAndActivateMultiPageTemplate('NavTest');
+    templateExternalId = template.externalId;
+
     quizActivePage = new QuizActivePage(page);
   });
 
-  test.afterAll(async () => {
+  // eslint-disable-next-line no-empty-pattern
+  test.afterAll(async ({}, testInfo) => {
+    testInfo.setTimeout(60000);
+    if (apiHelper && templateExternalId) {
+      await apiHelper.cleanup(templateExternalId, []).catch(() => {});
+    }
     await context?.close();
   });
 
@@ -60,43 +76,17 @@ test.describe.serial('Multi-Page Quiz Navigation @questioner @validation @critic
     await quizActivePage.waitForLoading();
 
     const hasQuiz = await quizActivePage.hasActiveQuiz();
-    if (!hasQuiz) {
-      test.skip(true, 'No active quiz available - cannot test cross-page validation');
-      return;
-    }
+    expect(hasQuiz, 'Expected an active quiz to be available after API setup').toBe(true);
 
     const totalPages = await quizActivePage.getTotalPages();
-    if (totalPages <= 1) {
-      test.skip(true, 'Single-page quiz - cross-page validation not applicable');
-      return;
-    }
+    expect(totalPages, 'Expected a multi-page quiz (2+ pages)').toBeGreaterThan(1);
 
     // Strategy: Fill page 1, advance to page 2, leave page 2 empty,
     // then try to submit. The validateAllPages() fix should catch errors
     // on page 2 even though we're on the last page.
 
     // Fill fields on page 1
-    const textInputs = page.locator('input[type="text"], textarea');
-    const inputCount = await textInputs.count();
-    for (let i = 0; i < inputCount; i++) {
-      const input = textInputs.nth(i);
-      if (await input.isVisible()) {
-        await input.fill(`Page 1 answer ${i + 1}`);
-      }
-    }
-
-    // Select first radio option on page 1
-    const radioGroups = page.locator('[role="radiogroup"]');
-    const radioCount = await radioGroups.count();
-    for (let i = 0; i < radioCount; i++) {
-      const group = radioGroups.nth(i);
-      if (await group.isVisible()) {
-        const firstRadio = group.locator('[role="radio"]').first();
-        if (await firstRadio.isVisible()) {
-          await firstRadio.click();
-        }
-      }
-    }
+    await fillCurrentPageFields(page, 'Page 1 answer');
 
     // Navigate to page 2 (should work since page 1 is filled)
     await quizActivePage.clickNext();
@@ -144,38 +134,13 @@ test.describe.serial('Multi-Page Quiz Navigation @questioner @validation @critic
     await quizActivePage.waitForLoading();
 
     const hasQuiz = await quizActivePage.hasActiveQuiz();
-    if (!hasQuiz) {
-      test.skip(true, 'No active quiz available');
-      return;
-    }
+    expect(hasQuiz, 'Expected an active quiz to be available after API setup').toBe(true);
 
     const totalPages = await quizActivePage.getTotalPages();
-    if (totalPages <= 1) {
-      test.skip(true, 'Single-page quiz - back navigation not applicable');
-      return;
-    }
+    expect(totalPages, 'Expected a multi-page quiz (2+ pages)').toBeGreaterThan(1);
 
     // Fill page 1 and advance
-    const textInputs = page.locator('input[type="text"], textarea');
-    const inputCount = await textInputs.count();
-    for (let i = 0; i < inputCount; i++) {
-      const input = textInputs.nth(i);
-      if (await input.isVisible()) {
-        await input.fill(`Navigation test ${i + 1}`);
-      }
-    }
-
-    const radioGroups = page.locator('[role="radiogroup"]');
-    const radioCount = await radioGroups.count();
-    for (let i = 0; i < radioCount; i++) {
-      const group = radioGroups.nth(i);
-      if (await group.isVisible()) {
-        const firstRadio = group.locator('[role="radio"]').first();
-        if (await firstRadio.isVisible()) {
-          await firstRadio.click();
-        }
-      }
-    }
+    await fillCurrentPageFields(page, 'Navigation test');
 
     await quizActivePage.clickNext();
     const afterNext = await quizActivePage.getCurrentPage();
@@ -187,8 +152,8 @@ test.describe.serial('Multi-Page Quiz Navigation @questioner @validation @critic
       expect(afterBack).toBe(1);
 
       // Verify page 1 fields still have their values
-      const textInputsAfterBack = page.locator('input[type="text"], textarea');
-      const firstInput = textInputsAfterBack.first();
+      const textInputs = page.getByPlaceholder(/enter your answer/i);
+      const firstInput = textInputs.first();
       if (await firstInput.isVisible()) {
         const value = await firstInput.inputValue();
         expect(

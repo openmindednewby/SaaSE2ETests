@@ -19,6 +19,11 @@ import { NotificationsStressPage } from '../../pages/NotificationsStressPage.js'
 import { TestIds } from '../../shared/testIds.js';
 import { hasNotificationTestApi } from '../utils/notificationHelpers.js';
 
+/** Timeout for initial page render after navigation.
+ * Must be generous because overlay handlers (cookie consent) can
+ * consume several seconds of the default 5s expect timeout. */
+const PAGE_RENDER_TIMEOUT_MS = 15000;
+
 test.describe('Notification Badge @notifications', () => {
   test.setTimeout(60000);
   let notificationsPage: NotificationsPage;
@@ -57,7 +62,9 @@ test.describe('Notification Badge @notifications', () => {
     test.skip(!serviceHealthy, 'NotificationService is not running');
 
     // The notification bell should be visible on protected pages
-    await expect(notificationsPage.notificationBell).toBeVisible();
+    await expect(notificationsPage.notificationBell).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
   });
 
   test('badge shows correct unread count', async ({ page }) => {
@@ -216,6 +223,9 @@ test.describe('Notification Badge @notifications', () => {
 
     // Verify the bell button has proper accessibility attributes
     const bell = notificationsPage.notificationBell;
+
+    // Wait for bell to be visible before checking attributes
+    await expect(bell).toBeVisible({ timeout: PAGE_RENDER_TIMEOUT_MS });
 
     // Check accessibility role
     const role = await bell.getAttribute('role');

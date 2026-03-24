@@ -43,7 +43,26 @@ export class QuizTemplatesPage extends BasePage {
 
   async goto() {
     await super.goto('/quiz-templates');
-    await this.waitForPageReady();
+
+    // Firefox auth recovery: the app may redirect to /login if the addInitScript
+    // ran before localStorage was populated. Restore auth and retry once.
+    if (this.page.url().includes('/login')) {
+      await this.restoreAuth();
+      // eslint-disable-next-line no-page-reload/no-page-reload -- auth recovery requires fresh navigation
+      await this.page.goto('/quiz-templates', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    }
+
+    try {
+      await this.waitForPageReady();
+    } catch {
+      // Firefox under concurrency may deliver a broken page bundle.
+      // Reload once; the retry usually succeeds because the JS assets
+      // are now cached by the browser.
+      await this.restoreAuth();
+      // eslint-disable-next-line no-page-reload/no-page-reload -- recovery reload after page-ready timeout
+      await this.page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
+      await this.waitForPageReady();
+    }
   }
 
   async refetchTemplatesList() {

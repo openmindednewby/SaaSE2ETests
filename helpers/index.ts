@@ -1,4 +1,5 @@
 export { AuthHelper } from './auth-helper.js';
+export { QuestionerApiHelper, createQuestionerApiHelper } from './questioner-admin.js';
 export { createAuthenticatedContext } from './serial-auth.js';
 export type { AuthenticatedContext } from './serial-auth.js';
 export { ensureProSubscriptions } from './subscription-admin.js';

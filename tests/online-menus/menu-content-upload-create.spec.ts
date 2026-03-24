@@ -29,7 +29,7 @@ test.describe('Create Menu with Category and Image @online-menus @content-upload
     test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
-    context = await browser.newContext();
+    context = await browser.newContext({ storageState: 'playwright/.auth/user.json' });
     page = await context.newPage();
 
     await page.addInitScript(() => {
@@ -58,6 +58,7 @@ test.describe('Create Menu with Category and Image @online-menus @content-upload
   });
 
   test.afterAll(async () => {
+    test.setTimeout(60000); // Firefox cleanup can be slow under concurrency
     // Cleanup: delete test menu if it exists
     try {
       await menusPage.goto();

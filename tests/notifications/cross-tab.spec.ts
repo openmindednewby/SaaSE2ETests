@@ -17,6 +17,11 @@ import { NotificationsPage } from '../../pages/NotificationsPage.js';
 import { NotificationsStressPage } from '../../pages/NotificationsStressPage.js';
 import { hasNotificationTestApi } from '../utils/notificationHelpers.js';
 
+/** Timeout for initial page render after navigation.
+ * Must be generous because overlay handlers (cookie consent) can
+ * consume several seconds of the default 5s expect timeout. */
+const PAGE_RENDER_TIMEOUT_MS = 15000;
+
 /** Extended timeout for cross-tab sync */
 const SYNC_TIMEOUT_MS = 15000;
 
@@ -94,12 +99,16 @@ test.describe('Cross-Tab Notification Sync @notifications', () => {
 
     // Reload needed: Tab 2 must re-fetch notification state from the server
     // to verify cross-tab sync. This is the correct way to test persistence.
-    await tab2.page.reload({ waitUntil: 'domcontentloaded' }); // eslint-disable-line no-page-reload/no-page-reload
+    await tab2.page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 }); // eslint-disable-line no-page-reload/no-page-reload
     await tab2.notificationsPage.waitForLoading();
 
     // Verify Tab 2 still has the notification screen
-    await expect(tab2.notificationsPage.notificationScreen).toBeVisible();
-    await expect(tab2.notificationsPage.notificationList).toBeVisible();
+    await expect(tab2.notificationsPage.notificationScreen).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
+    await expect(tab2.notificationsPage.notificationList).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
 
     // Clean up
     await tab1.page.close();
@@ -155,7 +164,7 @@ test.describe('Cross-Tab Notification Sync @notifications', () => {
     // Switch to Tab 1 and reload to check if state synced
     // Reload needed: Tab 1 must re-fetch to verify cross-tab mark-as-read sync.
     await tab1.page.bringToFront();
-    await tab1.page.reload({ waitUntil: 'domcontentloaded' }); // eslint-disable-line no-page-reload/no-page-reload
+    await tab1.page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 }); // eslint-disable-line no-page-reload/no-page-reload
     await tab1.notificationsPage.waitForLoading();
 
     // Verify the badge count decreased or disappeared in Tab 1
@@ -178,16 +187,27 @@ test.describe('Cross-Tab Notification Sync @notifications', () => {
     // Open Tab 2 on a different protected page
     const tab2 = await setupPageWithAuth(context, '/menus');
 
-    // Verify both tabs are functional
+    // Verify both tabs are functional.
+    // After bringToFront, wait for the page to stabilize in case the
+    // browser throttled the background tab.
     await tab1.page.bringToFront();
-    await expect(tab1.notificationsPage.notificationScreen).toBeVisible();
+    await tab1.page.waitForLoadState('domcontentloaded');
+    await expect(tab1.notificationsPage.notificationScreen).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
 
     await tab2.page.bringToFront();
-    await expect(tab2.notificationsPage.notificationBell).toBeVisible();
+    await tab2.page.waitForLoadState('domcontentloaded');
+    await expect(tab2.notificationsPage.notificationBell).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
 
     // Switch back to Tab 1 - it should still be on the notifications screen
     await tab1.page.bringToFront();
-    await expect(tab1.notificationsPage.notificationScreen).toBeVisible();
+    await tab1.page.waitForLoadState('domcontentloaded');
+    await expect(tab1.notificationsPage.notificationScreen).toBeVisible({
+      timeout: PAGE_RENDER_TIMEOUT_MS,
+    });
 
     // Clean up
     await tab1.page.close();

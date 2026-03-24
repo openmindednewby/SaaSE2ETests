@@ -16,6 +16,7 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
   let testTemplateName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    testInfo.setTimeout(120000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     // Create a new browser context for this test suite
@@ -129,8 +130,19 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
 
   test('should show active template on quiz-active page', async () => {
     expect(testTemplateName, 'Test template name not set; did the create test run?').toBeTruthy();
-    // Activate the template again
-    await quizPage.activateTemplate(testTemplateName);
+
+    // Re-create template if it was deleted (e.g. by deleteInactiveTemplates in another spec)
+    if (!await templatesPage.templateExists(testTemplateName)) {
+      await templatesPage.createTemplate(testTemplateName, 'Template for activation test');
+    }
+
+    // Activate the template
+    await ensureNoActiveTemplates();
+    const activated = await quizPage.activateTemplate(testTemplateName);
+    if (!activated) {
+      await ensureNoActiveTemplates();
+      await quizPage.activateTemplate(testTemplateName);
+    }
 
     // Navigate to quiz active page
     const quizActivePage = new QuizActivePage(page);

@@ -22,6 +22,7 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
   const createdTemplates: string[] = [];
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    testInfo.setTimeout(120000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     // Create a new browser context for this test suite

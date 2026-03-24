@@ -32,7 +32,7 @@ test.describe.serial('Menu Duplicate Names @online-menus @duplicate-names', () =
     test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
-    context = await browser.newContext();
+    context = await browser.newContext({ storageState: 'playwright/.auth/user.json' });
     page = await context.newPage();
 
     // Add init script to restore auth from localStorage to sessionStorage
@@ -64,6 +64,7 @@ test.describe.serial('Menu Duplicate Names @online-menus @duplicate-names', () =
   });
 
   test.afterAll(async () => {
+    test.setTimeout(60000); // Firefox cleanup can be slow under concurrency
     // Cleanup: delete test menu
     try {
       await menusPage.goto();

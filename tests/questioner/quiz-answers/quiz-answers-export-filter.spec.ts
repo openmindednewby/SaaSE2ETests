@@ -1,5 +1,6 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { getProjectUsers } from '../../../fixtures/test-data.js';
+import { createQuestionerApiHelper, QuestionerApiHelper } from '../../../helpers/questioner-admin.js';
 import { LoginPage } from '../../../pages/LoginPage.js';
 import { QuizAnswersPage } from '../../../pages/QuizAnswersPage.js';
 
@@ -9,6 +10,9 @@ import { QuizAnswersPage } from '../../../pages/QuizAnswersPage.js';
  * Previously, the export function ignored the active search filter and exported
  * all answers. The fix ensures export respects the current search query,
  * only including filtered results in the export.
+ *
+ * Setup: Creates a multi-page template, activates it, and submits 3 test
+ * answers via the API so the answers page has data to filter and export.
  *
  * These tests verify:
  * 1. Search filter reduces the visible answer count
@@ -22,15 +26,18 @@ test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
   let context: BrowserContext;
   let page: Page;
   let answersPage: QuizAnswersPage;
+  let apiHelper: QuestionerApiHelper;
+  let templateExternalId: string | null = null;
+  let answerExternalIds: string[] = [];
 
   test.beforeAll(async ({ browser }, testInfo) => {
-    testInfo.setTimeout(60000);
+    testInfo.setTimeout(120000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
+    // 1. Browser login FIRST (before any API calls to avoid auth interference)
     context = await browser.newContext();
     page = await context.newPage();
 
-    // Add init script to restore auth from localStorage to sessionStorage
     await page.addInitScript(() => {
       try {
         const persistAuth = localStorage.getItem('persist:auth');
@@ -46,7 +53,6 @@ test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
     await loginPage.goto();
     await loginPage.loginAndWait(adminUser.username, adminUser.password);
 
-    // Save auth state to localStorage
     await page.evaluate(() => {
       const persistAuth = sessionStorage.getItem('persist:auth');
       if (persistAuth) {
@@ -54,10 +60,22 @@ test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
       }
     });
 
+    // 2. Set up test data via the API: create template, activate it, submit answers
+    apiHelper = createQuestionerApiHelper();
+    await apiHelper.login(adminUser.username, adminUser.password);
+    const setup = await apiHelper.setupMultiPageTemplateWithAnswers('ExportTest');
+    templateExternalId = setup.templateExternalId;
+    answerExternalIds = setup.answerExternalIds;
+
     answersPage = new QuizAnswersPage(page);
   });
 
-  test.afterAll(async () => {
+  // eslint-disable-next-line no-empty-pattern
+  test.afterAll(async ({}, testInfo) => {
+    testInfo.setTimeout(60000);
+    if (apiHelper) {
+      await apiHelper.cleanup(templateExternalId, answerExternalIds).catch(() => {});
+    }
     await context?.close();
   });
 
@@ -66,7 +84,7 @@ test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
     await expect(page).toHaveURL(/quiz-answers/);
   });
 
-  test('should display answer list or empty state', async () => {
+  test('should display answer list with submitted answers', async () => {
     await answersPage.waitForLoading();
 
     // Page should show answers list, search input, or empty state
@@ -77,6 +95,13 @@ test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
     await expect(
       pageHeader.or(searchInput).or(emptyMessage).first()
     ).toBeVisible({ timeout: 10000 });
+
+    // We submitted 3 answers via API, so there should be answers
+    const answerCount = await answersPage.getAnswerCount();
+    expect(
+      answerCount,
+      'Expected at least 3 answers from API setup'
+    ).toBeGreaterThanOrEqual(3);
   });
 
   test('should filter answers when search is applied', async () => {
@@ -85,15 +110,15 @@ test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
     // Check if search input exists
     const hasSearch = await answersPage.searchInput.isVisible({ timeout: 3000 }).catch(() => false);
     if (!hasSearch) {
-      test.skip(true, 'Search input not available');
+      test.skip(true, 'Search input not available on this page layout');
       return;
     }
 
     const initialCount = await answersPage.getAnswerCount();
-    if (initialCount === 0) {
-      test.skip(true, 'No answers available to test filtering');
-      return;
-    }
+    expect(
+      initialCount,
+      'Expected answers to be present (submitted via API)'
+    ).toBeGreaterThan(0);
 
     // Search for a non-existent term to verify filtering works
     await answersPage.search('zzz_nonexistent_filter_test_12345');
@@ -126,10 +151,10 @@ test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
     }
 
     const answerCount = await answersPage.getAnswerCount();
-    if (answerCount === 0) {
-      test.skip(true, 'No answers available to test export');
-      return;
-    }
+    expect(
+      answerCount,
+      'Expected answers to be present for export test'
+    ).toBeGreaterThan(0);
 
     // Check if export/CSV button is available
     const csvButton = page.getByRole('button', { name: /csv|export/i });
@@ -163,7 +188,6 @@ test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
     const exportRequest = await exportRequestPromise;
     if (exportRequest) {
       const requestUrl = exportRequest.url();
-      // Export request URL verified via assertion below
 
       // After BUG-QUIZ-015 fix, the export URL should include the search parameter
       const urlIncludesSearch = requestUrl.toLowerCase().includes('search') ||
@@ -200,10 +224,10 @@ test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
     }
 
     const answerCount = await answersPage.getAnswerCount();
-    if (answerCount === 0) {
-      test.skip(true, 'No answers available to test export');
-      return;
-    }
+    expect(
+      answerCount,
+      'Expected answers to be present for export test'
+    ).toBeGreaterThan(0);
 
     // Ensure search is clear
     await answersPage.clearSearch();
@@ -227,7 +251,6 @@ test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
     const exportRequest = await exportRequestPromise;
     if (exportRequest) {
       const requestUrl = exportRequest.url();
-      // Export request URL (no filter) verified via assertion below
 
       // Without search, the URL should not include a search parameter
       // or the search parameter should be empty

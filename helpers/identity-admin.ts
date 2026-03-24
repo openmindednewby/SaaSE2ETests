@@ -81,10 +81,21 @@ export async function ensureTenantsAndUsersExist(identityApiUrl: string, usernam
   for (const name of desiredTenants) {
     const existing = tenantByName.get(name.toLowerCase());
     if (existing?.tenantId) continue;
-    const createResp = await client.post('tenants', { name, tenantStatus: 1 });
-    const created = createResp.data as CreateTenantResponse;
-    const id = created.tenantId;
-    tenantByName.set(name.toLowerCase(), { tenantId: id, name, tenantStatus: 1 });
+    try {
+      const createResp = await client.post('tenants', { name, tenantStatus: 1 });
+      const created = createResp.data as CreateTenantResponse;
+      const id = created.tenantId;
+      tenantByName.set(name.toLowerCase(), { tenantId: id, name, tenantStatus: 1 });
+    } catch (e: any) {
+      // 409 or 500 may mean tenant already exists (race with concurrent setup); re-list to confirm
+      const refreshed = await listTenants();
+      const found = refreshed.find((t) => typeof t.name === 'string' && t.name.toLowerCase() === name.toLowerCase());
+      if (found?.tenantId) {
+        tenantByName.set(name.toLowerCase(), found);
+      } else {
+        throw e; // Genuinely failed -- rethrow
+      }
+    }
   }
 
   // Refresh tenants after creates to capture server-generated IDs and ensure status.
@@ -139,6 +150,8 @@ export async function ensureTenantsAndUsersExist(identityApiUrl: string, usernam
       await client.delete(`users/${userId}`);
     } catch (e: any) {
       const status = e?.response?.status;
+      // 404 means the user was already deleted (e.g., by concurrent teardown) -- treat as success
+      if (status === 404) return;
       const data = e?.response?.data;
       const details = status ? `status ${status}` : (e?.message ?? String(e));
       const rawBody = typeof data === 'string' ? data : JSON.stringify(data ?? '');

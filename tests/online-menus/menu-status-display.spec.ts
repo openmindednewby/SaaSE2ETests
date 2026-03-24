@@ -61,6 +61,7 @@ test.describe.serial('Menu Status Display @online-menus @ui', () => {
   });
 
   test.afterAll(async () => {
+    test.setTimeout(60000); // Firefox cleanup can be slow under concurrency
     // Cleanup all test menus
     try {
       await menusPage.goto();

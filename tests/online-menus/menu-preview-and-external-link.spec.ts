@@ -24,7 +24,7 @@ test.describe.serial('Menu Preview and External Link @online-menus @preview', ()
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     // Create a new browser context for this test suite
-    context = await browser.newContext();
+    context = await browser.newContext({ storageState: 'playwright/.auth/user.json' });
     page = await context.newPage();
 
     // Add init script to restore auth from localStorage to sessionStorage on page load
@@ -63,6 +63,7 @@ test.describe.serial('Menu Preview and External Link @online-menus @preview', ()
   });
 
   test.afterAll(async () => {
+    test.setTimeout(60000); // Firefox cleanup can be slow under concurrency
     // Cleanup - deactivate first if active, then delete
     try {
       await menusPage.goto();

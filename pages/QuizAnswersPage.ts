@@ -1,5 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from './BasePage.js';
+import { TestIds, testIdSelector } from '../shared/testIds.js';
 
 export class QuizAnswersPage extends BasePage {
   readonly pageHeader: Locator;
@@ -115,7 +116,10 @@ export class QuizAnswersPage extends BasePage {
    */
   async getAnswerCount(): Promise<number> {
     await this.waitForLoading();
-    const items = this.page.locator('[data-testid="answer-item"], [role="listitem"]');
+    // Answer items use TenantListItem component with data-testid="tenant-list-item"
+    const items = this.page.locator(
+      `${testIdSelector(TestIds.TENANT_LIST_ITEM)}, [data-testid="answer-item"], [role="listitem"]`
+    );
     return await items.count();
   }
 

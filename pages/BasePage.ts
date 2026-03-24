@@ -87,10 +87,25 @@ export abstract class BasePage {
   /**
    * Navigate to a specific path.
    * Waits for 'domcontentloaded' to ensure the JS bundle is downloaded before proceeding.
+   * Retries on NS_BINDING_ABORTED (Firefox navigation cancel) and navigation timeouts
+   * (Firefox under WSL2/Docker can exceed 60s on first load under concurrency).
    */
   async goto(path: string) {
     await this.registerOverlayHandlers();
-    await this.page.goto(path, { waitUntil: 'domcontentloaded', timeout: 60000 });
+
+    const MAX_NAV_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_NAV_RETRIES; attempt++) {
+      try {
+        await this.page.goto(path, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        break;
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : '';
+        const isRetryable = msg.includes('NS_BINDING_ABORTED') || msg.includes('Timeout');
+        if (!isRetryable || attempt === MAX_NAV_RETRIES) throw error;
+        // Navigation failed transiently; retry (assets may be cached on next attempt)
+      }
+    }
+
     // Run dismissOverlay, restoreAuth, and suppressTooltipTours in parallel for speed
     await Promise.all([
       this.dismissOverlay(),

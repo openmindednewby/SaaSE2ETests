@@ -24,7 +24,7 @@ test.describe.serial('Menu Editor Categories - Focus Retention @online-menus @ca
     test.setTimeout(60000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
-    context = await browser.newContext();
+    context = await browser.newContext({ storageState: 'playwright/.auth/user.json' });
     page = await context.newPage();
 
     await page.addInitScript(() => {
@@ -54,6 +54,7 @@ test.describe.serial('Menu Editor Categories - Focus Retention @online-menus @ca
   });
 
   test.afterAll(async () => {
+    test.setTimeout(60000); // Firefox cleanup can be slow under concurrency
     try {
       await menusPage.goto();
       await menusPage.waitForLoading();

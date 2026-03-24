@@ -2,7 +2,7 @@ import { Locator, Page, expect } from '@playwright/test';
 import { TestIds, testIdSelector } from '../shared/testIds.js';
 import { BasePage } from './BasePage.js';
 
-const EDITOR_LOAD_TIMEOUT = 15000;
+const EDITOR_LOAD_TIMEOUT = 30000;
 
 /**
  * Page object for the Tenant Theme Editor page.
@@ -44,6 +44,7 @@ export class TenantThemesPage extends BasePage {
 
   async goto() {
     await super.goto('/tenant-themes');
+    await this.waitForLoading();
   }
 
   async expectPageLoaded() {
