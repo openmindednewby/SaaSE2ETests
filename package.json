@@ -139,6 +139,7 @@
     "tilt:theme-studio": "node scripts/tilt-e2e.mjs theme-studio-e2e --port 10351",
     "tilt:logging": "node scripts/tilt-e2e.mjs playwright-e2e-logging",
     "tilt:monitoring": "node scripts/tilt-e2e.mjs playwright-e2e-monitoring",
+    "smoke:report": "node ../personalServerNotes/scripts/smoke-report-writer.mjs --service baseclient --target-url https://tagheuer.dloizides.com --runner playwright --results reports/results.json --output-dir test-reports --screenshots-dir reports --env-build-flag BASECLIENT_DEPLOY=production",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
