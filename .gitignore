@@ -64,3 +64,8 @@ screenshots/*
 11-alerts-management_mobile.png
 13-marketplace_tablet.png
 visual-qa-screenshots/**
+
+# Playwright reports
+playwright-report/
+playwright-report-games/
+test-results/
