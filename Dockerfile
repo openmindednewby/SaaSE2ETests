@@ -1,4 +1,8 @@
 FROM mcr.microsoft.com/playwright:v1.48.0-noble
+LABEL org.opencontainers.image.authors="dloizides.com"
+LABEL org.opencontainers.image.vendor="dloizides.com"
+LABEL org.opencontainers.image.title="E2ETests"
+LABEL built-by="dloizides.com"
 
 WORKDIR /app
 

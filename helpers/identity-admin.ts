@@ -37,6 +37,12 @@ function normalizeIdentityApiBase(identityApiUrl: string): string {
 }
 
 export function createIdentityAdminClient(identityApiUrl: string, accessToken: string): AxiosInstance {
+  // The user-management endpoints (CreateUser/ListUsers/UpdatePassword/DeleteUser/GetUser)
+  // were migrated to the realm-aware admin client. They now require an X-Realm header
+  // and return 422 RealmResolution.Missing when multiple realms are on the allow-list and
+  // no header is sent. Mirror AuthHelper's logic: take the realm from IDENTITY_REALM
+  // (defaults to "questioner" since the legacy E2E suite targets the questioner realm).
+  const realm = process.env.IDENTITY_REALM || 'questioner';
   return axios.create({
     baseURL: normalizeIdentityApiBase(identityApiUrl),
     timeout: 30000,
@@ -44,6 +50,7 @@ export function createIdentityAdminClient(identityApiUrl: string, accessToken: s
     // return 400 when Content-Type is set with an empty body.
     headers: {
       Authorization: `Bearer ${accessToken}`,
+      'X-Realm': realm,
     },
   });
 }

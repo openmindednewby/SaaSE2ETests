@@ -89,6 +89,12 @@ export abstract class BasePage {
    * Waits for 'domcontentloaded' to ensure the JS bundle is downloaded before proceeding.
    * Retries on NS_BINDING_ABORTED (Firefox navigation cancel) and navigation timeouts
    * (Firefox under WSL2/Docker can exceed 60s on first load under concurrency).
+   *
+   * Auth-bounce recovery: when navigating to a protected route, the BaseClient SPA
+   * runs its auth check synchronously during page load and redirects to /login if
+   * sessionStorage:persist:auth is empty. The addInitScript copies localStorage->
+   * sessionStorage to fix this — but Firefox can race the SPA on first load and
+   * lose. If we land on /login when we shouldn't have, we restore auth + retry once.
    */
   async goto(path: string) {
     await this.registerOverlayHandlers();
@@ -103,6 +109,24 @@ export abstract class BasePage {
         const isRetryable = msg.includes('NS_BINDING_ABORTED') || msg.includes('Timeout');
         if (!isRetryable || attempt === MAX_NAV_RETRIES) throw error;
         // Navigation failed transiently; retry (assets may be cached on next attempt)
+      }
+    }
+
+    // Detect SPA auth-bounce: when we ask for a protected route but land on
+    // /login, the BaseClient SPA's auth check beat the addInitScript that
+    // copies localStorage:persist:auth into sessionStorage. Reproduces in
+    // firefox far more reliably than chromium. Recover by restoring auth
+    // and re-navigating, retrying up to 2 times to handle the SPA-redirect
+    // race fully.
+    if (!path.includes('/login')) {
+      for (let recoverAttempt = 0; recoverAttempt < 2; recoverAttempt++) {
+        if (!this.page.url().includes('/login')) break;
+        await this.restoreAuth();
+        try {
+          await this.page.goto(path, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        } catch {
+          // Best-effort; let the test's own assertions surface any issue.
+        }
       }
     }
 

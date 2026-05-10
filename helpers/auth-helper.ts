@@ -27,11 +27,16 @@ export class AuthHelper {
   constructor(baseUrl?: string) {
     // The IdentityService uses /api/v1 prefix for all endpoints
     const apiBase = baseUrl || process.env.IDENTITY_API_URL || 'http://localhost:5002';
+    // The realm resolver added in the cookie-auth task rejects requests with no
+    // X-Realm header when the service is configured for multi-realm. The legacy
+    // E2E tests (questioner-realm) need to declare their realm explicitly.
+    const realm = process.env.IDENTITY_REALM || 'questioner';
     this.apiClient = axios.create({
       baseURL: apiBase.endsWith('/api/v1') ? apiBase : `${apiBase}/api/v1`,
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
+        'X-Realm': realm,
       },
     });
   }

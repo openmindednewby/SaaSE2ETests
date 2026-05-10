@@ -26,8 +26,8 @@ test.describe('NotificationService Health Checks', () => {
     );
     expect(response.status()).toBe(200);
 
-    const body = await response.json();
-    expect(body.status).toBe('Healthy');
+    const body = await response.text();
+    expect(body.trim()).toBe('Healthy');
   });
 
   // NotificationService uses ServiceDefaults health endpoints, not /api/health

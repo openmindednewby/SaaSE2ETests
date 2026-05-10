@@ -3,7 +3,7 @@ import type { Page, BrowserContext } from '@playwright/test';
 import { LoginPage } from '../../pages/LoginPage.js';
 import { TestIds, testIdSelector } from '../../shared/testIds.js';
 
-// Use serial mode so tests run in order and share the same browser context
+// Use serial mode so tests run in order and share the same browser context.
 test.describe.serial('Logout Flow @identity @auth', () => {
   let context: BrowserContext;
   let page: Page;

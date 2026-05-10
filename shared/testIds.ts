@@ -39,6 +39,19 @@ export const TestIds = {
   USERNAME_INPUT: 'username-input',
   PASSWORD_INPUT: 'password-input',
   LOGIN_BUTTON: 'login-button',
+  LOGIN_SIGN_UP_LINK: 'login-sign-up-link',
+
+  // Register page
+  REGISTER_FORM: 'register-form',
+  REGISTER_FIRST_NAME_INPUT: 'register-first-name-input',
+  REGISTER_LAST_NAME_INPUT: 'register-last-name-input',
+  REGISTER_USERNAME_INPUT: 'register-username-input',
+  REGISTER_EMAIL_INPUT: 'register-email-input',
+  REGISTER_PASSWORD_INPUT: 'register-password-input',
+  REGISTER_CONFIRM_PASSWORD_INPUT: 'register-confirm-password-input',
+  REGISTER_TENANT_NAME_INPUT: 'register-tenant-name-input',
+  REGISTER_SUBMIT_BUTTON: 'register-submit-button',
+  REGISTER_SIGN_IN_LINK: 'register-sign-in-link',
 
   // Navigation
   NAV_MENU: 'nav-menu',

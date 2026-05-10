@@ -47,7 +47,8 @@ test.describe.serial('Theme Persistence - Login/Logout @theme @persistence', () 
     await context?.close();
   });
 
-  test('should apply saved theme on login @critical', async (_fixtures, testInfo) => {
+  // eslint-disable-next-line no-empty-pattern
+  test('should apply saved theme on login @critical', async ({}, testInfo) => {
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     // Login as admin
@@ -68,7 +69,8 @@ test.describe.serial('Theme Persistence - Login/Logout @theme @persistence', () 
     await themeSettings.expectColorSwatchesVisible();
   });
 
-  test('should revert to default theme after logout and fresh login @critical', async (_fixtures, testInfo) => {
+  // eslint-disable-next-line no-empty-pattern
+  test('should revert to default theme after logout and fresh login @critical', async ({}, testInfo) => {
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     // First, set a specific preset so we can tell when it reverts

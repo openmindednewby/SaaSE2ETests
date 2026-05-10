@@ -89,6 +89,7 @@
     "test:logging:all": "cross-env SHELL=/bin/bash playwright test tests/logging --project=logging --project=logging-stress",
     "test:monitoring": "cross-env SHELL=/bin/bash playwright test tests/monitoring --project=monitoring",
     "test:observability": "cross-env SHELL=/bin/bash playwright test tests/logging tests/monitoring --project=logging --project=logging-stress --project=monitoring",
+    "test:cross-product-isolation": "cross-env SHELL=/bin/bash playwright test tests/cross-product-isolation --project=cross-product-isolation",
     "report": "playwright show-report reports/html",
     "codegen": "playwright codegen localhost:8082",
     "tilt:health": "node scripts/tilt-e2e.mjs playwright-e2e-health",
@@ -139,6 +140,7 @@
     "tilt:theme-studio": "node scripts/tilt-e2e.mjs theme-studio-e2e --port 10351",
     "tilt:logging": "node scripts/tilt-e2e.mjs playwright-e2e-logging",
     "tilt:monitoring": "node scripts/tilt-e2e.mjs playwright-e2e-monitoring",
+    "tilt:cross-product-isolation": "node scripts/tilt-e2e.mjs playwright-e2e-cross-product-isolation",
     "smoke:report": "node ../personalServerNotes/scripts/smoke-report-writer.mjs --service baseclient --target-url https://tagheuer.dloizides.com --runner playwright --results reports/results.json --output-dir test-reports --screenshots-dir reports --env-build-flag BASECLIENT_DEPLOY=production",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"

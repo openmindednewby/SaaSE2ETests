@@ -367,4 +367,16 @@ export const projects: ProjectConfig = [
     testMatch: /monitoring\/.*\.spec\.ts/,
     dependencies: ['setup'],
   },
+
+  // Cross-product isolation (Phase 2 / Step 5).
+  // The regression-guard suite for the Questioner / OnlineMenu product split.
+  // API-only (no browser UI needed). Depends on `setup` only — does NOT require
+  // the multi-tenant test users since it operates on realm-scoped tokens, not
+  // tenant-scoped users.
+  {
+    name: 'cross-product-isolation',
+    workers: 1,
+    testMatch: /cross-product-isolation\/.*\.spec\.ts/,
+    dependencies: ['setup'],
+  },
 ];

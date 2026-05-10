@@ -58,16 +58,20 @@ export class OnlineMenusContentPage extends BasePage {
 
   /**
    * Handle the crop modal that appears after selecting an image file.
+   *
+   * React Native Web's <Modal> renders without role="dialog", so we locate it
+   * by its testID instead. Resolves the apply button via its own testID,
+   * which is unambiguous and survives label/locale changes.
    */
   async handleCropModal() {
-    const cropDialog = this.page.getByRole('dialog').filter({ hasText: /crop image/i });
+    const cropDialog = this.page.locator(testIdSelector(TestIds.CROP_MODAL));
     try {
       await expect(cropDialog).toBeVisible({ timeout: 10000 });
     } catch {
       return;
     }
 
-    const applyButton = cropDialog.getByRole('button', { name: /apply/i });
+    const applyButton = cropDialog.locator(testIdSelector(TestIds.CROP_MODAL_APPLY));
     await expect(applyButton).toBeEnabled({ timeout: 10000 });
     await applyButton.click();
     await expect(cropDialog).not.toBeVisible({ timeout: 10000 });
