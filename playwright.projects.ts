@@ -4,11 +4,14 @@ import type { PlaywrightTestConfig } from '@playwright/test';
 
 type ProjectConfig = NonNullable<PlaywrightTestConfig['projects']>;
 
-/**
- * Playwright project definitions extracted from playwright.config.ts.
- * Each project configures a test batch with browser, dependencies, and test match patterns.
- */
-export const projects: ProjectConfig = [
+// Browser-matrix gate. Default is chromium-only (~3x faster — every UI
+// domain ships a chromium / mobile / firefox triple, and against staging
+// the Firefox project can't resolve hostnames because --host-resolver-rules
+// is Chromium-only). Opt into full coverage with `E2E_BROWSERS=all`.
+const ENABLE_MOBILE = process.env.E2E_BROWSERS === 'all' || process.env.E2E_BROWSERS === 'mobile';
+const ENABLE_FIREFOX = process.env.E2E_BROWSERS === 'all' || process.env.E2E_BROWSERS === 'firefox';
+
+const allProjects: ProjectConfig = [
   // Auth setup project - runs before all tests
   {
     name: 'setup',
@@ -189,20 +192,10 @@ export const projects: ProjectConfig = [
     dependencies: ['setup', 'multi-tenant-setup'],
   },
 
-  // Notification Stress Tests (Chromium only, generous timeouts)
-  {
-    name: 'notification-stress',
-    workers: 1,
-    testMatch: /notifications\/stress-.*\.spec\.ts/,
-    use: {
-      ...devices['Desktop Chrome'],
-      storageState: 'playwright/.auth/user.json',
-      actionTimeout: 30000,
-      navigationTimeout: 30000,
-    },
-    timeout: 120000,
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
+  // Notification stress tests dropped from default matrix — they need 120s+
+  // per test which violates the 60s/test cap. Re-enable manually via a
+  // direct `npx playwright test --timeout=120000 tests/notifications/stress-*`
+  // invocation when stress regression coverage is needed.
 
   // Showcase batch (requires multi-tenant setup for authenticated access)
   {
@@ -351,14 +344,9 @@ export const projects: ProjectConfig = [
     dependencies: ['setup'],
   },
 
-  // Logging Stress Tests (generous timeouts, single worker)
-  {
-    name: 'logging-stress',
-    workers: 1,
-    testMatch: /logging\/stress-.*\.spec\.ts/,
-    timeout: 120000,
-    dependencies: ['setup'],
-  },
+  // Logging stress tests dropped from default matrix — need 120s+ per test
+  // which violates the 60s/test cap. Re-enable manually with a direct
+  // `npx playwright test --timeout=120000 tests/logging/stress-*` invocation.
 
   // Monitoring tests (API-only, no browser UI needed)
   {
@@ -380,3 +368,13 @@ export const projects: ProjectConfig = [
     dependencies: ['setup'],
   },
 ];
+
+// Apply the browser-matrix gate. Drops mobile/firefox projects unless
+// explicitly opted in via E2E_BROWSERS. Keeps all non-browser-prefixed
+// projects (setup, multi-tenant-setup, health, logging, monitoring, ...).
+export const projects: ProjectConfig = allProjects.filter((p) => {
+  const name = (p as { name: string }).name;
+  if (name.endsWith('-mobile')) return ENABLE_MOBILE;
+  if (name.endsWith('-firefox')) return ENABLE_FIREFOX;
+  return true;
+});

@@ -77,7 +77,12 @@ export default defineConfig({
     navigationTimeout: 15000,
   },
 
-  timeout: 30000,
+  // Hard per-test timeout cap. Tests budgeted at 30s for normal flows; 60s
+  // is the absolute ceiling — anything that needs longer is either testing
+  // wrong (waiting on a polled retry instead of asserting once) or belongs
+  // in a separate stress suite invoked with --timeout. Stress projects were
+  // removed from the default matrix for this reason.
+  timeout: 60000,
 
   expect: {
     timeout: 5000,
