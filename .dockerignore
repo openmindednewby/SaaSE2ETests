@@ -1,0 +1,27 @@
+# Build context exclusions for the playwright-e2e image (Phase 4 — in-cluster
+# canary Job runner). Keeps the ~2 GB image free of host-only cruft.
+node_modules
+test-results
+reports
+playwright-report
+playwright-report-games
+playwright/.auth
+*.log
+.env
+.env.*.secrets
+
+# Visual-QA scratch — none of it ships in the canary image.
+qa-screenshots
+visual-qa-screenshots
+screenshots
+*.png
+setup-output.txt
+setup-report.json
+test_output.txt
+error-copy.md
+
+# Git / IDE
+.git
+.gitignore
+.vscode
+.idea

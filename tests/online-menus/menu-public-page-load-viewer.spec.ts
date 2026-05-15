@@ -1,4 +1,3 @@
-/* eslint-disable max-file-lines/max-file-lines -- serial test with shared state */
 import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { getProjectUsers } from '../../fixtures/test-data.js';
 import { LoginPage } from '../../pages/LoginPage.js';

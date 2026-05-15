@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import axios, { type AxiosResponse } from 'axios';
+import { sharedHttpsAgent } from '../../helpers/http-agent.js';
+import { retryWhileRateLimited } from '../../helpers/rate-limit.js';
 
 /**
  * E2E coverage for the cookie-based web session that backs the
@@ -15,7 +17,9 @@ import axios, { type AxiosResponse } from 'axios';
  */
 
 const IDENTITY_API_URL = process.env.IDENTITY_API_URL || 'http://localhost:5002';
-const TEST_REALM = process.env.TEST_REALM || 'questioner';
+// Falls back to IDENTITY_REALM (the canonical env var) so this spec works in
+// both local + staging without needing a separate TEST_REALM override.
+const TEST_REALM = process.env.TEST_REALM || process.env.IDENTITY_REALM || 'questioner';
 const COOKIE_NAME = '__Host-refresh';
 
 interface SetCookieEntry {
@@ -56,6 +60,32 @@ function findRefreshCookie(response: AxiosResponse): SetCookieEntry | undefined 
   return parseSetCookieHeaders(response).find(c => c.name === COOKIE_NAME);
 }
 
+/**
+ * POST /auth/login with the given credentials. Wrapped in
+ * {@link retryWhileRateLimited} because against staging/prod Keycloak fronts
+ * this endpoint with brute-force / rate-limiting protection, and a dense
+ * sequential suite intermittently draws HTTP 429. A persistent 429 still
+ * surfaces via the caller's `expect(status).toBe(200)` assertion.
+ */
+async function loginForCookie(username: string, password: string): Promise<AxiosResponse> {
+  return retryWhileRateLimited(
+    'cookie-session login',
+    () =>
+      axios.post(
+        `${IDENTITY_API_URL}/api/v1/auth/login`,
+        { method: 0, username, password },
+        {
+          headers: { 'X-Realm': TEST_REALM },
+          timeout: 15000,
+          validateStatus: () => true,
+          httpsAgent: sharedHttpsAgent,
+        },
+      ),
+    (response) => response.status,
+    (response) => response.headers['retry-after'],
+  );
+}
+
 test.describe('Cookie-based Session @identity @auth @cookie', () => {
   test.slow();
 
@@ -67,15 +97,7 @@ test.describe('Cookie-based Session @identity @auth @cookie', () => {
       return;
     }
 
-    const response = await axios.post(
-      `${IDENTITY_API_URL}/api/v1/auth/login`,
-      { method: 0, username, password },
-      {
-        headers: { 'X-Realm': TEST_REALM },
-        timeout: 15000,
-        validateStatus: () => true,
-      },
-    );
+    const response = await loginForCookie(username, password);
 
     expect(response.status).toBe(200);
 
@@ -102,15 +124,7 @@ test.describe('Cookie-based Session @identity @auth @cookie', () => {
     }
 
     // Login to get the cookie.
-    const loginResponse = await axios.post(
-      `${IDENTITY_API_URL}/api/v1/auth/login`,
-      { method: 0, username, password },
-      {
-        headers: { 'X-Realm': TEST_REALM },
-        timeout: 15000,
-        validateStatus: () => true,
-      },
-    );
+    const loginResponse = await loginForCookie(username, password);
     expect(loginResponse.status).toBe(200);
     const initialCookie = findRefreshCookie(loginResponse);
     expect(initialCookie).toBeDefined();
@@ -126,6 +140,7 @@ test.describe('Cookie-based Session @identity @auth @cookie', () => {
         },
         timeout: 15000,
         validateStatus: () => true,
+        httpsAgent: sharedHttpsAgent,
       },
     );
 
@@ -147,6 +162,7 @@ test.describe('Cookie-based Session @identity @auth @cookie', () => {
         headers: { 'X-Realm': TEST_REALM },
         timeout: 15000,
         validateStatus: () => true,
+        httpsAgent: sharedHttpsAgent,
       },
     );
 
@@ -163,15 +179,7 @@ test.describe('Cookie-based Session @identity @auth @cookie', () => {
     }
 
     // Login to get a cookie.
-    const loginResponse = await axios.post(
-      `${IDENTITY_API_URL}/api/v1/auth/login`,
-      { method: 0, username, password },
-      {
-        headers: { 'X-Realm': TEST_REALM },
-        timeout: 15000,
-        validateStatus: () => true,
-      },
-    );
+    const loginResponse = await loginForCookie(username, password);
     expect(loginResponse.status).toBe(200);
     const cookie = findRefreshCookie(loginResponse);
     expect(cookie).toBeDefined();
@@ -184,6 +192,7 @@ test.describe('Cookie-based Session @identity @auth @cookie', () => {
         headers: { Cookie: `${COOKIE_NAME}=${cookie!.value}` },
         timeout: 15000,
         validateStatus: () => true,
+        httpsAgent: sharedHttpsAgent,
       },
     );
 

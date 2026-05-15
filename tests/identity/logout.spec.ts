@@ -2,11 +2,15 @@ import { test, expect } from '../../fixtures/index.js';
 import type { Page, BrowserContext } from '@playwright/test';
 import { LoginPage } from '../../pages/LoginPage.js';
 import { TestIds, testIdSelector } from '../../shared/testIds.js';
+import { firefoxCannotReachStaging, FIREFOX_STAGING_SKIP_REASON } from '../../helpers/target.js';
 
 // Use serial mode so tests run in order and share the same browser context.
 test.describe.serial('Logout Flow @identity @auth', () => {
   let context: BrowserContext;
   let page: Page;
+
+  // Firefox UI traffic can't reach the staging frontend (see helper docs).
+  test.skip(({ browserName }) => firefoxCannotReachStaging(browserName), FIREFOX_STAGING_SKIP_REASON);
 
   async function openLogoutMenu() {
     const logoutButton = page.locator(testIdSelector(TestIds.LOGOUT_BUTTON));
@@ -141,8 +145,8 @@ test.describe.serial('Logout Flow @identity @auth', () => {
     context = await browser.newContext();
     page = await context.newPage();
 
-    // Add init script to restore auth from localStorage to sessionStorage on page load
-    // This is needed because page.goto() causes a full reload and sessionStorage is empty
+    // Restore auth from localStorage to sessionStorage on each load — page.goto()
+    // causes a full reload and sessionStorage starts empty.
     await page.addInitScript(() => {
       try {
         const persistAuth = localStorage.getItem('persist:auth');
@@ -154,14 +158,10 @@ test.describe.serial('Logout Flow @identity @auth', () => {
       }
     });
 
-    // Clear any stale state
+    // Clear any stale state, then log in once for all tests in this suite.
     await page.context().clearCookies();
-
-    // Login once for all tests in this suite
     const loginPage = new LoginPage(page);
     await loginPage.goto();
-
-    // Wait for login form with increased timeout for app hydration
     await expect(loginPage.usernameInput).toBeVisible({ timeout: 15000 });
 
     await loginPage.loginAndWait(username, password);
@@ -184,10 +184,8 @@ test.describe.serial('Logout Flow @identity @auth', () => {
     // Start on protected route (using authenticated state)
     await page.goto('/quiz-templates', { waitUntil: 'domcontentloaded' });
 
-    // Wait for React to hydrate. On desktop the logout button is directly
-    // visible in the sidebar/topbar. On mobile it's hidden inside the
-    // MobileTopbar drawer behind a "Menu" button. Wait for either the
-    // logout button or the menu button to appear, then proceed.
+    // Wait for React to hydrate: desktop shows the logout button directly;
+    // mobile hides it in the MobileTopbar drawer behind a "Menu" button.
     const logoutButton = page.locator(testIdSelector(TestIds.LOGOUT_BUTTON)).first();
     const menuButton = page.locator(testIdSelector(TestIds.NAV_MENU));
     await expect(logoutButton.or(menuButton)).toBeVisible({ timeout: 15000 });

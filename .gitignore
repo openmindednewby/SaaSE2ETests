@@ -5,8 +5,10 @@ node_modules/
 dist/
 
 # Environment files
-.env.local
+# Per-target URL files (.env.local, .env.staging, .env.prod) are TRACKED — auditable URLs.
+# Per-target secret files (.env.*.secrets) are gitignored — passwords / tokens.
 .env
+.env.*.secrets
 
 # Test artifacts
 reports/

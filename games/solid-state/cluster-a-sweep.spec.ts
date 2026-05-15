@@ -62,7 +62,7 @@ test.describe('cluster A sweep — every level resolves', () => {
       // bugs. We log them via console.warn so they're visible in
       // CI output without failing the test.
       if (r.result === 'stalemate') {
-        // eslint-disable-next-line no-console
+        // eslint-disable-next-line no-console-in-tests/no-console-in-tests -- balance/content signal, intentional CI visibility
         console.warn(`[content] ${c.level} stalemates with ${c.place} after ${r.ticks} ticks (reason: ${r.reason}). Level rebalance candidate.`);
       }
     });

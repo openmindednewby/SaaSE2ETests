@@ -3,6 +3,8 @@ import { setTimeout as delay } from 'timers/promises';
 
 import { TEST_TENANTS, TEST_USERS } from '../fixtures/test-data.js';
 import { AuthHelper } from './auth-helper.js';
+import { canaryHeaders, getCanarySuperUserToken } from './canary-prefix.js';
+import { sharedHttpsAgent } from './http-agent.js';
 
 type TenantDto = {
   tenantId?: string;
@@ -43,6 +45,13 @@ export function createIdentityAdminClient(identityApiUrl: string, accessToken: s
   // no header is sent. Mirror AuthHelper's logic: take the realm from IDENTITY_REALM
   // (defaults to "questioner" since the legacy E2E suite targets the questioner realm).
   const realm = process.env.IDENTITY_REALM || 'questioner';
+  // canaryHeaders() returns X-Canary-Run-Id only when canary mode is on; we
+  // strip its Authorization override (we already attach the per-call token).
+  const canary = canaryHeaders();
+  const canaryHeader = canary['X-Canary-Run-Id']
+    ? { 'X-Canary-Run-Id': canary['X-Canary-Run-Id'] }
+    : {};
+
   return axios.create({
     baseURL: normalizeIdentityApiBase(identityApiUrl),
     timeout: 30000,
@@ -51,11 +60,22 @@ export function createIdentityAdminClient(identityApiUrl: string, accessToken: s
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'X-Realm': realm,
+      ...canaryHeader,
     },
+    httpsAgent: sharedHttpsAgent,
   });
 }
 
 export async function loginSuperUser(identityApiUrl: string, username: string, password: string): Promise<string> {
+  // KI-2 fix: in canary mode `global-setup.canary.ts` already minted a
+  // superUser JWT with these exact credentials. Reuse it instead of another
+  // `/auth/login` — keeps identity-api's `/auth/*` rate limiter off our back
+  // on `--workers=1` staging/prod runs.
+  const canaryToken = getCanarySuperUserToken();
+  if (canaryToken) {
+    return canaryToken;
+  }
+
   const auth = new AuthHelper(identityApiUrl);
   await auth.loginViaAPI(username, password);
   const accessToken = auth.getAccessToken();

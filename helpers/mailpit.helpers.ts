@@ -12,6 +12,7 @@
 
 import { setTimeout as delay } from 'timers/promises';
 import axios, { type AxiosInstance } from 'axios';
+import { sharedHttpsAgent } from './http-agent.js';
 
 const MAILPIT_URL = process.env.MAILPIT_URL || 'http://localhost:5020';
 const API_TIMEOUT_MS = 10000;
@@ -60,6 +61,7 @@ function createMailpitClient(): AxiosInstance {
   return axios.create({
     baseURL: MAILPIT_URL,
     timeout: API_TIMEOUT_MS,
+    httpsAgent: sharedHttpsAgent,
   });
 }
 

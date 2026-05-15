@@ -1,16 +1,33 @@
 import { chromium, FullConfig } from '@playwright/test';
 import { AuthHelper } from '../helpers/auth-helper.js';
-import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
+import * as https from 'node:https';
+import { loadE2EEnv } from './env-loader.js';
+import { installHostOverride } from './host-override.js';
+import { isIgnoreHttpsErrors } from '../helpers/http-agent.js';
 
-// Load environment variables
-dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
+// Load environment variables (target picked via E2E_TARGET env var, default 'local')
+loadE2EEnv();
+
+// Install Node-side DNS override if E2E_HOST_OVERRIDE_IP is set. Must run
+// BEFORE any HTTP traffic so axios / APIRequestContext / fetch all see the
+// patched lookup. No-op when the env var is unset (local / prod targets).
+installHostOverride();
 
 /**
- * Check if a service is available by making a simple request
+ * Check if a service is available by making a simple request.
+ *
+ * When `E2E_IGNORE_HTTPS_ERRORS` is true OR `E2E_HOST_OVERRIDE_IP` is set
+ * (typically `E2E_TARGET=staging` against Traefik's self-signed default cert),
+ * we use a one-off https.request fall-back that disables cert verification.
+ * Undici/fetch doesn't expose a per-call cert-trust knob without pulling in
+ * `undici` as a direct dep, and `NODE_TLS_REJECT_UNAUTHORIZED=0` is too broad.
  */
 async function isServiceAvailable(url: string): Promise<boolean> {
+  if (isIgnoreHttpsErrors() && url.startsWith('https://')) {
+    return isHttpsServiceAvailableIgnoreCert(url);
+  }
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -25,6 +42,36 @@ async function isServiceAvailable(url: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function isHttpsServiceAvailableIgnoreCert(url: string): Promise<boolean> {
+  return new Promise<boolean>(resolve => {
+    try {
+      const parsed = new URL(url);
+      const req = https.request(
+        {
+          host: parsed.hostname,
+          port: parsed.port || 443,
+          path: parsed.pathname + parsed.search,
+          method: 'GET',
+          rejectUnauthorized: false,
+          timeout: 5000,
+        },
+        res => {
+          resolve((res.statusCode ?? 500) < 500);
+          res.resume();
+        },
+      );
+      req.on('error', () => resolve(false));
+      req.on('timeout', () => {
+        req.destroy();
+        resolve(false);
+      });
+      req.end();
+    } catch {
+      resolve(false);
+    }
+  });
 }
 
 async function globalSetup(config: FullConfig) {
@@ -111,9 +158,12 @@ async function globalSetup(config: FullConfig) {
 
     console.log('✅ Frontend is available');
 
-    // Launch browser to set storage state
+    // Launch browser to set storage state. When targeting an environment with
+    // a self-signed cert (staging) the browser context must trust it too —
+    // playwright.config.ts sets ignoreHTTPSErrors at the test fixture level
+    // but globalSetup's own context lives outside that.
     const browser = await chromium.launch();
-    const context = await browser.newContext();
+    const context = await browser.newContext({ ignoreHTTPSErrors: true });
     const page = await context.newPage();
 
     // Navigate to the app

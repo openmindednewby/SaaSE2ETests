@@ -1,11 +1,19 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage } from '../../pages/LoginPage.js';
+import {
+  isStagingTarget,
+  firefoxCannotReachStaging,
+  FIREFOX_STAGING_SKIP_REASON,
+} from '../../helpers/target.js';
 
 test.describe('Login Flow @identity @auth', () => {
   // Login tests navigate to /login and wait for React hydration.
   // Under heavy load (12 workers), context creation + page load can exceed
   // the default 30s timeout. Double it to avoid flaky beforeEach failures.
   test.slow();
+
+  // Firefox UI traffic can't reach the staging frontend (see helper docs).
+  test.skip(({ browserName }) => firefoxCannotReachStaging(browserName), FIREFOX_STAGING_SKIP_REASON);
 
   let loginPage: LoginPage;
 
@@ -42,9 +50,12 @@ test.describe('Login Flow @identity @auth', () => {
       return;
     }
 
-    // Already on login page from beforeEach
-    await loginPage.login(username, password);
-    await loginPage.expectToBeOnProtectedRoute();
+    // Already on login page from beforeEach. Use `loginAndWait` (3x retry with
+    // a fresh navigation between attempts) rather than a bare `login` —
+    // staging fronts /auth/login with a rate limiter, and a sequential
+    // `--workers=1` suite firing 50+ logins can transiently hit HTTP 429.
+    // The retry gives the limiter window time to drain.
+    await loginPage.loginAndWait(username, password);
   });
 
   test('should show error with invalid credentials', async ({ page }) => {
@@ -183,7 +194,20 @@ test.describe('Login Flow @identity @auth', () => {
       // React ErrorBoundary recovery messages (not application errors)
       !e.includes('error boundary') &&
       !e.includes('ErrorBoundary') &&
-      !e.includes('recreate this component tree'),
+      !e.includes('recreate this component tree') &&
+      // Staging serves the Traefik default (self-signed) cert — no public
+      // letsencrypt. Chromium refuses to fetch/register the service worker
+      // over a cert it doesn't trust, even with `ignoreHTTPSErrors` (that
+      // flag covers navigation/fetch, not the SW script-fetch security
+      // check). This is a documented staging-environment constraint
+      // (E2ETests/README.md — "Self-signed TLS accepted"), not an app bug.
+      // The SW SSL error does not occur on local or prod (both have trusted
+      // certs), so the filter is gated on the staging target.
+      !(isStagingTarget() && (
+        e.includes('SSL certificate error') ||
+        e.includes('service-worker.js') ||
+        e.includes('Failed to register a ServiceWorker')
+      )),
     );
 
     expect(criticalErrors, `Unexpected console errors on login page:\n${criticalErrors.join('\n')}`).toHaveLength(0);

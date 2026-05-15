@@ -2,8 +2,14 @@ import { test, expect } from '../../fixtures/index.js';
 import type { BrowserContext, Page } from '@playwright/test';
 import { AuthHelper } from '../../helpers/auth-helper.js';
 import { LoginPage } from '../../pages/LoginPage.js';
+import { firefoxCannotReachStaging, FIREFOX_STAGING_SKIP_REASON } from '../../helpers/target.js';
 
 test.describe('Token Refresh @identity @auth', () => {
+  // The API leg logs in + refreshes; against staging the AuthHelper's
+  // rate-limit retry backoff (up to ~30s cumulative) can exceed the default
+  // 30s budget when Keycloak is throttling. `test.slow()` triples it to 90s.
+  test.slow();
+
   test('should refresh token via API @critical', async () => {
     const username = process.env.TEST_USER_USERNAME;
     const password = process.env.TEST_USER_PASSWORD;
@@ -38,6 +44,10 @@ test.describe('Token Refresh @identity @auth', () => {
 test.describe.serial('Token Session Tests @identity @auth', () => {
   let context: BrowserContext;
   let page: Page;
+
+  // Firefox UI traffic can't reach the staging frontend (see helper docs) —
+  // the shared `beforeAll` login never reaches the login form.
+  test.skip(({ browserName }) => firefoxCannotReachStaging(browserName), FIREFOX_STAGING_SKIP_REASON);
 
   test.beforeAll(async ({ browser }, testInfo) => {
     testInfo.setTimeout(60000);

@@ -48,7 +48,6 @@ export class QuizTemplatesPage extends BasePage {
     // ran before localStorage was populated. Restore auth and retry once.
     if (this.page.url().includes('/login')) {
       await this.restoreAuth();
-      // eslint-disable-next-line no-page-reload/no-page-reload -- auth recovery requires fresh navigation
       await this.page.goto('/quiz-templates', { waitUntil: 'domcontentloaded', timeout: 60000 });
     }
 

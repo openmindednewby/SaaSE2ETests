@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { AuthHelper } from '../helpers/auth-helper.js';
+import { sharedHttpsAgent } from '../helpers/http-agent.js';
 
 /**
  * Multi-tenant test teardown
@@ -79,6 +80,7 @@ async function globalTeardown(_config: FullConfig) {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
+      httpsAgent: sharedHttpsAgent,
     });
 
     const usersToDelete = Array.isArray(setupState.users) ? setupState.users : [];

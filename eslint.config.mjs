@@ -22,6 +22,14 @@ export default [
       'dist/**',
       'reports/**',
       'playwright/**',
+      // Playwright trace viewer / report artifacts. These contain minified
+      // browser bundles (uiMode.*.js, trace bundles) that ESLint should not
+      // lint — they generate hundreds of no-undef / no-fallthrough errors
+      // from third-party code we don't own. The `playwright-report*` glob
+      // covers both `playwright-report/` and `playwright-report-games/`
+      // (the games suite writes to a separate output dir).
+      '**/playwright-report*/**',
+      'test-results/**',
       'scripts/**',
       'eslint-plugins/**',
       '*.cjs',

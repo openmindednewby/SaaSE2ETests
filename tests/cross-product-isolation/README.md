@@ -12,11 +12,20 @@ Specifically:
 | Service | Accepts | Rejects |
 |---|---|---|
 | IdentityService | Both realms | (none) |
-| QuestionerService | `questioner` ONLY | `onlinemenu`, malformed |
+| QuestionerService | `questioner` ONLY | `onlinemenu`, legacy `OnlineMenu`, malformed |
 | OnlineMenuService | `onlinemenu` ONLY | `questioner`, malformed |
 | NotificationService | Both realms | malformed |
 | ContentService | Both realms (Option-B) | malformed |
 | PaymentService | Both realms | malformed |
+
+> **Legacy `OnlineMenu` realm — retired.** The early-cutover backward-compat
+> window (legacy `OnlineMenu` tokens accepted by QuestionerService) has closed.
+> QuestionerService's base `appsettings.json` (inherited by staging+prod) sets
+> `AllowedRealms` to `["questioner"]` only; the legacy realm survives only in
+> `appsettings.Development.json`. The spec
+> `legacy OnlineMenu-realm token still works against QuestionerService` in
+> `cross-realm-rejection.spec.ts` is therefore `test.skip()`'d as retired
+> behaviour — see the product-split roadmap.
 
 Rejections must return **HTTP 401** (NOT 403) — 403 leaks "you exist in some
 realm but not this one"; 401 says "we don't recognize you", which is the
@@ -57,7 +66,8 @@ enabled (Phase 2 / Step 3 dependency), the relevant tests skip with reason
 
 | Env var | Default | Use |
 |---|---|---|
-| `KEYCLOAK_URL` | `https://identity.dloizides.com` | Which Keycloak instance hosts the realms |
+| `KEYCLOAK_ISSUER` | (required — set per `.env.<target>`) | The realm issuer URL (e.g. `https://staging.identity.dloizides.com/realms/OnlineMenu`). The helper **derives** the Keycloak base URL from this by stripping the `/realms/<realm>` suffix. This is the primary source. |
+| `KEYCLOAK_URL` | (unset — optional) | Explicit Keycloak base URL override. Only needed if the base can't be derived from `KEYCLOAK_ISSUER`. If neither is resolvable the helper **throws** — it never falls back to a hardcoded prod URL. |
 | `CROSS_PRODUCT_REALM_CLIENT_ID` | `online-menu-client` | OAuth client ID to use against the new realms (after the OAuth client migration lands, this should be one of the cloned clients) |
 | `CROSS_PRODUCT_NEW_REALM_USERNAME` | `${TEST_USER_USERNAME}` | Username seeded into the new realms |
 | `CROSS_PRODUCT_NEW_REALM_PASSWORD` | `${TEST_USER_PASSWORD}` | Password for that user |

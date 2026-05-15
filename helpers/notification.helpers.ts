@@ -10,6 +10,7 @@
  */
 
 import axios, { type AxiosInstance } from 'axios';
+import { sharedHttpsAgent } from './http-agent.js';
 
 const NOTIFICATION_SERVICE_URL =
   process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:5015';
@@ -65,6 +66,7 @@ function createNotificationClient(accessToken?: string): AxiosInstance {
     baseURL: NOTIFICATION_SERVICE_URL,
     timeout: API_TIMEOUT_MS,
     headers,
+    httpsAgent: sharedHttpsAgent,
   });
 }
 

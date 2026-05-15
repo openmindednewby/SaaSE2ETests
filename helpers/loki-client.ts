@@ -15,6 +15,7 @@
 
 import axios, { type AxiosInstance } from 'axios';
 import { setTimeout as delay } from 'timers/promises';
+import { sharedHttpsAgent } from './http-agent.js';
 
 /** Shape of a single log stream returned by Loki */
 export interface LokiStream {
@@ -42,6 +43,7 @@ export class LokiClient {
     this.client = axios.create({
       baseURL: baseUrl.replace(/\/+$/, ''),
       timeout: API_TIMEOUT_MS,
+      httpsAgent: sharedHttpsAgent,
     });
   }
 

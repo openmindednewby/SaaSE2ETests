@@ -2,6 +2,7 @@ import axios from 'axios';
 import { setTimeout as delay } from 'timers/promises';
 
 import { AuthHelper } from './auth-helper.js';
+import { sharedHttpsAgent } from './http-agent.js';
 
 /** Pro plan ExternalId seeded in PaymentDbContext */
 const PRO_PLAN_EXTERNAL_ID = '00000000-0000-0000-0000-000000000002';
@@ -52,6 +53,7 @@ async function provisionProSubscription(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
+    httpsAgent: sharedHttpsAgent,
   });
 
   try {
