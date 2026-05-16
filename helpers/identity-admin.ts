@@ -38,13 +38,16 @@ function normalizeIdentityApiBase(identityApiUrl: string): string {
   return `${identityApiUrl}/api/v1/`;
 }
 
-export function createIdentityAdminClient(identityApiUrl: string, accessToken: string): AxiosInstance {
+export function createIdentityAdminClient(identityApiUrl: string, accessToken: string, realmOverride?: string): AxiosInstance {
   // The user-management endpoints (CreateUser/ListUsers/UpdatePassword/DeleteUser/GetUser)
   // were migrated to the realm-aware admin client. They now require an X-Realm header
   // and return 422 RealmResolution.Missing when multiple realms are on the allow-list and
   // no header is sent. Mirror AuthHelper's logic: take the realm from IDENTITY_REALM
   // (defaults to "questioner" since the legacy E2E suite targets the questioner realm).
-  const realm = process.env.IDENTITY_REALM || 'questioner';
+  // KI-5: callers can pass realmOverride to provision users in a SPECIFIC realm
+  // — needed by multi-tenant.setup to seed both 'onlinemenu' and 'questioner'
+  // realms so questioner-api accepts tokens issued by its native realm.
+  const realm = realmOverride ?? process.env.IDENTITY_REALM ?? 'questioner';
   // canaryHeaders() returns X-Canary-Run-Id only when canary mode is on; we
   // strip its Authorization override (we already attach the per-call token).
   const canary = canaryHeaders();
@@ -85,12 +88,22 @@ export async function loginSuperUser(identityApiUrl: string, username: string, p
   return accessToken;
 }
 
-export async function ensureTenantsAndUsersExist(identityApiUrl: string, username: string, password: string): Promise<{
+export async function ensureTenantsAndUsersExist(
+  identityApiUrl: string,
+  username: string,
+  password: string,
+  realmOverride?: string,
+): Promise<{
   tenants: string[];
   users: string[];
 }> {
   const accessToken = await loginSuperUser(identityApiUrl, username, password);
-  const client = createIdentityAdminClient(identityApiUrl, accessToken);
+  // KI-5: realmOverride scopes the users-CRUD path to the specified Keycloak
+  // realm. Tenants are realm-agnostic (one DB record), but users live per-realm
+  // - so multi-tenant.setup calls this once per realm to seed canary users in
+  // both 'onlinemenu' and 'questioner', satisfying questioner-api's cross-realm
+  // wall while keeping the shared-tenant model intact.
+  const client = createIdentityAdminClient(identityApiUrl, accessToken, realmOverride);
 
   const listTenants = async (): Promise<TenantDto[]> => {
     const resp = await client.get('tenants');

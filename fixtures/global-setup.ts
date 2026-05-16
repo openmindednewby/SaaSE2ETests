@@ -117,11 +117,32 @@ async function globalSetup(config: FullConfig) {
   console.log('🔐 Authenticating test user...');
 
   try {
-    // Login via API to get tokens
-    const authHelper = new AuthHelper();
-    const tokens = await authHelper.loginViaAPI(username, password);
+    // KI-2 fix: reuse the canary-minted superUser token when present.
+    // global-setup.canary.ts runs BEFORE this and stashes the token in
+    // E2E_CANARY_ACCESS_TOKEN/_REFRESH_TOKEN — doing a second /auth/login
+    // here would be the same superUser hitting identity-api's per-user rate
+    // limiter twice in the first few seconds of a run, which is exactly the
+    // pattern that produced the intermittent 429s on staging.
+    const cachedAccess = process.env.E2E_CANARY_ACCESS_TOKEN;
+    const cachedRefresh = process.env.E2E_CANARY_REFRESH_TOKEN;
 
-    console.log('✅ API authentication successful');
+    let tokens: { accessToken: string | null; refreshToken: string | null; userInfo: unknown | null };
+    if (cachedAccess && cachedAccess.length > 0) {
+      tokens = {
+        accessToken: cachedAccess,
+        refreshToken: cachedRefresh && cachedRefresh.length > 0 ? cachedRefresh : null,
+        // userInfo is best-effort: the storage state accepts null. The app
+        // re-hydrates from /me once a token is present so a missing userInfo
+        // on disk is invisible to the test.
+        userInfo: null,
+      };
+      console.log('✅ Reusing canary-minted superUser token (no fresh /auth/login)');
+    } else {
+      const authHelper = new AuthHelper();
+      const fresh = await authHelper.loginViaAPI(username, password);
+      tokens = { accessToken: fresh.accessToken, refreshToken: fresh.refreshToken, userInfo: fresh.userInfo };
+      console.log('✅ API authentication successful');
+    }
 
     // Check if frontend is available
     console.log(`🔍 Checking frontend at ${baseURL}...`);

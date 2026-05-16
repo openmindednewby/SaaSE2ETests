@@ -1,7 +1,7 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { getProjectUsers } from '../../../fixtures/test-data.js';
 import { createQuestionerApiHelper, QuestionerApiHelper } from '../../../helpers/questioner-admin.js';
-import { LoginPage } from '../../../pages/LoginPage.js';
+import { loginAsTenantAdminBrowser } from '../../../helpers/realm-browser-auth.js';
 import { QuizAnswersPage } from '../../../pages/QuizAnswersPage.js';
 
 /**
@@ -49,16 +49,8 @@ test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
       }
     });
 
-    const loginPage = new LoginPage(page);
-    await loginPage.goto();
-    await loginPage.loginAndWait(adminUser.username, adminUser.password);
-
-    await page.evaluate(() => {
-      const persistAuth = sessionStorage.getItem('persist:auth');
-      if (persistAuth) {
-        localStorage.setItem('persist:auth', persistAuth);
-      }
-    });
+    // KI-5: login against the questioner realm for questioner-api access.
+    await loginAsTenantAdminBrowser(page, adminUser, { productRealm: 'questioner' });
 
     // 2. Set up test data via the API: create template, activate it, submit answers
     apiHelper = createQuestionerApiHelper();

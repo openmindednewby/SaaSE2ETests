@@ -1,7 +1,7 @@
 
 import { test } from '../../../fixtures/index.js';
 import { getProjectUsers } from '../../../fixtures/test-data.js';
-import { LoginPage } from '../../../pages/LoginPage';
+import { loginAsTenantAdminBrowser } from '../../../helpers/realm-browser-auth.js';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage';
 import { QuizTemplatesQuizPage } from '../../../pages/QuizTemplatesQuizPage.js';
 import { createTemplateAndWait } from '../../../flows/quiz-templates.flow.js';
@@ -37,7 +37,6 @@ test.describe('Active Quiz Limit @questioner', () => {
       }
     });
 
-    const loginPage = new LoginPage(page);
     templatesPage = new QuizTemplatesPage(page);
     quizPage = new QuizTemplatesQuizPage(page);
 
@@ -45,17 +44,9 @@ test.describe('Active Quiz Limit @questioner', () => {
     t1Name = `Limit Test T1 ${runId}`;
     t2Name = `Limit Test T2 ${runId}`;
 
-    await loginPage.goto();
+    // KI-5: login against the questioner realm for questioner-api access.
     const { admin } = getProjectUsers(testInfo.project.name);
-    await loginPage.loginAndWait(admin.username, admin.password);
-
-    // Save auth state to localStorage so it persists across page navigations
-    await page.evaluate(() => {
-      const persistAuth = sessionStorage.getItem('persist:auth');
-      if (persistAuth) {
-        localStorage.setItem('persist:auth', persistAuth);
-      }
-    });
+    await loginAsTenantAdminBrowser(page, admin, { productRealm: 'questioner' });
 
     await templatesPage.goto();
     await quizPage.deactivateAllTemplates();

@@ -1,7 +1,7 @@
 import { test, expect } from '../../../fixtures/index.js';
 import type { Page, BrowserContext } from '@playwright/test';
 import { QuizAnswersPage } from '../../../pages/QuizAnswersPage.js';
-import { LoginPage } from '../../../pages/LoginPage.js';
+import { loginAsTenantAdminBrowser } from '../../../helpers/realm-browser-auth.js';
 
 // Use serial mode so tests run in order and share the same browser context
 test.describe.serial('View Quiz Answers @questioner', () => {
@@ -34,18 +34,8 @@ test.describe.serial('View Quiz Answers @questioner', () => {
       }
     });
 
-    // Login once for all tests in this suite
-    const loginPage = new LoginPage(page);
-    await loginPage.goto();
-    await loginPage.loginAndWait(username, password);
-
-    // Save auth state to localStorage so it persists across page navigations
-    await page.evaluate(() => {
-      const persistAuth = sessionStorage.getItem('persist:auth');
-      if (persistAuth) {
-        localStorage.setItem('persist:auth', persistAuth);
-      }
-    });
+    // KI-5: login against the questioner realm for questioner-api access.
+    await loginAsTenantAdminBrowser(page, { username, password }, { productRealm: 'questioner' });
 
     // Initialize page objects
     answersPage = new QuizAnswersPage(page);

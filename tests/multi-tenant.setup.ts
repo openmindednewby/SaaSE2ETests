@@ -24,8 +24,24 @@ setup.describe('Multi-Tenant Test Setup', () => {
     // Always run idempotent setup.
     // Tests rely on these tenants/users existing, and globalTeardown may remove them between runs.
 
-    // Fast path: use IdentityService API directly (no UI navigation).
-    await ensureTenantsAndUsersExist(identityApiUrl, username, password);
+    // KI-5: Provision users in BOTH realms. questioner-api enforces a
+    // cross-realm wall (ProductRealms=["questioner"]) so onlinemenu-realm
+    // tokens are rejected. The same canary tenant-admin needs to exist as
+    // an onlinemenu-realm user (for online-menus tests) AND as a
+    // questioner-realm user (for questioner tests). Tenants are realm-agnostic
+    // (one DB record); only the user-CRUD is realm-scoped.
+    //
+    // First call seeds tenants + users in the default realm (IDENTITY_REALM).
+    // Subsequent calls re-use the existing tenants (idempotent) and just add
+    // users to the other realms.
+    const realmsToSeed = [
+      process.env.IDENTITY_REALM ?? 'onlinemenu',
+      'questioner',
+    ];
+    const uniqueRealms = Array.from(new Set(realmsToSeed));
+    for (const realm of uniqueRealms) {
+      await ensureTenantsAndUsersExist(identityApiUrl, username, password, realm);
+    }
 
     // Provision Pro subscriptions for all test tenants.
     // Free tier limits maxMenus to 1, which blocks multi-menu E2E tests.

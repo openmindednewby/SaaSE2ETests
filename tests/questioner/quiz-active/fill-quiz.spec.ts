@@ -1,7 +1,7 @@
 import { test, expect } from '../../../fixtures/index.js';
 import type { Page, BrowserContext } from '@playwright/test';
 import { QuizActivePage } from '../../../pages/QuizActivePage.js';
-import { LoginPage } from '../../../pages/LoginPage.js';
+import { loginAsTenantAdminBrowser } from '../../../helpers/realm-browser-auth.js';
 
 // Use serial mode so tests run in order and share the same browser context
 test.describe.serial('Fill Active Quiz @questioner', () => {
@@ -40,18 +40,10 @@ test.describe.serial('Fill Active Quiz @questioner', () => {
       }
     });
 
-    // Login once for all tests in this suite
-    const loginPage = new LoginPage(page);
-    await loginPage.goto();
-    await loginPage.loginAndWait(username, password);
-
-    // Save auth state to localStorage so it persists across page navigations
-    await page.evaluate(() => {
-      const persistAuth = sessionStorage.getItem('persist:auth');
-      if (persistAuth) {
-        localStorage.setItem('persist:auth', persistAuth);
-      }
-    });
+    // KI-5: login against the questioner realm so questioner-api accepts
+    // the token. The helper handles both staging/prod (API-mint + storage
+    // inject) and local (legacy UI login) paths.
+    await loginAsTenantAdminBrowser(page, { username, password }, { productRealm: 'questioner' });
 
     // Initialize page objects
     quizActivePage = new QuizActivePage(page);

@@ -1,7 +1,7 @@
 import { test, expect } from '../../../fixtures/index.js';
 import { request as playwrightRequest } from '@playwright/test';
 import { TEST_USERS } from '../../../fixtures/test-data.js';
-import { LoginPage } from '../../../pages/LoginPage.js';
+import { loginAsTenantAdminBrowser } from '../../../helpers/realm-browser-auth.js';
 import { QuizTemplatesPage } from '../../../pages/QuizTemplatesPage.js';
 import { AuthHelper } from '../../../helpers/auth-helper.js';
 
@@ -39,21 +39,12 @@ test.describe('Tenant Isolation @questioner @security', () => {
     });
 
     try {
-      // Login as TenantA admin
-      const loginPage = new LoginPage(page);
-      await loginPage.goto();
-      await loginPage.loginAndWait(
-        TEST_USERS.TENANT_A_ADMIN.username,
-        TEST_USERS.TENANT_A_ADMIN.password
+      // KI-5: login against the questioner realm as TenantA admin.
+      await loginAsTenantAdminBrowser(
+        page,
+        { username: TEST_USERS.TENANT_A_ADMIN.username, password: TEST_USERS.TENANT_A_ADMIN.password },
+        { productRealm: 'questioner' },
       );
-
-      // Save auth state to localStorage so it persists across page navigations
-      await page.evaluate(() => {
-        const persistAuth = sessionStorage.getItem('persist:auth');
-        if (persistAuth) {
-          localStorage.setItem('persist:auth', persistAuth);
-        }
-      });
 
       // Navigate to templates page
       const templatesPage = new QuizTemplatesPage(page);
@@ -92,21 +83,12 @@ test.describe('Tenant Isolation @questioner @security', () => {
     });
 
     try {
-      // Login as TenantB admin
-      const loginPage = new LoginPage(page);
-      await loginPage.goto();
-      await loginPage.loginAndWait(
-        TEST_USERS.TENANT_B_ADMIN.username,
-        TEST_USERS.TENANT_B_ADMIN.password
+      // KI-5: login against the questioner realm as TenantB admin.
+      await loginAsTenantAdminBrowser(
+        page,
+        { username: TEST_USERS.TENANT_B_ADMIN.username, password: TEST_USERS.TENANT_B_ADMIN.password },
+        { productRealm: 'questioner' },
       );
-
-      // Save auth state to localStorage so it persists across page navigations
-      await page.evaluate(() => {
-        const persistAuth = sessionStorage.getItem('persist:auth');
-        if (persistAuth) {
-          localStorage.setItem('persist:auth', persistAuth);
-        }
-      });
 
       // Navigate to templates page
       const templatesPage = new QuizTemplatesPage(page);
@@ -145,21 +127,12 @@ test.describe('Tenant Isolation @questioner @security', () => {
     });
 
     try {
-      // Login as TenantA user (non-admin)
-      const loginPage = new LoginPage(page);
-      await loginPage.goto();
-      await loginPage.loginAndWait(
-        TEST_USERS.TENANT_A_USER.username,
-        TEST_USERS.TENANT_A_USER.password
+      // KI-5: login against the questioner realm as TenantA user (non-admin).
+      await loginAsTenantAdminBrowser(
+        page,
+        { username: TEST_USERS.TENANT_A_USER.username, password: TEST_USERS.TENANT_A_USER.password },
+        { productRealm: 'questioner' },
       );
-
-      // Save auth state to localStorage so it persists across page navigations
-      await page.evaluate(() => {
-        const persistAuth = sessionStorage.getItem('persist:auth');
-        if (persistAuth) {
-          localStorage.setItem('persist:auth', persistAuth);
-        }
-      });
 
       // Navigate to templates page
       const templatesPage = new QuizTemplatesPage(page);
