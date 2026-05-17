@@ -77,12 +77,13 @@ export default defineConfig({
     navigationTimeout: 15000,
   },
 
-  // Hard per-test timeout cap. Tests budgeted at 30s for normal flows; 60s
-  // is the absolute ceiling — anything that needs longer is either testing
-  // wrong (waiting on a polled retry instead of asserting once) or belongs
-  // in a separate stress suite invoked with --timeout. Stress projects were
-  // removed from the default matrix for this reason.
-  timeout: 60000,
+  // Hard per-test timeout cap (2026-05-17): 30s. Anything that needs longer
+  // is either testing wrong (polled-retry waits instead of single asserts) or
+  // belongs in a separate stress suite invoked with `--timeout=120000`. Stress
+  // projects were dropped from the default matrix for this reason. Tests
+  // currently > 30s will fail-fast → flagged in CI output → either split into
+  // smaller atomic tests or moved to the stress suite. See tests/README.md.
+  timeout: 30000,
 
   expect: {
     timeout: 5000,

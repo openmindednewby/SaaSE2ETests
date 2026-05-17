@@ -119,7 +119,7 @@ grep -rn "@known-bug-" tests/
 ## Notes on test design
 
 - **No setup-as-test antipattern**: setup belongs in `beforeAll`, not in a numbered `test('should create X for Y tests', ...)`. We have ~11 of those still, listed in `tests/README.md` follow-up section — refactor when touching those suites for other reasons.
-- **Per-test timeout: 60s**. Hard-capped in `playwright.config.ts`. Anything that needs longer is testing wrong (polling instead of asserting once).
+- **Per-test timeout: 30s** (hard-capped in `playwright.config.ts`, tightened from 60s on 2026-05-17). Anything that needs longer is testing wrong (polling instead of asserting once). The 30s cap is policy: tests > 30s either get split into smaller atomic tests OR moved to the stress suite invoked with `--timeout=120000`.
 - **describe.serial chains cascade-skip**: if you tag the first test in a serial chain with `@critical`, the chain's `beforeAll` runs — but downstream tests not tagged `@critical` won't run under `--grep "@critical"`. Tag the WHOLE chain or none.
 - **Canary mode auto-cleanup**: every entity created in staging/prod E2E is `e2ec-{runId8}-` prefixed; the canary teardown sweeps via 6 per-service cleanup endpoints + the weekly `playwright-e2e-orphan-cleanup` CronJob is the safety net.
 
