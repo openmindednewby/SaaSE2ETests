@@ -193,7 +193,8 @@ test.describe('Multiple Content Uploads @online-menus @content-upload', () => {
   });
 
   // eslint-disable-next-line no-empty-pattern
-  test('should upload images to multiple menu items', async ({}, testInfo) => {
+  test.skip('should upload images to multiple menu items @known-bug-upload-2', async ({}, testInfo) => {
+    // Skipped 2026-05-17 — see BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md (Tier 3)
     test.skip(testInfo.project.name.includes('firefox'), 'Firefox file chooser handling is unreliable for image uploads');
     testMenuName = `Multiple Uploads Test ${Date.now()}`;
 

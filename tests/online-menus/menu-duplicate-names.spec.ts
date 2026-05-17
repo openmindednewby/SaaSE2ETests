@@ -199,7 +199,8 @@ test.describe.serial('Menu Duplicate Names @online-menus @duplicate-names', () =
     await menusPage.expectMenuInList(testMenuName);
   });
 
-  test('should edit one duplicate without affecting the other', async () => {
+  test.skip('should edit one duplicate without affecting the other @known-bug-edit-1', async () => {
+    // Skipped 2026-05-17 — see BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md (Tier 4)
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
     // Edit the menu

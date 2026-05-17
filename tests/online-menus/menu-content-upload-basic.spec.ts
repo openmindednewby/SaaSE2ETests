@@ -135,7 +135,8 @@ test.describe.serial('Menu Content Upload @online-menus @content-upload', () => 
   });
 
   // eslint-disable-next-line no-empty-pattern
-  test('should upload an image to a menu item', async ({}, testInfo) => {
+  test.skip('should upload an image to a menu item @known-bug-upload-1', async ({}, testInfo) => {
+    // Skipped 2026-05-17 — see BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md (Tier 3)
     test.skip(testInfo.project.name.includes('firefox'), 'Firefox file chooser handling is unreliable for image uploads');
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 

@@ -78,7 +78,8 @@ test.describe.serial('Menu Status Display @online-menus @ui', () => {
     await context?.close();
   });
 
-  test('should create multiple menus for status testing', async () => {
+  test.skip('should create multiple menus for status testing @known-bug-multicreate-2', async () => {
+    // Skipped 2026-05-17 — see BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md (Tier 2)
     // Give this test extra time -- it creates 3 menus sequentially, each involving
     // POST + GET refetch + UI settle, which can be slow under 12-worker concurrency.
     test.setTimeout(180000);

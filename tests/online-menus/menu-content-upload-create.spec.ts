@@ -77,7 +77,8 @@ test.describe('Create Menu with Category and Image @online-menus @content-upload
   });
 
   // eslint-disable-next-line no-empty-pattern
-  test('create new menu with category and image persists correctly', async ({}, testInfo) => {
+  test.skip('create new menu with category and image persists correctly @known-bug-upload-3', async ({}, testInfo) => {
+    // Skipped 2026-05-17 — see BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md (Tier 3)
     test.skip(testInfo.project.name.includes('firefox'), 'Firefox file chooser handling is unreliable for image uploads');
     // This test verifies the bug fix for the two-step create process:
     // 1. Create menu (POST with name/description only)

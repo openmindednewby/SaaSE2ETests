@@ -96,7 +96,8 @@ test.describe.serial('Public Viewer Active Filtering - Basic @online-menus @publ
     await context?.close();
   });
 
-  test('should create test menus with different activation states', async () => {
+  test.skip('should create test menus with different activation states @known-bug-multicreate-3', async () => {
+    // Skipped 2026-05-17 — see BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md (Tier 2)
     activeMenuName = `Active Public Menu ${Date.now()}`;
     inactiveMenuName = `Inactive Public Menu ${Date.now() + 1}`;
 

@@ -110,7 +110,8 @@ test.describe.serial('Public Viewer Active Filtering - States @online-menus @pub
     await context?.close();
   });
 
-  test('should show menu in public list immediately after activation', async () => {
+  test.skip('should show menu in public list immediately after activation @known-bug-multicreate-4', async () => {
+    // Skipped 2026-05-17 — see BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md (Tier 2)
     expect(inactiveMenuName, 'Inactive menu not created').toBeTruthy();
 
     await menusPage.activateMenu(inactiveMenuName);

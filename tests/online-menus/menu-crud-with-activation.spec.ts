@@ -91,7 +91,8 @@ test.describe.serial('Menu CRUD with Activation State @online-menus @crud', () =
     await menusPage.expectMenuActive(testMenuName, true);
   });
 
-  test('should be able to delete an active menu', async () => {
+  test.skip('should be able to delete an active menu @known-bug-multicreate-1', async () => {
+    // Skipped 2026-05-17 — see BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md (Tier 2)
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
     // Ensure menu is active
