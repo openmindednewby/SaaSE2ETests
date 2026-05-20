@@ -17,7 +17,6 @@ import { createAuthenticatedContext } from '../../helpers/serial-auth.js';
  * state rendering and the structural integrity of the history section.
  */
 test.describe.serial('Billing History Display @billing @history', () => {
-  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let billingPage: BillingPage;
@@ -31,6 +30,7 @@ test.describe.serial('Billing History Display @billing @history', () => {
   });
 
   test.beforeEach(async () => {
+    test.setTimeout(90000);
     await billingPage.goto();
   });
 

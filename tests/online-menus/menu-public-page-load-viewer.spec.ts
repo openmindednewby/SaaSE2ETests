@@ -8,8 +8,6 @@ import { TestIds, testIdSelector } from '../../shared/testIds.js';
 
 // Public Menu Page Loading - Viewer and Error States (BUG-MENU-005/006)
 test.describe.serial('Public Menu Page Load - Viewer @online-menus @public-viewer', () => {
-  test.setTimeout(120000);
-
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;

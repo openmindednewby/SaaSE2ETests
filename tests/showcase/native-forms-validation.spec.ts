@@ -16,13 +16,12 @@ import { TestIds } from '../../shared/testIds.js';
  */
 
 test.describe.serial('Form Validation UX @showcase @native-forms', () => {
-  test.setTimeout(120000);
-
   let context: BrowserContext;
   let page: Page;
   let nativeFormsPage: NativeFormsPage;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();

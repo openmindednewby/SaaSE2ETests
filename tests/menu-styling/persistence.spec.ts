@@ -9,8 +9,6 @@ import { OnlineMenusEditorPage } from '../../pages/OnlineMenusEditorPage.js';
 
 /** E2E Tests: Menu Styling Persistence - Apply & Verify @tag @menu-styling */
 test.describe.serial('Menu Styling Persistence - Apply & Verify @menu-styling @online-menus @critical', () => {
-  test.setTimeout(300000);
-
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;
@@ -22,6 +20,7 @@ test.describe.serial('Menu Styling Persistence - Apply & Verify @menu-styling @o
   const appliedStyles = { backgroundColor: '#F0F0F0', textColor: '#222222', fontSize: '18', borderRadius: 2, hasShadow: true };
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();
@@ -229,14 +228,13 @@ test.describe.serial('Menu Styling Persistence - Apply & Verify @menu-styling @o
 
 /** Persistence edge case: cancelled changes should not persist */
 test.describe('Menu Styling Persistence - Cancel Behavior @menu-styling @online-menus', () => {
-  test.setTimeout(120000);
-
   let menusPage: OnlineMenusPage;
   let _editorPage: OnlineMenusEditorPage;
   let stylingPage: MenuStylingPage;
   let _advancedStylingPage: MenuStylingAdvancedPage;
 
   test.beforeEach(async ({ page }, testInfo) => {
+    test.setTimeout(90000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     await page.addInitScript(() => {

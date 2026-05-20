@@ -19,8 +19,6 @@ import { QuizActivePage } from '../../../pages/QuizActivePage.js';
  * 2. Validation errors appear for required fields left empty on earlier pages
  */
 test.describe.serial('Multi-Page Quiz Validation @questioner @validation @critical', () => {
-  test.setTimeout(180000); // 3 minutes for multi-step tests
-
   let context: BrowserContext;
   let page: Page;
   let quizActivePage: QuizActivePage;
@@ -28,6 +26,7 @@ test.describe.serial('Multi-Page Quiz Validation @questioner @validation @critic
   let templateExternalId: string | null = null;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     testInfo.setTimeout(120000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 

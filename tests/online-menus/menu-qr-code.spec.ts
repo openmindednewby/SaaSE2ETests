@@ -16,7 +16,6 @@ import { OnlineMenusPublicPage } from '../../pages/OnlineMenusPublicPage.js';
  * - Backend QR tracking redirect endpoint
  */
 test.describe.serial('QR Code Generation @online-menus @qr-code', () => {
-  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;
@@ -74,6 +73,7 @@ test.describe.serial('QR Code Generation @online-menus @qr-code', () => {
   });
 
   test.beforeEach(async () => {
+    test.setTimeout(90000);
     await menusPage.goto();
   });
 

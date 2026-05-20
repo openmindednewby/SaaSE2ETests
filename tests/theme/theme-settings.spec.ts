@@ -23,13 +23,12 @@ import { ThemeSettingsAppPage } from '../../pages/ThemeSettingsAppPage.js';
 // =============================================================================
 
 test.describe.serial('Theme Settings - Admin @theme @settings', () => {
-  test.setTimeout(120000);
-
   let context: BrowserContext;
   let page: Page;
   let themeSettings: ThemeSettingsAppPage;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();
@@ -148,13 +147,12 @@ test.describe.serial('Theme Settings - Admin @theme @settings', () => {
 // =============================================================================
 
 test.describe.serial('Theme Settings - Non-Admin @theme @settings', () => {
-  test.setTimeout(120000);
-
   let context: BrowserContext;
   let page: Page;
   let themeSettings: ThemeSettingsAppPage;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     const { user: regularUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();

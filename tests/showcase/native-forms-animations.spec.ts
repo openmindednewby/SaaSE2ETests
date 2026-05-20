@@ -16,13 +16,12 @@ import { NativeFormsPage } from '../../pages/NativeFormsPage.js';
  */
 
 test.describe('CSS Animations @showcase @native-forms', () => {
-  test.setTimeout(60000);
-
   let context: BrowserContext;
   let page: Page;
   let nativeFormsPage: NativeFormsPage;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();

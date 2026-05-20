@@ -21,8 +21,6 @@ import { QuizAnswersPage } from '../../../pages/QuizAnswersPage.js';
  * 4. Clearing search restores the full answer list
  */
 test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
-  test.setTimeout(120000);
-
   let context: BrowserContext;
   let page: Page;
   let answersPage: QuizAnswersPage;
@@ -31,6 +29,7 @@ test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
   let answerExternalIds: string[] = [];
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     testInfo.setTimeout(120000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 

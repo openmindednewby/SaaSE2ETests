@@ -18,7 +18,6 @@ import { createAuthenticatedContext } from '../../helpers/serial-auth.js';
  * billing UI renders correctly for the default (free) subscription state.
  */
 test.describe.serial('Billing Subscription Management @billing @subscription', () => {
-  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let billingPage: BillingPage;
@@ -32,6 +31,7 @@ test.describe.serial('Billing Subscription Management @billing @subscription', (
   });
 
   test.beforeEach(async () => {
+    test.setTimeout(90000);
     await billingPage.goto();
   });
 

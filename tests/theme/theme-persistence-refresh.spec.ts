@@ -18,13 +18,12 @@ import { ThemeSettingsAppPage } from '../../pages/ThemeSettingsAppPage.js';
 // =============================================================================
 
 test.describe.serial('Theme Persistence - Page Refresh @theme @persistence', () => {
-  test.setTimeout(120000);
-
   let context: BrowserContext;
   let page: Page;
   let themeSettings: ThemeSettingsAppPage;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();

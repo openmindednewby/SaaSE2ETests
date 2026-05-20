@@ -12,8 +12,6 @@ import { OnlineMenusContentPage } from '../../pages/OnlineMenusContentPage.js';
  * These tests verify proper error handling during content upload.
  */
 test.describe('Menu Content Upload Error Handling @online-menus @content-upload', () => {
-  test.setTimeout(120000);
-
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;
@@ -129,8 +127,6 @@ test.describe('Menu Content Upload Error Handling @online-menus @content-upload'
  * Tests uploading images to multiple menu items and categories.
  */
 test.describe('Multiple Content Uploads @online-menus @content-upload', () => {
-  test.setTimeout(240000); // 4 minutes for multiple uploads
-
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;

@@ -14,8 +14,6 @@ import { OnlineMenusContentPage } from '../../pages/OnlineMenusContentPage.js';
  * lose the category because the create API only supported name/description.
  */
 test.describe('Create Menu with Category and Image @online-menus @content-upload', () => {
-  test.setTimeout(180000); // 3 minutes for upload tests
-
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;

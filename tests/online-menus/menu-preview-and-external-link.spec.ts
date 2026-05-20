@@ -12,7 +12,6 @@ import { OnlineMenusPublicPage } from '../../pages/OnlineMenusPublicPage.js';
  * - Open External Link button: Opens the public menu URL in a new tab (active menus only)
  */
 test.describe.serial('Menu Preview and External Link @online-menus @preview', () => {
-  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;
@@ -59,6 +58,7 @@ test.describe.serial('Menu Preview and External Link @online-menus @preview', ()
   });
 
   test.beforeEach(async () => {
+    test.setTimeout(90000);
     await menusPage.goto();
   });
 

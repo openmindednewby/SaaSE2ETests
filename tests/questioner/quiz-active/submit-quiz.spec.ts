@@ -16,8 +16,6 @@ import { QuizActivePage } from '../../../pages/QuizActivePage.js';
  * 3. Form is interactive and accepts input
  */
 test.describe.serial('Submit Quiz @questioner', () => {
-  test.setTimeout(120000);
-
   let context: BrowserContext;
   let page: Page;
   let quizActivePage: QuizActivePage;
@@ -25,6 +23,7 @@ test.describe.serial('Submit Quiz @questioner', () => {
   let templateExternalId: string | null = null;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     testInfo.setTimeout(120000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 

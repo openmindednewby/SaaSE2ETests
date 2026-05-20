@@ -16,7 +16,6 @@ import { TestIds, testIdSelector, testIdStartsWithSelector } from '../../shared/
  * BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md
  */
 test.describe.skip('Public Viewer Active Filtering - Basic @online-menus @public-viewer @critical', () => {
-  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;
@@ -80,6 +79,7 @@ test.describe.skip('Public Viewer Active Filtering - Basic @online-menus @public
   });
 
   test.beforeEach(async () => {
+    test.setTimeout(90000);
     await menusPage.goto();
   });
 

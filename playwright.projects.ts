@@ -2,22 +2,44 @@ import { devices } from '@playwright/test';
 import type { PlaywrightTestConfig } from '@playwright/test';
 
 type ProjectConfig = NonNullable<PlaywrightTestConfig['projects']>;
+type Project = ProjectConfig[number];
 
-// Chromium-only matrix (2026-05-20). Mobile (Pixel 5) and Firefox project
-// triples were dropped permanently — they roughly tripled wall-clock time,
-// and against staging the Firefox project couldn't even resolve hostnames
-// (`--host-resolver-rules` is Chromium-only). Every UI domain now ships a
-// single `<domain>-chromium` project. If cross-browser regression coverage
-// is ever needed again, add a one-off project inline rather than reviving
-// the full matrix.
+// Chromium-only. The suite is sharded into fine-grained "chunk" projects —
+// each a sub-batch sized to run in roughly 2-3 minutes. Splitting the run this
+// way (vs coarse per-domain projects) means a broken chunk is isolated from
+// the rest and the list reporter shows per-chunk progress — all inside ONE
+// `playwright test` invocation, so globalSetup runs only once.
+
+const CHROME = devices['Desktop Chrome'];
+const AUTH = 'playwright/.auth/user.json';
+
+interface ChunkOpts {
+  /** Loads the saved auth storage state — set for any project that drives the UI as a logged-in user. */
+  auth?: boolean;
+  /** Adds the multi-tenant-setup dependency (per-tenant test users). */
+  multiTenant?: boolean;
+}
+
+/**
+ * Build one chunk project. `dir` is the path under tests/; `files` is the list
+ * of spec basenames (without `.spec.ts`) — empty means every spec in `dir`.
+ */
+function chunk(name: string, dir: string, files: string[], opts: ChunkOpts = {}): Project {
+  const body = files.length ? `(${files.join('|')})` : '.*';
+  return {
+    name,
+    workers: 1,
+    testMatch: new RegExp(`${dir}/${body}\\.spec\\.ts`),
+    use: opts.auth ? { ...CHROME, storageState: AUTH } : { ...CHROME },
+    dependencies: opts.multiTenant ? ['setup', 'multi-tenant-setup'] : ['setup'],
+  };
+}
+
+const UI = { auth: true, multiTenant: true } as const;
+
 export const projects: ProjectConfig = [
-  // Auth setup project - runs before all tests
-  {
-    name: 'setup',
-    testMatch: /auth\.setup\.ts/,
-  },
-
-  // Multi-tenant setup - creates test tenants and users
+  // ---- Setup projects (run first, results shared by every chunk) ----
+  { name: 'setup', testMatch: /auth\.setup\.ts/ },
   {
     name: 'multi-tenant-setup',
     testMatch: /multi-tenant\.setup\.ts/,
@@ -25,165 +47,60 @@ export const projects: ProjectConfig = [
     timeout: 180000,
   },
 
-  // Health probe checks (no tenant/user setup required)
-  {
-    name: 'health',
-    testMatch: /health\/.*\.spec\.ts/,
-    dependencies: ['setup'],
-  },
+  // ---- API / observability chunks (no multi-tenant users needed) ----
+  { name: 'health', workers: 1, testMatch: /health\/.*\.spec\.ts/, dependencies: ['setup'] },
+  chunk('diagnostics', 'diagnostics', [], { multiTenant: true }),
+  { name: 'logging', workers: 1, testMatch: /logging\/(?!stress).*\.spec\.ts/, dependencies: ['setup'] },
+  { name: 'monitoring', workers: 1, testMatch: /monitoring\/.*\.spec\.ts/, dependencies: ['setup'] },
+  { name: 'cross-product-isolation', workers: 1, testMatch: /cross-product-isolation\/.*\.spec\.ts/, dependencies: ['setup'] },
 
-  // Diagnostics (API-only) - validates tenantId claims per project user
-  {
-    name: 'diagnostics-chromium',
-    testMatch: /diagnostics\/.*\.spec\.ts/,
-    dependencies: ['setup', 'multi-tenant-setup'],
-    use: { ...devices['Desktop Chrome'] },
-  },
+  // ---- Identity chunks (auth state, no multi-tenant users) ----
+  chunk('identity-auth', 'identity', ['login', 'login-direct', 'logout', 'token-refresh'], { auth: true }),
+  chunk('identity-account', 'identity', ['email-otp', 'password-reset', 'host-override-smoke', 'cookie-session'], { auth: true }),
 
-  // ==================== BATCHED UI PROJECTS ====================
-  // Identity batch (no multi-tenant setup required)
-  {
-    name: 'identity-chromium',
-    workers: 1,
-    testMatch: /identity\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup'],
-  },
+  // ---- Smoke ----
+  chunk('smoke', 'smoke', [], UI),
 
-  // Questioner batch (requires multi-tenant setup)
-  {
-    name: 'questioner-chromium',
-    workers: 1,
-    testMatch: /questioner\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
+  // ---- Online Menus (5 chunks) ----
+  chunk('online-menus-crud', 'online-menus', ['menu-activation', 'menu-crud-with-activation', 'menu-display-order-sorting'], UI),
+  chunk('online-menus-editor-categories', 'online-menus', ['menu-editor-categories-focus', 'menu-editor-categories-crud', 'menu-editor-categories-switching', 'menu-duplicate-names'], UI),
+  chunk('online-menus-editor-uploads', 'online-menus', ['menu-content-upload-basic', 'menu-content-upload-create', 'menu-content-upload-advanced'], UI),
+  chunk('online-menus-public-preview', 'online-menus', ['menu-preview-and-external-link', 'menu-qr-code'], UI),
+  chunk('online-menus-public-viewer', 'online-menus', ['menu-public-page-load-basic', 'menu-public-page-load-viewer', 'public-viewer-active-filtering-basic', 'public-viewer-active-filtering-states'], UI),
 
-  // Smoke batch (requires multi-tenant setup)
-  {
-    name: 'smoke-chromium',
-    workers: 1,
-    testMatch: /smoke\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
+  // ---- Questioner (3 chunks) ----
+  chunk('questioner-templates', 'questioner/templates', [], UI),
+  chunk('questioner-active', 'questioner/quiz-active', [], UI),
+  chunk('questioner-answers', 'questioner/quiz-answers', [], UI),
 
-  // Online Menus batch (requires multi-tenant setup)
-  {
-    name: 'online-menus-chromium',
-    workers: 1,
-    testMatch: /online-menus\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
+  // ---- Content (2 chunks) ----
+  chunk('content-api', 'content', ['content-api', 'content-api-advanced'], UI),
+  chunk('content-upload', 'content', ['content-upload'], UI),
 
-  // Content upload batch (requires multi-tenant setup)
-  {
-    name: 'content-chromium',
-    workers: 1,
-    testMatch: /content\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
+  // ---- Notifications (4 chunks; stress specs excluded) ----
+  chunk('notifications-screen', 'notifications', ['notification-screen'], UI),
+  chunk('notifications-nav', 'notifications', ['notification-screen-navigation', 'health'], UI),
+  chunk('notifications-alerts', 'notifications', ['notification-toast', 'notification-badge', 'cross-tab'], UI),
+  chunk('notifications-infra', 'notifications', ['realtime', 'connection'], UI),
 
-  // Notifications batch (requires multi-tenant setup)
-  {
-    name: 'notifications-chromium',
-    workers: 1,
-    testMatch: /notifications\/(?!stress).*\.spec\.ts/,
-    use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
+  // ---- Theme (2 chunks) ----
+  chunk('theme-settings', 'theme', ['theme-settings', 'theme-persistence-auth', 'theme-persistence-refresh'], UI),
+  chunk('theme-components', 'theme', ['theme-components'], UI),
 
-  // Notification stress tests dropped from default matrix — they need 120s+
-  // per test which violates the 30s/test cap. Re-enable manually via a
-  // direct `npx playwright test --timeout=120000 tests/notifications/stress-*`
-  // invocation when stress regression coverage is needed.
+  // ---- Tenant Themes ----
+  chunk('tenant-themes', 'tenant-themes', [], UI),
 
-  // Showcase batch (requires multi-tenant setup for authenticated access)
-  {
-    name: 'showcase-chromium',
-    workers: 1,
-    testMatch: /showcase\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
+  // ---- Menu Styling (3 chunks) ----
+  chunk('menu-styling-categories', 'menu-styling', ['category-styling', 'category-styling-advanced'], UI),
+  chunk('menu-styling-colors', 'menu-styling', ['color-scheme', 'color-scheme-save', 'layout-templates'], UI),
+  chunk('menu-styling-text', 'menu-styling', ['typography', 'typography-advanced', 'persistence', 'persistence-reload'], UI),
 
-  // Tenant Themes batch (requires multi-tenant setup for authenticated access)
-  {
-    name: 'tenant-themes-chromium',
-    workers: 1,
-    testMatch: /tenant-themes\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
+  // ---- Billing (2 chunks) ----
+  chunk('billing-subscription', 'billing', ['billing-subscription', 'billing-subscription-flow', 'billing-cancellation'], UI),
+  chunk('billing-pricing', 'billing', ['billing-pricing-page', 'billing-upgrade-downgrade', 'billing-history'], UI),
 
-  // Theme settings batch (requires multi-tenant setup for tenant isolation tests)
-  {
-    name: 'theme-chromium',
-    workers: 1,
-    testMatch: /theme\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
-
-  // Navigation batch (sidebar expandable sections, no multi-tenant setup required)
-  {
-    name: 'navigation-chromium',
-    workers: 1,
-    testMatch: /navigation\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup'],
-  },
-
-  // Menu Styling batch (requires multi-tenant setup for menu styling tests)
-  {
-    name: 'menu-styling-chromium',
-    workers: 1,
-    testMatch: /menu-styling\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
-
-  // Billing batch (requires multi-tenant setup for subscription state)
-  {
-    name: 'billing-chromium',
-    workers: 1,
-    testMatch: /billing\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
-
-  // ==================== OBSERVABILITY PROJECTS ====================
-  // Logging tests (API-only, no browser UI needed, no multi-tenant setup)
-  {
-    name: 'logging',
-    workers: 1,
-    testMatch: /logging\/(?!stress).*\.spec\.ts/,
-    dependencies: ['setup'],
-  },
-
-  // Logging stress tests dropped from default matrix — need 120s+ per test
-  // which violates the 30s/test cap. Re-enable manually with a direct
-  // `npx playwright test --timeout=120000 tests/logging/stress-*` invocation.
-
-  // Monitoring tests (API-only, no browser UI needed)
-  {
-    name: 'monitoring',
-    workers: 1,
-    testMatch: /monitoring\/.*\.spec\.ts/,
-    dependencies: ['setup'],
-  },
-
-  // Cross-product isolation (Phase 2 / Step 5).
-  // The regression-guard suite for the Questioner / OnlineMenu product split.
-  // API-only (no browser UI needed). Depends on `setup` only — does NOT require
-  // the multi-tenant test users since it operates on realm-scoped tokens, not
-  // tenant-scoped users.
-  {
-    name: 'cross-product-isolation',
-    workers: 1,
-    testMatch: /cross-product-isolation\/.*\.spec\.ts/,
-    dependencies: ['setup'],
-  },
+  // ---- Showcase (3 chunks) ----
+  chunk('showcase-forms', 'showcase', ['native-forms', 'native-forms-fields', 'native-forms-validation', 'native-forms-animations'], UI),
+  chunk('showcase-visual', 'showcase', ['native-forms-combobox', 'native-forms-dark-theme', 'theme-preset-cards'], UI),
+  chunk('showcase-components', 'showcase', ['layout-full-width', 'native-components', 'products-api'], UI),
 ];

@@ -7,9 +7,6 @@ import { QuizTemplatesQuizPage } from '../../../pages/QuizTemplatesQuizPage.js';
 import { createTemplateAndWait } from '../../../flows/quiz-templates.flow.js';
 
 test.describe('Active Quiz Limit @questioner', () => {
-  // Increase timeout for this test suite since it involves multiple operations
-  test.setTimeout(120000);
-
   let t1Name: string;
   let t2Name: string;
   let templatesPage: QuizTemplatesPage;
@@ -17,11 +14,13 @@ test.describe('Active Quiz Limit @questioner', () => {
   let context: any;
 
   test.beforeAll(async ({ browser: _browser }) => {
+    test.setTimeout(90000);
     // Shared context for speed if separate tests, but we'll do one flow here
     // Actually standard is separate tests, but this is a sequence
   });
 
   test.beforeEach(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     context = await browser.newContext();
     const page = await context.newPage();
 

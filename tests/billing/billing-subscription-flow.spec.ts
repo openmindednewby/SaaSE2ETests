@@ -18,7 +18,6 @@ import { createAuthenticatedContext } from '../../helpers/serial-auth.js';
  * UI state rather than performing Stripe checkout (which requires external integration).
  */
 test.describe.serial('Billing Subscription Flow @billing @subscription-flow', () => {
-  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let billingPage: BillingPage;

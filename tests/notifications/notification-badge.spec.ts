@@ -25,7 +25,6 @@ import { hasNotificationTestApi } from '../utils/notificationHelpers.js';
 const PAGE_RENDER_TIMEOUT_MS = 15000;
 
 test.describe('Notification Badge @notifications', () => {
-  test.setTimeout(60000);
   let notificationsPage: NotificationsPage;
   let stressPage: NotificationsStressPage;
 
@@ -33,10 +32,12 @@ test.describe('Notification Badge @notifications', () => {
   let serviceHealthy = false;
 
   test.beforeAll(async () => {
+    test.setTimeout(90000);
     serviceHealthy = await isNotificationServiceHealthy();
   });
 
   test.beforeEach(async ({ page }) => {
+    test.setTimeout(90000);
     notificationsPage = new NotificationsPage(page);
     stressPage = new NotificationsStressPage(page);
 

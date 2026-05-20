@@ -18,7 +18,6 @@ import { TestIds, testIdSelector } from '../../shared/testIds.js';
  * (set up by multi-tenant.setup.ts via ensureProSubscriptions).
  */
 test.describe.serial('Billing Pricing Page @billing @pricing', () => {
-  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let billingPage: BillingPage;
@@ -32,6 +31,7 @@ test.describe.serial('Billing Pricing Page @billing @pricing', () => {
   });
 
   test.beforeEach(async () => {
+    test.setTimeout(90000);
     await billingPage.goto();
   });
 

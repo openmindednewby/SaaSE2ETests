@@ -53,11 +53,11 @@ async function setupPageWithAuth(
 }
 
 test.describe('Cross-Tab Notification Sync @notifications', () => {
-  test.setTimeout(60000);
   /** Whether the NotificationService is reachable */
   let serviceHealthy = false;
 
   test.beforeAll(async () => {
+    test.setTimeout(90000);
     serviceHealthy = await isNotificationServiceHealthy();
   });
 

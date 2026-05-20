@@ -18,14 +18,13 @@ import { ThemeSettingsAppPage } from '../../pages/ThemeSettingsAppPage.js';
 // =============================================================================
 
 test.describe.serial('Theme Persistence - Login/Logout @theme @persistence', () => {
-  test.setTimeout(180000);
-
   let context: BrowserContext;
   let page: Page;
   let loginPage: LoginPage;
   let themeSettings: ThemeSettingsAppPage;
 
   test.beforeAll(async ({ browser }) => {
+    test.setTimeout(90000);
     context = await browser.newContext();
     page = await context.newPage();
 
@@ -128,8 +127,6 @@ test.describe.serial('Theme Persistence - Login/Logout @theme @persistence', () 
 // =============================================================================
 
 test.describe('Theme Persistence - Tenant Isolation @theme @persistence @isolation', () => {
-  test.setTimeout(180000);
-
   test('should show different themes for different tenants @critical', async ({ browser }) => {
     // Login as Tenant A admin
     const contextA = await browser.newContext();

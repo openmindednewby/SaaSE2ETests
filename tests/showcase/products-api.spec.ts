@@ -25,13 +25,12 @@ import { StudioProductsPage } from '../../pages/StudioProductsPage.js';
 // =============================================================================
 
 test.describe.serial('Native Products Page @showcase @products @bug-fix', () => {
-  test.setTimeout(120000);
-
   let context: BrowserContext;
   let page: Page;
   let productsPage: StudioProductsPage;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();
@@ -89,13 +88,12 @@ test.describe.serial('Native Products Page @showcase @products @bug-fix', () => 
 // =============================================================================
 
 test.describe.serial('Syncfusion Products Page @showcase @products @bug-fix', () => {
-  test.setTimeout(120000);
-
   let context: BrowserContext;
   let page: Page;
   let productsPage: StudioProductsPage;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();

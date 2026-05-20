@@ -11,8 +11,6 @@ import { OnlineMenusEditorPage } from '../../pages/OnlineMenusEditorPage.js';
  * and that category data persists after save and reload.
  */
 test.describe('Menu Editor - Multiple Category Focus Switching @online-menus @categories', () => {
-  test.setTimeout(120000);
-
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;

@@ -12,8 +12,6 @@ import { OnlineMenusEditorPage } from '../../pages/OnlineMenusEditorPage.js';
  * retention bugs where typing would lose focus mid-keystroke.
  */
 test.describe.serial('Menu Editor Categories - Focus Retention @online-menus @categories', () => {
-  test.setTimeout(180000); // 3 minutes for comprehensive tests
-
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;

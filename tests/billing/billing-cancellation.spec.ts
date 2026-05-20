@@ -18,7 +18,6 @@ import { createAuthenticatedContext } from '../../helpers/serial-auth.js';
  * provisions Pro subscriptions for all test tenants.
  */
 test.describe.serial('Billing Cancellation Flow @billing @cancellation', () => {
-  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let billingPage: BillingPage;

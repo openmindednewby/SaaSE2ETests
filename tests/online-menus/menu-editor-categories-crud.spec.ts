@@ -11,8 +11,6 @@ import { OnlineMenusEditorPage } from '../../pages/OnlineMenusEditorPage.js';
  * including persistence verification after save and reload.
  */
 test.describe.serial('Menu Editor - Full CRUD for Categories @online-menus @categories', () => {
-  test.setTimeout(240000); // 4 minutes for full CRUD tests
-
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;

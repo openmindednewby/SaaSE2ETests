@@ -8,8 +8,6 @@ import { OnlineMenusEditorPage } from '../../pages/OnlineMenusEditorPage.js';
 
 /** E2E Tests: Category Styling - Advanced Effects, Save & Persistence @tag @menu-styling */
 test.describe.serial('Category Styling - Advanced @menu-styling @online-menus', () => {
-  test.setTimeout(240000);
-
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;
@@ -19,6 +17,7 @@ test.describe.serial('Category Styling - Advanced @menu-styling @online-menus', 
   let testMenuName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();

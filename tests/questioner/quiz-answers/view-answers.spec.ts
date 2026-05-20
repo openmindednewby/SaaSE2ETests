@@ -5,12 +5,12 @@ import { loginAsTenantAdminBrowser } from '../../../helpers/realm-browser-auth.j
 
 // Use serial mode so tests run in order and share the same browser context
 test.describe.serial('View Quiz Answers @questioner', () => {
-  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let answersPage: QuizAnswersPage;
 
   test.beforeAll(async ({ browser }) => {
+    test.setTimeout(90000);
     const username = process.env.TEST_USER_USERNAME;
     const password = process.env.TEST_USER_PASSWORD;
 

@@ -18,7 +18,6 @@ import { TestIds, testIdSelector } from '../../shared/testIds.js';
  * The multi-tenant setup provisions Pro subscriptions for all test tenants.
  */
 test.describe.serial('Billing Upgrade and Downgrade Options @billing @upgrade-downgrade', () => {
-  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let billingPage: BillingPage;
@@ -32,6 +31,7 @@ test.describe.serial('Billing Upgrade and Downgrade Options @billing @upgrade-do
   });
 
   test.beforeEach(async () => {
+    test.setTimeout(90000);
     await billingPage.goto();
   });
 

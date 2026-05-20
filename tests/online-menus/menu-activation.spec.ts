@@ -12,7 +12,6 @@ import { OnlineMenusPage } from '../../pages/OnlineMenusPage.js';
  * - isActive field on menus
  */
 test.describe.serial('Menu Activation and Deactivation @online-menus @crud', () => {
-  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;
@@ -57,6 +56,7 @@ test.describe.serial('Menu Activation and Deactivation @online-menus @crud', () 
   });
 
   test.beforeEach(async () => {
+    test.setTimeout(90000);
     await menusPage.goto();
   });
 

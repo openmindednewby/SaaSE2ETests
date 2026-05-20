@@ -8,7 +8,6 @@ import { QuizTemplatesQuizPage } from '../../pages/QuizTemplatesQuizPage.js';
 
 // Use serial mode so tests run in order and share the same browser context
 test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
-  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let templatesPage: QuizTemplatesPage;
@@ -17,6 +16,7 @@ test.describe.serial('Critical Path Smoke Tests @smoke @critical', () => {
   let answersPage: QuizAnswersPage;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     // Create a new browser context for this test suite

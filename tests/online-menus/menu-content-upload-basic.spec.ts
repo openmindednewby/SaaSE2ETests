@@ -24,8 +24,6 @@ import { OnlineMenusPublicPage } from '../../pages/OnlineMenusPublicPage.js';
  * - Test image file exists at E2ETests/fixtures/files/test-image.png
  */
 test.describe.serial('Menu Content Upload @online-menus @content-upload', () => {
-  test.setTimeout(180000); // 3 minutes for upload tests
-
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;

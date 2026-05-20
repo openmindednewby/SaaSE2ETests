@@ -24,13 +24,12 @@ import { NativeComponentsPage } from '../../pages/NativeComponentsPage.js';
 // =============================================================================
 
 test.describe.serial('Native Checkbox Section @showcase @native-components @bug-fix', () => {
-  test.setTimeout(120000);
-
   let context: BrowserContext;
   let page: Page;
   let nativeComponentsPage: NativeComponentsPage;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();

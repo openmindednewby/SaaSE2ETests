@@ -13,8 +13,6 @@ import { TestIds, testIdSelector, testIdStartsWithSelector } from '../../shared/
  * appears in the public list.
  */
 test.describe.serial('Public Menu Page Load - Basic @online-menus @public-viewer', () => {
-  test.setTimeout(120000);
-
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;

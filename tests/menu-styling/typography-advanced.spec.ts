@@ -8,8 +8,6 @@ import { OnlineMenusEditorPage } from '../../pages/OnlineMenusEditorPage.js';
 
 /** E2E Tests: Menu Typography - Advanced Controls, Save & Persistence @tag @menu-styling */
 test.describe.serial('Menu Typography - Advanced @menu-styling @online-menus', () => {
-  test.setTimeout(180000);
-
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;
@@ -19,6 +17,7 @@ test.describe.serial('Menu Typography - Advanced @menu-styling @online-menus', (
   let testMenuName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();

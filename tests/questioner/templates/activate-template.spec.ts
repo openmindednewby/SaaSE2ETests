@@ -8,7 +8,6 @@ import { QuizTemplatesQuizPage } from '../../../pages/QuizTemplatesQuizPage.js';
 
 // Use serial mode so tests run in order and share the same browser context
 test.describe.serial('Activate Quiz Template @questioner @crud', () => {
-  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let templatesPage: QuizTemplatesPage;
@@ -16,6 +15,7 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
   let testTemplateName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     testInfo.setTimeout(120000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
@@ -44,6 +44,7 @@ test.describe.serial('Activate Quiz Template @questioner @crud', () => {
   });
 
   test.beforeEach(async () => {
+    test.setTimeout(90000);
     try {
       await templatesPage.goto();
     } catch {

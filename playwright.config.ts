@@ -59,7 +59,10 @@ export default defineConfig({
   testDir: './tests',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // 1 retry in CI (was 2): the in-cluster nightly runs the full suite serially;
+  // a 2nd retry on every failure roughly tripled wall time on the red portion
+  // of the suite. 1 retry still absorbs transient network/timing flakes.
+  retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: [
     ['html', { outputFolder: 'reports/html' }],

@@ -19,13 +19,12 @@ import { NativeFormsPage } from '../../pages/NativeFormsPage.js';
 // =============================================================================
 
 test.describe('Dark Theme Support @showcase @native-forms', () => {
-  test.setTimeout(60000);
-
   let context: BrowserContext;
   let page: Page;
   let nativeFormsPage: NativeFormsPage;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     // Create context with dark color scheme
@@ -175,8 +174,6 @@ test.describe('Dark Theme Support @showcase @native-forms', () => {
 // =============================================================================
 
 test.describe('Theme Switching @showcase @native-forms', () => {
-  test.setTimeout(90000);
-
   test('should apply different backgrounds for light and dark themes @critical', async ({ browser }, testInfo) => {
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 

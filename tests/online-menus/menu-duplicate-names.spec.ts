@@ -20,8 +20,6 @@ import { TestIds, testIdSelector } from '../../shared/testIds.js';
  * 5. Public viewer renders all duplicate-named categories
  */
 test.describe.serial('Menu Duplicate Names @online-menus @duplicate-names', () => {
-  test.setTimeout(180000); // 3 minutes for comprehensive tests
-
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;

@@ -12,11 +12,10 @@ import { AuthHelper } from '../../../helpers/auth-helper.js';
 test.describe('Tenant Isolation @questioner @security', () => {
   // eslint-disable-next-line no-empty-pattern
   test.beforeEach(async ({}, testInfo) => {
+    test.setTimeout(90000);
     const isChromium = (testInfo.project.name || '').toLowerCase().includes('chromium');
     testInfo.skip(!isChromium, 'Runs once (chromium) to avoid cross-project tenant collisions');
   });
-
-  test.setTimeout(120000);
 
   test('TenantA user cannot create templates (non-admin)', async ({ browser }) => {
     const context = await browser.newContext();

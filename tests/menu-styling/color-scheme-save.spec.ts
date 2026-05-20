@@ -7,8 +7,6 @@ import { OnlineMenusPage } from '../../pages/OnlineMenusPage.js';
 
 /** E2E Tests: Menu Color Scheme - Preview, Reset, Save & Persistence @tag @menu-styling */
 test.describe.serial('Menu Color Scheme - Save & Persist @menu-styling @online-menus', () => {
-  test.setTimeout(180000);
-
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;
@@ -17,6 +15,7 @@ test.describe.serial('Menu Color Scheme - Save & Persist @menu-styling @online-m
   let testMenuName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();

@@ -137,9 +137,6 @@ test.describe('Notification Screen - Navigation @notifications', () => {
 });
 
 test.describe('Notification Screen - Rendering @notifications', () => {
-  // Each test navigates + waits for cookie consent + renders; 30s default can be tight
-  test.setTimeout(60000);
-
   // NOTE: The notification system uses SignalR for real-time data, not REST API.
   // The useNotifications() hook gets data from SignalR context, so HTTP mocking
   // doesn't affect what the component displays. These tests verify the UI renders
@@ -148,6 +145,7 @@ test.describe('Notification Screen - Rendering @notifications', () => {
   let notificationsPage: NotificationsPage;
 
   test.beforeEach(async ({ page }) => {
+    test.setTimeout(90000);
     notificationsPage = new NotificationsPage(page);
 
     // Copy auth from localStorage (set by storageState) to sessionStorage

@@ -15,7 +15,6 @@ import { TestIds, testIdSelector } from '../../shared/testIds.js';
  * - Sorting applies to public menu viewer
  */
 test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
-  test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;
@@ -60,6 +59,7 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
   });
 
   test.beforeEach(async () => {
+    test.setTimeout(90000);
     await menusPage.goto();
   });
 

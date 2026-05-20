@@ -8,8 +8,6 @@ import { OnlineMenusEditorPage } from '../../pages/OnlineMenusEditorPage.js';
 
 /** E2E Tests: Menu Styling Persistence - Browser Reload & Activation @tag @menu-styling */
 test.describe.serial('Menu Styling Persistence - Browser Reload @menu-styling @online-menus @critical', () => {
-  test.setTimeout(300000);
-
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;
@@ -21,6 +19,7 @@ test.describe.serial('Menu Styling Persistence - Browser Reload @menu-styling @o
   const styledColor = '#F0F0F0';
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    test.setTimeout(90000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext();
