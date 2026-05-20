@@ -90,11 +90,15 @@ function listChunks() {
   const out = `${r.stdout || ''}\n${r.stderr || ''}`;
   const seen = new Set();
   const order = [];
+  // A real `--list` test line is `  [project] › file › test`. The `›`
+  // (›) after the bracket is what distinguishes it from stray bracketed log
+  // prefixes the config load prints to stdout (e.g. `[e2e-env] target=...`).
+  const SKIP = new Set(['setup', 'multi-tenant-setup', 'e2e-env']);
   for (const line of out.split('\n')) {
-    const m = line.match(/^\s*\[([a-z][a-z0-9-]+)\]/);
+    const m = line.match(/^\s*\[([a-z][a-z0-9-]+)\]\s+›/);
     if (!m) continue;
     const name = m[1];
-    if (name === 'setup' || name === 'multi-tenant-setup') continue;
+    if (SKIP.has(name)) continue;
     if (!seen.has(name)) { seen.add(name); order.push(name); }
   }
   return order;
