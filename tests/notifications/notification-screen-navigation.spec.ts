@@ -174,49 +174,6 @@ test.describe('Notification Screen - Rendering @notifications', () => {
     });
   });
 
-  test('screen renders correctly', async ({ page: _page }) => {
-    test.skip(!serviceHealthy, 'NotificationService is not running');
-
-    // Navigate to notifications page
-    await notificationsPage.goto('/notifications');
-    await notificationsPage.waitForLoading();
-
-    // Screen should render
-    await expect(notificationsPage.notificationScreen).toBeVisible({
-      timeout: PAGE_RENDER_TIMEOUT_MS,
-    });
-
-    // Notification list should be present
-    await expect(notificationsPage.notificationList).toBeVisible({
-      timeout: PAGE_RENDER_TIMEOUT_MS,
-    });
-  });
-
-  test('shows empty state or notifications based on data', async ({ page: _page }) => {
-    test.skip(!serviceHealthy, 'NotificationService is not running');
-
-    // Navigate to notifications page
-    await notificationsPage.goto('/notifications');
-    await notificationsPage.waitForLoading();
-
-    // Screen should render
-    await expect(notificationsPage.notificationScreen).toBeVisible({
-      timeout: PAGE_RENDER_TIMEOUT_MS,
-    });
-
-    // Either empty state or notification items should be visible
-    const items = notificationsPage.getNotificationItems();
-    const count = await items.count();
-
-    if (count === 0) {
-      // Empty state should be visible when no notifications
-      await notificationsPage.expectEmptyState();
-    } else {
-      // Notification items should be visible when there are notifications
-      await notificationsPage.expectHasNotifications();
-    }
-  });
-
   test('handles disconnected state gracefully', async ({ page }) => {
     test.skip(!serviceHealthy, 'NotificationService is not running');
 

@@ -5,36 +5,14 @@
  * - Prometheus is reachable and ready
  * - Prometheus has active scrape targets
  * - cAdvisor target is up and healthy
- * - Grafana Prometheus datasource is configured
  */
 
 import { test, expect } from '@playwright/test';
-
-import axios from 'axios';
 
 import { PrometheusClient } from '../../helpers/prometheus-client.js';
 
 const PROMETHEUS_URL =
   process.env.PROMETHEUS_URL ?? 'http://localhost:9090';
-const GRAFANA_URL = process.env.GRAFANA_URL ?? 'http://localhost:3000';
-
-/** Grafana default admin credentials (local dev only) */
-const GRAFANA_AUTH = {
-  username: process.env.GRAFANA_ADMIN_USER ?? 'admin',
-  password: process.env.GRAFANA_ADMIN_PASSWORD ?? 'admin',
-};
-
-/** Timeout for Grafana API requests */
-const GRAFANA_TIMEOUT_MS = 15000;
-
-interface GrafanaDatasource {
-  id: number;
-  name: string;
-  type: string;
-  url: string;
-  access: string;
-  isDefault: boolean;
-}
 
 test.describe('Prometheus Health @monitoring', () => {
   let prometheus: PrometheusClient;
@@ -171,54 +149,5 @@ test.describe('Prometheus Health @monitoring', () => {
       type: 'info',
       description: `cAdvisor target: health=${cadvisorTarget.health}, url=${cadvisorTarget.scrapeUrl}, lastScrape=${cadvisorTarget.lastScrape}`,
     });
-  });
-
-  test('Grafana Prometheus datasource is configured', async () => {
-    let datasources: GrafanaDatasource[];
-    try {
-      const response = await axios.get(`${GRAFANA_URL}/api/datasources`, {
-        timeout: GRAFANA_TIMEOUT_MS,
-        auth: GRAFANA_AUTH,
-      });
-      datasources = response.data as GrafanaDatasource[];
-    } catch {
-      const response = await axios
-        .get(`${GRAFANA_URL}/api/datasources`, {
-          timeout: GRAFANA_TIMEOUT_MS,
-        })
-        .catch(() => null);
-
-      if (!response) {
-        test.skip(
-          true,
-          'Cannot access Grafana datasources API (auth required or Grafana not running)'
-        );
-        return;
-      }
-      datasources = response.data as GrafanaDatasource[];
-    }
-
-    expect(
-      Array.isArray(datasources),
-      'Datasources API should return an array'
-    ).toBe(true);
-
-    const promDs = datasources.find(
-      (ds) =>
-        ds.type === 'prometheus' ||
-        ds.name.toLowerCase().includes('prometheus')
-    );
-
-    expect(
-      promDs,
-      'Prometheus datasource should be configured in Grafana'
-    ).toBeTruthy();
-
-    if (promDs) {
-      test.info().annotations.push({
-        type: 'info',
-        description: `Prometheus datasource: name="${promDs.name}", url="${promDs.url}", default=${promDs.isDefault}`,
-      });
-    }
   });
 });

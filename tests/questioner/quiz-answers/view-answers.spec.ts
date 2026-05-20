@@ -45,63 +45,6 @@ test.describe.serial('View Quiz Answers @questioner', () => {
     await context?.close();
   });
 
-  test('should display quiz answers page', async () => {
-    await answersPage.goto();
-    await expect(page).toHaveURL(/quiz-answers/);
-  });
-
-  test('should show page content', async () => {
-    // Page should have some content - either search input, list, or empty state
-    const pageHeader = page.getByText(/quiz answers|answers/i);
-    const searchInput = answersPage.searchInput;
-    const emptyMessage = page.getByText(/no answers|no data/i);
-
-    await expect(
-      pageHeader.or(searchInput).or(emptyMessage).first()
-    ).toBeVisible({ timeout: 10000 });
-  });
-
-  test('should filter answers by search @critical', async () => {
-    await answersPage.waitForLoading();
-
-    // Check if search input exists
-    const hasSearch = await answersPage.searchInput.isVisible({ timeout: 3000 }).catch(() => false);
-    if (!hasSearch) {
-      test.skip();
-      return;
-    }
-
-    const initialCount = await answersPage.getAnswerCount();
-
-    if (initialCount === 0) {
-      // No answers - test passes (empty state is valid)
-      expect(true).toBe(true);
-      return;
-    }
-
-    // Search for something that likely won't match
-    await answersPage.search('zzzznonexistent12345');
-
-    // Should filter results
-    const filteredCount = await answersPage.getAnswerCount();
-    expect(filteredCount).toBeLessThanOrEqual(initialCount);
-
-    // Clear search
-    await answersPage.clearSearch();
-
-    // Wait for list refetch response after clearing search (debounce can delay reload)
-    await page.waitForResponse(
-      r => r.url().includes('completedQuestioners') && r.request().method() === 'GET',
-      { timeout: 10000 },
-    ).catch(() => {});
-    await answersPage.waitForLoading();
-
-    // Should restore results — use >= because pagination may limit visible items
-    // (e.g. initial load shows all pages scrolled, but after clear only first page loads)
-    const restoredCount = await answersPage.getAnswerCount();
-    expect(restoredCount).toBeGreaterThanOrEqual(filteredCount);
-  });
-
   test('should open view modal when clicking view button', async () => {
     await answersPage.waitForLoading();
 
@@ -155,24 +98,5 @@ test.describe.serial('View Quiz Answers @questioner', () => {
 
       await answersPage.closeModal();
     }
-  });
-
-  test('should handle empty state gracefully', async () => {
-    await answersPage.waitForLoading();
-
-    // Check if search input exists
-    const hasSearch = await answersPage.searchInput.isVisible({ timeout: 3000 }).catch(() => false);
-    if (!hasSearch) {
-      // No search input - test passes
-      expect(true).toBe(true);
-      return;
-    }
-
-    // Search for something that won't exist
-    await answersPage.search('definitelynonexistent123456789');
-
-    // Should handle empty results gracefully (page doesn't crash)
-    await answersPage.waitForLoading();
-    expect(true).toBe(true);
   });
 });

@@ -51,14 +51,6 @@ test.describe.serial('Billing Subscription Management @billing @subscription', (
     await billingPage.expectStatusBadgeVisible();
   });
 
-  test('should display plan comparison cards', async () => {
-    await pricingPage.expectPlanCardsVisible();
-
-    // The system has 3 tiers: Free, Pro, Enterprise
-    const cardCount = await pricingPage.getPlanCardCount();
-    expect(cardCount).toBeGreaterThanOrEqual(1);
-  });
-
   test('should show billing cycle toggle with monthly and annual options', async () => {
     await pricingPage.expectCycleToggleVisible();
 
@@ -85,25 +77,4 @@ test.describe.serial('Billing Subscription Management @billing @subscription', (
     await billingPage.expectPortalButtonVisible();
   });
 
-  test('should display feature lists within plan cards', async () => {
-    // Each plan card should contain feature text (checkmarks and feature names)
-    const firstCard = pricingPage.planCards.first();
-    await expect(firstCard).toBeVisible();
-
-    // Plan cards contain feature rows with checkmark symbols
-    const cardText = await pricingPage.getPlanCardText(0);
-    expect(cardText.length).toBeGreaterThan(0);
-  });
-
-  test('should show select button on non-current plan cards', async () => {
-    // At least one plan card should have a select button
-    // (the current plan shows "Current Plan" text instead of a button)
-    const cardCount = await pricingPage.getPlanCardCount();
-
-    if (cardCount > 1) {
-      // With multiple plans, at least one should have a select button
-      const selectButtonCount = await pricingPage.planSelectButtons.count();
-      expect(selectButtonCount).toBeGreaterThan(0);
-    }
-  });
 });

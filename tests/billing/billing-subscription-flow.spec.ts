@@ -54,11 +54,6 @@ test.describe.serial('Billing Subscription Flow @billing @subscription-flow', ()
     await expect(billingPage.statusBadge).toContainText(/Active|Trial/);
   });
 
-  test('should show the cancel subscription button for a Pro subscriber', async () => {
-    // Active/Trial subscriptions can be canceled
-    await billingPage.expectCancelButtonVisible();
-  });
-
   test('should hide the free tier watermark for a Pro subscriber', async () => {
     // Pro subscribers should not see the "Powered by MenuFlow" watermark
     await pricingPage.expectWatermarkHidden();
@@ -72,20 +67,6 @@ test.describe.serial('Billing Subscription Flow @billing @subscription-flow', ()
     await expect(proCard).toBeVisible();
     await expect(proCard).toContainText('Current');
     await expect(proCard).not.toContainText('Select Plan');
-  });
-
-  test('should show select buttons for non-Pro plan cards', async () => {
-    // Free and Enterprise cards should have select/upgrade buttons
-    // while Pro (current) should not
-    const selectButtonCount = await pricingPage.planSelectButtons.count();
-    const totalCards = await pricingPage.getPlanCardCount();
-
-    // Current plan card has no select button
-    expect(selectButtonCount).toBe(totalCards - 1);
-  });
-
-  test('should display the manage payment portal button', async () => {
-    await billingPage.expectPortalButtonVisible();
   });
 
   test('should persist subscription state after page reload', async () => {

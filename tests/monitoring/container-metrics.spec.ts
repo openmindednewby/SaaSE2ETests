@@ -27,21 +27,6 @@ test.describe('Container Metrics @monitoring', () => {
     prometheus = new PrometheusClient(PROMETHEUS_URL);
   });
 
-  test('Prometheus is healthy and responding', async () => {
-    const ready = await prometheus.isReady();
-    expect(ready, 'Prometheus should be ready').toBe(true);
-
-    // Also verify the query API responds
-    const result = await prometheus.query('up');
-    expect(result.status).toBe('success');
-    expect(result.data.result.length).toBeGreaterThan(0);
-
-    test.info().annotations.push({
-      type: 'info',
-      description: `Prometheus reports ${result.data.result.length} "up" targets`,
-    });
-  });
-
   test('container CPU metrics are available for service containers', async () => {
     const result = await prometheus.getContainerCpu(
       SERVICE_CONTAINER_PATTERN

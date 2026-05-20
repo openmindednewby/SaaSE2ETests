@@ -31,68 +31,6 @@ import path from 'path';
 const FIXTURES_PATH = path.resolve(__dirname, '../../fixtures/files');
 const TEST_IMAGE_PATH = path.join(FIXTURES_PATH, 'test-image.png');
 
-test.describe('Content Upload - File Validation @content-upload', () => {
-  test.describe('Image Validation', () => {
-    test('should accept valid image MIME types', async () => {
-      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-
-      for (const mimeType of validTypes) {
-        // Validate MIME type format
-        expect(mimeType).toMatch(/^image\//);
-      }
-    });
-
-    test('should enforce 10MB size limit for images', async () => {
-      const maxSizeBytes = 10 * 1024 * 1024;
-      expect(maxSizeBytes).toBe(10485760);
-    });
-
-    test('should reject invalid image types', async () => {
-      const invalidTypes = ['image/bmp', 'image/tiff', 'image/svg+xml'];
-
-      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-
-      for (const invalidType of invalidTypes) {
-        expect(validTypes).not.toContain(invalidType);
-      }
-    });
-  });
-
-  test.describe('Video Validation', () => {
-    test('should accept valid video MIME types', async () => {
-      const validTypes = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm'];
-
-      for (const mimeType of validTypes) {
-        expect(mimeType).toMatch(/^video\//);
-      }
-    });
-
-    test('should enforce 500MB size limit for videos', async () => {
-      const maxSizeBytes = 500 * 1024 * 1024;
-      expect(maxSizeBytes).toBe(524288000);
-    });
-  });
-
-  test.describe('Document Validation', () => {
-    test('should accept valid document MIME types', async () => {
-      const validTypes = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      ];
-
-      for (const mimeType of validTypes) {
-        expect(mimeType).toMatch(/^application\//);
-      }
-    });
-
-    test('should enforce 50MB size limit for documents', async () => {
-      const maxSizeBytes = 50 * 1024 * 1024;
-      expect(maxSizeBytes).toBe(52428800);
-    });
-  });
-});
-
 test.describe('Content Upload - Test Fixtures @content-upload', () => {
   test('test image fixture should exist', async () => {
     const fs = await import('fs');
@@ -129,26 +67,6 @@ test.describe('Content Upload - Test Fixtures @content-upload', () => {
  * That file contains comprehensive tests for the complete upload flow
  * including image upload, save, reload, CORS handling, and deletion.
  */
-
-test.describe('Content Upload - Accessibility @content-upload @a11y', () => {
-  test('upload button should have accessible name', async () => {
-    // Contract test - verifies expected accessibility attributes
-    const expectedAccessibilityLabel = /select|upload|choose/i;
-    expect(expectedAccessibilityLabel.source).toBeTruthy();
-  });
-
-  test('progress indicator should be announced to screen readers', async () => {
-    // Contract test - verifies expected ARIA attributes
-    const expectedAriaAttributes = ['aria-valuenow', 'aria-valuemin', 'aria-valuemax'];
-    expect(expectedAriaAttributes.length).toBe(3);
-  });
-
-  test('error messages should have role="alert"', async () => {
-    // Contract test - verifies expected error announcement
-    const expectedRole = 'alert';
-    expect(expectedRole).toBe('alert');
-  });
-});
 
 test.describe('Content Upload - Test IDs Contract @content-upload', () => {
   /**

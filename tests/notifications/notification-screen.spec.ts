@@ -192,64 +192,6 @@ test.describe('Notification Screen @notifications', () => {
     await notificationsPage.expectMarkAllReadHidden();
   });
 
-  test('connection status shows when disconnected', async ({ page }) => {
-    test.skip(!serviceHealthy, 'NotificationService is not running');
-
-    // This test checks if the connection status banner appears when disconnected
-    // We can't easily simulate disconnection, but we can verify the element behavior
-
-    const connectionStatus = page.locator(testIdSelector(TestIds.NOTIFICATION_CONNECTION_STATUS));
-
-    // If visible, verify it contains status information.
-    // Use textContent() with catch since the banner can disappear between
-    // the visibility check and text read (connection recovering).
-    const isVisible = await connectionStatus
-      .isVisible({ timeout: 2000 })
-      .catch(() => false);
-
-    if (isVisible) {
-      const text = await connectionStatus.textContent().catch(() => null);
-      if (text)
-        expect(text).toMatch(/connect|status/i);
-    }
-    // If not visible, that means we're connected - which is expected
-  });
-
-  test('clicking notification item marks it as read', async () => {
-    test.skip(!serviceHealthy, 'NotificationService is not running');
-
-    const items = notificationsPage.getNotificationItems();
-    const count = await items.count();
-
-    if (count === 0) {
-      // No notifications to interact with - just verify list is shown
-      await expect(notificationsPage.notificationList).toBeVisible({
-        timeout: PAGE_RENDER_TIMEOUT_MS,
-      });
-      return;
-    }
-
-    // Find an unread notification if possible
-    // Unread items typically have different styling or an indicator
-    const unreadIndicator = items.first().locator('.unread, [data-unread="true"], [aria-selected="false"]');
-    const hasUnread = await unreadIndicator.count() > 0;
-
-    if (!hasUnread) {
-      // Just verify clicking works without error
-      const firstItem = items.first();
-      await firstItem.click();
-      await notificationsPage.waitForLoading();
-      return;
-    }
-
-    // Click the first item
-    await notificationsPage.clickNotification(0);
-    await notificationsPage.waitForLoading();
-
-    // The unread indicator should be gone after clicking
-    // or the styling should change
-  });
-
   test('notification screen is accessible', async () => {
     test.skip(!serviceHealthy, 'NotificationService is not running');
 

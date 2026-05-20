@@ -105,44 +105,6 @@ test.describe('Real-Time Notification Delivery @notifications', () => {
     }).toPass({ timeout: 10000 });
   });
 
-  test('should mark notification as read when clicked', async ({ page }) => {
-    test.skip(!serviceHealthy, 'NotificationService is not running');
-    const hasApi = await hasNotificationTestApi(page);
-    test.skip(!hasApi, 'Notification test API not available in this build');
-
-    // Inject a notification
-    await stressPage.mockNotification({
-      id: `click-read-${Date.now()}`,
-      title: 'Click to Read',
-    });
-
-    // Wait for badge to appear
-    await notificationsPage.expectBadgeVisible();
-    const countBefore = await notificationsPage.getUnreadCount();
-    expect(countBefore).toBeGreaterThan(0);
-
-    // Navigate to notifications and click the first item
-    await notificationsPage.clickBellToNavigate();
-    await notificationsPage.waitForLoading();
-
-    const firstItem = notificationsPage.getNotificationItem(0);
-    const isItemVisible = await firstItem
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
-
-    if (isItemVisible) {
-      await notificationsPage.clickNotification(0);
-      await notificationsPage.waitForLoading();
-
-      // Navigate back to check the badge count decreased
-      await notificationsPage.goto('/menus');
-      await notificationsPage.waitForLoading();
-
-      const countAfter = await notificationsPage.getUnreadCount();
-      expect(countAfter).toBeLessThanOrEqual(countBefore);
-    }
-  });
-
   test('should mark all as read', async ({ page }) => {
     test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);

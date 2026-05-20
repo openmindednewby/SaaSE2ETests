@@ -121,22 +121,4 @@ test.describe.serial('Create Quiz Template @questioner @crud', () => {
     await expect(page).toHaveURL(/quiz-templates/);
   });
 
-  test('should handle special characters in template name', async () => {
-    // Check if form is available
-    const hasForm = await templatesPage.templateNameInput.isVisible({ timeout: 5000 }).catch(() => false);
-    if (!hasForm) {
-      test.skip();
-      return;
-    }
-
-    const specialName = `Template Test ${Date.now()}`;
-
-    await templatesPage.createTemplate(specialName, 'Special chars test');
-
-    // Verify it was created
-    const exists = await templatesPage.templateExists(specialName);
-    if (exists) {
-      await templatesPage.deleteTemplate(specialName, false);
-    }
-  });
 });

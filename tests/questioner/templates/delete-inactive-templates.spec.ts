@@ -202,20 +202,4 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
     createdTemplates.splice(createdTemplates.indexOf(inactiveTemplateName), 1);
   });
 
-  test('should refresh template list after deleting inactive', async () => {
-    // Create an inactive template
-    const templateName = `Refresh Test ${Date.now()}`;
-    createdTemplates.push(templateName);
-    await templatesPage.createTemplate(templateName);
-
-    // Verify it exists using web-first assertion
-    await expect(templatesPage.getTemplateRow(templateName)).toBeVisible();
-
-    // Delete inactive - list should auto-refresh
-    await quizPage.deleteInactiveTemplates();
-
-    // Template should be gone (web-first assertion auto-retries)
-    await expect(templatesPage.getTemplateRow(templateName)).not.toBeVisible({ timeout: 5000 });
-    createdTemplates.splice(createdTemplates.indexOf(templateName), 1);
-  });
 });

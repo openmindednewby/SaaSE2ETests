@@ -1,14 +1,8 @@
 /**
- * Volume Stress Tests for Notification System
- *
- * Tests that push notification delivery volume to the limits:
- * - 100 rapid notifications without dropping any
- * - 50 concurrent mark-as-read operations
- * - Correct unread count under load
- * - 200 notifications in list rendering performance
- * - 1000 notification flood without UI freeze
- *
- * All tests use generous timeouts (60-120s) to account for volume.
+ * Volume Stress Tests for Notification System — pushes delivery volume to the
+ * limits: 100 rapid notifications, 50 concurrent mark-as-read, unread count
+ * under load, 200-item list render, 1000-notification flood. Generous
+ * 60-120s timeouts account for volume.
  */
 
 import { test, expect } from '@playwright/test';

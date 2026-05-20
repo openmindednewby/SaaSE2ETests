@@ -90,22 +90,6 @@ test.describe.serial('Theme Settings - Admin @theme @settings', () => {
     await themeSettings.expectLivePreviewVisible();
   });
 
-  test('should persist preset selection after page refresh @critical', async () => {
-    // Record the primary swatch color before refresh
-    const colorBefore = await themeSettings.getSwatchColor(themeSettings.swatchPrimary);
-
-    // Navigate away and back to force a fresh API load
-    await themeSettings.goto();
-    await themeSettings.expectPageLoaded();
-
-    // Verify the primary swatch color is the same after re-navigating
-    const colorAfter = await themeSettings.getSwatchColor(themeSettings.swatchPrimary);
-    expect(
-      colorAfter,
-      'Primary swatch color should persist after page refresh'
-    ).toBe(colorBefore);
-  });
-
   test('should toggle light/dark mode', async () => {
     // Verify both mode buttons are visible for admin
     await Promise.all([

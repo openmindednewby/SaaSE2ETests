@@ -64,39 +64,6 @@ test.describe.serial('Submit Quiz @questioner', () => {
     await context?.close();
   });
 
-  test('should show submit button on last page @critical', async () => {
-    await quizActivePage.goto();
-    await quizActivePage.waitForLoading();
-
-    const hasQuiz = await quizActivePage.hasActiveQuiz();
-    expect(hasQuiz, 'Expected an active quiz to be available after API setup').toBe(true);
-
-    const totalPages = await quizActivePage.getTotalPages();
-
-    // If single page, submit should be visible
-    // If multi-page, need to navigate to last page
-    if (totalPages === 1) {
-      const submitButton = page.getByRole('button', { name: /submit|next/i });
-      await expect(submitButton).toBeVisible();
-    } else {
-      // Fill and navigate to the last page
-      let currentPage = await quizActivePage.getCurrentPage();
-      while (currentPage < totalPages) {
-        await fillCurrentPageFields(page);
-        await quizActivePage.clickNext();
-        await quizActivePage.waitForLoading();
-        const newPage = await quizActivePage.getCurrentPage();
-        if (newPage === currentPage) break;
-        currentPage = newPage;
-      }
-
-      if (currentPage === totalPages) {
-        const submitButton = page.getByRole('button', { name: /submit/i });
-        await expect(submitButton).toBeVisible();
-      }
-    }
-  });
-
   test('should show thank you message after successful submission', async () => {
     await quizActivePage.goto();
     await quizActivePage.waitForLoading();

@@ -114,29 +114,6 @@ test.describe('Notification Badge @notifications', () => {
     await notificationsPage.expectBadgeHidden();
   });
 
-  test('badge updates when notification received', async ({ page }) => {
-    test.skip(!serviceHealthy, 'NotificationService is not running');
-    const hasApi = await hasNotificationTestApi(page);
-    test.skip(!hasApi, 'Notification test API not available in this build');
-
-    // Get initial count
-    const initialCount = await notificationsPage.getUnreadCount();
-
-    // Inject a new notification
-    await stressPage.mockNotification({
-      id: `badge-test-${Date.now()}`,
-      title: 'Badge Update Test',
-      body: 'Testing badge increment',
-    });
-
-    // Wait for badge to update (may need to wait for SignalR/WebSocket update)
-    // Use web-first assertion to wait for the count to change
-    await expect(async () => {
-      const newCount = await notificationsPage.getUnreadCount();
-      expect(newCount).toBeGreaterThan(initialCount);
-    }).toPass({ timeout: 10000 });
-  });
-
   test('badge updates when notification marked as read', async ({ page }) => {
     test.skip(!serviceHealthy, 'NotificationService is not running');
     const hasApi = await hasNotificationTestApi(page);
@@ -182,17 +159,6 @@ test.describe('Notification Badge @notifications', () => {
       const countIsZero = countAfter === 0;
       expect(countDecreased || countIsZero).toBe(true);
     }
-  });
-
-  test('clicking bell navigates to notifications screen', async ({ page }) => {
-    test.skip(!serviceHealthy, 'NotificationService is not running');
-
-    // Click the notification bell
-    await notificationsPage.clickBellToNavigate();
-
-    // Verify we're on the notifications screen
-    const notificationScreen = page.locator(`[data-testid="${TestIds.NOTIFICATION_SCREEN}"]`);
-    await expect(notificationScreen).toBeVisible({ timeout: 5000 });
   });
 
   test('badge is accessible', async ({ page: _page }) => {

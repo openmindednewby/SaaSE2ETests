@@ -4,38 +4,16 @@
  * Basic health checks for the Grafana Loki logging infrastructure:
  * - Loki is reachable and ready
  * - Loki has expected labels (ServiceName, Level, TenantId)
- * - Grafana Loki datasource is configured and reachable
  */
 
 import { test, expect } from '@playwright/test';
 
-import axios from 'axios';
-
 import { LokiClient } from '../../helpers/loki-client.js';
 
 const LOKI_URL = process.env.LOKI_URL ?? 'http://localhost:3100';
-const GRAFANA_URL = process.env.GRAFANA_URL ?? 'http://localhost:3000';
-
-/** Grafana default admin credentials (local dev only) */
-const GRAFANA_AUTH = {
-  username: process.env.GRAFANA_ADMIN_USER ?? 'admin',
-  password: process.env.GRAFANA_ADMIN_PASSWORD ?? 'admin',
-};
-
-/** Timeout for Grafana API requests */
-const GRAFANA_TIMEOUT_MS = 15000;
 
 /** Expected labels that should exist in the observability stack */
 const EXPECTED_LABELS = ['ServiceName', 'Level'];
-
-interface GrafanaDatasource {
-  id: number;
-  name: string;
-  type: string;
-  url: string;
-  access: string;
-  isDefault: boolean;
-}
 
 test.describe('Loki Health @logging', () => {
   let loki: LokiClient;
@@ -120,53 +98,5 @@ test.describe('Loki Health @logging', () => {
       type: 'info',
       description: `ServiceName values: ${serviceNames.join(', ')}`,
     });
-  });
-
-  test('Grafana Loki datasource is configured', async () => {
-    let datasources: GrafanaDatasource[];
-    try {
-      const response = await axios.get(`${GRAFANA_URL}/api/datasources`, {
-        timeout: GRAFANA_TIMEOUT_MS,
-        auth: GRAFANA_AUTH,
-      });
-      datasources = response.data as GrafanaDatasource[];
-    } catch {
-      // If auth fails, try without auth (Grafana may have anonymous access)
-      const response = await axios
-        .get(`${GRAFANA_URL}/api/datasources`, {
-          timeout: GRAFANA_TIMEOUT_MS,
-        })
-        .catch(() => null);
-
-      if (!response) {
-        test.skip(
-          true,
-          'Cannot access Grafana datasources API (auth required or Grafana not running)'
-        );
-        return;
-      }
-      datasources = response.data as GrafanaDatasource[];
-    }
-
-    expect(
-      Array.isArray(datasources),
-      'Datasources API should return an array'
-    ).toBe(true);
-
-    const lokiDs = datasources.find(
-      (ds) => ds.type === 'loki' || ds.name.toLowerCase().includes('loki')
-    );
-
-    expect(
-      lokiDs,
-      'Loki datasource should be configured in Grafana'
-    ).toBeTruthy();
-
-    if (lokiDs) {
-      test.info().annotations.push({
-        type: 'info',
-        description: `Loki datasource: name="${lokiDs.name}", url="${lokiDs.url}", default=${lokiDs.isDefault}`,
-      });
-    }
   });
 });

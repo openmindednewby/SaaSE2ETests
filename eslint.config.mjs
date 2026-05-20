@@ -119,10 +119,11 @@ export default [
       'max-tests-per-file/max-tests-per-file': ['error', { max: 50 }],
 
       // Batch size limit: max 100 total tests per Tilt E2E batch
-      // (uniqueTests × 3 browsers + 2 setup = max 100 → max 32 unique per batch)
+      // (uniqueTests × 1 browser + 2 setup = max 100 → max 98 unique per batch;
+      // chromium-only since 2026-05-20)
       'max-tests-per-batch/max-tests-per-batch': ['warn', {
         max: 100,
-        browserMultiplier: 3,
+        browserMultiplier: 1,
         setupOverhead: 2,
         subBatches: {
           // Online Menus (existing sub-batches)
@@ -151,9 +152,8 @@ export default [
             'menu-qr-code.spec.ts',
           ],
 
-          // Questioner sub-batches (49 total tests across 3 sub-batches)
+          // Questioner sub-batches
           'questioner-active': [
-            'fill-quiz.spec.ts',
             'quiz-multipage-validation.spec.ts',
             'quiz-multipage-navigation.spec.ts',
             'submit-quiz.spec.ts',

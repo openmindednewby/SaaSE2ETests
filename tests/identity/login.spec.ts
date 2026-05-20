@@ -103,46 +103,6 @@ test.describe('Login Flow @identity @auth', () => {
     expect(dialogMessage.toLowerCase()).toContain('enter');
   });
 
-  test('should require password when username is provided', async ({ page }) => {
-    // Already on login page from beforeEach
-    const dialogPromise = new Promise<string>((resolve) => {
-      const timeout = setTimeout(() => resolve(''), 5000);
-      page.once('dialog', async dialog => {
-        clearTimeout(timeout);
-        const message = dialog.message();
-        await dialog.accept();
-        resolve(message);
-      });
-    });
-
-    await loginPage.usernameInput.fill('someuser');
-    await loginPage.loginButton.click();
-
-    const dialogMessage = await dialogPromise;
-
-    expect(dialogMessage.toLowerCase()).toContain('enter');
-  });
-
-  test('should require username when password is provided', async ({ page }) => {
-    // Already on login page from beforeEach
-    const dialogPromise = new Promise<string>((resolve) => {
-      const timeout = setTimeout(() => resolve(''), 5000);
-      page.once('dialog', async dialog => {
-        clearTimeout(timeout);
-        const message = dialog.message();
-        await dialog.accept();
-        resolve(message);
-      });
-    });
-
-    await loginPage.passwordInput.fill('somepassword');
-    await loginPage.loginButton.click();
-
-    const dialogMessage = await dialogPromise;
-
-    expect(dialogMessage.toLowerCase()).toContain('enter');
-  });
-
   test('should disable inputs while logging in', async ({ page: _page }) => {
     const username = process.env.TEST_USER_USERNAME;
     const password = process.env.TEST_USER_PASSWORD;

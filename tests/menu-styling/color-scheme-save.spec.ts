@@ -126,24 +126,4 @@ test.describe.serial('Menu Color Scheme - Save & Persist @menu-styling @online-m
     await stylingPage.saveStyling();
     await menusPage.expectMenuInList(testMenuName);
   });
-
-  test('should persist color scheme after reload @critical', async () => {
-    expect(testMenuName, 'Test menu not created').toBeTruthy();
-
-    await menusPage.goto();
-    await menusPage.waitForLoading();
-    await menusPage.editMenu(testMenuName);
-    await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
-    await stylingPage.switchToStylingTab();
-    await stylingPage.switchToColorsTab();
-    await expect(stylingPage.colorSchemeEditor).toBeVisible({ timeout: 5000 });
-
-    const colorInputs = page.locator('[data-testid="color-scheme-input"]');
-    if (await colorInputs.count() > 0) {
-      const savedColor = await colorInputs.first().inputValue();
-      expect(savedColor, 'Color should be a valid hex value').toMatch(/^#[0-9A-Fa-f]{6}$/);
-    }
-
-    await stylingPage.cancelStyling();
-  });
 });

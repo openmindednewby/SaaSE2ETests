@@ -490,7 +490,6 @@ docker compose -f docker-compose.e2e.yml down -v
 | `create-template.spec.ts` | Create templates, validation, special characters |
 | `edit-template.spec.ts` | Edit modal, update name/description, cancel |
 | `activate-template.spec.ts` | Activate/deactivate templates |
-| `fill-quiz.spec.ts` | Display quiz, navigate pages, validation |
 | `submit-quiz.spec.ts` | Submit quiz, thank you message |
 | `view-answers.spec.ts` | Search answers, view details, export |
 | `health/services-health.spec.ts` | Startup/liveness/readiness probes for services |
