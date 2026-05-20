@@ -1,17 +1,16 @@
-/* eslint-disable max-file-lines/max-file-lines -- Project definitions are a single declarative array; splitting further would reduce readability */
 import { devices } from '@playwright/test';
 import type { PlaywrightTestConfig } from '@playwright/test';
 
 type ProjectConfig = NonNullable<PlaywrightTestConfig['projects']>;
 
-// Browser-matrix gate. Default is chromium-only (~3x faster — every UI
-// domain ships a chromium / mobile / firefox triple, and against staging
-// the Firefox project can't resolve hostnames because --host-resolver-rules
-// is Chromium-only). Opt into full coverage with `E2E_BROWSERS=all`.
-const ENABLE_MOBILE = process.env.E2E_BROWSERS === 'all' || process.env.E2E_BROWSERS === 'mobile';
-const ENABLE_FIREFOX = process.env.E2E_BROWSERS === 'all' || process.env.E2E_BROWSERS === 'firefox';
-
-const allProjects: ProjectConfig = [
+// Chromium-only matrix (2026-05-20). Mobile (Pixel 5) and Firefox project
+// triples were dropped permanently — they roughly tripled wall-clock time,
+// and against staging the Firefox project couldn't even resolve hostnames
+// (`--host-resolver-rules` is Chromium-only). Every UI domain now ships a
+// single `<domain>-chromium` project. If cross-browser regression coverage
+// is ever needed again, add a one-off project inline rather than reviving
+// the full matrix.
+export const projects: ProjectConfig = [
   // Auth setup project - runs before all tests
   {
     name: 'setup',
@@ -40,18 +39,6 @@ const allProjects: ProjectConfig = [
     dependencies: ['setup', 'multi-tenant-setup'],
     use: { ...devices['Desktop Chrome'] },
   },
-  {
-    name: 'diagnostics-mobile',
-    testMatch: /diagnostics\/.*\.spec\.ts/,
-    dependencies: ['setup', 'multi-tenant-setup'],
-    use: { ...devices['Pixel 5'] },
-  },
-  {
-    name: 'diagnostics-firefox',
-    testMatch: /diagnostics\/.*\.spec\.ts/,
-    dependencies: ['setup', 'multi-tenant-setup'],
-    use: { ...devices['Desktop Firefox'] },
-  },
 
   // ==================== BATCHED UI PROJECTS ====================
   // Identity batch (no multi-tenant setup required)
@@ -60,20 +47,6 @@ const allProjects: ProjectConfig = [
     workers: 1,
     testMatch: /identity\/.*\.spec\.ts/,
     use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup'],
-  },
-  {
-    name: 'identity-mobile',
-    workers: 1,
-    testMatch: /identity\/.*\.spec\.ts/,
-    use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup'],
-  },
-  {
-    name: 'identity-firefox',
-    workers: 1,
-    testMatch: /identity\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
     dependencies: ['setup'],
   },
 
@@ -85,20 +58,6 @@ const allProjects: ProjectConfig = [
     use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
     dependencies: ['setup', 'multi-tenant-setup'],
   },
-  {
-    name: 'questioner-mobile',
-    workers: 1,
-    testMatch: /questioner\/.*\.spec\.ts/,
-    use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
-  {
-    name: 'questioner-firefox',
-    workers: 1,
-    testMatch: /questioner\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
 
   // Smoke batch (requires multi-tenant setup)
   {
@@ -106,20 +65,6 @@ const allProjects: ProjectConfig = [
     workers: 1,
     testMatch: /smoke\/.*\.spec\.ts/,
     use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
-  {
-    name: 'smoke-mobile',
-    workers: 1,
-    testMatch: /smoke\/.*\.spec\.ts/,
-    use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
-  {
-    name: 'smoke-firefox',
-    workers: 1,
-    testMatch: /smoke\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
     dependencies: ['setup', 'multi-tenant-setup'],
   },
 
@@ -131,20 +76,6 @@ const allProjects: ProjectConfig = [
     use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
     dependencies: ['setup', 'multi-tenant-setup'],
   },
-  {
-    name: 'online-menus-mobile',
-    workers: 1,
-    testMatch: /online-menus\/.*\.spec\.ts/,
-    use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
-  {
-    name: 'online-menus-firefox',
-    workers: 1,
-    testMatch: /online-menus\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
 
   // Content upload batch (requires multi-tenant setup)
   {
@@ -152,20 +83,6 @@ const allProjects: ProjectConfig = [
     workers: 1,
     testMatch: /content\/.*\.spec\.ts/,
     use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
-  {
-    name: 'content-mobile',
-    workers: 1,
-    testMatch: /content\/.*\.spec\.ts/,
-    use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
-  {
-    name: 'content-firefox',
-    workers: 1,
-    testMatch: /content\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
     dependencies: ['setup', 'multi-tenant-setup'],
   },
 
@@ -177,23 +94,9 @@ const allProjects: ProjectConfig = [
     use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
     dependencies: ['setup', 'multi-tenant-setup'],
   },
-  {
-    name: 'notifications-mobile',
-    workers: 1,
-    testMatch: /notifications\/(?!stress).*\.spec\.ts/,
-    use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
-  {
-    name: 'notifications-firefox',
-    workers: 1,
-    testMatch: /notifications\/(?!stress).*\.spec\.ts/,
-    use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
 
   // Notification stress tests dropped from default matrix — they need 120s+
-  // per test which violates the 60s/test cap. Re-enable manually via a
+  // per test which violates the 30s/test cap. Re-enable manually via a
   // direct `npx playwright test --timeout=120000 tests/notifications/stress-*`
   // invocation when stress regression coverage is needed.
 
@@ -205,20 +108,6 @@ const allProjects: ProjectConfig = [
     use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
     dependencies: ['setup', 'multi-tenant-setup'],
   },
-  {
-    name: 'showcase-mobile',
-    workers: 1,
-    testMatch: /showcase\/.*\.spec\.ts/,
-    use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
-  {
-    name: 'showcase-firefox',
-    workers: 1,
-    testMatch: /showcase\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
 
   // Tenant Themes batch (requires multi-tenant setup for authenticated access)
   {
@@ -226,20 +115,6 @@ const allProjects: ProjectConfig = [
     workers: 1,
     testMatch: /tenant-themes\/.*\.spec\.ts/,
     use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
-  {
-    name: 'tenant-themes-mobile',
-    workers: 1,
-    testMatch: /tenant-themes\/.*\.spec\.ts/,
-    use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
-  {
-    name: 'tenant-themes-firefox',
-    workers: 1,
-    testMatch: /tenant-themes\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
     dependencies: ['setup', 'multi-tenant-setup'],
   },
 
@@ -251,20 +126,6 @@ const allProjects: ProjectConfig = [
     use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
     dependencies: ['setup', 'multi-tenant-setup'],
   },
-  {
-    name: 'theme-mobile',
-    workers: 1,
-    testMatch: /theme\/.*\.spec\.ts/,
-    use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
-  {
-    name: 'theme-firefox',
-    workers: 1,
-    testMatch: /theme\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
 
   // Navigation batch (sidebar expandable sections, no multi-tenant setup required)
   {
@@ -272,20 +133,6 @@ const allProjects: ProjectConfig = [
     workers: 1,
     testMatch: /navigation\/.*\.spec\.ts/,
     use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup'],
-  },
-  {
-    name: 'navigation-mobile',
-    workers: 1,
-    testMatch: /navigation\/.*\.spec\.ts/,
-    use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup'],
-  },
-  {
-    name: 'navigation-firefox',
-    workers: 1,
-    testMatch: /navigation\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
     dependencies: ['setup'],
   },
 
@@ -297,20 +144,6 @@ const allProjects: ProjectConfig = [
     use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
     dependencies: ['setup', 'multi-tenant-setup'],
   },
-  {
-    name: 'menu-styling-mobile',
-    workers: 1,
-    testMatch: /menu-styling\/.*\.spec\.ts/,
-    use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
-  {
-    name: 'menu-styling-firefox',
-    workers: 1,
-    testMatch: /menu-styling\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
 
   // Billing batch (requires multi-tenant setup for subscription state)
   {
@@ -318,20 +151,6 @@ const allProjects: ProjectConfig = [
     workers: 1,
     testMatch: /billing\/.*\.spec\.ts/,
     use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
-  {
-    name: 'billing-mobile',
-    workers: 1,
-    testMatch: /billing\/.*\.spec\.ts/,
-    use: { ...devices['Pixel 5'], storageState: 'playwright/.auth/user.json' },
-    dependencies: ['setup', 'multi-tenant-setup'],
-  },
-  {
-    name: 'billing-firefox',
-    workers: 1,
-    testMatch: /billing\/.*\.spec\.ts/,
-    use: { ...devices['Desktop Firefox'], storageState: 'playwright/.auth/user.json' },
     dependencies: ['setup', 'multi-tenant-setup'],
   },
 
@@ -345,7 +164,7 @@ const allProjects: ProjectConfig = [
   },
 
   // Logging stress tests dropped from default matrix — need 120s+ per test
-  // which violates the 60s/test cap. Re-enable manually with a direct
+  // which violates the 30s/test cap. Re-enable manually with a direct
   // `npx playwright test --timeout=120000 tests/logging/stress-*` invocation.
 
   // Monitoring tests (API-only, no browser UI needed)
@@ -368,13 +187,3 @@ const allProjects: ProjectConfig = [
     dependencies: ['setup'],
   },
 ];
-
-// Apply the browser-matrix gate. Drops mobile/firefox projects unless
-// explicitly opted in via E2E_BROWSERS. Keeps all non-browser-prefixed
-// projects (setup, multi-tenant-setup, health, logging, monitoring, ...).
-export const projects: ProjectConfig = allProjects.filter((p) => {
-  const name = (p as { name: string }).name;
-  if (name.endsWith('-mobile')) return ENABLE_MOBILE;
-  if (name.endsWith('-firefox')) return ENABLE_FIREFOX;
-  return true;
-});

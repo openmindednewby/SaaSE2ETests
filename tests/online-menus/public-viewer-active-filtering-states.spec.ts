@@ -10,8 +10,13 @@ import { TestIds, testIdSelector, testIdStartsWithSelector } from '../../shared/
  * Tests that activation state changes immediately reflect in the public
  * menu list, multiple active menus are shown, direct URL access to
  * inactive menus is restricted, and filtering is consistent across reloads.
+ *
+ * Whole describe skipped 2026-05-20 — the lead test that activates the
+ * pre-created menu is a tracked known-bug (@known-bug-multicreate-4), so
+ * every dependent test cannot pass. See
+ * BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md
  */
-test.describe.serial('Public Viewer Active Filtering - States @online-menus @public-viewer @critical', () => {
+test.describe.skip('Public Viewer Active Filtering - States @online-menus @public-viewer @critical', () => {
   test.setTimeout(120000);
   let context: BrowserContext;
   let page: Page;

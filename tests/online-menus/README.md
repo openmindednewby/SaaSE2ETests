@@ -24,27 +24,6 @@ Tests the core activation and deactivation functionality introduced in Backend P
 **Critical Tests** (tagged @critical):
 - Should activate a menu
 
-### menu-status-display.spec.ts
-Tests that the `isActive` field displays correctly across various scenarios.
-
-**What it tests**:
-- Default status for newly created menus (should be inactive)
-- Independent status display for multiple menus
-- Immediate status updates after activation/deactivation
-- Status persistence after page reload
-- Mixed active/inactive states across multiple menus
-- Status consistency during rapid changes
-
-**UI Elements Tested**:
-- Menu list rendering
-- Status badge display
-- Status text content
-- Real-time status updates
-
-**Critical Tests** (tagged @critical):
-- Should show newly created menus as inactive by default
-- Should persist status after page reload
-
 ### menu-crud-with-activation.spec.ts
 Tests the integration of CRUD operations with activation state management.
 

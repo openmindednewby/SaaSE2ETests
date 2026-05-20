@@ -410,7 +410,7 @@ npm run test:smoke
 #### Single Command (All Projects)
 
 ```bash
-cd E2ETests && npx playwright test --project=health --project=identity-chromium --project=identity-mobile --project=identity-firefox --project=questioner-chromium --project=questioner-mobile --project=questioner-firefox --project=smoke-chromium --project=smoke-mobile --project=smoke-firefox
+cd E2ETests && npx playwright test --project=health --project=identity-chromium --project=questioner-chromium --project=smoke-chromium
 ```
 
 #### Diagnostics

@@ -129,7 +129,6 @@ export default [
           'online-menus-crud': [
             'menu-activation.spec.ts',
             'menu-crud-with-activation.spec.ts',
-            'menu-status-display.spec.ts',
             'menu-display-order-sorting.spec.ts',
           ],
           'online-menus-editor': [

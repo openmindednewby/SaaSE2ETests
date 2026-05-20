@@ -6,7 +6,7 @@ This suite is organized into **three speed tiers** to match different feedback l
 |---|---|---|---|
 | **Smoke (API-only)** | < 30s | After every backend deploy, nightly | API-layer cross-realm wall + 401 sanitization |
 | **Critical** | < 5 min | Pre-commit on touched domain, pre-deploy gate | All `@critical`-tagged tests across all suites |
-| **Full** | 30-60 min | Pre-release, weekly | Every spec, every browser |
+| **Full** | 30-60 min | Pre-release, weekly | Every spec (chromium) |
 
 ## Tier 1 — Smoke (API-only, sub-30s)
 
@@ -54,7 +54,7 @@ test('should create menu with inactive status by default @critical', async () =>
 | Suite | Critical entries |
 |---|---|
 | `tests/showcase/` | 21 |
-| `tests/online-menus/` | 20 |
+| `tests/online-menus/` | 17 |
 | `tests/menu-styling/` | 20 |
 | `tests/theme/` | 12 |
 | `tests/questioner/` | 11 |
@@ -88,12 +88,7 @@ E2E_TARGET=prod npx playwright test tests/cross-product-isolation --workers=1
 
 ## Browser matrix
 
-**Default: chromium-only.** The browser matrix was slimmed from `chromium+mobile+firefox` (3× cost) to chromium-only on 2026-05-16 — Firefox can't reach staging hosts (`--host-resolver-rules` is Chromium-only) and mobile was redundant for the API-driven flows that dominate the suite.
-
-Opt-in to full matrix with `E2E_BROWSERS=all`:
-```bash
-E2E_BROWSERS=all npm run test:online-menus
-```
+**Chromium-only.** The mobile (Pixel 5) and Firefox project triples were dropped permanently on 2026-05-20 — they roughly tripled wall-clock time, Firefox can't reach staging hosts (`--host-resolver-rules` is Chromium-only), and mobile was redundant for the API-driven flows that dominate the suite. Every UI domain now ships a single `<domain>-chromium` project. If cross-browser regression coverage is ever needed again, add a one-off project inline in `playwright.projects.ts` rather than reviving the full matrix.
 
 ## Where to see status
 

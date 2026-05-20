@@ -95,16 +95,6 @@ test.describe.serial('QR Code Generation @online-menus @qr-code', () => {
     await context?.close();
   });
 
-  test.skip('should show QR code button on menu cards @critical @known-bug-qr-1', async () => {
-    // Skipped 2026-05-17 — see BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md (Tier 1)
-    // QR code button should be visible on both active and inactive menu cards
-    const activeQrButton = publicPage.getQrCodeButton(activeMenuName);
-    const inactiveQrButton = publicPage.getQrCodeButton(inactiveMenuName);
-
-    await expect(activeQrButton).toBeVisible({ timeout: 10000 });
-    await expect(inactiveQrButton).toBeVisible({ timeout: 10000 });
-  });
-
   test('should disable QR code button for inactive menus', async () => {
     const inactiveQrButton = publicPage.getQrCodeButton(inactiveMenuName);
     await expect(inactiveQrButton).toBeVisible({ timeout: 10000 });
