@@ -19,7 +19,7 @@ test.describe.serial('Menu Editor Categories - Focus Retention @online-menus @ca
   let testMenuName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
-    test.setTimeout(60000);
+    test.setTimeout(120000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext({ storageState: 'playwright/.auth/user.json' });
@@ -48,11 +48,17 @@ test.describe.serial('Menu Editor Categories - Focus Retention @online-menus @ca
     });
 
     menusPage = new OnlineMenusPage(page);
+
+
+    // Clean slate: drop any menus left by an earlier chunk (free-tier 2-menu cap).
+
+
+    await menusPage.deleteAllMenus();
     editorPage = new OnlineMenusEditorPage(page);
   });
 
   test.afterAll(async () => {
-    test.setTimeout(60000); // Firefox cleanup can be slow under concurrency
+    test.setTimeout(120000); // Firefox cleanup can be slow under concurrency
     try {
       await menusPage.goto();
       await menusPage.waitForLoading();

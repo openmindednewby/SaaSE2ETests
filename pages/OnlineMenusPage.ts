@@ -1,3 +1,6 @@
+/* eslint-disable max-file-lines/max-file-lines -- aggregator page object: core
+   menu-list operations plus a thin backwards-compatible delegation API to the
+   OnlineMenusEditorPage / OnlineMenusContentPage sub-page-objects. */
 import { Locator, Page, expect } from '@playwright/test';
 import { TestIds, testIdSelector } from '../shared/testIds.js';
 import { BasePage } from './BasePage.js';
@@ -106,7 +109,7 @@ export class OnlineMenusPage extends BasePage {
   async createMenu(name: string, description: string = '') {
     await expect(this.createMenuButton).toBeVisible({ timeout: 15000 });
     await this.createMenuButton.click({ timeout: 15000 });
-    await this.menuEditor.waitFor({ state: 'visible', timeout: 15000 });
+    await this.waitForCreateEditorOrFail(name);
     await this.menuNameInput.fill(name);
     if (description) await this.menuDescriptionInput.fill(description);
 
@@ -123,6 +126,30 @@ export class OnlineMenusPage extends BasePage {
     await refetchPromise;
     await this.waitForLoading();
     await expect(this.menuEditor).not.toBeVisible({ timeout: 10000 });
+  }
+
+  /**
+   * Wait for the menu editor dialog after clicking "create".
+   *
+   * The menus screen silently blocks "create" once a tenant is at its plan's
+   * menu cap (free tier = 1 menu): it shows a "menu limit reached" toast and
+   * never opens the editor. Surface that as a clear, actionable failure
+   * instead of an opaque 15s "dialog never visible" timeout.
+   */
+  private async waitForCreateEditorOrFail(name: string): Promise<void> {
+    const opened = await this.menuEditor
+      .waitFor({ state: 'visible', timeout: 15000 })
+      .then(() => true)
+      .catch(() => false);
+    if (opened) return;
+    const limitToast = this.page.getByText(/reached the menu limit/i);
+    if (await limitToast.isVisible({ timeout: 500 }).catch(() => false))
+      throw new Error(
+        `createMenu("${name}") blocked: tenant is at its plan menu limit. The free ` +
+        'tier allows only 1 menu — call deleteAllMenus() first, or gate the spec ' +
+        'behind paymentsConfigured() if it genuinely needs more.',
+      );
+    throw new Error(`createMenu("${name}") failed: the editor dialog did not open within 15s.`);
   }
 
   getMenuCard(name: string): Locator {
@@ -273,6 +300,27 @@ export class OnlineMenusPage extends BasePage {
       else { await this.goto(); continue; }
       await api;
       await this.waitForLoading();
+    }
+  }
+
+  /**
+   * Delete every menu belonging to the current tenant.
+   *
+   * Called from each online-menus spec's `beforeAll` so every spec starts from
+   * a clean slate. Without this, menus accumulate across chunks within one
+   * `playwright test` run (the per-run canary teardown only sweeps at the very
+   * end) and a tenant on the free plan hits its single-menu cap
+   * (`FREE_MAX_MENUS = 1`), after which `createMenu` can no longer open the
+   * editor (the menus screen silently blocks it). The E2E tenants are canary
+   * tenants (`e2ec-…`) whose every menu is this run's test data, so deleting
+   * all of them is safe.
+   */
+  async deleteAllMenus(): Promise<void> {
+    await this.deactivateAllMenus();
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const names = await this.getMenuNames();
+      if (names.length === 0) break;
+      await this.deleteMenu(names[0], false);
     }
   }
 

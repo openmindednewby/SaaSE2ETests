@@ -1,6 +1,7 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { BillingPage } from '../../pages/BillingPage.js';
 import { createAuthenticatedContext } from '../../helpers/serial-auth.js';
+import { paymentsConfigured, PAYMENTS_SKIP_REASON } from '../../helpers/feature-gates.js';
 
 /**
  * E2E Tests for Billing Cancellation Flow
@@ -18,6 +19,9 @@ import { createAuthenticatedContext } from '../../helpers/serial-auth.js';
  * provisions Pro subscriptions for all test tenants.
  */
 test.describe.serial('Billing Cancellation Flow @billing @cancellation', () => {
+  // Billing requires a real payment provider; skips when none is configured.
+  test.skip(!paymentsConfigured(), PAYMENTS_SKIP_REASON);
+
   let context: BrowserContext;
   let page: Page;
   let billingPage: BillingPage;

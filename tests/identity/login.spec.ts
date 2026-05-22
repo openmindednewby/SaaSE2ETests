@@ -151,6 +151,13 @@ test.describe('Login Flow @identity @auth', () => {
       !e.includes('Failed to fetch') &&
       !e.includes('NetworkError') &&
       !e.includes('favicon.ico') &&
+      // BFF era (Phase 2): the SPA's session bootstrap probes `GET /bff/me`
+      // on every load. On the login page there is, by design, no session, so
+      // the BFF correctly answers 401. The browser logs every HTTP 401 to the
+      // console as a "Failed to load resource" error — that is the browser's
+      // network logging, not an application fault. The unauthenticated
+      // `/bff/me` 401 is the expected, correct response.
+      !(e.includes('Failed to load resource') && e.includes('401')) &&
       // React ErrorBoundary recovery messages (not application errors)
       !e.includes('error boundary') &&
       !e.includes('ErrorBoundary') &&

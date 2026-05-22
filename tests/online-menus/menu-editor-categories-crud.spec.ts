@@ -18,7 +18,7 @@ test.describe.serial('Menu Editor - Full CRUD for Categories @online-menus @cate
   let testMenuName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
-    test.setTimeout(60000);
+    test.setTimeout(120000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext({ storageState: 'playwright/.auth/user.json' });
@@ -47,11 +47,17 @@ test.describe.serial('Menu Editor - Full CRUD for Categories @online-menus @cate
     });
 
     menusPage = new OnlineMenusPage(page);
+
+
+    // Clean slate: drop any menus left by an earlier chunk (free-tier 2-menu cap).
+
+
+    await menusPage.deleteAllMenus();
     editorPage = new OnlineMenusEditorPage(page);
   });
 
   test.afterAll(async () => {
-    test.setTimeout(60000); // Firefox cleanup can be slow under concurrency
+    test.setTimeout(120000); // Firefox cleanup can be slow under concurrency
     try {
       await menusPage.goto();
       await menusPage.waitForLoading();
@@ -143,6 +149,13 @@ test.describe.serial('Menu Editor - Full CRUD for Categories @online-menus @cate
   test('should delete a menu item from category', async () => {
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
+    // Re-navigate before editing so the editor opens from a FRESH server fetch.
+    // editMenu() opens the editor from the React Query list cache; without a
+    // goto() the cache can still hold the pre-previous-test state, and the next
+    // save would clobber the previous test's persisted change.
+    await menusPage.goto();
+    await menusPage.waitForLoading();
+
     await menusPage.editMenu(testMenuName);
     await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
 
@@ -166,11 +179,27 @@ test.describe.serial('Menu Editor - Full CRUD for Categories @online-menus @cate
   test('should delete a category', async () => {
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
+    // Re-navigate so the editor opens from a fresh server fetch — see the
+    // comment in the "delete a menu item" test above. Without this the editor
+    // would open with the pre-delete item list and the category-delete save
+    // would clobber the previous test's menu-item deletion.
+    await menusPage.goto();
+    await menusPage.waitForLoading();
+
     await menusPage.editMenu(testMenuName);
     await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
 
+    await editorPage.switchToContentTab();
+
     const initialCount = await editorPage.getCategoryCount();
     expect(initialCount, 'Should have 3 categories initially').toBe(3);
+
+    // The previous test deleted one item from category 0, leaving it with one
+    // item ("Spring Rolls"). Assert that persisted state opened correctly so a
+    // regression in menu-item persistence fails HERE, not silently downstream.
+    await editorPage.expandCategory(0);
+    const cat0Items = await editorPage.getItemCount(0);
+    expect(cat0Items, 'Category 0 should still have 1 item from the prior delete').toBe(1);
 
     await editorPage.deleteCategory(1);
 
@@ -197,7 +226,9 @@ test.describe.serial('Menu Editor - Full CRUD for Categories @online-menus @cate
 
     await editorPage.expandCategory(0);
     const firstCategoryName = await editorPage.getCategoryNameValue(0);
-    expect(firstCategoryName, 'First category should be Appetizers & Starters').toBe('Appetizers & Starters');
+    // The '@known-bug-edit-2' rename test (Starters -> "Appetizers & Starters")
+    // is skipped, so category 0 keeps the name set by the create test above.
+    expect(firstCategoryName, 'First category should be Starters').toBe('Starters');
 
     const firstCategoryItemCount = await editorPage.getItemCount(0);
     expect(firstCategoryItemCount, 'First category should have 1 item').toBe(1);

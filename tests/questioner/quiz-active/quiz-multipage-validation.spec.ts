@@ -46,7 +46,7 @@ test.describe.serial('Multi-Page Quiz Validation @questioner @validation @critic
     });
 
     // KI-5: login against the questioner realm for questioner-api access.
-    await loginAsTenantAdminBrowser(page, adminUser, { productRealm: 'questioner' });
+    await loginAsTenantAdminBrowser(page, adminUser);
 
     // 2. Set up test data via the API: create and activate a multi-page template
     apiHelper = createQuestionerApiHelper();

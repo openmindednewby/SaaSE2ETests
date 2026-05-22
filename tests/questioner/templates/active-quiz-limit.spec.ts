@@ -45,7 +45,7 @@ test.describe('Active Quiz Limit @questioner', () => {
 
     // KI-5: login against the questioner realm for questioner-api access.
     const { admin } = getProjectUsers(testInfo.project.name);
-    await loginAsTenantAdminBrowser(page, admin, { productRealm: 'questioner' });
+    await loginAsTenantAdminBrowser(page, admin);
 
     await templatesPage.goto();
     await quizPage.deactivateAllTemplates();

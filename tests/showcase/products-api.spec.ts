@@ -1,5 +1,6 @@
 import { BrowserContext, Page, test } from '@playwright/test';
 import { getProjectUsers } from '../../fixtures/test-data.js';
+import { themeEditorEnabled, THEME_EDITOR_SKIP_REASON } from '../../helpers/feature-gates.js';
 import { LoginPage } from '../../pages/LoginPage.js';
 import { StudioProductsPage } from '../../pages/StudioProductsPage.js';
 
@@ -25,6 +26,8 @@ import { StudioProductsPage } from '../../pages/StudioProductsPage.js';
 // =============================================================================
 
 test.describe.serial('Native Products Page @showcase @products @bug-fix', () => {
+  test.skip(!themeEditorEnabled(), THEME_EDITOR_SKIP_REASON);
+
   let context: BrowserContext;
   let page: Page;
   let productsPage: StudioProductsPage;
@@ -88,6 +91,8 @@ test.describe.serial('Native Products Page @showcase @products @bug-fix', () => 
 // =============================================================================
 
 test.describe.serial('Syncfusion Products Page @showcase @products @bug-fix', () => {
+  test.skip(!themeEditorEnabled(), THEME_EDITOR_SKIP_REASON);
+
   let context: BrowserContext;
   let page: Page;
   let productsPage: StudioProductsPage;

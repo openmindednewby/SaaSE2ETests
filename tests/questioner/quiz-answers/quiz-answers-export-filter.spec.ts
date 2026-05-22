@@ -49,7 +49,7 @@ test.describe.serial('Quiz Answers Export Filter @questioner @export', () => {
     });
 
     // KI-5: login against the questioner realm for questioner-api access.
-    await loginAsTenantAdminBrowser(page, adminUser, { productRealm: 'questioner' });
+    await loginAsTenantAdminBrowser(page, adminUser);
 
     // 2. Set up test data via the API: create template, activate it, submit answers
     apiHelper = createQuestionerApiHelper();

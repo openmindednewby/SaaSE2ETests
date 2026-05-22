@@ -23,7 +23,7 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
   let _testMenuId: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
-    test.setTimeout(60000);
+    test.setTimeout(120000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext({ storageState: 'playwright/.auth/user.json' });
@@ -55,6 +55,12 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
     });
 
     menusPage = new OnlineMenusPage(page);
+
+
+    // Clean slate: drop any menus left by an earlier chunk (free-tier 2-menu cap).
+
+
+    await menusPage.deleteAllMenus();
     publicPage = new OnlineMenusPublicPage(page);
   });
 
@@ -64,7 +70,7 @@ test.describe.serial('Menu DisplayOrder Sorting @online-menus @sorting', () => {
   });
 
   test.afterAll(async () => {
-    test.setTimeout(60000); // Firefox cleanup can be slow under concurrency
+    test.setTimeout(120000); // Firefox cleanup can be slow under concurrency
     try {
       await menusPage.goto();
       await menusPage.deactivateAllMenus();

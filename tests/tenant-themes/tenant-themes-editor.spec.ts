@@ -1,5 +1,6 @@
 import { BrowserContext, Page, test, expect } from '@playwright/test';
 import { getProjectUsers } from '../../fixtures/test-data.js';
+import { themeEditorEnabled, THEME_EDITOR_SKIP_REASON } from '../../helpers/feature-gates.js';
 import { LoginPage } from '../../pages/LoginPage.js';
 import { TenantThemesPage } from '../../pages/TenantThemesPage.js';
 
@@ -13,6 +14,8 @@ import { TenantThemesPage } from '../../pages/TenantThemesPage.js';
  * @tag @tenant-themes @editor
  */
 test.describe.serial('Tenant Theme Editor @tenant-themes @editor', () => {
+  test.skip(!themeEditorEnabled(), THEME_EDITOR_SKIP_REASON);
+
   let context: BrowserContext;
   let page: Page;
   let themesPage: TenantThemesPage;

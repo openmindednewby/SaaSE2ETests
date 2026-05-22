@@ -1,10 +1,15 @@
 import { defineConfig } from '@playwright/test';
 import { loadE2EEnv } from './fixtures/env-loader.js';
 import { chromiumHostResolverRules, installHostOverride } from './fixtures/host-override.js';
-import { projects } from './playwright.projects.js';
+import { buildProjects } from './playwright.projects.js';
 
 // Load environment-specific config based on E2E_TARGET (default: 'local')
 loadE2EEnv();
+
+// Build the project list AFTER loadE2EEnv() — buildProjects() reads
+// EREVNA_BASE_URL to set the per-project baseURL override for questioner
+// chunks, and that env var is only populated by the load above.
+const projects = buildProjects();
 
 // Install Node-side DNS override if E2E_HOST_OVERRIDE_IP is set. This config
 // module is re-evaluated in each worker process, so the patch applies to all

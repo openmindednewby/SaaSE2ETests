@@ -2,6 +2,7 @@ import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { BillingPage } from '../../pages/BillingPage.js';
 import { BillingPricingPage } from '../../pages/BillingPricingPage.js';
 import { createAuthenticatedContext } from '../../helpers/serial-auth.js';
+import { paymentsConfigured, PAYMENTS_SKIP_REASON } from '../../helpers/feature-gates.js';
 import { TestIds, testIdSelector } from '../../shared/testIds.js';
 
 /**
@@ -18,6 +19,9 @@ import { TestIds, testIdSelector } from '../../shared/testIds.js';
  * (set up by multi-tenant.setup.ts via ensureProSubscriptions).
  */
 test.describe.serial('Billing Pricing Page @billing @pricing', () => {
+  // Billing requires a real payment provider; skips when none is configured.
+  test.skip(!paymentsConfigured(), PAYMENTS_SKIP_REASON);
+
   let context: BrowserContext;
   let page: Page;
   let billingPage: BillingPage;

@@ -10,6 +10,7 @@
 import { test, expect } from '@playwright/test';
 
 import axios from 'axios';
+import { monitoringConfigured, MONITORING_SKIP_REASON } from '../../helpers/feature-gates.js';
 
 const GRAFANA_URL = process.env.GRAFANA_URL ?? 'http://localhost:3000';
 
@@ -32,6 +33,9 @@ interface GrafanaDatasource {
 }
 
 test.describe('Grafana Health @monitoring', () => {
+  // Observability stack is in-cluster only — skip on dev-PC staging/prod runs.
+  test.skip(!monitoringConfigured(), MONITORING_SKIP_REASON);
+
   test('Grafana is accessible and healthy', async () => {
     const response = await axios.get(`${GRAFANA_URL}/api/health`, {
       timeout: GRAFANA_TIMEOUT_MS,

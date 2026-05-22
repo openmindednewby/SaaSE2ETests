@@ -101,12 +101,17 @@ export async function ensureProSubscriptions(
   paymentApiUrl: string,
   tenantUsers: Array<{ tenantName: string; username: string; password: string }>,
 ): Promise<SubscriptionResult[]> {
-  // Check if PaymentService is reachable before attempting provisioning
+  // Check if PaymentService is reachable before attempting provisioning.
+  // Use axios with `sharedHttpsAgent` rather than `fetch`: against staging/prod
+  // the payment-api serves a self-signed (Traefik default) cert and Node's
+  // global `fetch` (undici) has no per-call cert-trust knob — a bare `fetch`
+  // here throws on the TLS handshake and falsely reports payment-api as down.
   try {
-    const controller = new AbortController();
-    const timeoutId = globalThis.setTimeout(() => controller.abort(), 5000);
-    await fetch(`${paymentApiUrl}/health/live`, { signal: controller.signal });
-    clearTimeout(timeoutId);
+    await axios.get(`${paymentApiUrl}/health/live`, {
+      httpsAgent: sharedHttpsAgent,
+      timeout: 5000,
+      validateStatus: () => true,
+    });
   } catch {
     console.warn(`  [subscription-admin] PaymentService not available at ${paymentApiUrl} — skipping subscription provisioning`);
     return tenantUsers.map((u) => ({

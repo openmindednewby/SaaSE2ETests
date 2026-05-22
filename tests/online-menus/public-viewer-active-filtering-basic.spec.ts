@@ -24,7 +24,7 @@ test.describe.skip('Public Viewer Active Filtering - Basic @online-menus @public
   let publicPage: Page;
 
   test.beforeAll(async ({ browser }, testInfo) => {
-    test.setTimeout(60000);
+    test.setTimeout(120000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     context = await browser.newContext({ storageState: 'playwright/.auth/user.json' });
@@ -53,6 +53,10 @@ test.describe.skip('Public Viewer Active Filtering - Basic @online-menus @public
     });
 
     menusPage = new OnlineMenusPage(page);
+
+    // Clean slate: drop any menus left by an earlier chunk (free-tier 2-menu cap).
+
+    await menusPage.deleteAllMenus();
 
     publicPage = await context.newPage();
     await publicPage.addInitScript(() => {
@@ -84,7 +88,7 @@ test.describe.skip('Public Viewer Active Filtering - Basic @online-menus @public
   });
 
   test.afterAll(async () => {
-    test.setTimeout(60000); // Firefox cleanup can be slow under concurrency
+    test.setTimeout(120000); // Firefox cleanup can be slow under concurrency
     try {
       await menusPage.goto();
       await menusPage.deactivateAllMenus();

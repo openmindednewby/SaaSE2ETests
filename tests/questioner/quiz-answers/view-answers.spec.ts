@@ -35,7 +35,7 @@ test.describe.serial('View Quiz Answers @questioner', () => {
     });
 
     // KI-5: login against the questioner realm for questioner-api access.
-    await loginAsTenantAdminBrowser(page, { username, password }, { productRealm: 'questioner' });
+    await loginAsTenantAdminBrowser(page, { username, password });
 
     // Initialize page objects
     answersPage = new QuizAnswersPage(page);

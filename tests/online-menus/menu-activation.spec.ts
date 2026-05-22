@@ -18,7 +18,7 @@ test.describe.serial('Menu Activation and Deactivation @online-menus @crud', () 
   let testMenuName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
-    test.setTimeout(60000);
+    test.setTimeout(120000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     // Create a new browser context for this test suite
@@ -53,6 +53,8 @@ test.describe.serial('Menu Activation and Deactivation @online-menus @crud', () 
 
     // Initialize page objects
     menusPage = new OnlineMenusPage(page);
+    // Clean slate: drop any menus left by an earlier chunk (free-tier 2-menu cap).
+    await menusPage.deleteAllMenus();
   });
 
   test.beforeEach(async () => {
@@ -66,7 +68,7 @@ test.describe.serial('Menu Activation and Deactivation @online-menus @crud', () 
   }
 
   test.afterAll(async () => {
-    test.setTimeout(60000); // Firefox cleanup can be slow under concurrency
+    test.setTimeout(120000); // Firefox cleanup can be slow under concurrency
     // Cleanup - deactivate first if active, then delete
     try {
       await menusPage.goto();

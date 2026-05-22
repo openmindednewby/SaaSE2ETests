@@ -1,161 +1,93 @@
 /**
- * KI-5 helper: inject a realm-specific token into a Playwright page so the
- * SPA loads as if logged-in against that realm, bypassing the realm-pinned
- * UI login flow.
+ * BFF browser auth — establishes a logged-in session for a Playwright page
+ * against a BFF-fronted SPA (erevna-web / katalogos-web).
  *
- * Why this exists: the SPA at staging.app.dloizides.com is configured for
- * the `onlinemenu` realm — UI login through LoginPage always mints an
- * onlinemenu-realm token. questioner-api enforces a cross-realm wall
- * (ProductRealms=["questioner"]) so onlinemenu tokens are rejected,
- * breaking every browser-driven questioner test.
+ * Retargeting (2026-05-22)
+ * -----------------------
+ * The E2E UI suites now drive the REAL shipped apps — `erevna-web` (questioner)
+ * and `katalogos-web` (online menus) — instead of the legacy BaseClient SPA
+ * (Phase-6-deletion-bound). Each real app is fronted by a per-app BFF
+ * (`bff-erevna` / `bff-katalogos`): authentication is terminated server-side.
+ * A same-origin POST to `/bff/login` makes the BFF do ROPC against the app's
+ * Keycloak realm, vault the tokens in Redis, and set an opaque httpOnly
+ * `__Host-bff-{app}` session cookie. The SPA then bootstraps its session from
+ * `GET /bff/me` on the next navigation. The browser holds NO token.
  *
- * The fix is realm-agnostic to the SPA: it stores `persist:auth` (Redux
- * persist format) in sessionStorage/localStorage and treats any bearer
- * token there as authenticated. By minting via the identity-api
- * `/auth/login` endpoint with the desired X-Realm header and injecting the
- * resulting token directly into the page's storage state, the SPA renders
- * as if the user logged in to that realm — without needing the SPA itself
- * to be re-pointed.
+ * This replaces the old KI-5 `injectRealmAuth` token-injection hack. That hack
+ * seeded a realm-scoped JWT into `persist:auth` storage — which only works for
+ * the legacy direct-KC BaseClient SPA. A BFF-fronted SPA has nothing to inject
+ * (the cookie IS the session). The KI-5 cross-realm problem is also gone:
+ * `erevna-web` is realm-pinned to `questioner` and `katalogos-web` to
+ * `onlinemenu` by their own BFFs, so each app's login natively mints a token
+ * in the correct realm — no per-product realm override needed.
  *
- * Usage in a questioner spec's beforeAll:
- *
- *     const page = await context.newPage();
- *     await injectRealmAuth(page, {
- *       baseURL: process.env.BASE_URL!,
- *       username: adminUser.username,
- *       password: adminUser.password,
- *       realm: 'questioner',
- *     });
- *     // Now navigations from `page` carry a questioner-realm bearer.
+ * The app host comes from the page's project `baseURL`: a relative
+ * `page.goto('/')` resolves to erevna-web for the questioner chunks and to
+ * katalogos-web for the rest (see `playwright.projects.ts`).
  */
 import type { Page } from '@playwright/test';
 
-import { LoginPage } from '../pages/LoginPage.js';
-import { AuthHelper } from './auth-helper.js';
-
-interface InjectRealmAuthOptions {
-  baseURL: string;
-  username: string;
-  password: string;
-  realm: string;
-}
-
-interface AuthState {
-  accessToken: string;
-  refreshToken: string | null;
-  isLoggedIn: true;
-  user: unknown;
-  userInfo: unknown;
-  loading: false;
-  refreshingUserInfo: false;
+interface BffLoginEvalResult {
+  status: number;
+  body: string;
 }
 
 /**
- * Mints a token from the named realm and seeds it into the page's storage
- * BEFORE the SPA initializes. Subsequent `page.goto(...)` calls will see
- * the SPA in its authenticated state.
- *
- * No-op when `realm` matches the SPA's default realm — in that case the
- * normal UI login path is fine and this helper would just double the work.
+ * Performs the same-origin `/bff/login` POST inside a loaded page and returns
+ * the raw status + body. Mirrors what the SPA's `BffAuthClient.login` does.
  */
-export async function injectRealmAuth(page: Page, opts: InjectRealmAuthOptions): Promise<void> {
-  const auth = new AuthHelper(undefined, opts.realm);
-  const tokens = await auth.loginViaAPI(opts.username, opts.password);
-  if (!tokens.accessToken) {
-    throw new Error(`injectRealmAuth: login to realm '${opts.realm}' returned no accessToken`);
-  }
-
-  const authState: AuthState = {
-    accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken ?? null,
-    isLoggedIn: true,
-    user: tokens.userInfo,
-    userInfo: tokens.userInfo,
-    loading: false,
-    refreshingUserInfo: false,
-  };
-  const persistAuthJson = JSON.stringify(authState);
-
-  // The SPA's bootstrap reads persist:auth from sessionStorage; the
-  // restoreAuthToSessionStorage init script in auth.fixture.ts copies it
-  // from localStorage on first navigation. Seed BOTH to cover both code
-  // paths regardless of whether the spec opts into that fixture.
-  await page.addInitScript((data: { authJson: string; origin: string }) => {
-    try {
-      // sessionStorage isn't writable from addInitScript before the document
-      // is loaded; copy on first script eval after the doc bootstraps. The
-      // app's persist:auth listener picks it up on hydrate.
-      if (window.location.origin === data.origin) {
-        sessionStorage.setItem('persist:auth', data.authJson);
-        localStorage.setItem('persist:auth', data.authJson);
+async function postBffLogin(page: Page, user: { username: string; password: string }): Promise<BffLoginEvalResult> {
+  return page.evaluate(
+    async (creds: { username: string; password: string }): Promise<BffLoginEvalResult> => {
+      const res = await fetch('/bff/login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-BFF-Csrf': '1' },
+        body: JSON.stringify({ username: creds.username, password: creds.password }),
+      });
+      let body = '';
+      try {
+        body = await res.text();
+      } catch {
+        // no body — fine
       }
-    } catch {
-      // If the storage write fails (e.g. cross-origin), the subsequent
-      // page.evaluate fallback below catches it.
-    }
-  }, { authJson: persistAuthJson, origin: new URL(opts.baseURL).origin });
-}
-
-interface LoginTenantAdminOptions {
-  username: string;
-  password: string;
-  /**
-   * The realm to mint the actual API-call token from. Should match the
-   * product the test exercises (e.g. 'questioner' for questioner specs).
-   * On local target this is ignored — local KC has a combined realm.
-   */
-  productRealm: 'questioner' | 'onlinemenu';
+      return { status: res.status, body };
+    },
+    { username: user.username, password: user.password },
+  );
 }
 
 /**
- * KI-5 wrapper: replaces the boilerplate `LoginPage.loginAndWait` +
- * persist-storage block that every browser spec used to repeat. On
- * staging/prod (where the SPA is realm-pinned), additionally overlays a
- * `productRealm`-scoped token via {@link injectRealmAuth} so cross-product
- * API calls (questioner-api from the onlinemenu-pinned SPA) succeed.
+ * Log a Playwright page into its BFF-fronted SPA. After this resolves the
+ * browser context holds the `__Host-bff-{app}` session cookie and the page is
+ * sitting on the authenticated app root — the caller can navigate straight to
+ * any protected route.
  *
- * Local target: drops to the legacy UI-login path unchanged — local KC has
- * a single combined realm so no token swap is needed.
+ * The app is determined by the page's project `baseURL`; no realm argument is
+ * needed (each app's BFF owns its realm). Call from `test.beforeAll` (or
+ * wherever the suite establishes its session):
  *
- * Call from `test.beforeAll` (or wherever you currently do the LoginPage
- * dance):
- *
- *     await loginAsTenantAdminBrowser(page, adminUser, { productRealm: 'questioner' });
+ *     await loginAsTenantAdminBrowser(page, adminUser);
  */
 export async function loginAsTenantAdminBrowser(
   page: Page,
   user: { username: string; password: string },
-  opts: { productRealm: 'questioner' | 'onlinemenu' },
 ): Promise<void> {
-  const target = process.env.E2E_TARGET ?? 'local';
+  // Load the SPA shell so a same-origin `fetch('/bff/login')` is possible.
+  // The path is relative — Playwright resolves it against the project baseURL.
+  // An unauthenticated load bounces to /login; that is still the same origin,
+  // so the BFF login below works regardless of the landing path.
+  await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-  if (target === 'staging' || target === 'prod') {
-    // staging/prod: skip the UI login entirely. The SPA is realm-pinned to
-    // onlinemenu — its UI login flow would give us the wrong-realm token.
-    // injectRealmAuth seeds the page's storage with a `productRealm`-scoped
-    // token; the next `page.goto(...)` (test's own first nav) reads it as
-    // the authenticated state. No UI bootstrap needed.
-    await injectRealmAuth(page, {
-      baseURL: process.env.BASE_URL!,
-      username: user.username,
-      password: user.password,
-      realm: opts.productRealm,
-    });
-    return;
+  const result = await postBffLogin(page, user);
+  if (result.status !== 200) {
+    throw new Error(
+      `loginAsTenantAdminBrowser: POST /bff/login failed (status ${result.status}) ` +
+        `for user '${user.username}' at ${page.url()} — ${result.body.slice(0, 200)}`,
+    );
   }
 
-  // Local target: legacy UI login dance — local KC has a single combined
-  // realm so the SPA-minted token works for every product API.
-  const loginPage = new LoginPage(page);
-  await loginPage.goto();
-  await loginPage.loginAndWait(user.username, user.password);
-
-  // Save auth state to localStorage so it persists across page navigations.
-  await page.evaluate(() => {
-    const persistAuth = sessionStorage.getItem('persist:auth');
-    if (persistAuth) {
-      localStorage.setItem('persist:auth', persistAuth);
-    }
-  });
+  // Re-bootstrap the SPA from `GET /bff/me` (cookie) so the page is in its
+  // authenticated state before the caller navigates to a protected route.
+  await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60000 });
 }
-

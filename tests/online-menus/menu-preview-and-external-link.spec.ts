@@ -19,7 +19,7 @@ test.describe.serial('Menu Preview and External Link @online-menus @preview', ()
   let testMenuName: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
-    test.setTimeout(60000);
+    test.setTimeout(120000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
     // Create a new browser context for this test suite
@@ -54,6 +54,10 @@ test.describe.serial('Menu Preview and External Link @online-menus @preview', ()
 
     // Initialize page objects
     menusPage = new OnlineMenusPage(page);
+
+    // Clean slate: drop any menus left by an earlier chunk (free-tier 2-menu cap).
+
+    await menusPage.deleteAllMenus();
     publicPage = new OnlineMenusPublicPage(page);
   });
 
@@ -63,7 +67,7 @@ test.describe.serial('Menu Preview and External Link @online-menus @preview', ()
   });
 
   test.afterAll(async () => {
-    test.setTimeout(60000); // Firefox cleanup can be slow under concurrency
+    test.setTimeout(120000); // Firefox cleanup can be slow under concurrency
     // Cleanup - deactivate first if active, then delete
     try {
       await menusPage.goto();

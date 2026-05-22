@@ -49,6 +49,15 @@ const SAAS_STAGING_HOSTNAMES = [
   'staging.content-api.dloizides.com',
   'staging.notification-api.dloizides.com',
   'staging.payment-api.dloizides.com',
+  // Per-product web apps (Phase 3 product split) — each is a BFF-fronted SPA
+  // on its own host. The Node-side `dns.lookup` patch already covers these via
+  // the `^staging\.[a-z0-9-]+\.dloizides\.com$` regex, but Chromium uses its
+  // OWN resolver and only honours these explicit `MAP` rules. Omitting them
+  // made the browser fall through to public DNS (a CNAME to the PROD IP),
+  // which has no `staging.{product}.dloizides.com` ingress → Traefik 404.
+  // That 404 was previously misdiagnosed as an erevna-web SPA routing defect.
+  'staging.erevna.dloizides.com',
+  'staging.katalogos.dloizides.com',
 ] as const;
 
 const PATCHED_SENTINEL = Symbol.for('e2e.host-override.patched');

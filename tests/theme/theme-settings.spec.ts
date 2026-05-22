@@ -1,5 +1,6 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { getProjectUsers } from '../../fixtures/test-data.js';
+import { themeEditorEnabled, THEME_EDITOR_SKIP_REASON } from '../../helpers/feature-gates.js';
 import { LoginPage } from '../../pages/LoginPage.js';
 import { ThemeSettingsAppPage } from '../../pages/ThemeSettingsAppPage.js';
 
@@ -23,6 +24,8 @@ import { ThemeSettingsAppPage } from '../../pages/ThemeSettingsAppPage.js';
 // =============================================================================
 
 test.describe.serial('Theme Settings - Admin @theme @settings', () => {
+  test.skip(!themeEditorEnabled(), THEME_EDITOR_SKIP_REASON);
+
   let context: BrowserContext;
   let page: Page;
   let themeSettings: ThemeSettingsAppPage;

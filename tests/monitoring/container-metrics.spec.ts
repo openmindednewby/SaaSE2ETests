@@ -12,6 +12,7 @@
 import { test, expect } from '@playwright/test';
 
 import { PrometheusClient } from '../../helpers/prometheus-client.js';
+import { monitoringConfigured, MONITORING_SKIP_REASON } from '../../helpers/feature-gates.js';
 
 const PROMETHEUS_URL =
   process.env.PROMETHEUS_URL ?? 'http://localhost:9090';
@@ -21,6 +22,9 @@ const SERVICE_CONTAINER_PATTERN =
   '.*identity.*|.*questioner.*|.*onlinemenu.*|.*notification.*';
 
 test.describe('Container Metrics @monitoring', () => {
+  // Observability stack is in-cluster only — skip on dev-PC staging/prod runs.
+  test.skip(!monitoringConfigured(), MONITORING_SKIP_REASON);
+
   let prometheus: PrometheusClient;
 
   test.beforeAll(async () => {

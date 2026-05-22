@@ -86,7 +86,13 @@ async function loginForCookie(username: string, password: string): Promise<Axios
   );
 }
 
-test.describe('Cookie-based Session @identity @auth @cookie', () => {
+test.describe.skip(
+  'Cookie-based Session @identity @auth @cookie',
+  () => {
+  // Skip reason: Cookie-session flow removed in Phase 1 identity shrink
+  // (Step 5a deleted /auth/refresh-cookie). Server-side cookie sessions return
+  // with the Phase 2 BFF — re-enable then. Test bodies left intact so Phase 2
+  // can un-skip + adapt them.
   test.slow();
 
   test('login response sets __Host-refresh cookie with HttpOnly + Secure + SameSite=Lax + Path=/', async () => {

@@ -3,6 +3,7 @@ import type { Page, BrowserContext } from '@playwright/test';
 import { LoginPage } from '../../pages/LoginPage.js';
 import { TestIds, testIdSelector } from '../../shared/testIds.js';
 import { firefoxCannotReachStaging, FIREFOX_STAGING_SKIP_REASON } from '../../helpers/target.js';
+import { readPersistAuthTokensCleared } from '../../helpers/auth-storage.js';
 
 // Use serial mode so tests run in order and share the same browser context.
 test.describe.serial('Logout Flow @identity @auth', () => {
@@ -94,17 +95,13 @@ test.describe.serial('Logout Flow @identity @auth', () => {
           const tokenFromPersist = parsed?.accessToken ?? null;
           const isLoggedIn = parsed?.isLoggedIn ?? null;
 
-          // Consider logged out if ANY of these are true:
-          // 1. persist:auth is gone
-          // 2. accessToken in persist:auth is falsy/null/"null"
-          // 3. isLoggedIn is explicitly false or "false"
-          // 4. No direct accessToken key OR it's empty (AND no direct refreshToken key OR it's empty)
+          // Logged out if persist:auth is gone, OR its token is cleared, OR
+          // isLoggedIn is false, OR both direct token keys are empty.
           const tokenIsFalsy = !tokenFromPersist || tokenFromPersist === 'null' || tokenFromPersist === '';
           const isLoggedInFalsy = isLoggedIn === false || isLoggedIn === 'false' || isLoggedIn === null || isLoggedIn === 'null';
           const accessKeyIsFalsy = !accessTokenKey || accessTokenKey === '';
           const refreshKeyIsFalsy = !refreshTokenKey || refreshTokenKey === '';
 
-          // Logged out if persist:auth is gone OR token is cleared OR isLoggedIn is false
           const loggedOut =
             !raw ||
             tokenIsFalsy ||
@@ -232,28 +229,25 @@ test.describe.serial('Logout Flow @identity @auth', () => {
     await clickLogout();
     await expectLoggedOut();
 
-    // Verify session storage is cleared of auth tokens
-    const authState = await page.evaluate(() => {
-      const raw = sessionStorage.getItem('persist:auth');
-      if (!raw) return null;
-      try {
-        return JSON.parse(raw);
-      } catch {
-        return null;
-      }
-    });
-
-    if (authState) {
-      // If persist:auth still exists, tokens must be cleared
-      const tokenIsFalsy = !authState.accessToken || authState.accessToken === 'null' || authState.accessToken === '';
-      const refreshIsFalsy = !authState.refreshToken || authState.refreshToken === 'null' || authState.refreshToken === '';
-      expect(tokenIsFalsy).toBe(true);
-      expect(refreshIsFalsy).toBe(true);
-    }
-    // If authState is null, persist:auth was removed entirely -- also valid
+    // Verify session storage settles into a tokens-cleared terminal state.
+    // BaseClient's logout cleanup re-dispatches the auth-clear action on a
+    // staggered timer schedule (0/50/200/500/1000ms) and the Redux persistence
+    // subscriber re-writes `persist:auth` on each dispatch — so a single
+    // non-polled snapshot races that schedule. Poll until storage settles.
+    await expect.poll(() => readPersistAuthTokensCleared(page), { timeout: 10000 }).toBe(true);
   });
 
   test('should redirect to login when accessing protected route after logout', async () => {
+    // Retired (2026-05-22): this test "logs out" by clearing browser storage
+    // (sessionStorage + localStorage `persist:auth`). That is only a valid
+    // logout simulation for the legacy token-in-storage BaseClient SPA. The
+    // retargeted apps are BFF-fronted — the session is an httpOnly
+    // `__Host-bff-*` cookie that JavaScript cannot clear, so clearing storage
+    // does NOT end the session and the SPA stays authenticated. Real BFF
+    // logout (the logout button → `/bff/logout`) is covered by the other tests
+    // in this file and by tests/*/bff-no-token-in-browser.spec.ts.
+    test.skip(true, 'BaseClient-era storage-clear logout simulation — invalid for BFF apps; real logout covered by the logout-button tests above + bff-no-token-in-browser.');
+
     const username = process.env.TEST_USER_USERNAME;
     const password = process.env.TEST_USER_PASSWORD;
 

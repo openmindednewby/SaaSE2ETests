@@ -11,6 +11,7 @@
 import { test, expect } from '@playwright/test';
 
 import { LokiClient } from '../../helpers/loki-client.js';
+import { lokiConfigured, LOKI_SKIP_REASON } from '../../helpers/feature-gates.js';
 
 const LOKI_URL = process.env.LOKI_URL ?? 'http://localhost:3100';
 const ONLINEMENU_URL =
@@ -23,6 +24,9 @@ const CORRELATION_HEADER = 'X-Correlation-ID';
 const CORRELATION_TIMEOUT_MS = 20000;
 
 test.describe('Correlation Tracking @logging', () => {
+  // Observability stack is in-cluster only — skip on dev-PC staging/prod runs.
+  test.skip(!lokiConfigured(), LOKI_SKIP_REASON);
+
   let loki: LokiClient;
 
   test.beforeAll(async () => {

@@ -34,11 +34,10 @@ test.describe('Tenant Isolation @questioner @security', () => {
     });
 
     try {
-      // KI-5: login against the questioner realm as TenantA user (non-admin).
+      // Log into erevna-web (questioner realm) as TenantA user (non-admin).
       await loginAsTenantAdminBrowser(
         page,
         { username: TEST_USERS.TENANT_A_USER.username, password: TEST_USERS.TENANT_A_USER.password },
-        { productRealm: 'questioner' },
       );
 
       // Navigate to templates page

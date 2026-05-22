@@ -2,6 +2,7 @@ import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { BillingPage } from '../../pages/BillingPage.js';
 import { BillingPricingPage } from '../../pages/BillingPricingPage.js';
 import { createAuthenticatedContext } from '../../helpers/serial-auth.js';
+import { paymentsConfigured, PAYMENTS_SKIP_REASON } from '../../helpers/feature-gates.js';
 
 /**
  * E2E Tests for Billing Subscription Flow
@@ -18,6 +19,9 @@ import { createAuthenticatedContext } from '../../helpers/serial-auth.js';
  * UI state rather than performing Stripe checkout (which requires external integration).
  */
 test.describe.serial('Billing Subscription Flow @billing @subscription-flow', () => {
+  // Billing requires a real payment provider; skips when none is configured.
+  test.skip(!paymentsConfigured(), PAYMENTS_SKIP_REASON);
+
   let context: BrowserContext;
   let page: Page;
   let billingPage: BillingPage;

@@ -73,15 +73,23 @@ setup('authenticate', async ({ page, baseURL: _baseURL }) => {
 
   // Fail fast: check if IdentityService is reachable before attempting browser login.
   // Without this, the browser login attempt times out after 30s on a clean environment.
-  const identityApiUrl = process.env.IDENTITY_API_URL || 'http://localhost:5002';
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-    await fetch(identityApiUrl, { signal: controller.signal });
-    clearTimeout(timeoutId);
-  } catch {
-    setup.skip(true, `IdentityService not available at ${identityApiUrl}. Start backend services first.`);
-    return;
+  //
+  // Skipped for staging/prod: those targets drive the BFF-fronted real apps,
+  // where login goes browser → SPA → `/bff/login` → BFF → Keycloak and never
+  // touches IDENTITY_API_URL directly. A bare `fetch` probe would also throw
+  // on staging's self-signed Traefik cert and falsely skip the whole suite.
+  const target = process.env.E2E_TARGET ?? 'local';
+  if (target !== 'staging' && target !== 'prod') {
+    const identityApiUrl = process.env.IDENTITY_API_URL || 'http://localhost:5002';
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      await fetch(identityApiUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+    } catch {
+      setup.skip(true, `IdentityService not available at ${identityApiUrl}. Start backend services first.`);
+      return;
+    }
   }
 
   // Check if frontend is available by navigating to the login page

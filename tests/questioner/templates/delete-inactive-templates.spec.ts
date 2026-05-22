@@ -40,7 +40,7 @@ test.describe.serial('Delete Inactive Templates @questioner @crud', () => {
     });
 
     // KI-5: login against the questioner realm for questioner-api access.
-    await loginAsTenantAdminBrowser(page, adminUser, { productRealm: 'questioner' });
+    await loginAsTenantAdminBrowser(page, adminUser);
 
     // Initialize page objects
     templatesPage = new QuizTemplatesPage(page);

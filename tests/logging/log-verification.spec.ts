@@ -12,6 +12,7 @@
 import { test, expect } from '@playwright/test';
 
 import { LokiClient } from '../../helpers/loki-client.js';
+import { lokiConfigured, LOKI_SKIP_REASON } from '../../helpers/feature-gates.js';
 
 const LOKI_URL = process.env.LOKI_URL ?? 'http://localhost:3100';
 
@@ -26,6 +27,9 @@ const SERVICE_NAMES = [
 const LOG_PROPAGATION_TIMEOUT_MS = 15000;
 
 test.describe('Log Verification @logging', () => {
+  // Observability stack is in-cluster only — skip on dev-PC staging/prod runs.
+  test.skip(!lokiConfigured(), LOKI_SKIP_REASON);
+
   let loki: LokiClient;
 
   test.beforeAll(async () => {

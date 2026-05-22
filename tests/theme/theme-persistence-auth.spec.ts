@@ -1,5 +1,6 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { getProjectUsers, TEST_USERS } from '../../fixtures/test-data.js';
+import { themeEditorEnabled, THEME_EDITOR_SKIP_REASON } from '../../helpers/feature-gates.js';
 import { LoginPage } from '../../pages/LoginPage.js';
 import { ThemeSettingsAppPage } from '../../pages/ThemeSettingsAppPage.js';
 
@@ -18,6 +19,8 @@ import { ThemeSettingsAppPage } from '../../pages/ThemeSettingsAppPage.js';
 // =============================================================================
 
 test.describe.serial('Theme Persistence - Login/Logout @theme @persistence', () => {
+  test.skip(!themeEditorEnabled(), THEME_EDITOR_SKIP_REASON);
+
   let context: BrowserContext;
   let page: Page;
   let loginPage: LoginPage;
@@ -127,6 +130,8 @@ test.describe.serial('Theme Persistence - Login/Logout @theme @persistence', () 
 // =============================================================================
 
 test.describe('Theme Persistence - Tenant Isolation @theme @persistence @isolation', () => {
+  test.skip(!themeEditorEnabled(), THEME_EDITOR_SKIP_REASON);
+
   test('should show different themes for different tenants @critical', async ({ browser }) => {
     // Login as Tenant A admin
     const contextA = await browser.newContext();

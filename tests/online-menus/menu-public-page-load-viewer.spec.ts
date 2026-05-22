@@ -46,6 +46,10 @@ test.describe.serial('Public Menu Page Load - Viewer @online-menus @public-viewe
     });
 
     menusPage = new OnlineMenusPage(page);
+
+    // Clean slate: drop any menus left by an earlier chunk (free-tier 2-menu cap).
+
+    await menusPage.deleteAllMenus();
     publicMenusPage = new OnlineMenusPublicPage(page);
     editorPage = new OnlineMenusEditorPage(page);
 
@@ -111,7 +115,7 @@ test.describe.serial('Public Menu Page Load - Viewer @online-menus @public-viewe
   });
 
   test.afterAll(async () => {
-    test.setTimeout(60000); // Firefox cleanup can be slow under concurrency
+    test.setTimeout(120000); // Firefox cleanup can be slow under concurrency
     try {
       await menusPage.goto();
       await menusPage.waitForLoading();

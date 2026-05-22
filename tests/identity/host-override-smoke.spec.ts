@@ -9,10 +9,17 @@
  *    with body "Healthy" — confirms Node-side `dns.lookup` patch routes
  *    `staging.identity-api.dloizides.com` to the override IP.
  *
- * 2. POST `/api/v1/auth/login` with the configured TEST_USER credentials
- *    succeeds, and the JWT's `iss` claim contains the configured KC hostname
- *    from `KEYCLOAK_ISSUER` env var — confirms the token was minted by the
- *    cluster the override points at, not by leakage to a different cluster.
+ * 2. A direct-to-Keycloak ROPC token mint (`grant_type=password`) with the
+ *    configured TEST_USER credentials succeeds, and the JWT's `iss` claim
+ *    contains the configured KC hostname from `KEYCLOAK_ISSUER` env var —
+ *    confirms the token was minted by the cluster the override points at, not
+ *    by leakage to a different cluster.
+ *
+ *    NOTE: Step 5a of the identity-service shrink deleted the identity-api
+ *    `/auth/login` proxy; frontends now do ROPC directly against Keycloak. This
+ *    leg therefore mints against KC's `/protocol/openid-connect/token` endpoint
+ *    (same path `login-direct.spec.ts` uses). The DNS-patch leg above is
+ *    unaffected — identity-api's `/health/live` still exists.
  *
  * Skipped automatically when:
  *   - `E2E_HOST_OVERRIDE_IP` is unset (mechanism not active — no point checking)
@@ -27,6 +34,24 @@ const keycloakIssuer = process.env.KEYCLOAK_ISSUER?.trim();
 const username = process.env.TEST_USER_USERNAME?.trim();
 const password = process.env.TEST_USER_PASSWORD?.trim();
 const realm = process.env.IDENTITY_REALM?.trim() || 'OnlineMenu';
+// Shared OAuth client across all app realms (Phase 0.1 audit). Direct Access
+// Grants stays enabled post-shrink (ADR: ROPC over PKCE, 2026-05-17).
+const KC_CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID?.trim() || 'online-menu-client';
+
+/**
+ * Derive the realm-scoped KC token endpoint from KEYCLOAK_ISSUER. The issuer
+ * is `<kc-base>/realms/<realm>`; strip the `/realms/<realm>` suffix to get the
+ * base, then re-append the spec's configured `realm`. Mirrors
+ * `realm-token-helper.ts#resolveKeycloakBaseUrl`.
+ */
+function kcTokenEndpoint(): string {
+  const match = /^(.*?)\/realms\/[^/]+/.exec(keycloakIssuer as string);
+  if (!match?.[1]) {
+    throw new Error(`KEYCLOAK_ISSUER='${keycloakIssuer}' does not contain '/realms/<realm>'`);
+  }
+  const base = match[1].replace(/\/+$/, '');
+  return `${base}/realms/${realm}/protocol/openid-connect/token`;
+}
 
 test.describe('Host override smoke @hostresolve', () => {
   test.skip(
@@ -61,18 +86,25 @@ test.describe('Host override smoke @hostresolve', () => {
 
     const ctx = await request.newContext({ ignoreHTTPSErrors: true, timeout: 15_000 });
     try {
-      // Staging fronts /auth/login with Keycloak brute-force / rate-limiting
-      // protection. When this spec runs inside the full identity suite (50+
-      // sequential logins), the limiter can transiently return HTTP 429.
-      // `retryWhileRateLimited` retries on 429 only with Retry-After-aware
-      // backoff — any other non-200 surfaces immediately via the assertion
-      // below, and a persistent 429 after all retries still fails the test.
+      // Step 5a deleted the identity-api /auth/login proxy — mint the token
+      // directly against Keycloak via ROPC (grant_type=password), the same
+      // path login-direct.spec.ts uses. Keycloak fronts this with brute-force
+      // / rate-limiting protection; when this spec runs inside the full
+      // identity suite (50+ sequential logins) the limiter can transiently
+      // return HTTP 429. `retryWhileRateLimited` retries on 429 only with
+      // Retry-After-aware backoff — any other non-200 surfaces immediately via
+      // the assertion below, and a persistent 429 still fails the test.
       const loginResponse = await retryWhileRateLimited(
-        'host-override-smoke login',
+        'host-override-smoke ROPC token mint',
         () =>
-          ctx.post(`${identityApiUrl}/api/v1/auth/login`, {
-            headers: { 'Content-Type': 'application/json', 'X-Realm': realm },
-            data: { method: 0, username, password },
+          ctx.post(kcTokenEndpoint(), {
+            form: {
+              grant_type: 'password',
+              client_id: KC_CLIENT_ID,
+              username: username as string,
+              password: password as string,
+              scope: 'openid',
+            },
           }),
         (response) => response.status(),
         (response) => response.headers()['retry-after'],
@@ -82,13 +114,13 @@ test.describe('Host override smoke @hostresolve', () => {
       // surface that, not pretend the override is broken.
       expect(
         loginResponse.status(),
-        `Login to ${identityApiUrl} failed; if 401, refresh TEST_USER_PASSWORD in .env.<target>.secrets`,
+        `ROPC token mint at ${kcTokenEndpoint()} failed; if 401, refresh TEST_USER_PASSWORD in .env.<target>.secrets`,
       ).toBe(200);
 
-      const json = (await loginResponse.json()) as { accessToken?: string };
-      expect(json.accessToken, 'Login response missing accessToken').toBeTruthy();
+      const json = (await loginResponse.json()) as { access_token?: string };
+      expect(json.access_token, 'Token response missing access_token').toBeTruthy();
 
-      const payload = decodeJwtPayload(json.accessToken as string);
+      const payload = decodeJwtPayload(json.access_token as string);
       expect(payload.iss, 'JWT iss claim missing').toBeTruthy();
 
       // KEYCLOAK_ISSUER is the full URL incl. realm path; we only need the

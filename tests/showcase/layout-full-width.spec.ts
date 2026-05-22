@@ -1,5 +1,6 @@
 import { BrowserContext, Page, test } from '@playwright/test';
 import { getProjectUsers } from '../../fixtures/test-data.js';
+import { themeEditorEnabled, THEME_EDITOR_SKIP_REASON } from '../../helpers/feature-gates.js';
 import { LoginPage } from '../../pages/LoginPage.js';
 import { ThemeSettingsPage } from '../../pages/ThemeSettingsPage.js';
 
@@ -25,6 +26,8 @@ import { ThemeSettingsPage } from '../../pages/ThemeSettingsPage.js';
 // =============================================================================
 
 test.describe.serial('Layout Full Width Toggle @showcase @layout @theme-settings', () => {
+  test.skip(!themeEditorEnabled(), THEME_EDITOR_SKIP_REASON);
+
   let context: BrowserContext;
   let page: Page;
   let themeSettingsPage: ThemeSettingsPage;

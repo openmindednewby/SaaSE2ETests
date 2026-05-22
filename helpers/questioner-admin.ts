@@ -128,9 +128,15 @@ export class QuestionerApiHelper {
   /**
    * Authenticate and initialize the API client.
    * Must be called before any other method.
+   *
+   * The token is minted from the `questioner` realm explicitly. questioner-api
+   * enforces a cross-realm wall (`ProductRealms=["questioner"]`) — a token from
+   * the default `onlinemenu` realm is rejected with 401. The KI-5 per-product
+   * realm fix landed in `realm-browser-auth.ts`; this helper needs the same
+   * realm override or every questioner-api call here 401s.
    */
   async login(username: string, password: string): Promise<void> {
-    const auth = new AuthHelper(this.identityApiUrl);
+    const auth = new AuthHelper(this.identityApiUrl, 'questioner');
     await auth.loginViaAPI(username, password);
     const token = auth.getAccessToken();
     if (!token) {

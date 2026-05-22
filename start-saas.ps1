@@ -1,7 +1,7 @@
 # -----------------------------
 # CONFIG – ADJUST PORTS HERE
 # -----------------------------
-$IdentityPort      = 5002   # e.g. IdentityService
+$IdentityPort      = 5002   # e.g. TenantService
 $QuestionerPort    = 5004   # e.g. QuestionerService
 $OnlineMenuPort    = 5006   # e.g. OnlineMenuService
 $FrontendPort      = 8082   # e.g. Angular/React dev server
@@ -26,10 +26,10 @@ function Wait-ForPort {
 # Start Services
 # -----------------------------
 
-# IdentityService
+# TenantService
 Start-Process powershell `
   -ArgumentList "-NoExit", "-Command", `
-  "`$Host.UI.RawUI.WindowTitle='IdentityService'; cd 'C:\desktopContents\projects\SaaS\IdentityService'; docker-compose up"
+  "`$Host.UI.RawUI.WindowTitle='TenantService'; cd 'C:\desktopContents\projects\SaaS\TenantService'; docker-compose up"
 
 # OnlineMenuService
 Start-Process powershell `
@@ -49,7 +49,7 @@ Start-Process powershell `
 # -----------------------------
 # Wait for all services
 # -----------------------------
-Wait-ForPort "IdentityService"   $IdentityPort
+Wait-ForPort "TenantService"     $IdentityPort
 Wait-ForPort "OnlineMenuService" $OnlineMenuPort
 Wait-ForPort "QuestionerService" $QuestionerPort
 Wait-ForPort "Frontend"          $FrontendPort

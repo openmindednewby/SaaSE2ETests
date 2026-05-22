@@ -87,8 +87,26 @@ async function globalSetup(config: FullConfig) {
     fs.mkdirSync(authDir, { recursive: true });
   }
 
-  // Create empty auth file if it doesn't exist (allows tests to run without auth)
   const authFile = path.join(authDir, 'user.json');
+
+  // Retargeting (2026-05-22): staging/prod drive the BFF-fronted real apps.
+  // A BFF SPA holds NO token in any JS-reachable surface — its session is the
+  // httpOnly `__Host-bff-*` cookie. The legacy token-injection below (seed
+  // `persist:auth` with a JWT, save storageState) is meaningless for a BFF app
+  // and, worse, a stale injected token can make the SPA skip its login form.
+  // So for staging/prod we write a CLEAN empty storage state and return; the
+  // real cookie-based session is established by `auth.setup.ts` (the `setup`
+  // project) doing a true `/bff/login` form login, and every UI spec also
+  // re-establishes its own session in `beforeAll`. The canary superUser JWT
+  // needed by teardown is already minted into env by `global-setup.canary.ts`.
+  const target = process.env.E2E_TARGET ?? 'local';
+  if (target === 'staging' || target === 'prod') {
+    fs.writeFileSync(authFile, JSON.stringify({ cookies: [], origins: [] }));
+    console.log(`✅ Global setup (${target}): wrote clean storage state — BFF apps authenticate per-suite\n`);
+    return;
+  }
+
+  // Create empty auth file if it doesn't exist (allows tests to run without auth)
   if (!fs.existsSync(authFile)) {
     fs.writeFileSync(authFile, JSON.stringify({ cookies: [], origins: [] }));
   }

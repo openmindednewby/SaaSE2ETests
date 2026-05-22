@@ -6,6 +6,7 @@ import {
   isMailpitHealthy,
   clearMailpit,
 } from '../../helpers/mailpit.helpers.js';
+import { sharedHttpsAgent } from '../../helpers/http-agent.js';
 
 /**
  * E2E coverage for the /auth/forgot-password + /auth/reset-password flow.
@@ -45,6 +46,7 @@ async function postForgotPassword(email: string, realm: string = TEST_REALM): Pr
     { email, resetUrlTemplate: RESET_URL_TEMPLATE },
     {
       headers: { 'X-Realm': realm },
+      httpsAgent: sharedHttpsAgent,
       timeout: 15000,
       validateStatus: () => true,
     },
@@ -60,6 +62,7 @@ async function postResetPassword(
     `${IDENTITY_API_URL}/api/v1/auth/reset-password`,
     { token, newPassword },
     {
+      httpsAgent: sharedHttpsAgent,
       timeout: 15000,
       validateStatus: () => true,
     },
@@ -81,18 +84,26 @@ function extractTokenFromEmail(emailBody: string): string {
 test.describe('Password Reset Flow @identity @auth @password-reset', () => {
   test.slow();
 
+  // Mailpit is needed ONLY by the two email-round-trip tests. The three
+  // pure-API contract tests (no-enumeration 200, bad-token 400, weak-password
+  // 400) need no mailbox and must run on every target — so we probe Mailpit
+  // once and let the email tests skip individually. A blanket beforeAll skip
+  // would wrongly drop the contract tests too, and would gate a staging run on
+  // whichever Mailpit the dev PC happens to be running.
+  let mailpitHealthy = false;
   test.beforeAll(async () => {
-    const healthy = await isMailpitHealthy();
-    test.skip(!healthy, 'Mailpit is not running — skipping password-reset E2E');
+    mailpitHealthy = await isMailpitHealthy();
   });
 
   test.beforeEach(async () => {
     // Identity API rate-limits /auth/* at 5 req/min. Spacing keeps tests
     // out of the 429 zone.
     await delay(500);
-    await clearMailpit().catch(() => {
-      /* idempotent */
-    });
+    if (mailpitHealthy) {
+      await clearMailpit().catch(() => {
+        /* idempotent */
+      });
+    }
   });
 
   test('forgot-password returns 200 for unknown email (no enumeration)', async () => {
@@ -108,8 +119,10 @@ test.describe('Password Reset Flow @identity @auth @password-reset', () => {
   test('forgot-password sends an email when the user exists', async () => {
     const username = process.env.TEST_USER_USERNAME;
     const userEmail = process.env.TEST_USER_EMAIL;
-    if (!username || !userEmail) {
-      test.skip(true, 'TEST_USER_EMAIL not configured — skipping happy-path reset test');
+    if (!mailpitHealthy || !username || !userEmail) {
+      test.skip(true, 'Email round-trip needs a reachable Mailpit + TEST_USER_EMAIL. ' +
+        'Staging/prod send via Maddy (unreachable from a dev-PC run) and set no ' +
+        'TEST_USER_EMAIL — the pure-API contract tests above still run.');
       return;
     }
 
@@ -145,8 +158,10 @@ test.describe('Password Reset Flow @identity @auth @password-reset', () => {
     const username = process.env.TEST_USER_USERNAME;
     const userEmail = process.env.TEST_USER_EMAIL;
     const originalPassword = process.env.TEST_USER_PASSWORD;
-    if (!username || !userEmail || !originalPassword) {
-      test.skip(true, 'TEST_USER_EMAIL/PASSWORD not configured — skipping round-trip test');
+    if (!mailpitHealthy || !username || !userEmail || !originalPassword) {
+      test.skip(true, 'Email round-trip needs a reachable Mailpit + TEST_USER_EMAIL/PASSWORD. ' +
+        'Staging/prod send via Maddy (unreachable from a dev-PC run) and set no ' +
+        'TEST_USER_EMAIL — the pure-API contract tests above still run.');
       return;
     }
 
@@ -182,6 +197,7 @@ test.describe('Password Reset Flow @identity @auth @password-reset', () => {
       },
       {
         headers: { 'X-Realm': TEST_REALM },
+        httpsAgent: sharedHttpsAgent,
         timeout: 15000,
         validateStatus: () => true,
       },

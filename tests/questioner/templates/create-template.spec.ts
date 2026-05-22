@@ -35,7 +35,7 @@ test.describe.serial('Create Quiz Template @questioner @crud', () => {
     // KI-5: on staging/prod mint a questioner-realm token (skips SPA UI
     // login because the SPA is onlinemenu-realm-pinned). On local the
     // helper falls through to the legacy LoginPage flow.
-    await loginAsTenantAdminBrowser(page, adminUser, { productRealm: 'questioner' });
+    await loginAsTenantAdminBrowser(page, adminUser);
 
     // Initialize page objects
     templatesPage = new QuizTemplatesPage(page);

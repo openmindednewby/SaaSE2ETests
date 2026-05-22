@@ -9,6 +9,7 @@
 import { test, expect } from '@playwright/test';
 
 import { LokiClient } from '../../helpers/loki-client.js';
+import { lokiConfigured, LOKI_SKIP_REASON } from '../../helpers/feature-gates.js';
 
 const LOKI_URL = process.env.LOKI_URL ?? 'http://localhost:3100';
 
@@ -16,6 +17,9 @@ const LOKI_URL = process.env.LOKI_URL ?? 'http://localhost:3100';
 const EXPECTED_LABELS = ['ServiceName', 'Level'];
 
 test.describe('Loki Health @logging', () => {
+  // Observability stack is in-cluster only — skip on dev-PC staging/prod runs.
+  test.skip(!lokiConfigured(), LOKI_SKIP_REASON);
+
   let loki: LokiClient;
 
   test.beforeAll(async () => {
