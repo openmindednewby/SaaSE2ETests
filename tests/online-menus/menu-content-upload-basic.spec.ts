@@ -139,12 +139,8 @@ test.describe.serial('Menu Content Upload @online-menus @content-upload', () => 
   });
 
   // eslint-disable-next-line no-empty-pattern
-  test.skip('should upload an image to a menu item @known-bug-upload-1', async ({}, testInfo) => {
-    // Skipped — pre-existing Tier-3 known bug. See
-    // BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md
-    // The image-upload modal flow is broken on staging: after the file is
-    // chosen, `content-preview` never renders (30s timeout). Genuine product
-    // bug in the upload pipeline (ContentService/SeaweedFS) — re-enable when fixed.
+  test('should upload an image to a menu item @known-bug-upload-1', async ({}, testInfo) => {
+    // Re-enabled 2026-05-24 by task #40 (SeaweedFS volume cap bumped 8 → 64 on both clusters).
     test.skip(testInfo.project.name.includes('firefox'), 'Firefox file chooser handling is unreliable for image uploads');
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
@@ -185,9 +181,8 @@ test.describe.serial('Menu Content Upload @online-menus @content-upload', () => 
     await menusPage.expectMenuInList(testMenuName);
   });
 
-  test.skip('should persist uploaded image after reloading menu', async () => {
-    // Skipped — depends on @known-bug-upload-1 (image upload broken on staging).
-    // See online-menus-e2e-known-failures-2026-05-17.md (Tier 3).
+  test('should persist uploaded image after reloading menu', async () => {
+    // Re-enabled 2026-05-24 by task #40 (SeaweedFS volume cap bumped 8 → 64 on both clusters).
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
     // Navigate away and back to force a fresh load
@@ -243,9 +238,8 @@ test.describe.serial('Menu Content Upload @online-menus @content-upload', () => 
     }
   });
 
-  test.skip('should display image in preview modal without CORS errors', async () => {
-    // Skipped — depends on @known-bug-upload-1 (image upload broken on staging).
-    // See online-menus-e2e-known-failures-2026-05-17.md (Tier 3).
+  test('should display image in preview modal without CORS errors', async () => {
+    // Re-enabled 2026-05-24 by task #40 (SeaweedFS volume cap bumped 8 → 64 on both clusters).
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
     // Close the editor if open
@@ -287,9 +281,8 @@ test.describe.serial('Menu Content Upload @online-menus @content-upload', () => 
     await publicPage.expectPreviewModalNotVisible();
   });
 
-  test.skip('should delete image from menu item', async () => {
-    // Skipped — depends on @known-bug-upload-1 (image upload broken on staging).
-    // See online-menus-e2e-known-failures-2026-05-17.md (Tier 3).
+  test('should delete image from menu item', async () => {
+    // Re-enabled 2026-05-24 by task #40 (SeaweedFS volume cap bumped 8 → 64 on both clusters).
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
     // Deactivate menu first
@@ -346,9 +339,8 @@ test.describe.serial('Menu Content Upload @online-menus @content-upload', () => 
     await editorPage.saveMenuEditor();
   });
 
-  test.skip('should upload image to category', async () => {
-    // Skipped — @known-bug-upload-1 class (image upload broken on staging).
-    // See online-menus-e2e-known-failures-2026-05-17.md (Tier 3).
+  test('should upload image to category', async () => {
+    // Re-enabled 2026-05-24 by task #40 (SeaweedFS volume cap bumped 8 → 64 on both clusters).
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
     // Edit the menu

@@ -195,8 +195,8 @@ test.describe('Multiple Content Uploads @online-menus @content-upload', () => {
   });
 
   // eslint-disable-next-line no-empty-pattern
-  test.skip('should upload images to multiple menu items @known-bug-upload-2', async ({}, testInfo) => {
-    // Skipped 2026-05-17 — see BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md (Tier 3)
+  test('should upload images to multiple menu items @known-bug-upload-2', async ({}, testInfo) => {
+    // Re-enabled 2026-05-24 by task #40 (SeaweedFS volume cap bumped 8 → 64 on both clusters).
     test.skip(testInfo.project.name.includes('firefox'), 'Firefox file chooser handling is unreliable for image uploads');
     testMenuName = `Multiple Uploads Test ${Date.now()}`;
 

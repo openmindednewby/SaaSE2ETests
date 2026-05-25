@@ -81,8 +81,8 @@ test.describe('Create Menu with Category and Image @online-menus @content-upload
   });
 
   // eslint-disable-next-line no-empty-pattern
-  test.skip('create new menu with category and image persists correctly @known-bug-upload-3', async ({}, testInfo) => {
-    // Skipped 2026-05-17 — see BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md (Tier 3)
+  test('create new menu with category and image persists correctly @known-bug-upload-3', async ({}, testInfo) => {
+    // Re-enabled 2026-05-24 by task #40 (SeaweedFS volume cap bumped 8 → 64 on both clusters).
     test.skip(testInfo.project.name.includes('firefox'), 'Firefox file chooser handling is unreliable for image uploads');
     // This test verifies the bug fix for the two-step create process:
     // 1. Create menu (POST with name/description only)
