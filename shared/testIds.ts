@@ -34,11 +34,16 @@ export const TestIds = {
   HEADING_TEXT: 'heading-text',
   STATUS_LABEL: 'status-label',
 
-  // Login page
-  LOGIN_FORM: 'login-form',
-  USERNAME_INPUT: 'username-input',
-  PASSWORD_INPUT: 'password-input',
-  LOGIN_BUTTON: 'login-button',
+  // Login page — render-side IDs come from `@dloizides/auth-web`'s `<LoginForm>`
+  // (AuthTestIds.loginForm = 'auth-login-form' etc.), which katalogos-web,
+  // erevna-web and any future app share. The legacy hand-rolled forms used
+  // 'login-form' / 'username-input' / etc. — those are gone after Phase 5.
+  // Kefi-web's `/login` keeps its own `kefi-login-*` IDs because its password
+  // sub-form is hand-rolled to coexist with the OTP + PIN tabs.
+  LOGIN_FORM: 'auth-login-form',
+  USERNAME_INPUT: 'auth-login-username',
+  PASSWORD_INPUT: 'auth-login-password',
+  LOGIN_BUTTON: 'auth-login-submit',
   LOGIN_SIGN_UP_LINK: 'login-sign-up-link',
 
   // Register page
@@ -52,6 +57,23 @@ export const TestIds = {
   REGISTER_TENANT_NAME_INPUT: 'register-tenant-name-input',
   REGISTER_SUBMIT_BUTTON: 'register-submit-button',
   REGISTER_SIGN_IN_LINK: 'register-sign-in-link',
+
+  // Verify-email page (POST /bff/verify-email)
+  VERIFY_EMAIL_PAGE: 'verify-email-page',
+  VERIFY_EMAIL_LOADING: 'verify-email-loading',
+  VERIFY_EMAIL_SUCCESS: 'verify-email-success',
+  VERIFY_EMAIL_ERROR: 'verify-email-error',
+  VERIFY_EMAIL_SUCCESS_CONTINUE: 'verify-email-success-continue',
+  VERIFY_EMAIL_RESEND_CTA: 'verify-email-resend-cta',
+  VERIFY_EMAIL_RESEND_FORM: 'verify-email-resend-form',
+  VERIFY_EMAIL_RESEND_EMAIL: 'verify-email-resend-email',
+  VERIFY_EMAIL_RESEND_SUBMIT: 'verify-email-resend-submit',
+  VERIFY_EMAIL_RESEND_CONFIRMATION: 'verify-email-resend-confirmation',
+
+  // Verification-pending banner (authenticated layout)
+  VERIFICATION_PENDING_BANNER: 'verification-pending-banner',
+  VERIFICATION_PENDING_RESEND_BUTTON: 'verification-pending-resend-button',
+  VERIFICATION_PENDING_RESEND_CONFIRMATION: 'verification-pending-resend-confirmation',
 
   // Navigation
   NAV_MENU: 'nav-menu',
