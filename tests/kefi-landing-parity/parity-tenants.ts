@@ -88,11 +88,7 @@ export const TENANTS: KefiLandingTenant[] = [
     label: 'UBS',
     standaloneUrl: 'https://unitedbysalsa.dloizides.com/',
     kefiUrl: 'https://united-by-salsa.kefi.dloizides.com/',
-    knownGaps: {
-      // GAP: tablet-width nav height differs by ~37px — standalone's
-      // responsive breakpoint kicks the mobile menu in at a different
-      // width than kefi-landings'. TODO reconcile breakpoint table.
-      navHeightToleranceByViewport: { tablet: 40 },
-    },
+    // UBS is fully at-parity with the standalone — no known gaps.
+    knownGaps: {},
   },
 ];
