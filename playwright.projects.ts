@@ -154,5 +154,17 @@ export function buildProjects(): ProjectConfig {
     chunk('showcase-forms', 'showcase', ['native-forms', 'native-forms-fields', 'native-forms-validation', 'native-forms-animations'], KAT),
     chunk('showcase-visual', 'showcase', ['native-forms-combobox', 'native-forms-dark-theme', 'theme-preset-cards'], KAT),
     chunk('showcase-components', 'showcase', ['layout-full-width', 'native-components', 'products-api'], KAT),
+
+    // ---- Kefi landing parity (standalone vs kefi-managed) ----
+    // Standalone project: hits the public prod URLs for KUCY + UBS and the
+    // matching kefi-landings renders. No auth, no multi-tenant deps, no
+    // baseURL override — the specs use absolute URLs. Safe to run against
+    // local OR staging OR prod (always reads the live prod refs).
+    {
+      name: 'kefi-landing-parity',
+      workers: 1,
+      testMatch: /kefi-landing-parity\/.*\.spec\.ts/,
+      use: CHROME,
+    },
   ];
 }

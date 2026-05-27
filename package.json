@@ -55,6 +55,7 @@
     "test:showcase:forms": "cross-env SHELL=/bin/bash playwright test tests/showcase/native-forms.spec.ts tests/showcase/native-forms-fields.spec.ts tests/showcase/native-forms-validation.spec.ts tests/showcase/native-forms-animations.spec.ts",
     "test:showcase:visual": "cross-env SHELL=/bin/bash playwright test tests/showcase/native-forms-combobox.spec.ts tests/showcase/native-forms-dark-theme.spec.ts tests/showcase/theme-preset-cards.spec.ts",
     "test:showcase:components": "cross-env SHELL=/bin/bash playwright test tests/showcase/layout-full-width.spec.ts tests/showcase/native-components.spec.ts tests/showcase/products-api.spec.ts",
+    "test:kefi-landing-parity": "cross-env SHELL=/bin/bash playwright test tests/kefi-landing-parity --project=kefi-landing-parity",
     "test:theme": "cross-env SHELL=/bin/bash playwright test tests/theme",
     "test:theme:settings": "cross-env SHELL=/bin/bash playwright test tests/theme/theme-settings.spec.ts tests/theme/theme-persistence-auth.spec.ts tests/theme/theme-persistence-refresh.spec.ts",
     "test:theme:components": "cross-env SHELL=/bin/bash playwright test tests/theme/theme-components.spec.ts",
