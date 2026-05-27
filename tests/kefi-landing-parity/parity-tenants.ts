@@ -73,15 +73,12 @@ export const TENANTS: KefiLandingTenant[] = [
     knownGaps: {
       // GAP: register countdown vs closed-state layout branch. State-
       // dependent — kefi correctly evaluates "event date has passed" →
-      // closed. Recheck if the event date moves to the future.
+      // closed. Recheck if the event date moves to the future. Not a
+      // template gap; cannot be closed without operator action.
       sectionHeightDrift: ['register'],
       // GAP: book section is +60px on kefi (minor padding/hover diff).
-      // TODO close after the nav-component refactor.
+      // TODO investigate the .book section .pay-card layout deltas.
       sectionToleranceOverrides: { book: 0.10 },
-      // GAP: register CTA has an extra `filter` transition on kefi
-      // (Tailwind preset). TODO normalise the transition properties on
-      // the register button so kefi matches standalone exactly.
-      skipAnimationRoles: ['registerCta'],
     },
   },
   {
@@ -90,26 +87,21 @@ export const TENANTS: KefiLandingTenant[] = [
     standaloneUrl: 'https://unitedbysalsa.dloizides.com/',
     kefiUrl: 'https://united-by-salsa.kefi.dloizides.com/',
     knownGaps: {
-      // GAP: UBS standalone hides ambassadors via height:0 — kefi shows
-      // the section. TODO add `hideAmbassadors` flag to LandingBrandingDto
-      // and respect it in TenantSite.astro.
-      sectionHeightDrift: ['ambassadors', 'classes', 'teachers', 'prices', 'register'],
-      // GAP: standalone uses "UBS" abbreviation + omits Ambassadors nav.
-      // TODO add `brandAbbreviation` field to LandingBrandingDto + wire
-      // into Nav.astro.
-      navItemsDiffer: true,
-      pageHeightDrift: true,
+      // GAP: classes section is ~248px shorter on kefi — the seed has 10
+      // workshops (17:00-21:00) while the standalone has 11 (17:00-21:50).
+      // Mechanical content sync needed in
+      // kefi-landings/src/templates/template-1/data/united-by-salsa.ts.
+      sectionHeightDrift: ['classes'],
       sectionToleranceOverrides: {
         classes: 0.20,
-        ambassadors: 1.0,
       },
-      // GAP: register CTA transition properties drift (different Tailwind
-      // class set). TODO normalise across templates.
-      skipAnimationRoles: ['registerCta'],
       // GAP: tablet-width nav height differs by ~37px — standalone's
       // responsive breakpoint kicks the mobile menu in at a different
       // width than kefi-landings'. TODO reconcile breakpoint table.
       navHeightToleranceByViewport: { tablet: 40 },
+      // Total-page height drift acceptable while the classes-section
+      // content-sync follow-up is open.
+      pageHeightDrift: true,
     },
   },
 ];
