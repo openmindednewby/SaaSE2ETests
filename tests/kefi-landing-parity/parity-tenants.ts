@@ -71,14 +71,16 @@ export const TENANTS: KefiLandingTenant[] = [
     standaloneUrl: 'https://kizombaunioncy.dloizides.com/',
     kefiUrl: 'https://kizomba-union-cy.kefi.dloizides.com/',
     knownGaps: {
-      // GAP: register countdown vs closed-state layout branch. State-
-      // dependent — kefi correctly evaluates "event date has passed" →
-      // closed. Recheck if the event date moves to the future. Not a
-      // template gap; cannot be closed without operator action.
-      sectionHeightDrift: ['register'],
-      // GAP: book section is +60px on kefi (minor padding/hover diff).
-      // TODO investigate the .book section .pay-card layout deltas.
-      sectionToleranceOverrides: { book: 0.10 },
+      // GAPS (state-dependent layout branches — kefi correctly evaluates
+      // "event date has passed" → closed; standalone is still showing the
+      // open variant). Both are book/register section's open-state vs
+      // closed-state content with different heights. Not template gaps;
+      // cannot be closed without operator action (e.g. moving the
+      // deadline to a future date).
+      //   • register: open=countdown timer (1526px) vs closed=text (663px)
+      //   • book: open=pay-reference block (770px wrap) vs closed=
+      //     pay-closed block (830px wrap)
+      sectionHeightDrift: ['register', 'book'],
     },
   },
   {
@@ -87,21 +89,10 @@ export const TENANTS: KefiLandingTenant[] = [
     standaloneUrl: 'https://unitedbysalsa.dloizides.com/',
     kefiUrl: 'https://united-by-salsa.kefi.dloizides.com/',
     knownGaps: {
-      // GAP: classes section is ~248px shorter on kefi — the seed has 10
-      // workshops (17:00-21:00) while the standalone has 11 (17:00-21:50).
-      // Mechanical content sync needed in
-      // kefi-landings/src/templates/template-1/data/united-by-salsa.ts.
-      sectionHeightDrift: ['classes'],
-      sectionToleranceOverrides: {
-        classes: 0.20,
-      },
       // GAP: tablet-width nav height differs by ~37px — standalone's
       // responsive breakpoint kicks the mobile menu in at a different
       // width than kefi-landings'. TODO reconcile breakpoint table.
       navHeightToleranceByViewport: { tablet: 40 },
-      // Total-page height drift acceptable while the classes-section
-      // content-sync follow-up is open.
-      pageHeightDrift: true,
     },
   },
 ];
