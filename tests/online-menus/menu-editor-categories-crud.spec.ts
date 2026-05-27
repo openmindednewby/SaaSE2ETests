@@ -125,8 +125,9 @@ test.describe.serial('Menu Editor - Full CRUD for Categories @online-menus @cate
     await menusPage.expectMenuInList(testMenuName);
   });
 
-  test.skip('should edit existing category name @known-bug-edit-2', async () => {
-    // Skipped 2026-05-17 — see BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md (Tier 4)
+  test('should edit existing category name', async () => {
+    // Re-enabled 2026-05-27 (was @known-bug-edit-2). The likely root cause was
+    // Issue #2 (stale editor state on reopen after save), fixed by task #41.
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
     await menusPage.editMenu(testMenuName);
@@ -226,9 +227,11 @@ test.describe.serial('Menu Editor - Full CRUD for Categories @online-menus @cate
 
     await editorPage.expandCategory(0);
     const firstCategoryName = await editorPage.getCategoryNameValue(0);
-    // The '@known-bug-edit-2' rename test (Starters -> "Appetizers & Starters")
-    // is skipped, so category 0 keeps the name set by the create test above.
-    expect(firstCategoryName, 'First category should be Starters').toBe('Starters');
+    // The 'should edit existing category name' test (was @known-bug-edit-2,
+    // re-enabled 2026-05-27) ran earlier in this describe and persisted the
+    // rename Starters → "Appetizers & Starters". This assertion must reflect
+    // the post-rename state.
+    expect(firstCategoryName, 'First category should be the renamed value').toBe('Appetizers & Starters');
 
     const firstCategoryItemCount = await editorPage.getItemCount(0);
     expect(firstCategoryItemCount, 'First category should have 1 item').toBe(1);

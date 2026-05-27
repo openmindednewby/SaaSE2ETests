@@ -203,8 +203,11 @@ test.describe.serial('Menu Duplicate Names @online-menus @duplicate-names', () =
     await menusPage.expectMenuInList(testMenuName);
   });
 
-  test.skip('should edit one duplicate without affecting the other @known-bug-edit-1', async () => {
-    // Skipped 2026-05-17 — see BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md (Tier 4)
+  test('should edit one duplicate without affecting the other', async () => {
+    // Re-enabled 2026-05-27 (was @known-bug-edit-1). The likely root cause was
+    // Issue #2 (stale editor state on reopen after save), which was fixed by
+    // task #41 — editor now derives editingItem from the latest list cache
+    // and skips the snapshot reset when canUndo is true.
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
     // Edit the menu

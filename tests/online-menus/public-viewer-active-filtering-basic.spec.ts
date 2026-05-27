@@ -3,6 +3,7 @@ import { getProjectUsers } from '../../fixtures/test-data.js';
 import { LoginPage } from '../../pages/LoginPage.js';
 import { OnlineMenusPage } from '../../pages/OnlineMenusPage.js';
 import { TestIds, testIdSelector, testIdStartsWithSelector } from '../../shared/testIds.js';
+import { paymentsConfigured, PAYMENTS_SKIP_REASON } from '../../helpers/feature-gates.js';
 
 /**
  * E2E Tests for Public Menu Viewer Active Filtering - Basic Visibility
@@ -10,12 +11,12 @@ import { TestIds, testIdSelector, testIdStartsWithSelector } from '../../shared/
  * Tests that the public menu list only shows active menus and that
  * deactivated menus are immediately hidden from public users.
  *
- * Whole describe skipped 2026-05-20 — the lead test that creates the
- * test menus is a tracked known-bug (@known-bug-multicreate-3), so every
- * dependent test cannot pass. See
- * BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md
+ * Re-enabled 2026-05-27. The original failure (was @known-bug-multicreate-3)
+ * was that the lead test creates TWO menus (active + inactive) while the
+ * free plan caps tenants at 1 menu. Now gated on paymentsConfigured() in
+ * beforeAll the same way the other multi-menu suites are.
  */
-test.describe.skip('Public Viewer Active Filtering - Basic @online-menus @public-viewer @critical', () => {
+test.describe.serial('Public Viewer Active Filtering - Basic @online-menus @public-viewer @critical', () => {
   let context: BrowserContext;
   let page: Page;
   let menusPage: OnlineMenusPage;
@@ -24,6 +25,13 @@ test.describe.skip('Public Viewer Active Filtering - Basic @online-menus @public
   let publicPage: Page;
 
   test.beforeAll(async ({ browser }, testInfo) => {
+    // Gate the entire describe on payments being configured. This suite needs
+    // two menus to exist concurrently (active + inactive) and the free plan
+    // caps tenants at 1 menu. test.skip() inside beforeAll marks every test in
+    // the describe as skipped, which is the cleanest way to communicate the
+    // intent without leaving the suite reporting failures.
+    test.skip(!paymentsConfigured(), PAYMENTS_SKIP_REASON);
+
     test.setTimeout(120000);
     const { admin: adminUser } = getProjectUsers(testInfo.project.name);
 
@@ -105,8 +113,9 @@ test.describe.skip('Public Viewer Active Filtering - Basic @online-menus @public
     await context?.close();
   });
 
-  test.skip('should create test menus with different activation states @known-bug-multicreate-3', async () => {
-    // Skipped 2026-05-17 — see BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md (Tier 2)
+  test('should create test menus with different activation states', async () => {
+    // Re-enabled 2026-05-27 (was @known-bug-multicreate-3). Whole describe is
+    // now gated on paymentsConfigured() in beforeAll for the free-tier cap.
     activeMenuName = `Active Public Menu ${Date.now()}`;
     inactiveMenuName = `Inactive Public Menu ${Date.now() + 1}`;
 

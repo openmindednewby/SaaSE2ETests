@@ -96,8 +96,15 @@ test.describe.serial('Menu CRUD with Activation State @online-menus @crud', () =
     await menusPage.expectMenuActive(testMenuName, true);
   });
 
-  test.skip('should be able to delete an active menu @known-bug-multicreate-1', async () => {
-    // Skipped 2026-05-17 — see BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md (Tier 2)
+  test('should be able to delete an active menu', async () => {
+    // Re-enabled 2026-05-27. The original failure mode was the same as the
+    // sibling 'should be able to delete an inactive menu' / 'should list all
+    // menus' tests: this test creates a SECOND menu (deleteTestMenuName) while
+    // testMenuName already exists, but the free plan caps tenants at 1 menu.
+    // Gating on paymentsConfigured() the same way they do (was previously
+    // tagged @known-bug-multicreate-1).
+    test.skip(!paymentsConfigured(), PAYMENTS_SKIP_REASON);
+
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
     // Ensure menu is active
