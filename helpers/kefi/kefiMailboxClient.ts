@@ -85,8 +85,16 @@ export class KefiMailbox {
    * Wait for the first message whose To-header contains the given address
    * substring. The match is `includes`, not exact-equals, because IMAP
    * envelope `to` can be `"Foo" <foo@bar>` etc.
+   *
+   * Optional `subjectIncludes` filters further by Subject substring — set
+   * this when the same canary mailbox could receive multiple email kinds
+   * (e.g. Phase D needs the welcome email but the verify email might still
+   * be in the inbox waiting to be expunged).
    */
-  async waitForMessageTo(to: string): Promise<CapturedEmail> {
+  async waitForMessageTo(
+    to: string,
+    options?: { subjectIncludes?: string },
+  ): Promise<CapturedEmail> {
     const client = new ImapFlow({
       host: this.config.host,
       port: this.config.port,
@@ -101,12 +109,15 @@ export class KefiMailbox {
 
     try {
       while (Date.now() < deadline) {
-        const found = await this.findMatchingMessage(client, to);
+        const found = await this.findMatchingMessage(client, to, options?.subjectIncludes);
         if (found) return found;
         await delay(this.options.pollIntervalMs);
       }
+      const subjectClause = options?.subjectIncludes
+        ? ` with subject containing "${options.subjectIncludes}"`
+        : '';
       throw new Error(
-        `[kefiMailbox] Timed out after ${this.options.timeoutMs}ms waiting for message to ${to}`,
+        `[kefiMailbox] Timed out after ${String(this.options.timeoutMs)}ms waiting for message to ${to}${subjectClause}`,
       );
     } finally {
       lock.release();
@@ -138,16 +149,20 @@ export class KefiMailbox {
     }
   }
 
-  private async findMatchingMessage(client: ImapFlow, to: string): Promise<CapturedEmail | null> {
+  private async findMatchingMessage(
+    client: ImapFlow,
+    to: string,
+    subjectIncludes?: string,
+  ): Promise<CapturedEmail | null> {
     // Fetch unseen messages with full source — small inbox + a single
     // canary in flight means this is cheap. `seen: false` to avoid
     // re-processing messages a previous run already touched.
     for await (const msg of client.fetch({ seen: false }, { source: true, envelope: true })) {
       const captured = extractCapturedEmail(msg);
       if (!captured) continue;
-      if (captured.to.includes(to)) {
-        return captured;
-      }
+      if (!captured.to.includes(to)) continue;
+      if (subjectIncludes && !captured.subject.includes(subjectIncludes)) continue;
+      return captured;
     }
     return null;
   }

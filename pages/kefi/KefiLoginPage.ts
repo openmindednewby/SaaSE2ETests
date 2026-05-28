@@ -72,6 +72,20 @@ export class KefiLoginPage {
     // GET /admin/onboarding requires the tenant-owner role, which the
     // signup-created user holds in KC.
     const { webUrl } = getKefiUrls();
+
+    // The SPA fires `claimVerification()` fire-and-forget from login.tsx's
+    // handleSignedIn — it flips Tenant.Status from PendingVerification to
+    // Active when the JWT carries email_verified=true. The spec needs this
+    // to land synchronously: the welcome-email worker only sweeps tenants
+    // with Status=Active, and Phase D fires the sweep right after the
+    // wizard finishes — if the fire-and-forget hasn't completed by then,
+    // the canary isn't eligible and the welcome email never goes out.
+    // Explicit await closes the race. The session cookie from the login
+    // POST authenticates this call.
+    await this.page.request
+      .post(`${webUrl}/bff/api/kefi/api/v1/me/claim-verification`, { data: {} })
+      .catch(() => undefined);
+
     await this.page.goto(`${webUrl}/organizer/onboarding`);
   }
 }

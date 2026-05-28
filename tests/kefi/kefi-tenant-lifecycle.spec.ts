@@ -1,19 +1,22 @@
 /**
- * Kefi tenant-lifecycle E2E (Phases B + C).
+ * Kefi tenant-lifecycle E2E (Phases B + C + D).
  *
  * End-to-end self-serve nightly canary:
  *   1. Marketing /signup form creates a verified tenant via IMAP loopback.
  *   2. Tenant owner logs into kefi-web, completes the 7-step onboarding wizard
  *      (canary stub data; KUCY template; Pro plan).
- *   3. API-side, the canary's saved landing-config is overwritten with a
+ *   3. Welcome-email sweep is force-triggered, the bot mailbox is polled
+ *      for "Welcome to Kefi" at the canary address — proves end-to-end
+ *      transactional SMTP from Maddy via the welcome worker.
+ *   4. API-side, the canary's saved landing-config is overwritten with a
  *      KUCY-shaped fixture (template='kucy' + full LandingConfigDto shape).
- *   4. Tenant owner publishes — the publish job rebuilds kefi-landings and
+ *   5. Tenant owner publishes — the publish job rebuilds kefi-landings and
  *      rolls out the new image.
- *   5. Subdomain probe asserts KUCY's hand-authored landing
+ *   6. Subdomain probe asserts KUCY's hand-authored landing
  *      (https://kizomba-union-cy.kefi.dloizides.com/) still renders every
  *      expected template marker after the rebuild. Catches regressions in
  *      shared template-1 components and the API overlay pipeline.
- *   6. Phase-A canary-cleanup sweep removes the tenant + KC user + per-tenant
+ *   7. Phase-A canary-cleanup sweep removes the tenant + KC user + per-tenant
  *      Ingress + Certificate + TLS Secret, leaving zero residue.
  *
  * Runs on staging + prod via the existing E2E_TARGET switch. Local is skipped
@@ -88,9 +91,19 @@ test.describe('Kefi tenant lifecycle — full self-serve canary', () => {
       const verifyUrl = extractVerifyUrl(captured);
       expect(verifyUrl, `verify URL extracted from ${captured.subject}`).not.toBeNull();
 
-      // ── 3. Verify link → tenant Active ───────────────────────────────
-      const verifyResponse = await page.request.get(verifyUrl!);
-      expect(verifyResponse.ok(), `verify GET ${verifyUrl}`).toBeTruthy();
+      // ── 3. Verify email → KC emailVerified=true ──────────────────────
+      // The verify URL is the kefi-web SPA route (/verify-email?token=...).
+      // GETting it just returns the HTML shell — the actual verify is a
+      // POST /bff/verify-email that the page's React code fires on mount.
+      // Doing the POST from the spec directly is blocked by the BFF's
+      // same-origin check (the spec's page is still on the marketing
+      // host). Easiest path: navigate the browser to the verify URL and
+      // wait for the SPA's success state — the React code does the
+      // properly-originated POST itself. Phase D caught this; Phase B
+      // used to GET-only and never noticed because nothing downstream
+      // depended on tenant.Status=Active.
+      await page.goto(verifyUrl!);
+      await expect(page.getByTestId('verify-email-success')).toBeVisible({ timeout: 30_000 });
 
       // ── 4. UI: log in as the canary owner; OnboardingGate redirects to /onboarding ──
       const login = new KefiLoginPage(page);
@@ -109,7 +122,34 @@ test.describe('Kefi tenant lifecycle — full self-serve canary', () => {
         eventDateIso,
       });
 
-      // ── 6. API: overwrite landing-config with KUCY-shaped fixture ────
+      // ── 6. API: trigger welcome-email sweep + IMAP-poll the inbox ────
+      // Phase D — the wizard's `complete` POST flips
+      // Tenant.OnboardingCompleted=true, which makes the tenant eligible
+      // for the welcome-email worker. Force-running the sweep skips the
+      // worker's normal 5-min cadence so the spec stays under 3 min total.
+      // The IMAP assertion is the binding end-to-end SMTP proof; the worker
+      // stamps `Tenant.WelcomeEmailSentAt` only AFTER the dispatcher
+      // returns true, so a delivered welcome email implies the column was
+      // set (no separate DB endpoint exposes the column today; plan-doc
+      // decision #24 accepts IMAP arrival as the assertion when no
+      // tenant-state read endpoint exists).
+      const sweepResult = await adminClient.triggerWelcomeSweep();
+      // EligibleCount may already be > 0 from other test runs that landed
+      // between the worker's last tick and our trigger; what matters is the
+      // welcome lands at our specific canary address within the budget.
+      expect(sweepResult.eligibleCount, 'welcome sweep eligibleCount').toBeGreaterThanOrEqual(0);
+
+      const welcomeMailbox = new KefiMailbox(loadKefiMailboxConfig(), {
+        timeoutMs: 60_000,
+        pollIntervalMs: 2_000,
+      });
+      const welcome = await welcomeMailbox.waitForMessageTo(ctx.email, {
+        subjectIncludes: 'Welcome to Kefi',
+      });
+      expect(welcome.subject, 'welcome email subject').toContain('Welcome to Kefi');
+      expect(welcome.to, 'welcome email To').toContain(ctx.email);
+
+      // ── 7. API: overwrite landing-config with KUCY-shaped fixture ────
       const kucyShaped = buildKucyShapedConfig(ctx.slugPrefix);
       await adminClient.putLandingConfig({
         ownerEmail: ctx.email,
@@ -117,7 +157,7 @@ test.describe('Kefi tenant lifecycle — full self-serve canary', () => {
         dto: kucyShaped,
       });
 
-      // ── 7. API: publish + poll until Succeeded ───────────────────────
+      // ── 8. API: publish + poll until Succeeded ───────────────────────
       const publishResult = await adminClient.publishLanding({
         ownerEmail: ctx.email,
         ownerPassword: ctx.password,
@@ -132,7 +172,7 @@ test.describe('Kefi tenant lifecycle — full self-serve canary', () => {
       });
       expect(terminal.status, `publish job ${publishResult.jobName} terminal`).toBe('Succeeded');
 
-      // ── 8. Probe: KUCY landing still renders every expected marker ──
+      // ── 9. Probe: KUCY landing still renders every expected marker ──
       // The canary publish rebuilt the kefi-landings image. KUCY is the
       // hand-authored proxy for "self-serve rendering would have worked
       // if Astro getStaticPaths supported dynamic tenants" — see
@@ -140,7 +180,7 @@ test.describe('Kefi tenant lifecycle — full self-serve canary', () => {
       const probe = await probeKucyLandingRender();
       expect(probe.missingMarkers, `KUCY markers after canary publish`).toEqual([]);
 
-      // ── 9. Sweep — exactly one of each resource class should be deleted ──
+      // ── 10. Sweep — exactly one of each resource class should be deleted ──
       const cleanup = await adminClient.canaryCleanup(ctx.canaryId);
       expect(cleanup.tenantsDeleted).toBe(1);
       expect(cleanup.usersDeleted).toBe(1);
@@ -150,8 +190,10 @@ test.describe('Kefi tenant lifecycle — full self-serve canary', () => {
       expect(cleanup.certificatesDeleted).toBeGreaterThanOrEqual(0);
       expect(cleanup.secretsDeleted).toBeGreaterThanOrEqual(0);
 
-      // ── 10. Mailbox hygiene — expunge the verify email ───────────────
-      await mailbox.expungeMessages([captured.uid]).catch(() => undefined);
+      // ── 11. Mailbox hygiene — expunge both captured messages ────────
+      await mailbox
+        .expungeMessages([captured.uid, welcome.uid])
+        .catch(() => undefined);
     } finally {
       // Always sweep, even if any assertion threw. Idempotent — re-sweep returns 0s.
       await cleanupKefiCanary(ctx.canaryId, { adminClient });
