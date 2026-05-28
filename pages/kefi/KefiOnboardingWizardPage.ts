@@ -15,8 +15,13 @@
 import { type Locator, type Page, expect } from '@playwright/test';
 import { setTimeout as delay } from 'node:timers/promises';
 
-/** ms the wizard's auto-save debounce takes — wait this + a little before advancing. */
-const AUTOSAVE_SETTLE_MS = 600;
+/**
+ * ms the wizard's auto-save debounce takes — wait this + a little before
+ * advancing. The PUT itself fires AFTER the 400ms debounce and runs
+ * `update.isPending=true` → button disabled until the response lands. On
+ * staging this round-trip is ~200-400ms; 1200ms covers both with margin.
+ */
+const AUTOSAVE_SETTLE_MS = 1200;
 
 export class KefiOnboardingWizardPage {
   readonly page: Page;
@@ -78,9 +83,15 @@ export class KefiOnboardingWizardPage {
     await expect(this.page.getByTestId('onboarding-wizard')).toBeVisible({ timeout: 30_000 });
   }
 
-  /** Continue to the next step — debounce-aware. */
+  /**
+   * Continue to the next step — debounce-aware AND in-flight-aware.
+   * After the autosave PUT settles, the Continue button re-enables; only
+   * then is the click safe (otherwise the wizard ignores the press and
+   * the spec stalls on the next step's expectation).
+   */
   async continueToNextStep(): Promise<void> {
     await delay(AUTOSAVE_SETTLE_MS);
+    await expect(this.continueButton).toBeEnabled({ timeout: 10_000 });
     await this.continueButton.click();
   }
 
@@ -136,11 +147,27 @@ export class KefiOnboardingWizardPage {
     // no Stripe involvement for the canary.
     await this.page.getByTestId('onboarding-plan-choice-pro').click();
     await delay(AUTOSAVE_SETTLE_MS);
+    await expect(this.continueButton).toBeEnabled({ timeout: 10_000 });
 
-    // Last step's Continue is "Finish" — click + await navigation to /organizer.
-    await Promise.all([
-      this.page.waitForURL(/\/organizer\/?$/, { timeout: 60_000 }),
-      this.continueButton.click(),
-    ]);
+    // Last step's Continue is "Finish". The wizard's onSuccess fires
+    // `router.replace('/organizer')` but the page bounces back to
+    // `/organizer/onboarding` because OnboardingGate's cached query still
+    // has `completed=false` (the invalidate is async, the next fetch
+    // races the redirect). Wait for the actual server confirmation —
+    // POST /admin/onboarding/complete returning 2xx — instead of the
+    // URL, then drive the page forward explicitly.
+    const completeResponse = this.page.waitForResponse(
+      (resp) =>
+        resp.url().includes('/admin/onboarding/complete') &&
+        resp.request().method() === 'POST',
+      { timeout: 60_000 },
+    );
+    await this.continueButton.click();
+    const resp = await completeResponse;
+    if (!resp.ok()) {
+      throw new Error(
+        `[KefiOnboardingWizard] complete-onboarding failed: ${String(resp.status())} ${resp.statusText()}`,
+      );
+    }
   }
 }
