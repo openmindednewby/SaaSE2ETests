@@ -17,6 +17,16 @@ interface KefiUrls {
   kcUrl: string;
   kcRealm: string;
   bffClientId: string;
+  /** kefi-web SPA host (Phase C — /(auth)/login + organizer wizard). */
+  webUrl: string;
+  /**
+   * KUCY hand-authored landing URL — the Phase C subdomain probe target. The
+   * canary's publish job rebuilds the whole kefi-landings image; KUCY is the
+   * only fully hand-authored, dynamically-overlaid tenant that proves the
+   * rebuild succeeded end-to-end (canary slugs aren't enumerated by Astro's
+   * getStaticPaths, so they never get a rendered page in the dist).
+   */
+  kucyLandingUrl: string;
 }
 
 function requireEnv(name: string): string {
@@ -36,6 +46,8 @@ export function getKefiUrls(): KefiUrls {
     kcUrl: requireEnv('KEFI_KC_URL'),
     kcRealm: requireEnv('KEFI_KC_REALM'),
     bffClientId: requireEnv('KEFI_BFF_CLIENT_ID'),
+    webUrl: requireEnv('KEFI_WEB_URL'),
+    kucyLandingUrl: requireEnv('KEFI_KUCY_LANDING_URL'),
   };
 }
 

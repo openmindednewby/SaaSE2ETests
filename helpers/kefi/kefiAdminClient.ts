@@ -1,64 +1,49 @@
 /**
- * Server-side admin helper for the Phase B Kefi tenant-lifecycle E2E.
+ * Server-side admin helper for the Kefi tenant-lifecycle E2E.
  *
- * Mints a platform-admin bearer via ROPC against the kefi realm
- * (`bff-kefi-client` confidential + direct-grant + `kefi-platformadmin`
- * test user) and exposes thin wrappers around the two Phase-A admin
- * endpoints:
- *   - POST /api/v1/admin/lifecycle/trigger-welcome-sweep
- *   - DELETE /api/v1/internal/canary-cleanup?canaryId=...
+ * Mints bearers via ROPC against the kefi realm
+ * (`bff-kefi-client` confidential + direct-grant) and exposes thin wrappers
+ * around the admin endpoints the spec needs:
+ *   - POST   /api/v1/admin/lifecycle/trigger-welcome-sweep        (platform-admin)
+ *   - DELETE /api/v1/internal/canary-cleanup?canaryId=...         (platform-admin)
+ *   - PUT    /api/v1/admin/landing-config                         (tenant-owner)
+ *   - POST   /api/v1/admin/landing-config/publish                 (tenant-owner)
+ *   - GET    /api/v1/admin/landing-config/publish/{jobName}       (tenant-owner)
  *
  * Why ROPC over PKCE: this helper runs server-side from a Playwright spec
  * (no browser, no consent screen). `bff-kefi-client` has
  * `directAccessGrantsEnabled=true`; `kefi-web` (public) does not. Mirrors
  * the existing `helpers/auth-helper.ts` ROPC pattern but against the kefi
- * realm + the platform-admin role instead of the OnlineMenu realm.
+ * realm.
+ *
+ * Two separate bearer caches: one for the platform-admin user (Phase A's
+ * sweep/cleanup endpoints), one keyed by the canary-tenant-owner's email
+ * (Phase C's landing-config + publish endpoints). They never collide
+ * because the tenant-owner cache is freshly created per-spec; the
+ * platform-admin cache lives for the whole client instance.
  */
 
 import axios, { type AxiosInstance } from 'axios';
+import { setTimeout as delay } from 'node:timers/promises';
 import { sharedHttpsAgent } from '../http-agent.js';
 import { getKefiUrls } from './kefiUrls.js';
+import type { SavedLandingDto } from './kefiKucyShapedConfig.js';
+import {
+  type AdminClientOptions,
+  type CanaryCleanupResult,
+  type PublishLandingResult,
+  type RawTokenResponse,
+  type WelcomeSweepResult,
+  PUBLISH_TERMINAL_STATUSES,
+  requireSecret,
+} from './kefiAdminClient.types.js';
 
-interface AdminClientOptions {
-  /** Username of the kefi-platform-admin user. Reads KEFI_PLATFORM_ADMIN_USERNAME by default. */
-  username?: string;
-  /** Password for the user. Reads KEFI_PLATFORM_ADMIN_PASSWORD by default. */
-  password?: string;
-  /** bff-kefi-client secret. Reads KEFI_BFF_CLIENT_SECRET by default. */
-  clientSecret?: string;
-}
-
-export interface WelcomeSweepResult {
-  eligibleCount: number;
-  sentCount: number;
-  skippedCount: number;
-}
-
-export interface CanaryCleanupResult {
-  canaryId: string;
-  tenantsDeleted: number;
-  usersDeleted: number;
-  ingressesDeleted: number;
-  certificatesDeleted: number;
-  secretsDeleted: number;
-}
-
-interface RawTokenResponse {
-  access_token?: string;
-  error?: string;
-  error_description?: string;
-}
-
-function requireSecret(name: string, override: string | undefined): string {
-  if (override && override.length > 0) return override;
-  const value = process.env[name];
-  if (!value || value.trim().length === 0) {
-    throw new Error(
-      `[kefiAdminClient] Required env var ${name} is unset. Add it to .env.<target>.secrets.`,
-    );
-  }
-  return value;
-}
+// Re-export so callers that imported from kefiAdminClient continue to work.
+export type {
+  CanaryCleanupResult,
+  PublishLandingResult,
+  WelcomeSweepResult,
+} from './kefiAdminClient.types.js';
 
 /**
  * Mint a fresh kefi-platform-admin bearer. Cached for the lifetime of one
@@ -67,6 +52,8 @@ function requireSecret(name: string, override: string | undefined): string {
  */
 export class KefiAdminClient {
   private token: string | null = null;
+  /** Cache of tenant-owner ROPC tokens, keyed by `{username}::{clientSecret}`. */
+  private readonly tenantOwnerTokens = new Map<string, string>();
   private readonly http: AxiosInstance;
   private readonly urls = getKefiUrls();
   private readonly options: AdminClientOptions;
@@ -143,5 +130,144 @@ export class KefiAdminClient {
       );
     }
     return resp.data;
+  }
+
+  /**
+   * Mint a tenant-owner bearer for the given canary signup credentials.
+   * Cached per-spec so a subsequent putLandingConfig + publish reuse the
+   * same token (KC default access-token lifetime is 5 min; spec is faster).
+   */
+  async getTenantOwnerBearer(input: {
+    email: string;
+    password: string;
+  }): Promise<string> {
+    const clientSecret = requireSecret('KEFI_BFF_CLIENT_SECRET', this.options.clientSecret);
+    const cacheKey = `${input.email}::${clientSecret.slice(0, 8)}`;
+    const cached = this.tenantOwnerTokens.get(cacheKey);
+    if (cached) return cached;
+
+    const tokenUrl = `${this.urls.kcUrl}/realms/${this.urls.kcRealm}/protocol/openid-connect/token`;
+    const body = new URLSearchParams({
+      grant_type: 'password',
+      client_id: this.urls.bffClientId,
+      client_secret: clientSecret,
+      username: input.email,
+      password: input.password,
+      scope: 'openid',
+    });
+
+    const resp = await axios.post<RawTokenResponse>(tokenUrl, body.toString(), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      httpsAgent: sharedHttpsAgent,
+      timeout: 30000,
+      validateStatus: () => true,
+    });
+
+    if (resp.status >= 200 && resp.status < 300 && resp.data.access_token) {
+      this.tenantOwnerTokens.set(cacheKey, resp.data.access_token);
+      return resp.data.access_token;
+    }
+    throw new Error(
+      `[kefiAdminClient] tenant-owner ROPC mint failed for ${input.email} (${resp.status}): ${resp.data.error ?? ''} ${resp.data.error_description ?? ''}`,
+    );
+  }
+
+  /** PUT /admin/landing-config — overwrites the calling tenant's saved config. */
+  async putLandingConfig(input: {
+    ownerEmail: string;
+    ownerPassword: string;
+    dto: SavedLandingDto;
+  }): Promise<void> {
+    const bearer = await this.getTenantOwnerBearer({
+      email: input.ownerEmail,
+      password: input.ownerPassword,
+    });
+    const resp = await this.http.put('/api/v1/admin/landing-config', input.dto, {
+      headers: { Authorization: `Bearer ${bearer}` },
+    });
+    if (resp.status !== 200) {
+      throw new Error(
+        `[kefiAdminClient] put landing-config expected 200, got ${resp.status}: ${JSON.stringify(resp.data)}`,
+      );
+    }
+  }
+
+  /**
+   * POST /admin/landing-config/publish — enqueues the publish K8s Job. The
+   * Pro+ plan gate is enforced inside the handler; the canary tenant picks
+   * `pro` in the wizard so the gate passes without Stripe involvement.
+   */
+  async publishLanding(input: {
+    ownerEmail: string;
+    ownerPassword: string;
+  }): Promise<PublishLandingResult> {
+    const bearer = await this.getTenantOwnerBearer({
+      email: input.ownerEmail,
+      password: input.ownerPassword,
+    });
+    const resp = await this.http.post<PublishLandingResult>(
+      '/api/v1/admin/landing-config/publish',
+      undefined,
+      { headers: { Authorization: `Bearer ${bearer}` } },
+    );
+    if (resp.status !== 202) {
+      throw new Error(
+        `[kefiAdminClient] publish expected 202, got ${resp.status}: ${JSON.stringify(resp.data)}`,
+      );
+    }
+    return resp.data;
+  }
+
+  /**
+   * Poll GET /admin/landing-config/publish/{jobName} until terminal
+   * (`Succeeded` or `Failed`) or the budget expires. Throws on `Failed` or
+   * on timeout — the caller can wrap in a `try` if a non-terminal job is OK.
+   *
+   * Budget defaults to 240s — kaniko build + kefi-landings rollout takes
+   * 60-180s in practice on prod; staging is slower.
+   */
+  async pollPublishStatus(input: {
+    ownerEmail: string;
+    ownerPassword: string;
+    jobName: string;
+    timeoutMs?: number;
+    pollIntervalMs?: number;
+  }): Promise<PublishLandingResult> {
+    const timeoutMs = input.timeoutMs ?? 240_000;
+    const pollIntervalMs = input.pollIntervalMs ?? 5_000;
+    const bearer = await this.getTenantOwnerBearer({
+      email: input.ownerEmail,
+      password: input.ownerPassword,
+    });
+    const deadline = Date.now() + timeoutMs;
+    let lastStatus: PublishLandingResult | null = null;
+
+    while (Date.now() < deadline) {
+      const resp = await this.http.get<PublishLandingResult>(
+        `/api/v1/admin/landing-config/publish/${encodeURIComponent(input.jobName)}`,
+        { headers: { Authorization: `Bearer ${bearer}` } },
+      );
+      if (resp.status === 200) {
+        lastStatus = resp.data;
+        if (PUBLISH_TERMINAL_STATUSES.has(lastStatus.status)) {
+          if (lastStatus.status === 'Failed') {
+            throw new Error(
+              `[kefiAdminClient] publish job ${input.jobName} terminal Failed: ${lastStatus.message}`,
+            );
+          }
+          return lastStatus;
+        }
+      } else if (resp.status === 404) {
+        // The Job hasn't been visible to the K8s informer yet — keep polling.
+      } else {
+        throw new Error(
+          `[kefiAdminClient] publish-status expected 200, got ${resp.status}: ${JSON.stringify(resp.data)}`,
+        );
+      }
+      await delay(pollIntervalMs);
+    }
+    throw new Error(
+      `[kefiAdminClient] publish job ${input.jobName} did not reach terminal in ${String(timeoutMs)}ms (last status: ${lastStatus?.status ?? 'unknown'})`,
+    );
   }
 }

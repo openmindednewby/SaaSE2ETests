@@ -67,6 +67,12 @@ const SAAS_STAGING_HOSTNAMES = [
   // ingress's KUCY-era hostname. Same Chromium-resolver footnote as above.
   'staging.kefi.dloizides.com',
   'staging.v2-api.kizombaunioncy.dloizides.com',
+  // Phase C — the kefi-web SPA hosts /login + the wizard; the KUCY landing
+  // is the post-publish probe target. Both are in the kefi-landings nginx
+  // server_name list (hand-authored slug for KUCY, default_server for
+  // kefi-web). Same Chromium-resolver footnote as above.
+  'staging.v2.kizombaunioncy.dloizides.com',
+  'staging.kizomba-union-cy.kefi.dloizides.com',
 ] as const;
 
 const PATCHED_SENTINEL = Symbol.for('e2e.host-override.patched');

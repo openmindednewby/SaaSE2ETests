@@ -36,11 +36,15 @@ import {
  * 375 catch responsive-layout drift; 1920 catches large-screen
  * overflow.
  */
-const VIEWPORTS: ReadonlyArray<{ name: string; width: number; height: number }> = [
+const VIEWPORTS = [
   { name: 'mobile', width: 375, height: 800 },
   { name: 'tablet', width: 768, height: 900 },
   { name: 'desktop', width: 1280, height: 900 },
-];
+] as const satisfies ReadonlyArray<{
+  name: 'mobile' | 'tablet' | 'desktop';
+  width: number;
+  height: number;
+}>;
 
 for (const tenant of TENANTS) {
   test.describe(`@kefi-landing-parity ${tenant.label}`, () => {

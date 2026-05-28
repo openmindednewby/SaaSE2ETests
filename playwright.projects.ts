@@ -167,22 +167,23 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
 
-    // ---- Kefi tenant-lifecycle E2E (Phase B) ----
+    // ---- Kefi tenant-lifecycle E2E (Phases B + C) ----
     // Standalone project — no auth dependency (the spec signs up a fresh
     // canary tenant) and no multi-tenant setup. Hits the Kefi marketing
-    // /signup form + the Phase-A admin endpoints + Maddy IMAP. Driven on
-    // staging + prod via the existing E2E_TARGET switch; the spec itself
-    // skips on local until the kefi-marketing dev stack is wired in.
+    // /signup form + the Phase-A admin endpoints + Maddy IMAP, then
+    // (Phase C) logs into kefi-web, completes the 7-step wizard, publishes,
+    // and asserts KUCY's hand-authored landing still renders.
     //
-    // Timeout override: this spec waits on Maddy's SMTP queue + DKIM
-    // signing + IMAP delivery (~30s typical, 60s budget) and on
-    // cert-manager HTTP-01 issuance during teardown — both legitimately
-    // exceed the suite's default 30s per-test cap. 180s is the upper
-    // bound; nightly runs land in ~45s.
+    // Timeout override: the spec waits on Maddy's SMTP queue + DKIM signing
+    // + IMAP delivery (~30s typical, 60s budget), the 7-step wizard's
+    // autosave debounce settles (~5s total), the publish K8s Job's kaniko
+    // build + kefi-landings rollout (60-240s), and the KUCY landing probe
+    // (up to 90s while the rollout settles). 600s ceiling; nightly runs
+    // land in ~3-4 min. Pre-Phase-C this was 180s.
     {
       name: 'kefi-lifecycle',
       workers: 1,
-      timeout: 180_000,
+      timeout: 600_000,
       testMatch: /kefi\/kefi-tenant-lifecycle\.spec\.ts/,
       use: CHROME,
     },
