@@ -166,5 +166,25 @@ export function buildProjects(): ProjectConfig {
       testMatch: /kefi-landing-parity\/.*\.spec\.ts/,
       use: CHROME,
     },
+
+    // ---- Kefi tenant-lifecycle E2E (Phase B) ----
+    // Standalone project — no auth dependency (the spec signs up a fresh
+    // canary tenant) and no multi-tenant setup. Hits the Kefi marketing
+    // /signup form + the Phase-A admin endpoints + Maddy IMAP. Driven on
+    // staging + prod via the existing E2E_TARGET switch; the spec itself
+    // skips on local until the kefi-marketing dev stack is wired in.
+    //
+    // Timeout override: this spec waits on Maddy's SMTP queue + DKIM
+    // signing + IMAP delivery (~30s typical, 60s budget) and on
+    // cert-manager HTTP-01 issuance during teardown — both legitimately
+    // exceed the suite's default 30s per-test cap. 180s is the upper
+    // bound; nightly runs land in ~45s.
+    {
+      name: 'kefi-lifecycle',
+      workers: 1,
+      timeout: 180_000,
+      testMatch: /kefi\/kefi-tenant-lifecycle\.spec\.ts/,
+      use: CHROME,
+    },
   ];
 }
