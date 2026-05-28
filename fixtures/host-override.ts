@@ -38,7 +38,12 @@ import type * as dns from 'node:dns';
 
 const dnsRuntime = require('node:dns') as typeof import('node:dns');
 
-const DEFAULT_PATTERN = '^staging\\.[a-z0-9-]+\\.dloizides\\.com$';
+// Multi-segment-friendly: matches `staging.<one-or-more-segments>.dloizides.com`.
+// The Kefi tenant-lifecycle E2E hits `staging.v2-api.kizombaunioncy.dloizides.com`
+// (kefi-api ingress today) and `staging.kefi.dloizides.com` (kefi-marketing) — the
+// former has two segments between `staging.` and `dloizides.com`, which the old
+// single-segment regex `^staging\.[a-z0-9-]+\.dloizides\.com$` would reject.
+const DEFAULT_PATTERN = '^staging\\.([a-z0-9-]+\\.)+dloizides\\.com$';
 
 const SAAS_STAGING_HOSTNAMES = [
   'staging.app.dloizides.com',
@@ -58,6 +63,10 @@ const SAAS_STAGING_HOSTNAMES = [
   // That 404 was previously misdiagnosed as an erevna-web SPA routing defect.
   'staging.erevna.dloizides.com',
   'staging.katalogos.dloizides.com',
+  // Kefi tenant-lifecycle E2E (Phase B) — marketing site + the kefi-api
+  // ingress's KUCY-era hostname. Same Chromium-resolver footnote as above.
+  'staging.kefi.dloizides.com',
+  'staging.v2-api.kizombaunioncy.dloizides.com',
 ] as const;
 
 const PATCHED_SENTINEL = Symbol.for('e2e.host-override.patched');
