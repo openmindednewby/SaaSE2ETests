@@ -21,13 +21,19 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { sharedHttpsAgent } from '../http-agent.js';
 import { getKefiUrls } from './kefiUrls.js';
 
-/** Strings every Template-1 render of KUCY's landing must contain. */
+/**
+ * Strings every Template-1 render of KUCY's landing must contain. Sourced
+ * from the rendered HTML of `kizomba-union-cy.kefi.dloizides.com` — see
+ * inline notes. Counts as a regression if any are missing post-publish.
+ */
 const REQUIRED_KUCY_MARKERS: readonly string[] = [
   'Kizomba Union CY',
   'Teachers',
   'Ambassadors',
   'Schedule',
-  'The Party',
+  // KUCY's data file labels the party section just "Party" (used in copy,
+  // section IDs, and og:description). Don't expect "The Party".
+  'Party',
   'Venue',
   'Bailemos',
 ];
