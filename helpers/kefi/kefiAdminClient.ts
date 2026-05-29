@@ -31,6 +31,7 @@ import type { SavedLandingDto } from './kefiKucyShapedConfig.js';
 import {
   type AdminClientOptions,
   type CanaryCleanupResult,
+  type CanaryTenantState,
   type PublishLandingResult,
   type RawTokenResponse,
   type WelcomeSweepResult,
@@ -41,6 +42,7 @@ import {
 // Re-export so callers that imported from kefiAdminClient continue to work.
 export type {
   CanaryCleanupResult,
+  CanaryTenantState,
   PublishLandingResult,
   WelcomeSweepResult,
 } from './kefiAdminClient.types.js';
@@ -127,6 +129,25 @@ export class KefiAdminClient {
     if (resp.status !== 200) {
       throw new Error(
         `[kefiAdminClient] canary-cleanup expected 200, got ${resp.status}: ${JSON.stringify(resp.data)}`,
+      );
+    }
+    return resp.data;
+  }
+
+  /**
+   * Read the canary tenant's lifecycle-column snapshot (Phase-D follow-up).
+   * Returns `found: false` when no tenant matches — never throws on a clean
+   * sweep, only on a non-200 (auth/validation) response.
+   */
+  async getCanaryTenantState(canaryId: string): Promise<CanaryTenantState> {
+    const bearer = await this.getBearer();
+    const resp = await this.http.get<CanaryTenantState>('/api/v1/internal/canary-tenant', {
+      params: { canaryId },
+      headers: { Authorization: `Bearer ${bearer}` },
+    });
+    if (resp.status !== 200) {
+      throw new Error(
+        `[kefiAdminClient] canary-tenant expected 200, got ${resp.status}: ${JSON.stringify(resp.data)}`,
       );
     }
     return resp.data;

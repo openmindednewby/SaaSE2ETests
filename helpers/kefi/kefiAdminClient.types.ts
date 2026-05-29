@@ -36,6 +36,18 @@ export interface PublishLandingResult {
   message: string;
 }
 
+/** Shape of GET /api/v1/internal/canary-tenant?canaryId= — the Phase-D DB-state probe. */
+export interface CanaryTenantState {
+  canaryId: string;
+  /** false when no tenant matches the e2c-{canaryId}- prefix (swept clean or never created). */
+  found: boolean;
+  slug: string;
+  status: string;
+  onboardingCompleted: boolean;
+  /** ISO timestamp the welcome worker stamped after dispatch, or null. */
+  welcomeEmailSentAtUtc: string | null;
+}
+
 /** Internal — KC OAuth2 token-endpoint response (camel-case is wire format). */
 export interface RawTokenResponse {
   access_token?: string;

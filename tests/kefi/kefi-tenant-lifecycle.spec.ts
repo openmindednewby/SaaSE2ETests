@@ -127,12 +127,11 @@ test.describe('Kefi tenant lifecycle — full self-serve canary', () => {
       // Tenant.OnboardingCompleted=true, which makes the tenant eligible
       // for the welcome-email worker. Force-running the sweep skips the
       // worker's normal 5-min cadence so the spec stays under 3 min total.
-      // The IMAP assertion is the binding end-to-end SMTP proof; the worker
-      // stamps `Tenant.WelcomeEmailSentAt` only AFTER the dispatcher
-      // returns true, so a delivered welcome email implies the column was
-      // set (no separate DB endpoint exposes the column today; plan-doc
-      // decision #24 accepts IMAP arrival as the assertion when no
-      // tenant-state read endpoint exists).
+      // The IMAP assertion is the binding end-to-end SMTP proof; the DB-state
+      // probe below is the corroborating signal (plan-doc decision #24 wanted
+      // both). The worker stamps `Tenant.WelcomeEmailSentAt` only AFTER the
+      // dispatcher returns true, so the column being non-null and the email
+      // landing in the inbox should always agree.
       const sweepResult = await adminClient.triggerWelcomeSweep();
       // EligibleCount may already be > 0 from other test runs that landed
       // between the worker's last tick and our trigger; what matters is the
@@ -148,6 +147,20 @@ test.describe('Kefi tenant lifecycle — full self-serve canary', () => {
       });
       expect(welcome.subject, 'welcome email subject').toContain('Welcome to Kefi');
       expect(welcome.to, 'welcome email To').toContain(ctx.email);
+
+      // ── 6b. DB-state probe — assert the worker stamped WelcomeEmailSentAt.
+      // GET /internal/canary-tenant (Phase-D follow-up endpoint). The email
+      // already arrived above, so the stamp must be set; this catches a
+      // regression where the email sends but the dedup column doesn't stamp
+      // (which would make the worker re-send on every future tick).
+      const tenantState = await adminClient.getCanaryTenantState(ctx.canaryId);
+      expect(tenantState.found, 'canary tenant found in DB').toBe(true);
+      expect(tenantState.status, 'canary tenant status').toBe('Active');
+      expect(tenantState.onboardingCompleted, 'canary onboarding completed').toBe(true);
+      expect(
+        tenantState.welcomeEmailSentAtUtc,
+        'WelcomeEmailSentAt stamped after welcome dispatch',
+      ).not.toBeNull();
 
       // ── 7. API: overwrite landing-config with KUCY-shaped fixture ────
       const kucyShaped = buildKucyShapedConfig(ctx.slugPrefix);
