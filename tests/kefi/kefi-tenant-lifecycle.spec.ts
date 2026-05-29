@@ -30,6 +30,8 @@ import { KefiSignupSuccessPage } from '../../pages/kefi/KefiSignupSuccessPage.js
 import { KefiLoginPage } from '../../pages/kefi/KefiLoginPage.js';
 import { KefiOnboardingWizardPage } from '../../pages/kefi/KefiOnboardingWizardPage.js';
 import { KefiAdminClient } from '../../helpers/kefi/kefiAdminClient.js';
+import { forceOnboardingPlan } from '../../helpers/kefi/kefiOnboardingApi.js';
+import { getKefiUrls } from '../../helpers/kefi/kefiUrls.js';
 import { cleanupKefiCanary } from '../../helpers/kefi/kefiTeardown.js';
 import { newCanaryContext } from '../../helpers/kefi/kefiCanaryIds.js';
 import {
@@ -113,14 +115,29 @@ test.describe('Kefi tenant lifecycle — full self-serve canary', () => {
         password: ctx.password,
       });
 
-      // ── 5. UI: complete the 7-step onboarding wizard ─────────────────
+      // ── 5. UI: complete the 4-step (M1 fast-path) onboarding wizard ──
+      // event-basics → template → landing-copy → review. The plan step moved
+      // to a post-live dashboard card, so we inject `pro` into the persisted
+      // onboarding state via the API before Finish — the completion handler
+      // maps it to Tenant.SubscriptionPlanCode so the publish Pro-gate (step 8)
+      // passes, exactly as the old wizard plan step did (no Stripe).
       const wizard = new KefiOnboardingWizardPage(page);
       await wizard.expectLoaded();
       const eventDateIso = toIsoDate(new Date(Date.now() + CANARY_EVENT_DAYS_AHEAD * MS_PER_DAY));
-      await wizard.completeAllSteps({
+      await wizard.fillFastPath({
         canaryPrefix: ctx.slugPrefix,
         eventDateIso,
       });
+      const ownerBearer = await adminClient.getTenantOwnerBearer({
+        email: ctx.email,
+        password: ctx.password,
+      });
+      await forceOnboardingPlan({
+        apiUrl: getKefiUrls().apiUrl,
+        bearer: ownerBearer,
+        code: 'pro',
+      });
+      await wizard.finishFromReview();
 
       // ── 6. API: trigger welcome-email sweep + IMAP-poll the inbox ────
       // Phase D — the wizard's `complete` POST flips

@@ -1,15 +1,17 @@
 /**
- * Page Object for the 7-step Kefi onboarding wizard
- * (`/organizer/onboarding`, served by kefi-web's OnboardingGate).
+ * Page Object for the Kefi onboarding wizard (`/organizer/onboarding`, served
+ * by kefi-web's OnboardingGate).
  *
- * The wizard auto-saves on a 400ms debounce, so the POM lets the debounce
- * land (300ms after the last field) before clicking Continue — otherwise the
- * Finish click can race the save and the backend complete handler sees
- * partial state.
+ * M1 fast path — 4 steps: event-basics → template-choice → landing-copy →
+ * review/finish. Logo/palette, schedule/teachers, payment and plan moved to
+ * post-live dashboard cards, so the wizard no longer collects them. The plan
+ * (which the publish Pro-gate needs) is injected into the persisted onboarding
+ * state via the API between `fillFastPath` and `finishFromReview` — see
+ * `KefiAdminClient.setOnboardingPlan`.
  *
- * Each step fills the minimum required fields with canary-prefixed content;
- * the rich KUCY-shaped landing config is applied via the API after Finish so
- * the wizard doesn't need every field for the assertion to pass.
+ * The wizard auto-saves on a 400ms debounce, so the POM lets the debounce land
+ * (plus the PUT round-trip) before clicking Continue — otherwise the Finish
+ * click can race the save and the backend complete handler sees partial state.
  */
 
 import { type Locator, type Page, expect } from '@playwright/test';
@@ -31,24 +33,16 @@ export class KefiOnboardingWizardPage {
   readonly eventLocationInput: Locator;
   readonly eventDateInput: Locator;
 
-  // Step 2 — logo-palette (skippable, no fill methods)
-
-  // Step 3 — template
+  // Step 2 — template
   readonly kucyTemplateOption: Locator;
 
-  // Step 4 — landing copy
+  // Step 3 — landing copy
   readonly brandNameInput: Locator;
   readonly taglineInput: Locator;
   readonly editionInput: Locator;
   readonly descriptionInput: Locator;
 
-  // Step 5 — schedule + teachers (skippable)
-  readonly scheduleNoteInput: Locator;
-
-  // Step 6 — payment
-  readonly payAtDoorNoteInput: Locator;
-
-  // Step 7 — plan (handled via `proOption` direct click)
+  // Step 4 — review (display-only; finished via the nav button)
 
   // Nav
   readonly continueButton: Locator;
@@ -68,10 +62,6 @@ export class KefiOnboardingWizardPage {
     this.taglineInput = page.getByTestId('onboarding-landing-tagline');
     this.editionInput = page.getByTestId('onboarding-landing-edition');
     this.descriptionInput = page.getByTestId('onboarding-landing-description');
-
-    this.scheduleNoteInput = page.getByTestId('onboarding-schedule-note');
-
-    this.payAtDoorNoteInput = page.getByTestId('onboarding-payment-pay-at-door');
 
     this.continueButton = page.getByTestId('onboarding-continue');
     this.backButton = page.getByTestId('onboarding-back');
@@ -96,15 +86,16 @@ export class KefiOnboardingWizardPage {
   }
 
   /**
-   * Run all 7 steps with minimal canary content, ending with Finish.
-   * After Finish, the wizard navigates to /organizer; this method awaits
-   * that URL transition.
+   * Fill the 3 form steps with minimal canary content and advance to the
+   * final review step. Does NOT finish — the caller injects the plan via the
+   * API (the wizard no longer has a plan step) and then calls
+   * {@link finishFromReview}.
    *
-   * `canaryPrefix` is the slug-shaped prefix (`e2c-{id}-`) used for content
-   * so the canary sweep can identify everything. `eventDateIso` should be a
+   * `canaryPrefix` is the slug-shaped prefix (`e2c-{id}-`) used for content so
+   * the canary sweep can identify everything. `eventDateIso` should be a
    * future date in YYYY-MM-DD form.
    */
-  async completeAllSteps(input: {
+  async fillFastPath(input: {
     canaryPrefix: string;
     eventDateIso: string;
   }): Promise<void> {
@@ -116,14 +107,11 @@ export class KefiOnboardingWizardPage {
     await this.page.getByTestId('onboarding-event-type-festival').click();
     await this.continueToNextStep();
 
-    // ── Step 2: logo-palette — skip entirely (no input). ────────────────
-    await this.continueToNextStep();
-
-    // ── Step 3: template — pick KUCY. ───────────────────────────────────
+    // ── Step 2: template — pick KUCY. ───────────────────────────────────
     await this.kucyTemplateOption.click();
     await this.continueToNextStep();
 
-    // ── Step 4: landing-copy ────────────────────────────────────────────
+    // ── Step 3: landing-copy ────────────────────────────────────────────
     await this.brandNameInput.fill(`${input.canaryPrefix}Canary Brand`);
     await this.taglineInput.fill('Synthetic E2E canary — auto-sweeps');
     await this.editionInput.fill('Canary Edition');
@@ -132,30 +120,22 @@ export class KefiOnboardingWizardPage {
     );
     await this.continueToNextStep();
 
-    // ── Step 5: schedule + teachers — minimal note. ─────────────────────
-    await this.scheduleNoteInput.fill('Synthetic — no real classes.');
-    await this.continueToNextStep();
-
-    // ── Step 6: payment — pay-at-door with the required note. ───────────
-    await this.page.getByTestId('onboarding-payment-provider-pay-at-door').click();
-    await this.payAtDoorNoteInput.fill('Synthetic test — pay-at-door note.');
-    await this.continueToNextStep();
-
-    // ── Step 7: plan — pick `pro` so PublishLandingConfigHandler's
-    // IsAtLeastPro gate passes (Free is blocked at the handler level).
-    // Wizard completion deterministically writes Tenant.SubscriptionPlanCode;
-    // no Stripe involvement for the canary.
-    await this.page.getByTestId('onboarding-plan-choice-pro').click();
+    // ── Step 4: review — display-only; settle so the page is interactive. ─
+    await expect(this.page.getByTestId('onboarding-step-review')).toBeVisible({ timeout: 10_000 });
     await delay(AUTOSAVE_SETTLE_MS);
-    await expect(this.continueButton).toBeEnabled({ timeout: 10_000 });
+  }
 
-    // Last step's Continue is "Finish". The wizard's onSuccess fires
-    // `router.replace('/organizer')` but the page bounces back to
-    // `/organizer/onboarding` because OnboardingGate's cached query still
-    // has `completed=false` (the invalidate is async, the next fetch
-    // races the redirect). Wait for the actual server confirmation —
-    // POST /admin/onboarding/complete returning 2xx — instead of the
-    // URL, then drive the page forward explicitly.
+  /**
+   * Click Finish on the review step and await the server's confirmation.
+   *
+   * The wizard's onSuccess fires `router.replace('/organizer')` but the page
+   * bounces back to `/organizer/onboarding` because OnboardingGate's cached
+   * query still has `completed=false` (the invalidate is async, the next fetch
+   * races the redirect). Wait for the actual server confirmation —
+   * POST /admin/onboarding/complete returning 2xx — instead of the URL.
+   */
+  async finishFromReview(): Promise<void> {
+    await expect(this.continueButton).toBeEnabled({ timeout: 10_000 });
     const completeResponse = this.page.waitForResponse(
       (resp) =>
         resp.url().includes('/admin/onboarding/complete') &&
