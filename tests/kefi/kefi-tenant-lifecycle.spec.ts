@@ -3,8 +3,11 @@
  *
  * End-to-end self-serve nightly canary:
  *   1. Marketing /signup form creates a verified tenant via IMAP loopback.
- *   2. Tenant owner logs into kefi-web, completes the 7-step onboarding wizard
- *      (canary stub data; KUCY template; Pro plan).
+ *   2. Clicking the verification link magic-link-auto-logs-in the tenant owner
+ *      (POST /bff/verify-and-login verifies + sets the BFF session in one shot)
+ *      and the SPA routes straight to the onboarding wizard, which the canary
+ *      completes via the 4-step M1 fast-path (canary stub data; KUCY template;
+ *      Pro plan injected via the API).
  *   3. Welcome-email sweep is force-triggered, the bot mailbox is polled
  *      for "Welcome to Kefi" at the canary address — proves end-to-end
  *      transactional SMTP from Maddy via the welcome worker.
@@ -27,7 +30,6 @@ import { test, expect } from '@playwright/test';
 
 import { KefiMarketingPage } from '../../pages/kefi/KefiMarketingPage.js';
 import { KefiSignupSuccessPage } from '../../pages/kefi/KefiSignupSuccessPage.js';
-import { KefiLoginPage } from '../../pages/kefi/KefiLoginPage.js';
 import { KefiOnboardingWizardPage } from '../../pages/kefi/KefiOnboardingWizardPage.js';
 import { KefiAdminClient } from '../../helpers/kefi/kefiAdminClient.js';
 import { forceOnboardingPlan } from '../../helpers/kefi/kefiOnboardingApi.js';
@@ -93,29 +95,21 @@ test.describe('Kefi tenant lifecycle — full self-serve canary', () => {
       const verifyUrl = extractVerifyUrl(captured);
       expect(verifyUrl, `verify URL extracted from ${captured.subject}`).not.toBeNull();
 
-      // ── 3. Verify email → KC emailVerified=true ──────────────────────
+      // ── 3. Verify email → magic-link auto-login → wizard ─────────────
       // The verify URL is the kefi-web SPA route (/verify-email?token=...).
-      // GETting it just returns the HTML shell — the actual verify is a
-      // POST /bff/verify-email that the page's React code fires on mount.
-      // Doing the POST from the spec directly is blocked by the BFF's
-      // same-origin check (the spec's page is still on the marketing
-      // host). Easiest path: navigate the browser to the verify URL and
-      // wait for the SPA's success state — the React code does the
-      // properly-originated POST itself. Phase D caught this; Phase B
-      // used to GET-only and never noticed because nothing downstream
-      // depended on tenant.Status=Active.
+      // GETting it just returns the HTML shell — the page's React code then
+      // POSTs /bff/verify-and-login (CSRF + same-origin) on mount. That single
+      // call verifies the email AND establishes the BFF session in one shot,
+      // so the SPA refreshes the user and `router.replace`s straight to
+      // /organizer/onboarding (the wizard). There is no success screen, no
+      // separate login step, and no manual claim-verification — Batch 1's
+      // EmailVerifiedEvent flips Tenant.Status=Active synchronously at verify
+      // time. Navigating the browser here leaves the Playwright context
+      // authenticated (the __Host-bff-kefi cookie was set on the response),
+      // so the wizard rendering is the auto-login proof.
       await page.goto(verifyUrl!);
-      await expect(page.getByTestId('verify-email-success')).toBeVisible({ timeout: 30_000 });
 
-      // ── 4. UI: log in as the canary owner; OnboardingGate redirects to /onboarding ──
-      const login = new KefiLoginPage(page);
-      await login.goto();
-      await login.signInAndExpectOnboarding({
-        email: ctx.email,
-        password: ctx.password,
-      });
-
-      // ── 5. UI: complete the 4-step (M1 fast-path) onboarding wizard ──
+      // ── 4. UI: complete the 4-step (M1 fast-path) onboarding wizard ──
       // event-basics → template → landing-copy → review. The plan step moved
       // to a post-live dashboard card, so we inject `pro` into the persisted
       // onboarding state via the API before Finish — the completion handler
