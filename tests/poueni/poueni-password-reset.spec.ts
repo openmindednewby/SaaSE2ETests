@@ -138,6 +138,18 @@ test.describe('Poueni forgot/reset password @poueni @auth @password-reset', () =
     const newLogin = await attemptDashboardLogin(page, email, NEW_PASSWORD);
     expect(newLogin, 'NEW password must log in via the dashboard after reset').toBe(true);
 
+    // ── 6b. stale-session hygiene: visiting /login while ALREADY logged in
+    //        must show the login form (LoginPage clears the session on mount),
+    //        NOT silently bounce into the dashboard. This is the exact trap
+    //        that makes a returning user think "my new password won't log in"
+    //        when really an old session was carrying them straight in. We are
+    //        authenticated here (step 6 left a live session, cookies intact).
+    await page.goto(`${urls.dashboardUrl}/login`);
+    await expect(
+      page.locator('input[type="email"]'),
+      '/login must render the form even with a live session (no stale-session bounce)',
+    ).toBeVisible({ timeout: 15_000 });
+
     // ── 7. old password must now be rejected ────────────────────────────
     const oldLoginAfterReset = await attemptDashboardLogin(page, email, OLD_PASSWORD);
     expect(oldLoginAfterReset, 'OLD password must be rejected after reset').toBe(false);
