@@ -154,4 +154,53 @@ test.describe('Poueni forgot/reset password @poueni @auth @password-reset', () =
     const oldLoginAfterReset = await attemptDashboardLogin(page, email, OLD_PASSWORD);
     expect(oldLoginAfterReset, 'OLD password must be rejected after reset').toBe(false);
   });
+
+  // Regression guard for the "I'm not receiving the reset email" report
+  // (2026-05-30): the most common real cause is requesting a reset for an
+  // address that isn't a registered active tenant — a mistype, or an email the
+  // user never actually signed up with. The endpoint is anti-enumeration, so it
+  // ALWAYS returns 202 and the marketing page ALWAYS shows the same "if it
+  // exists, a link is on its way" success — but NO email is sent. This test
+  // pins that contract: unknown email → 202, success copy shown, and crucially
+  // NO reset email lands at that address within a real polling window. If a
+  // future change ever leaks an email (or an error) for unknown addresses, or
+  // breaks the success-copy UX, this fails.
+  test('forgot-password for an UNREGISTERED email: 202 + success copy, but no email sent (anti-enum) @critical', async ({
+    page,
+    request,
+  }) => {
+    // A guaranteed-unregistered plus-address on the bot mailbox — same inbox we
+    // can poll, so "no email arrives" is a real assertion, not a blind wait.
+    const unknownEmail = newPoueniCanaryEmail();
+    test.info().annotations.push({ type: 'unknownEmail', description: unknownEmail });
+
+    // API: the endpoint accepts it (anti-enumeration — never reveals it's unknown).
+    const res = await request.post(`${urls.apiUrl}/v1/public/reset-password-request`, {
+      data: { email: unknownEmail },
+    });
+    expect(res.status(), 'unknown-email request still returns 202').toBe(202);
+
+    // UI: the marketing forgot-password form shows the same generic success.
+    await page.goto(`${urls.marketingUrl}/forgot-password`);
+    await page.locator('#email').fill(unknownEmail);
+    await page.locator('#submitBtn').click();
+    await expect(page.locator('#formStatus')).toHaveAttribute('data-kind', 'success', {
+      timeout: 15_000,
+    });
+
+    // No reset email may land for an unregistered address. Poll the shared bot
+    // mailbox filtered to this plus-address for a real window; expect a timeout.
+    const mailbox = new PoueniMailbox(loadPoueniMailboxConfig(), {
+      timeoutMs: 25_000,
+      pollIntervalMs: 2_000,
+    });
+    let received = false;
+    try {
+      await mailbox.waitForMessageTo(unknownEmail, { subjectIncludes: 'Reset' });
+      received = true;
+    } catch {
+      received = false; // expected: nothing arrives for an unknown account
+    }
+    expect(received, 'NO reset email should be sent for an unregistered email').toBe(false);
+  });
 });
