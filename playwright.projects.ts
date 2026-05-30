@@ -187,5 +187,19 @@ export function buildProjects(): ProjectConfig {
       testMatch: /kefi\/kefi-tenant-lifecycle\.spec\.ts/,
       use: CHROME,
     },
+
+    // ---- Poueni forgot/reset-password E2E ----
+    // Standalone — signs up a fresh canary tenant (plus-addressed on the
+    // shared bot mailbox), verifies, then drives the full forgot→reset→login
+    // round-trip through the marketing reset page + the dashboard login form
+    // in a real browser. Timeout override: two IMAP waits (verify + reset
+    // emails, ~30s typical / 90s budget each) plus several browser logins.
+    {
+      name: 'poueni-password-reset',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /poueni\/poueni-password-reset\.spec\.ts/,
+      use: CHROME,
+    },
   ];
 }
