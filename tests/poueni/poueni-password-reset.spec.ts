@@ -203,4 +203,46 @@ test.describe('Poueni forgot/reset password @poueni @auth @password-reset', () =
     }
     expect(received, 'NO reset email should be sent for an unregistered email').toBe(false);
   });
+
+  // The "Resend email" action on the success state (added after the "not
+  // receiving it" report): after a successful request, the page reveals a
+  // Resend button that re-fires WITHOUT retyping the address, and a "Use a
+  // different email" button that restores the form. This drives a real
+  // registered canary so the resend actually delivers a SECOND email.
+  test('forgot-password success state offers Resend (re-delivers) + Use-a-different-email @critical', async ({
+    page,
+    request,
+  }) => {
+    // Need a real active tenant so the resend genuinely sends. Signup + verify.
+    const email = newPoueniCanaryEmail();
+    test.info().annotations.push({ type: 'canaryEmail', description: email });
+    await signup(request, email);
+    const verifyEmail = await readEmail(email, 'Verify');
+    const verifyUrl = extractPoueniVerifyUrl({ uid: 0, subject: 'Verify', to: email, bodyText: verifyEmail.text, bodyHtml: verifyEmail.html });
+    expect(verifyUrl, 'verify URL present').not.toBeNull();
+    expect((await request.get(verifyUrl!)).status(), 'verify ok').toBe(200);
+
+    // Request the reset through the marketing form → success state appears.
+    await page.goto(`${urls.marketingUrl}/forgot-password`);
+    await page.locator('#email').fill(email);
+    await page.locator('#submitBtn').click();
+    await expect(page.locator('#formStatus')).toHaveAttribute('data-kind', 'success', { timeout: 15_000 });
+    // Drain the first reset email so the post-resend poll can't match it.
+    await readEmail(email, 'Reset');
+
+    // The Resend + different-email actions are now revealed.
+    await expect(page.locator('#resendBtn'), 'Resend button visible on success').toBeVisible();
+    await expect(page.locator('#differentBtn'), 'Use-a-different-email button visible').toBeVisible();
+
+    // Click Resend (no retype) → a SECOND reset email must arrive.
+    await page.locator('#resendBtn').click();
+    await expect(page.locator('#resendStatus')).toHaveAttribute('data-kind', 'success', { timeout: 15_000 });
+    const second = await readEmail(email, 'Reset');
+    expect(second.html || second.text, 'resend delivers a second reset email').toContain('reset-password?token=');
+
+    // "Use a different email" restores the form for a fresh address.
+    await page.locator('#differentBtn').click();
+    await expect(page.locator('#email'), 'form restored after Use-a-different-email').toBeVisible();
+    await expect(page.locator('#email')).toHaveValue('');
+  });
 });
