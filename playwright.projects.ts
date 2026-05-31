@@ -187,6 +187,13 @@ export function buildProjects(): ProjectConfig {
       testMatch: /kefi\/kefi-tenant-lifecycle\.spec\.ts/,
       use: CHROME,
     },
+    {
+      name: 'kefi-device-pin',
+      workers: 1,
+      timeout: 180_000,
+      testMatch: /kefi\/kefi-device-pin-unlock\.spec\.ts/,
+      use: CHROME,
+    },
 
     // ---- Poueni forgot/reset-password E2E ----
     // Standalone — signs up a fresh canary tenant (plus-addressed on the
