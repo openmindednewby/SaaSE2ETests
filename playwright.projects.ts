@@ -197,6 +197,16 @@ export function buildProjects(): ProjectConfig {
       testMatch: /kefi\/kefi-device-pin-unlock\.spec\.ts/,
       use: CHROME,
     },
+    {
+      name: 'kefi-passkey',
+      workers: 1,
+      // Signup + IMAP verify (~60s budget) + two full Keycloak redirect dances
+      // (registration re-auth + ceremony, then the passkey login ceremony), each
+      // with a 90s drive budget. CDP virtual authenticator does the WebAuthn part.
+      timeout: 360_000,
+      testMatch: /kefi\/kefi-passkey-login\.spec\.ts/,
+      use: CHROME,
+    },
 
     // ---- Poueni forgot/reset-password E2E ----
     // Standalone — signs up a fresh canary tenant (plus-addressed on the
