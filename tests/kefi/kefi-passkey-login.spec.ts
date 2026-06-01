@@ -204,24 +204,29 @@ test.describe('Kefi passkey — register, sign out, sign in with passkey', () =>
       // ── 2. Virtual platform authenticator (TouchID / Hello stand-in) ─────
       await attachVirtualAuthenticator(page);
 
-      // ── 3. REGISTER a passkey from the organizer settings card ───────────
-      // The wizard may be showing — go to the dashboard root where the
-      // settings cards live.
-      await page.goto(`${webUrl}/organizer`);
+      // ── 3. REGISTER a passkey ─────────────────────────────────────────────
+      // A fresh canary tenant sees the onboarding WIZARD at /organizer, not the
+      // dashboard, so the settings card (which lives on the dashboard) is not
+      // reachable here. Navigate to the BFF register endpoint directly — that is
+      // exactly what the card's "Add a passkey" button does (a window.location
+      // navigation); the card's rendering/gating is covered by kefi-web's jest
+      // suite + the login-surface button assert below.
       const passkeyPage = new KefiPasskeyPage(page);
-      await passkeyPage.expectSettingsAddButton();
-      await passkeyPage.clickAddPasskey();
+      await page.goto(`${webUrl}/bff/passkey/register?returnUrl=/organizer`);
 
-      // The browser is now on /bff/passkey/register → Keycloak. Drive whatever
-      // KC shows (re-auth + ceremony + label) until we are back at the app.
+      // The browser is now bounced to Keycloak. Drive whatever KC shows
+      // (re-auth + ceremony + label) until we are back at the app.
       await page.waitForURL(() => isOnKeycloak(page), { timeout: NAV_TIMEOUT_MS });
       await driveKeycloakPages(page, { email: ctx.email, password: ctx.password });
 
-      // Back at the app with ?passkey=registered and a (fresh) session.
-      await page.waitForURL((url) => url.searchParams.get('passkey') === 'registered', {
-        timeout: NAV_TIMEOUT_MS,
-      });
-      await passkeyPage.expectRegistrationSuccess();
+      // Back at the app on /organizer. NOTE: the BFF appends ?passkey=registered
+      // to the redirect, but expo-router strips query params during client-side
+      // route normalisation, so the spec must not assert on it — the passkey
+      // LOGIN below is the real proof the credential was registered.
+      await page.waitForURL(
+        (url) => !isOnKeycloak(page) && url.pathname.includes('/organizer'),
+        { timeout: NAV_TIMEOUT_MS },
+      );
 
       // ── 4. SIGN OUT: clear every cookie. The virtual authenticator (and its
       // discoverable credential) lives on the browser target, not in cookies —
@@ -246,9 +251,11 @@ test.describe('Kefi passkey — register, sign out, sign in with passkey', () =>
       const sessionCookie = cookies.find((cookie) => cookie.name === SESSION_COOKIE);
       expect(sessionCookie, 'passkey login minted a BFF session cookie').toBeDefined();
 
-      // The session is real: the organizer dashboard loads authenticated.
-      await page.goto(`${webUrl}/organizer`);
-      await passkeyPage.expectSettingsAddButton();
+      // The session is real: /bff/me answers 200 with the canary's identity.
+      const meResponse = await page.request.get(`${webUrl}/bff/me`);
+      expect(meResponse.status(), 'passkey-minted session resolves /bff/me').toBe(200);
+      const me = (await meResponse.json()) as { user?: { email?: string } };
+      expect(me.user?.email, 'the passkey session belongs to the canary').toBe(ctx.email);
 
       // ── 6. NEGATIVE: a forged callback cannot mint a session ─────────────
       // Fresh logged-out state, no binding cookie → the BFF bounces to
