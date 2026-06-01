@@ -190,7 +190,10 @@ export function buildProjects(): ProjectConfig {
     {
       name: 'kefi-device-pin',
       workers: 1,
-      timeout: 180_000,
+      // Generous: the BFF's per-IP rate limiter (5 req/60s) sits in front of the
+      // device-PIN endpoints, so the lockout phase deliberately waits between
+      // attempts — the wall-clock is dominated by those waits, not by work.
+      timeout: 360_000,
       testMatch: /kefi\/kefi-device-pin-unlock\.spec\.ts/,
       use: CHROME,
     },

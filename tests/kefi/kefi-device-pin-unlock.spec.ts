@@ -65,9 +65,18 @@ const WRONG_PIN = '999999';
 const HTTP_OK = 200;
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_TOO_MANY_REQUESTS = 429;
-/** Engine default `MaxFailures` is 5 → the 6th wrong attempt is locked out. */
-const LOCKOUT_PROBE_ATTEMPTS = 6;
+/** Engine default `MaxFailures` is 5 → the 6th wrong attempt is device-locked. */
+const MAX_LOCKOUT_ITERATIONS = 12;
 const NAV_TIMEOUT_MS = 30_000;
+/**
+ * The BFF's per-IP "BffAuth" rate limiter (5 req / 60s sliding window, 10s
+ * segments) sits IN FRONT of the device-PIN lockout. Its 429s have an EMPTY
+ * body; the device-lockout 429 has a JSON `{error}` body + Retry-After. Calls
+ * poll with a backoff between rate-limited attempts so they can reach the
+ * device-PIN logic underneath.
+ */
+const RATE_LIMIT_BACKOFF_MS = 15_000;
+const RATE_LIMIT_MAX_WAIT_MS = 120_000;
 
 /** POSTs a device-PIN endpoint with the CSRF header the BFF requires. */
 function pinPost(
@@ -76,10 +85,44 @@ function pinPost(
   data?: Record<string, unknown>,
 ): ReturnType<APIRequestContext['post']> {
   const { webUrl } = getKefiUrls();
+  // Origin must be sent explicitly: the BFF's anti-forgery gate checks the
+  // CSRF header AND an allow-listed Origin/Referer. Browsers add Origin
+  // automatically; Playwright's APIRequestContext does not.
   return request.post(`${webUrl}${path}`, {
-    headers: { [CSRF_HEADER]: CSRF_VALUE },
+    headers: { [CSRF_HEADER]: CSRF_VALUE, Origin: webUrl },
     data: data ?? {},
   });
+}
+
+/**
+ * Like {@link pinPost}, but polls through the per-IP rate limiter: an
+ * empty-body 429 (the "BffAuth" sliding-window limiter) is retried on a
+ * backoff interval, while any other response — including the device-lockout
+ * 429, which carries a JSON body — resolves the poll and is returned as-is.
+ */
+async function pinPostThroughRateLimit(
+  request: APIRequestContext,
+  path: string,
+  data?: Record<string, unknown>,
+): Promise<Awaited<ReturnType<APIRequestContext['post']>>> {
+  let lastResponse: Awaited<ReturnType<APIRequestContext['post']>> | null = null;
+  await expect
+    .poll(
+      async () => {
+        lastResponse = await pinPost(request, path, data);
+        if (lastResponse.status() !== HTTP_TOO_MANY_REQUESTS) return 'reached';
+        const body = await lastResponse.text();
+        // Device-lockout 429s carry a JSON body — that IS the signal we want.
+        return body.length > 0 ? 'reached' : 'rate-limited';
+      },
+      {
+        message: `waiting out the per-IP BffAuth rate limiter on ${path}`,
+        intervals: [RATE_LIMIT_BACKOFF_MS],
+        timeout: RATE_LIMIT_MAX_WAIT_MS,
+      },
+    )
+    .toBe('reached');
+  return lastResponse!;
 }
 
 /** Finds a captured cookie by name, asserting it exists. */
@@ -123,10 +166,12 @@ test.describe('Kefi device-PIN unlock — enrol, unlock, lockout, disable', () =
       expect(verifyUrl, `verify URL from ${captured.subject}`).not.toBeNull();
 
       // Navigating the verify URL POSTs /bff/verify-and-login on mount → the
-      // Playwright context is now authenticated (the __Host-bff-kefi cookie set
-      // on the response).
+      // Playwright context is authenticated once that completes. The completion
+      // signal is the SPA routing to /organizer/onboarding (the wizard) — the
+      // verify page's own pathname (/verify-email) must NOT be treated as done,
+      // or we race the session-cookie mint and the enroll below 401s.
       await page.goto(verifyUrl!);
-      await page.waitForURL((url) => !url.pathname.includes('/login'), {
+      await page.waitForURL((url) => url.pathname.includes('/organizer'), {
         timeout: NAV_TIMEOUT_MS,
       });
 
@@ -164,20 +209,24 @@ test.describe('Kefi device-PIN unlock — enrol, unlock, lockout, disable', () =
       // ── 4. WRONG PIN + LOCKOUT (API-level, device-cookie-only context) ──
       // A separate context so the happy-path session above is untouched. The
       // successful unlock in step 3 reset the failure counter, so we start clean.
+      // pinPostThroughRateLimit waits out the per-IP "BffAuth" limiter (empty-body
+      // 429s) so the loop can reach the DEVICE lockout (JSON-body 429) underneath.
       const lockoutContext = await browser.newContext();
       await lockoutContext.addCookies([deviceCookie]);
 
-      const firstWrong = await pinPost(lockoutContext.request, '/bff/pin/unlock', {
+      const firstWrong = await pinPostThroughRateLimit(lockoutContext.request, '/bff/pin/unlock', {
         pin: WRONG_PIN,
       });
       expect(firstWrong.status(), 'first wrong PIN is a generic 401').toBe(HTTP_UNAUTHORIZED);
 
-      // Keep submitting wrong PINs until the device locks (429). Engine default
-      // threshold is 5 failures, so the 6th attempt should be locked.
+      // Keep submitting wrong PINs until the device locks. Engine default
+      // threshold is 5 failures → the 6th wrong attempt is locked out.
       let lockedStatus = firstWrong.status();
       let retryAfter: string | null = null;
-      for (let attempt = 2; attempt <= LOCKOUT_PROBE_ATTEMPTS; attempt++) {
-        const resp = await pinPost(lockoutContext.request, '/bff/pin/unlock', { pin: WRONG_PIN });
+      for (let attempt = 2; attempt <= MAX_LOCKOUT_ITERATIONS; attempt++) {
+        const resp = await pinPostThroughRateLimit(lockoutContext.request, '/bff/pin/unlock', {
+          pin: WRONG_PIN,
+        });
         lockedStatus = resp.status();
         if (lockedStatus === HTTP_TOO_MANY_REQUESTS) {
           retryAfter = resp.headers()['retry-after'] ?? null;
@@ -188,11 +237,12 @@ test.describe('Kefi device-PIN unlock — enrol, unlock, lockout, disable', () =
       expect(lockedStatus, 'device locks out after the failure threshold').toBe(
         HTTP_TOO_MANY_REQUESTS,
       );
-      expect(retryAfter, '429 carries a Retry-After header').not.toBeNull();
+      expect(retryAfter, 'device-lockout 429 carries a Retry-After header').not.toBeNull();
       await lockoutContext.close();
 
       // ── 5. DISABLE revokes the offline token + clears the device record ──
-      const disableResp = await pinPost(page.request, '/bff/pin/disable');
+      // (Same per-IP rate-limit bucket as the lockout loop above — wait it out.)
+      const disableResp = await pinPostThroughRateLimit(page.request, '/bff/pin/disable');
       expect(disableResp.status(), 'disable OK').toBe(HTTP_OK);
 
       // The remembered device can no longer unlock — the record is gone, so a
@@ -200,9 +250,11 @@ test.describe('Kefi device-PIN unlock — enrol, unlock, lockout, disable', () =
       // the deleted record). Proves disable severs the device, not just locks it.
       const afterDisableContext = await browser.newContext();
       await afterDisableContext.addCookies([deviceCookie]);
-      const afterDisable = await pinPost(afterDisableContext.request, '/bff/pin/unlock', {
-        pin: CANARY_PIN,
-      });
+      const afterDisable = await pinPostThroughRateLimit(
+        afterDisableContext.request,
+        '/bff/pin/unlock',
+        { pin: CANARY_PIN },
+      );
       expect(
         afterDisable.status(),
         'a disabled device cannot unlock (record deleted → generic 401)',

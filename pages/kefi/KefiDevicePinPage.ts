@@ -20,11 +20,15 @@ export class KefiDevicePinPage {
   private readonly errorText = () => this.page.getByTestId('kefi-device-pin-unlock-error');
   private readonly usePasswordLink = () => this.page.getByTestId('kefi-device-pin-unlock-use-password');
 
-  /** Navigates to /login and asserts the device-PIN unlock gate is showing. */
+  /**
+   * Navigates to /login and asserts the device-PIN unlock gate is showing.
+   * Generous timeout: a cold browser context must download the full SPA
+   * bundle, mount React, and call GET /bff/config before the gate can render.
+   */
   async gotoAndExpectUnlockGate(): Promise<void> {
     const { webUrl } = getKefiUrls();
     await this.page.goto(`${webUrl}/login`);
-    await expect(this.unlockRoot()).toBeVisible();
+    await expect(this.unlockRoot()).toBeVisible({ timeout: 30_000 });
   }
 
   /** Enters a PIN and submits the unlock attempt. */
