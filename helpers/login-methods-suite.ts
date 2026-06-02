@@ -143,6 +143,33 @@ async function registerCookieBannerHandler(page: Page): Promise<void> {
 }
 
 /**
+ * Drives the browser to a rate-limited BFF GET endpoint (/bff/passkey/login or
+ * /bff/passkey/register), polling through empty-body 429 pages. These endpoints
+ * share the per-IP "BffAuth" limiter with the PIN endpoints, so in serial runs
+ * the PIN test's lockout phase can leave the window drained — a navigation then
+ * renders a bare 429 instead of redirecting to Keycloak.
+ */
+async function gotoBffThroughRateLimit(page: Page, url: string): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        if (isOnKeycloak(page)) return 'on-keycloak';
+        const response = await page.goto(url);
+        if (response !== null && response.status() === HTTP_TOO_MANY_REQUESTS) {
+          return 'rate-limited';
+        }
+        return isOnKeycloak(page) ? 'on-keycloak' : 'navigating';
+      },
+      {
+        message: `waiting out the per-IP BffAuth rate limiter navigating to ${url}`,
+        intervals: [RATE_LIMIT_BACKOFF_MS],
+        timeout: RATE_LIMIT_MAX_WAIT_MS,
+      },
+    )
+    .toBe('on-keycloak');
+}
+
+/**
  * Logs in via the BFF, polling through per-IP rate-limit 429s. The serial
  * device-PIN test's lockout phase deliberately drains the BffAuth limiter, so
  * the next test's first login can land inside a still-throttled window —
@@ -309,8 +336,9 @@ export function defineLoginMethodsSuite(config: LoginMethodsSuiteConfig): void {
       await attachVirtualAuthenticator(page);
 
       // ── 2. REGISTER a passkey (KC password re-auth + WebAuthn ceremony) ───
-      await page.goto(`${appUrl}/bff/passkey/register?returnUrl=/`);
-      await page.waitForURL(() => isOnKeycloak(page), { timeout: NAV_TIMEOUT_MS });
+      // Navigation polls through rate-limit 429s — /bff/passkey/register shares
+      // the per-IP limiter the PIN test's lockout phase may have drained.
+      await gotoBffThroughRateLimit(page, `${appUrl}/bff/passkey/register?returnUrl=/`);
       await driveKeycloakPages(page, {
         email: TEST_USER.username,
         password: TEST_USER.password,
@@ -328,7 +356,16 @@ export function defineLoginMethodsSuite(config: LoginMethodsSuiteConfig): void {
       ).toBeVisible({ timeout: NAV_TIMEOUT_MS });
       await page.getByTestId(passkeyButtonTestId).click();
 
-      await page.waitForURL(() => isOnKeycloak(page), { timeout: NAV_TIMEOUT_MS });
+      // The click navigates to /bff/passkey/login (also rate-limited). If the
+      // window is drained the page shows a bare 429 — fall back to polling the
+      // navigation directly (equivalent to the button's window.location.assign).
+      const reachedKeycloak = await page
+        .waitForURL(() => isOnKeycloak(page), { timeout: NAV_TIMEOUT_MS })
+        .then(() => true)
+        .catch(() => false);
+      if (!reachedKeycloak) {
+        await gotoBffThroughRateLimit(page, `${appUrl}/bff/passkey/login?returnUrl=/`);
+      }
       await driveKeycloakPages(page, {
         email: TEST_USER.username,
         password: TEST_USER.password,
