@@ -218,6 +218,15 @@ export function buildProjects(): ProjectConfig {
       testMatch: /identity\/katalogos-device-pin-passkey\.spec\.ts/,
       use: CHROME,
     },
+    {
+      // Erevna device-PIN + passkey — same shared suite, erevna-web baseURL
+      // (questioner realm). See helpers/login-methods-suite.ts.
+      name: 'erevna-login-methods',
+      workers: 1,
+      timeout: 360_000,
+      testMatch: /identity\/erevna-device-pin-passkey\.spec\.ts/,
+      use: { ...CHROME, ...(erevnaUrl ? { baseURL: erevnaUrl } : {}) },
+    },
 
     // ---- Poueni forgot/reset-password E2E ----
     // Standalone — signs up a fresh canary tenant (plus-addressed on the
