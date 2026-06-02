@@ -29,7 +29,7 @@
  * Runs on staging + prod; local is skipped (no katalogos BFF in the dev loop).
  */
 
-import { test, expect, type APIRequestContext, type Cookie } from '@playwright/test';
+import { test, expect, type APIRequestContext, type Cookie, type Page } from '@playwright/test';
 
 import { isRemoteTarget } from '../../helpers/target.js';
 import { loginAsTenantAdminBrowser } from '../../helpers/realm-browser-auth.js';
@@ -124,6 +124,59 @@ function requireCookie(cookies: Cookie[], name: string): Cookie {
   return cookie!;
 }
 
+/**
+ * Auto-dismiss katalogos-web's cookie-consent banner whenever it blocks an
+ * interaction (mirrors BasePage.registerOverlayHandlers — this spec doesn't use
+ * the page-object hierarchy). Without it, the banner overlays the passkey button
+ * and intercepts the click.
+ */
+async function registerCookieBannerHandler(page: Page): Promise<void> {
+  await page.addLocatorHandler(
+    page.locator('[data-testid="cookie-consent-banner"]'),
+    async () => {
+      try {
+        await page
+          .locator('[data-testid="cookie-consent-accept-all"]')
+          .click({ noWaitAfter: true, timeout: 5_000 });
+      } catch {
+        // Banner disappeared mid-navigation — safe to ignore.
+      }
+    },
+  );
+}
+
+/**
+ * Logs in via the BFF, polling through per-IP rate-limit 429s. The serial
+ * device-PIN test's lockout phase deliberately drains the BffAuth limiter, so
+ * the next test's first login can land inside a still-throttled window —
+ * that's the limiter doing its job, not a product failure.
+ */
+async function loginThroughRateLimit(
+  page: Page,
+  user: { username: string; password: string },
+): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        try {
+          await loginAsTenantAdminBrowser(page, user);
+          return 'logged-in';
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('status 429')) {
+            return 'rate-limited';
+          }
+          throw error;
+        }
+      },
+      {
+        message: 'waiting out the per-IP BffAuth rate limiter before /bff/login',
+        intervals: [RATE_LIMIT_BACKOFF_MS],
+        timeout: RATE_LIMIT_MAX_WAIT_MS,
+      },
+    )
+    .toBe('logged-in');
+}
+
 test.describe('Katalogos device-PIN + passkey (shared auth-web 1.4.0 components)', () => {
   test.skip(
     !isRemoteTarget(),
@@ -140,9 +193,10 @@ test.describe('Katalogos device-PIN + passkey (shared auth-web 1.4.0 components)
     baseURL,
   }) => {
     const appUrl = baseURL!;
+    await registerCookieBannerHandler(page);
 
     // ── 1. Sign in as the seeded test user (BFF ROPC via the SPA origin) ──
-    await loginAsTenantAdminBrowser(page, TEST_USER);
+    await loginThroughRateLimit(page, TEST_USER);
 
     // ── 2. ENROL a device PIN against this strong session ─────────────────
     const enrollResp = await bffPostThroughRateLimit(page.request, appUrl, '/bff/pin/enroll', {
@@ -162,6 +216,7 @@ test.describe('Katalogos device-PIN + passkey (shared auth-web 1.4.0 components)
     const returningContext = await browser.newContext();
     await returningContext.addCookies([deviceCookie]);
     const returningPage = await returningContext.newPage();
+    await registerCookieBannerHandler(returningPage);
 
     await returningPage.goto(`${appUrl}/login`);
     await expect(
@@ -230,9 +285,10 @@ test.describe('Katalogos device-PIN + passkey (shared auth-web 1.4.0 components)
     baseURL,
   }) => {
     const appUrl = baseURL!;
+    await registerCookieBannerHandler(page);
 
     // ── 1. Sign in + attach the virtual platform authenticator ────────────
-    await loginAsTenantAdminBrowser(page, TEST_USER);
+    await loginThroughRateLimit(page, TEST_USER);
     await attachVirtualAuthenticator(page);
 
     // ── 2. REGISTER a passkey (KC password re-auth + WebAuthn ceremony) ───
