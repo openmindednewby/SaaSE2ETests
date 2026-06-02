@@ -207,6 +207,17 @@ export function buildProjects(): ProjectConfig {
       testMatch: /kefi\/kefi-passkey-login\.spec\.ts/,
       use: CHROME,
     },
+    {
+      // Katalogos device-PIN + passkey via the SHARED auth-web 1.4.0 components
+      // (unified-login Increment 3). Uses the seeded realm test user + the global
+      // baseURL (katalogos-web per E2E_TARGET) — no canary signup/IMAP needed.
+      // Timeout: the lockout phase deliberately waits out the per-IP rate limiter.
+      name: 'katalogos-login-methods',
+      workers: 1,
+      timeout: 360_000,
+      testMatch: /identity\/katalogos-device-pin-passkey\.spec\.ts/,
+      use: CHROME,
+    },
 
     // ---- Poueni forgot/reset-password E2E ----
     // Standalone — signs up a fresh canary tenant (plus-addressed on the

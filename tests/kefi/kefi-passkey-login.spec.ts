@@ -32,7 +32,7 @@
  * the browser leaves Keycloak. Runs on staging + prod via E2E_TARGET.
  */
 
-import { test, expect, type CDPSession, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 import { KefiMarketingPage } from '../../pages/kefi/KefiMarketingPage.js';
 import { KefiSignupSuccessPage } from '../../pages/kefi/KefiSignupSuccessPage.js';
@@ -47,121 +47,17 @@ import {
   loadKefiMailboxConfig,
 } from '../../helpers/kefi/kefiMailboxClient.js';
 import { isRemoteTarget } from '../../helpers/target.js';
+import {
+  attachVirtualAuthenticator,
+  driveKeycloakPages,
+  isOnKeycloak,
+} from '../../helpers/webauthn-helpers.js';
 
 // Serial — shares one bot mailbox + one Maddy SMTP queue with the other kefi canaries.
 test.describe.configure({ mode: 'serial' });
 
 const SESSION_COOKIE = '__Host-bff-kefi';
 const NAV_TIMEOUT_MS = 30_000;
-/** Budget for the whole KC redirect dance (re-auth + ceremony + label + callback). */
-const KC_DRIVE_TIMEOUT_MS = 90_000;
-/** Poll interval while watching for the next KC page element to react to. */
-const KC_DRIVE_POLL_MS = 1_000;
-
-/**
- * Attaches a CDP virtual WebAuthn authenticator to the page's browser target.
- * CTAP2 + internal transport + resident keys + user verification = a platform
- * passkey (TouchID / Windows Hello stand-in). automaticPresenceSimulation makes
- * every ceremony complete without a human tap. The authenticator lives on the
- * page TARGET, so it survives cross-origin navigations (app → Keycloak → app)
- * and cookie clearing — exactly like a real platform authenticator would.
- */
-async function attachVirtualAuthenticator(page: Page): Promise<CDPSession> {
-  const cdp = await page.context().newCDPSession(page);
-  await cdp.send('WebAuthn.enable');
-  await cdp.send('WebAuthn.addVirtualAuthenticator', {
-    options: {
-      protocol: 'ctap2',
-      transport: 'internal',
-      hasResidentKey: true,
-      hasUserVerification: true,
-      isUserVerified: true,
-      automaticPresenceSimulation: true,
-    },
-  });
-  return cdp;
-}
-
-/** True while the page is on a Keycloak-hosted page (any *identity* host). */
-function isOnKeycloak(page: Page): boolean {
-  return page.url().includes('identity.');
-}
-
-/** Clicks the first visible locator among candidates; returns what it clicked or null. */
-async function clickFirstVisible(page: Page, selectors: string[]): Promise<string | null> {
-  for (const selector of selectors) {
-    const locator = page.locator(selector).first();
-    const visible = await locator.isVisible().catch(() => false);
-    if (visible) {
-      await locator.click().catch(() => undefined);
-      return selector;
-    }
-  }
-  return null;
-}
-
-/**
- * Reacts to whichever Keycloak hosted page is currently showing, until the
- * browser navigates back to the app (leaves the identity host) or the budget
- * runs out. Handles, in priority order:
- *  - the username/password re-auth form (filled with the canary credentials);
- *  - the "Try another way" link (shown when the WebAuthn ceremony can't proceed,
- *    e.g. registering a first passkey — falls through to the password form);
- *  - the authentication-method selector (picks the password option);
- *  - explicit WebAuthn trigger buttons (register / authenticate);
- *  - the post-ceremony authenticator-label form (accepts the default label).
- * The virtual authenticator answers every navigator.credentials.* call silently.
- */
-async function driveKeycloakPages(
-  page: Page,
-  credentials: { email: string; password: string },
-): Promise<void> {
-  const deadline = Date.now() + KC_DRIVE_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    if (!isOnKeycloak(page)) return;
-
-    // 1. Username/password re-auth form.
-    const passwordField = page.locator('#password');
-    const usernameField = page.locator('#username');
-    const loginSubmit = page.locator('#kc-login');
-    if (
-      (await passwordField.isVisible().catch(() => false)) &&
-      (await loginSubmit.isVisible().catch(() => false))
-    ) {
-      if (await usernameField.isVisible().catch(() => false)) {
-        await usernameField.fill(credentials.email).catch(() => undefined);
-      }
-      await passwordField.fill(credentials.password).catch(() => undefined);
-      await loginSubmit.click().catch(() => undefined);
-      await page.waitForLoadState('networkidle').catch(() => undefined);
-      continue;
-    }
-
-    // 2. Whatever known interactive element is showing, in priority order:
-    //    try-another-way → password option in the method selector → WebAuthn
-    //    trigger buttons → label-form save.
-    const clicked = await clickFirstVisible(page, [
-      '#try-another-way',
-      '.select-auth-box-parent:has-text("Password")',
-      '#authenticateWebAuthnButton',
-      'input#registerWebAuthn',
-      '#registerWebAuthn',
-      'input[type="submit"]#saveWebAuthnRegistration',
-      'form#register input[type="submit"]',
-    ]);
-    if (clicked !== null) {
-      await page.waitForLoadState('networkidle').catch(() => undefined);
-      continue;
-    }
-
-    // Nothing recognisable yet — the ceremony JS may be running; poll again.
-    await page.waitForTimeout(KC_DRIVE_POLL_MS);
-  }
-
-  throw new Error(
-    `Keycloak page drive timed out after ${KC_DRIVE_TIMEOUT_MS}ms — still on ${page.url()}`,
-  );
-}
 
 test.describe('Kefi passkey — register, sign out, sign in with passkey', () => {
   test.skip(
