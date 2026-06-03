@@ -38,12 +38,17 @@ import type * as dns from 'node:dns';
 
 const dnsRuntime = require('node:dns') as typeof import('node:dns');
 
-// Multi-segment-friendly: matches `staging.<one-or-more-segments>.dloizides.com`.
-// The Kefi tenant-lifecycle E2E hits `staging.v2-api.kizombaunioncy.dloizides.com`
-// (kefi-api ingress today) and `staging.kefi.dloizides.com` (kefi-marketing) — the
-// former has two segments between `staging.` and `dloizides.com`, which the old
-// single-segment regex `^staging\.[a-z0-9-]+\.dloizides\.com$` would reject.
-const DEFAULT_PATTERN = '^staging\\.([a-z0-9-]+\\.)+dloizides\\.com$';
+// Position-agnostic: matches any hostname carrying a `staging.` label anywhere
+// before `dloizides.com`. Two shapes exist in the fleet:
+//   - prefix style:  `staging.<product>.dloizides.com` (SaaS apps, kefi)
+//   - infix style:   `<sub>.<product>.staging.dloizides.com` (Poueni — e.g.
+//     `app.poueni.staging.dloizides.com`, `poueni.staging.dloizides.com`)
+// The old prefix-only regex silently sent the infix-style hosts to public DNS
+// (a wildcard CNAME to the PROD IP) → Traefik 404 on prod, which got
+// misdiagnosed as "staging poueni-api missing the signup endpoint" — the same
+// failure class as the erevna-web note below. Production hostnames never carry
+// a `staging.` label, so the broader match cannot leak prod traffic.
+const DEFAULT_PATTERN = '^([a-z0-9-]+\\.)*staging\\.([a-z0-9-]+\\.)*dloizides\\.com$';
 
 const SAAS_STAGING_HOSTNAMES = [
   'staging.app.dloizides.com',
@@ -73,6 +78,12 @@ const SAAS_STAGING_HOSTNAMES = [
   // kefi-web). Same Chromium-resolver footnote as above.
   'staging.v2.kizombaunioncy.dloizides.com',
   'staging.kizomba-union-cy.kefi.dloizides.com',
+  // Poueni (unified-login Increment 3 / password-reset E2E) — Poueni's staging
+  // hosts use the INFIX style (`*.staging.dloizides.com`), not the prefix style.
+  // Same Chromium-resolver footnote as above.
+  'poueni.staging.dloizides.com',
+  'app.poueni.staging.dloizides.com',
+  'api.poueni.staging.dloizides.com',
 ] as const;
 
 const PATCHED_SENTINEL = Symbol.for('e2e.host-override.patched');

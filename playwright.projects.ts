@@ -227,6 +227,16 @@ export function buildProjects(): ProjectConfig {
       testMatch: /identity\/erevna-device-pin-passkey\.spec\.ts/,
       use: { ...CHROME, ...(erevnaUrl ? { baseURL: erevnaUrl } : {}) },
     },
+    {
+      // Poueni passkey — the Vite dashboard's passkey-only rollout (no PIN leg;
+      // see the Poueni decision in the Increment-3 task doc). Absolute URLs via
+      // getPoueniUrls(); seeded poueni-realm test user.
+      name: 'poueni-passkey',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /poueni\/poueni-passkey\.spec\.ts/,
+      use: CHROME,
+    },
 
     // ---- Poueni forgot/reset-password E2E ----
     // Standalone — signs up a fresh canary tenant (plus-addressed on the
