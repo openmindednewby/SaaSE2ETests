@@ -71,6 +71,24 @@ export async function bffPostThroughRateLimit(
   return lastResponse!;
 }
 
+/**
+ * PUTs a BFF-proxied JSON endpoint (e.g. the tenant-api `/bff/api/tenants/*`
+ * routes) with the CSRF header + explicit Origin the BFF requires on
+ * state-changing calls. Unlike {@link bffPost} this targets the YARP proxy
+ * path, not the BFF's own `/bff/*` auth endpoints.
+ */
+export function bffPut(
+  request: APIRequestContext,
+  baseUrl: string,
+  path: string,
+  data: Record<string, unknown>,
+): ReturnType<APIRequestContext['put']> {
+  return request.put(`${baseUrl}${path}`, {
+    headers: { [CSRF_HEADER]: CSRF_VALUE, Origin: baseUrl },
+    data,
+  });
+}
+
 /** Finds a captured cookie by name, asserting it exists. */
 export function requireCookie(cookies: Cookie[], name: string): Cookie {
   const cookie = cookies.find((c) => c.name === name);

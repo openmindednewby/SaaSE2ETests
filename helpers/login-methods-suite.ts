@@ -28,6 +28,7 @@
 
 import { test, expect } from '@playwright/test';
 
+import { definePreferredMethodTest } from './login-methods-preferred.js';
 import { isRemoteTarget } from './target.js';
 import {
   bffPostThroughRateLimit,
@@ -288,5 +289,9 @@ export function defineLoginMethodsSuite(config: LoginMethodsSuiteConfig): void {
         'a forged callback must not mint a session',
       ).toBeUndefined();
     });
+
+    // The cross-device preferred-method round-trip (D5) — its own module to keep
+    // this file within the max-file-lines budget. Inherits the describe's skips.
+    definePreferredMethodTest(TEST_USER);
   });
 }
