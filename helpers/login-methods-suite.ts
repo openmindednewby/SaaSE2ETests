@@ -32,6 +32,7 @@ import { definePreferredMethodTest } from './login-methods-preferred.js';
 import { isRemoteTarget } from './target.js';
 import {
   bffPostThroughRateLimit,
+  bffPostThroughTransientErrors,
   gotoBffThroughRateLimit,
   loginThroughRateLimit,
   registerCookieBannerHandler,
@@ -105,14 +106,14 @@ export function defineLoginMethodsSuite(config: LoginMethodsSuiteConfig): void {
       // ── 1. Sign in as the seeded test user (BFF ROPC via the SPA origin) ──
       await loginThroughRateLimit(page, TEST_USER);
 
-      // ── 2. ENROL a device PIN against this strong session ─────────────────
-      const enrollResp = await bffPostThroughRateLimit(page.request, appUrl, '/bff/pin/enroll', {
+      // ── 2. ENROL a device PIN — retries the intermittent staging KC 502 ───
+      const enrollResp = await bffPostThroughTransientErrors(page.request, appUrl, '/bff/pin/enroll', {
         pin: CANARY_PIN,
         digits: CANARY_PIN_DIGITS,
       });
       expect(
         enrollResp.status(),
-        'enroll OK — a 502 here means the BFF client lacks the offline_access scope on its realm',
+        'enroll OK — a persistent 502 means the BFF client lacks the offline_access scope on its realm',
       ).toBe(HTTP_OK);
 
       const ownerCookies = await page.context().cookies();
@@ -291,7 +292,8 @@ export function defineLoginMethodsSuite(config: LoginMethodsSuiteConfig): void {
     });
 
     // The cross-device preferred-method round-trip (D5) — its own module to keep
-    // this file within the max-file-lines budget. Inherits the describe's skips.
-    definePreferredMethodTest(TEST_USER);
+    // this file within the max-file-lines budget. Logs in as a tenant-scoped
+    // user itself (the write needs a tenantId), so it takes no user argument.
+    definePreferredMethodTest();
   });
 }

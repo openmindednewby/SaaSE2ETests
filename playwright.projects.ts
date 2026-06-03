@@ -227,6 +227,9 @@ export function buildProjects(): ProjectConfig {
       workers: 1,
       timeout: 360_000,
       testMatch: /identity\/katalogos-device-pin-passkey\.spec\.ts/,
+      // multi-tenant-setup seeds the tenant-scoped users the preferred-method
+      // (D5) test logs in as — the write needs a tenantId the superUser lacks.
+      dependencies: ['multi-tenant-setup'],
       use: CHROME,
     },
     {
@@ -236,6 +239,7 @@ export function buildProjects(): ProjectConfig {
       workers: 1,
       timeout: 360_000,
       testMatch: /identity\/erevna-device-pin-passkey\.spec\.ts/,
+      dependencies: ['multi-tenant-setup'],
       use: { ...CHROME, ...(erevnaUrl ? { baseURL: erevnaUrl } : {}) },
     },
     {

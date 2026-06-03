@@ -89,6 +89,49 @@ export function bffPut(
   });
 }
 
+/** Upstream-error statuses worth retrying — a BFF→Keycloak grant can blip. */
+const HTTP_BAD_GATEWAY = 502;
+const HTTP_SERVICE_UNAVAILABLE = 503;
+const HTTP_GATEWAY_TIMEOUT = 504;
+const TRANSIENT_RETRY_BACKOFF_MS = 3_000;
+const TRANSIENT_RETRY_MAX_ATTEMPTS = 4;
+
+/**
+ * Like {@link bffPostThroughRateLimit}, but ALSO retries transient upstream
+ * errors (502/503/504) on a short backoff. The device-PIN enrol calls
+ * `bff → Keycloak` for an offline-access grant; on staging that grant
+ * occasionally 502s on a momentary KC hiccup (it succeeds on the next try).
+ * Retrying here keeps the shared suite from flaking on an environment blip
+ * without masking a persistent config error (which 502s every attempt).
+ */
+export async function bffPostThroughTransientErrors(
+  request: APIRequestContext,
+  baseUrl: string,
+  path: string,
+  data?: Record<string, unknown>,
+): Promise<Awaited<ReturnType<APIRequestContext['post']>>> {
+  let last: Awaited<ReturnType<APIRequestContext['post']>> | null = null;
+  await expect
+    .poll(
+      async () => {
+        last = await bffPostThroughRateLimit(request, baseUrl, path, data);
+        const status = last.status();
+        const isTransient =
+          status === HTTP_BAD_GATEWAY ||
+          status === HTTP_SERVICE_UNAVAILABLE ||
+          status === HTTP_GATEWAY_TIMEOUT;
+        return isTransient ? 'transient' : 'settled';
+      },
+      {
+        message: `retrying transient upstream errors on ${path}`,
+        intervals: Array<number>(TRANSIENT_RETRY_MAX_ATTEMPTS).fill(TRANSIENT_RETRY_BACKOFF_MS),
+        timeout: TRANSIENT_RETRY_BACKOFF_MS * (TRANSIENT_RETRY_MAX_ATTEMPTS + 1),
+      },
+    )
+    .toBe('settled');
+  return last!;
+}
+
 /** Finds a captured cookie by name, asserting it exists. */
 export function requireCookie(cookies: Cookie[], name: string): Cookie {
   const cookie = cookies.find((c) => c.name === name);
