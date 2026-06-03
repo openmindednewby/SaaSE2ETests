@@ -26,10 +26,19 @@
  * prod; local is skipped.
  */
 
-import { test, expect, type APIRequestContext, type Cookie, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 import { isRemoteTarget } from './target.js';
-import { loginAsTenantAdminBrowser } from './realm-browser-auth.js';
+import {
+  bffPostThroughRateLimit,
+  gotoBffThroughRateLimit,
+  loginThroughRateLimit,
+  registerCookieBannerHandler,
+  requireCookie,
+  HTTP_OK,
+  HTTP_UNAUTHORIZED,
+  HTTP_TOO_MANY_REQUESTS,
+} from './bff-auth-api.js';
 import {
   attachVirtualAuthenticator,
   driveKeycloakPages,
@@ -48,9 +57,6 @@ export interface LoginMethodsSuiteConfig {
   testIdPrefix: string;
 }
 
-const CSRF_HEADER = 'X-BFF-Csrf';
-const CSRF_VALUE = '1';
-
 /** The seeded realm test user (created by keycloak-seed-test-users). */
 const TEST_USER = {
   username: process.env.TEST_USER_USERNAME ?? '',
@@ -61,145 +67,9 @@ const CANARY_PIN = '135790';
 const CANARY_PIN_DIGITS = 6;
 const WRONG_PIN = '999999';
 
-const HTTP_OK = 200;
-const HTTP_UNAUTHORIZED = 401;
-const HTTP_TOO_MANY_REQUESTS = 429;
 /** Engine default `MaxFailures` is 5 → the 6th wrong attempt is device-locked. */
 const MAX_LOCKOUT_ITERATIONS = 12;
 const NAV_TIMEOUT_MS = 30_000;
-
-/**
- * The per-IP "BffAuth" rate limiter (5 req/60s, empty-body 429s) sits in front
- * of the device lockout (JSON-body 429 + Retry-After). Poll through it.
- */
-const RATE_LIMIT_BACKOFF_MS = 15_000;
-const RATE_LIMIT_MAX_WAIT_MS = 120_000;
-
-/** POSTs a /bff endpoint with the CSRF header + explicit Origin the BFF requires. */
-function bffPost(
-  request: APIRequestContext,
-  baseUrl: string,
-  path: string,
-  data?: Record<string, unknown>,
-): ReturnType<APIRequestContext['post']> {
-  return request.post(`${baseUrl}${path}`, {
-    headers: { [CSRF_HEADER]: CSRF_VALUE, Origin: baseUrl },
-    data: data ?? {},
-  });
-}
-
-/** Like {@link bffPost}, but polls through the per-IP rate limiter's empty-body 429s. */
-async function bffPostThroughRateLimit(
-  request: APIRequestContext,
-  baseUrl: string,
-  path: string,
-  data?: Record<string, unknown>,
-): Promise<Awaited<ReturnType<APIRequestContext['post']>>> {
-  let lastResponse: Awaited<ReturnType<APIRequestContext['post']>> | null = null;
-  await expect
-    .poll(
-      async () => {
-        lastResponse = await bffPost(request, baseUrl, path, data);
-        if (lastResponse.status() !== HTTP_TOO_MANY_REQUESTS) return 'reached';
-        const body = await lastResponse.text();
-        // Device-lockout 429s carry a JSON body — that IS the signal we want.
-        return body.length > 0 ? 'reached' : 'rate-limited';
-      },
-      {
-        message: `waiting out the per-IP BffAuth rate limiter on ${path}`,
-        intervals: [RATE_LIMIT_BACKOFF_MS],
-        timeout: RATE_LIMIT_MAX_WAIT_MS,
-      },
-    )
-    .toBe('reached');
-  return lastResponse!;
-}
-
-/** Finds a captured cookie by name, asserting it exists. */
-function requireCookie(cookies: Cookie[], name: string): Cookie {
-  const cookie = cookies.find((c) => c.name === name);
-  expect(cookie, `cookie ${name} present`).toBeDefined();
-  return cookie!;
-}
-
-/**
- * Auto-dismiss the app's cookie-consent banner whenever it blocks an
- * interaction (mirrors BasePage.registerOverlayHandlers). Without it, the
- * banner overlays the passkey button and intercepts the click.
- */
-async function registerCookieBannerHandler(page: Page): Promise<void> {
-  await page.addLocatorHandler(
-    page.locator('[data-testid="cookie-consent-banner"]'),
-    async () => {
-      try {
-        await page
-          .locator('[data-testid="cookie-consent-accept-all"]')
-          .click({ noWaitAfter: true, timeout: 5_000 });
-      } catch {
-        // Banner disappeared mid-navigation — safe to ignore.
-      }
-    },
-  );
-}
-
-/**
- * Drives the browser to a rate-limited BFF GET endpoint (/bff/passkey/login or
- * /bff/passkey/register), polling through empty-body 429 pages. These endpoints
- * share the per-IP "BffAuth" limiter with the PIN endpoints, so in serial runs
- * the PIN test's lockout phase can leave the window drained — a navigation then
- * renders a bare 429 instead of redirecting to Keycloak.
- */
-async function gotoBffThroughRateLimit(page: Page, url: string): Promise<void> {
-  await expect
-    .poll(
-      async () => {
-        if (isOnKeycloak(page)) return 'on-keycloak';
-        const response = await page.goto(url);
-        if (response !== null && response.status() === HTTP_TOO_MANY_REQUESTS) {
-          return 'rate-limited';
-        }
-        return isOnKeycloak(page) ? 'on-keycloak' : 'navigating';
-      },
-      {
-        message: `waiting out the per-IP BffAuth rate limiter navigating to ${url}`,
-        intervals: [RATE_LIMIT_BACKOFF_MS],
-        timeout: RATE_LIMIT_MAX_WAIT_MS,
-      },
-    )
-    .toBe('on-keycloak');
-}
-
-/**
- * Logs in via the BFF, polling through per-IP rate-limit 429s. The serial
- * device-PIN test's lockout phase deliberately drains the BffAuth limiter, so
- * the next test's first login can land inside a still-throttled window —
- * that's the limiter doing its job, not a product failure.
- */
-async function loginThroughRateLimit(
-  page: Page,
-  user: { username: string; password: string },
-): Promise<void> {
-  await expect
-    .poll(
-      async () => {
-        try {
-          await loginAsTenantAdminBrowser(page, user);
-          return 'logged-in';
-        } catch (error) {
-          if (error instanceof Error && error.message.includes('status 429')) {
-            return 'rate-limited';
-          }
-          throw error;
-        }
-      },
-      {
-        message: 'waiting out the per-IP BffAuth rate limiter before /bff/login',
-        intervals: [RATE_LIMIT_BACKOFF_MS],
-        timeout: RATE_LIMIT_MAX_WAIT_MS,
-      },
-    )
-    .toBe('logged-in');
-}
 
 /**
  * Defines the two-test login-methods suite for one product. Call from a spec
@@ -268,6 +138,24 @@ export function defineLoginMethodsSuite(config: LoginMethodsSuiteConfig): void {
       const afterUnlock = await returningContext.cookies();
       requireCookie(afterUnlock, config.sessionCookie);
       await returningContext.close();
+
+      // ── 3b. REPEAT UNLOCK (API-level) — guards offline-token rotation ──────
+      // The realms revoke refresh tokens on use, so this second unlock replays
+      // a dead token unless the engine persisted the rotated one on the first
+      // unlock (Bff.AspNetCore 1.3.2). On 1.3.1 the device dies after one use.
+      const repeatContext = await browser.newContext();
+      await repeatContext.addCookies([deviceCookie]);
+      const repeatUnlock = await bffPostThroughRateLimit(
+        repeatContext.request,
+        appUrl,
+        '/bff/pin/unlock',
+        { pin: CANARY_PIN },
+      );
+      expect(
+        repeatUnlock.status(),
+        'device unlocks REPEATEDLY (engine persists the rotated offline token)',
+      ).toBe(HTTP_OK);
+      await repeatContext.close();
 
       // ── 4. WRONG PIN + LOCKOUT (API-level, device-cookie-only context) ─────
       const lockoutContext = await browser.newContext();

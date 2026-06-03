@@ -208,6 +208,17 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      // Password-reset revokes remembered devices (unified-login #169 Batch 6
+      // Seam 1). Signup + IMAP verify + PIN enrol + forgot/reset email round-trip
+      // + the stale-device 401 assertion. Timeout is dominated by the per-IP
+      // BffAuth rate limiter (5 req/60s) that every auth call polls through.
+      name: 'kefi-reset-revokes-devices',
+      workers: 1,
+      timeout: 360_000,
+      testMatch: /kefi\/kefi-reset-revokes-devices\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       // Katalogos device-PIN + passkey via the SHARED auth-web 1.4.0 components
       // (unified-login Increment 3). Uses the seeded realm test user + the global
       // baseURL (katalogos-web per E2E_TARGET) — no canary signup/IMAP needed.
