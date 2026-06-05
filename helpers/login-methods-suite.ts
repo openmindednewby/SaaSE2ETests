@@ -1,33 +1,24 @@
 /**
- * Shared device-PIN + passkey E2E suite (unified-login Increment 3).
+ * Shared login-methods E2E suite (unified-login Increment 3 + parity #172).
  *
- * One parameterised suite definition consumed by every product that rolled out
- * the unified login methods via the shared @dloizides/auth-web 1.4.0 components
- * (katalogos, erevna, …). Extracted from the Katalogos spec on its second use
- * (the Erevna rollout) — per-product spec files stay thin config callers.
+ * One parameterised suite consumed by every product that rolled out the unified
+ * login methods via the shared @dloizides/auth-web components (katalogos,
+ * erevna, …); per-product spec files stay thin config callers. Tests:
+ *   1. device PIN — enrol → unlock on a remembered device → wrong-PIN lockout
+ *      (429 + Retry-After) → disable revokes the record.
+ *   2. passkey — register via the KC WebAuthn ceremony → usernameless login →
+ *      forged callback rejected.
+ *   3. email OTP — request → read the emailed code → verify (see login-methods-otp).
+ *   4. preferred method — cross-device round-trip (see login-methods-preferred).
  *
- *   Test 1 — device PIN:
- *     login (seeded test user) → enrol via /bff/pin/enroll → a SECOND context
- *     carrying ONLY the device cookie sees the shared DevicePinUnlockScreen gate
- *     on /login → unlocks → fresh session. Then wrong-PIN 401s → device lockout
- *     429 + Retry-After → disable revokes the record.
- *
- *   Test 2 — passkey:
- *     CDP virtual authenticator → /bff/passkey/register (KC re-auth + WebAuthn
- *     ceremony) → clear cookies → the shared PasskeyLoginButton on /login →
- *     usernameless passkey login → /bff/me identifies the user → a forged
- *     callback is rejected to /login?passkeyError=.
- *
- * Uses the realm's SEEDED test user (TEST_USER_USERNAME / TEST_USER_PASSWORD).
- * Cleanup: the PIN device record is disabled in test 1; passkey credentials
- * accumulate on the test user (KC handles multiples; accepted gap).
- *
- * The app host comes from the calling project's baseURL. Runs on staging +
- * prod; local is skipped.
+ * Tests 1-2 use the realm's SEEDED test user (TEST_USER_USERNAME/PASSWORD); the
+ * PIN record is disabled in test 1, passkey creds accumulate (KC handles
+ * multiples). The app host is the calling project's baseURL. Remote-only.
  */
 
 import { test, expect } from '@playwright/test';
 
+import { defineOtpLoginTest } from './login-methods-otp.js';
 import { definePreferredMethodTest } from './login-methods-preferred.js';
 import { isRemoteTarget } from './target.js';
 import {
@@ -57,6 +48,8 @@ export interface LoginMethodsSuiteConfig {
   deviceCookie: string;
   /** The app's testIdPrefix — shared-component testIDs are `{prefix}-auth-…`. */
   testIdPrefix: string;
+  /** Plus-address tag for the seeded `otp-bot` user (e.g. `otp-katalogos`); see login-methods-otp. */
+  otpEmailTag: string;
 }
 
 /** The seeded realm test user (created by keycloak-seed-test-users). */
@@ -290,6 +283,10 @@ export function defineLoginMethodsSuite(config: LoginMethodsSuiteConfig): void {
         'a forged callback must not mint a session',
       ).toBeUndefined();
     });
+
+    // Email-OTP login round-trip (#172) — its own module (max-file-lines), and
+    // the only leg that completes the realm's Direct-Grant-OTP flow end to end.
+    defineOtpLoginTest(config);
 
     // The cross-device preferred-method round-trip (D5) — its own module to keep
     // this file within the max-file-lines budget. Logs in as a tenant-scoped

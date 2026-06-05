@@ -18,4 +18,5 @@ defineLoginMethodsSuite({
   sessionCookie: '__Host-bff-erevna',
   deviceCookie: '__Host-bffdev-erevna',
   testIdPrefix: 'erevna',
+  otpEmailTag: 'otp-erevna',
 });

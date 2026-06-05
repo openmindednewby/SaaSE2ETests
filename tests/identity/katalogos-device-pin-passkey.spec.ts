@@ -20,4 +20,5 @@ defineLoginMethodsSuite({
   sessionCookie: '__Host-bff-katalogos',
   deviceCookie: '__Host-bffdev-katalogos',
   testIdPrefix: 'katalogos',
+  otpEmailTag: 'otp-katalogos',
 });
