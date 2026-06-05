@@ -63,14 +63,33 @@ async function readEmail(to: string, subjectIncludes: string): Promise<{ html: s
   return { html: captured.bodyHtml ?? '', text: captured.bodyText };
 }
 
-/** Log in via the dashboard form and stay authenticated (keeps the session). */
+/**
+ * Log in via the dashboard form and stay authenticated. Retries the credential
+ * submit for up to a minute: right after signup+verify, Keycloak user-enable can
+ * lag the API by a few seconds (more so in-cluster, where several canary specs
+ * mint fresh KC users back-to-back), so a single submit can race propagation.
+ * The dual-marker behaviour under test is unrelated to auth — this just keeps
+ * the login step from being the flaky part.
+ */
 async function login(page: Page, email: string, password: string): Promise<void> {
-  await page.goto(`${urls.dashboardUrl}/login`);
-  await page.locator('input[type="email"]').waitFor({ state: 'visible', timeout: 15_000 });
-  await page.locator('input[type="email"]').fill(email);
-  await page.locator('input[type="password"]').fill(password);
-  await page.locator('button[type="submit"]').click();
-  await page.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 15_000 });
+  const deadline = Date.now() + 60_000;
+  let lastError: unknown;
+  while (Date.now() < deadline) {
+    await page.context().clearCookies();
+    await page.goto(`${urls.dashboardUrl}/login`);
+    await page.locator('input[type="email"]').waitFor({ state: 'visible', timeout: 15_000 });
+    await page.locator('input[type="email"]').fill(email);
+    await page.locator('input[type="password"]').fill(password);
+    await page.locator('button[type="submit"]').click();
+    try {
+      await page.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 8_000 });
+      return;
+    } catch (e) {
+      lastError = e;
+      await page.waitForTimeout(3_000);
+    }
+  }
+  throw lastError ?? new Error('dashboard login did not complete within the retry window');
 }
 
 /**
