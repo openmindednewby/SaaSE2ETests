@@ -123,6 +123,9 @@ export function defineOtpLoginTest(config: OtpLoginTestConfig): void {
     const mailbox = new SharedBotMailbox(mailboxConfig, { timeoutMs: MAILBOX_TIMEOUT_MS });
     const email = await mailbox.waitForMessageTo(otpEmail, {
       subjectIncludes: OTP_EMAIL_SUBJECT,
+      // A fresh request supersedes any earlier code in the backend; if a stray
+      // older message lingers in the shared inbox, the newest one is the live one.
+      preferNewest: true,
     });
     const code = extractOtpCode(email);
     expect(code, `a 6-digit OTP code is present in "${email.subject}"`).not.toBeNull();

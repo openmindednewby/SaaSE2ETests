@@ -93,7 +93,7 @@ export class KefiMailbox {
    */
   async waitForMessageTo(
     to: string,
-    options?: { subjectIncludes?: string },
+    options?: { subjectIncludes?: string; preferNewest?: boolean },
   ): Promise<CapturedEmail> {
     const client = new ImapFlow({
       host: this.config.host,
@@ -109,7 +109,12 @@ export class KefiMailbox {
 
     try {
       while (Date.now() < deadline) {
-        const found = await this.findMatchingMessage(client, to, options?.subjectIncludes);
+        const found = await this.findMatchingMessage(
+          client,
+          to,
+          options?.subjectIncludes,
+          options?.preferNewest,
+        );
         if (found) return found;
         await delay(this.options.pollIntervalMs);
       }
@@ -153,18 +158,25 @@ export class KefiMailbox {
     client: ImapFlow,
     to: string,
     subjectIncludes?: string,
+    preferNewest?: boolean,
   ): Promise<CapturedEmail | null> {
     // Fetch unseen messages with full source — small inbox + a single
     // canary in flight means this is cheap. `seen: false` to avoid
     // re-processing messages a previous run already touched.
+    //
+    // `preferNewest` returns the HIGHEST-UID match instead of the first: for
+    // supersedable codes (email-OTP), an older un-expunged message carries a
+    // code the backend has already invalidated, so the freshest must win.
+    let newest: CapturedEmail | null = null;
     for await (const msg of client.fetch({ seen: false }, { source: true, envelope: true })) {
       const captured = extractCapturedEmail(msg);
       if (!captured) continue;
       if (!captured.to.includes(to)) continue;
       if (subjectIncludes && !captured.subject.includes(subjectIncludes)) continue;
-      return captured;
+      if (!preferNewest) return captured;
+      if (newest === null || captured.uid > newest.uid) newest = captured;
     }
-    return null;
+    return newest;
   }
 }
 

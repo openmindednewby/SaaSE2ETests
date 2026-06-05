@@ -48,6 +48,7 @@ interface ChunkOpts {
 
 export function buildProjects(): ProjectConfig {
   const erevnaUrl = process.env.EREVNA_BASE_URL;
+  const kefiWebUrl = process.env.KEFI_WEB_URL;
 
   /**
    * Build one chunk project. `dir` is the path under tests/; `files` is the
@@ -206,6 +207,16 @@ export function buildProjects(): ProjectConfig {
       timeout: 360_000,
       testMatch: /kefi\/kefi-passkey-login\.spec\.ts/,
       use: CHROME,
+    },
+    {
+      // Kefi interactive email-OTP login (request→verify) — closes the gap the
+      // magic-link specs left. Reuses defineOtpLoginTest; baseURL = the kefi web
+      // host (KEFI_WEB_URL per E2E_TARGET); seeded kefi-realm otp-bot + bot mailbox.
+      name: 'kefi-otp-login',
+      workers: 1,
+      timeout: 360_000,
+      testMatch: /kefi\/kefi-otp-login\.spec\.ts/,
+      use: { ...CHROME, ...(kefiWebUrl ? { baseURL: kefiWebUrl } : {}) },
     },
     {
       // Password-reset revokes remembered devices (unified-login #169 Batch 6
