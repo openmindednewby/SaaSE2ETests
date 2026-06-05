@@ -64,15 +64,18 @@ async function readEmail(to: string, subjectIncludes: string): Promise<{ html: s
 }
 
 /**
- * Log in via the dashboard form and stay authenticated. Retries the credential
- * submit for up to a minute: right after signup+verify, Keycloak user-enable can
- * lag the API by a few seconds (more so in-cluster, where several canary specs
- * mint fresh KC users back-to-back), so a single submit can race propagation.
- * The dual-marker behaviour under test is unrelated to auth — this just keeps
- * the login step from being the flaky part.
+ * Log in via the dashboard form and stay authenticated. Retries on a 15s
+ * backoff: when the whole poueni suite runs back-to-back from one canary pod the
+ * per-IP BffAuth rate limiter (5/60s) 429s the submit (form just stays on
+ * /login); a fresh signup+verify can also briefly 401 while Keycloak enables the
+ * user. Both clear within a 60s window, so WAIT IT OUT — don't hammer (a tight
+ * retry would only burn more rate-limit budget). The dual-marker behaviour under
+ * test is unrelated to auth — this just keeps login from being the flaky part.
  */
+const RATE_LIMIT_WINDOW_MS = 15_000;
+const LOGIN_BUDGET_MS = 120_000;
 async function login(page: Page, email: string, password: string): Promise<void> {
-  const deadline = Date.now() + 60_000;
+  const deadline = Date.now() + LOGIN_BUDGET_MS;
   let lastError: unknown;
   while (Date.now() < deadline) {
     await page.context().clearCookies();
@@ -86,10 +89,10 @@ async function login(page: Page, email: string, password: string): Promise<void>
       return;
     } catch (e) {
       lastError = e;
-      await page.waitForTimeout(3_000);
+      await page.waitForTimeout(RATE_LIMIT_WINDOW_MS);
     }
   }
-  throw lastError ?? new Error('dashboard login did not complete within the retry window');
+  throw lastError ?? new Error('dashboard login did not complete within the rate-limit budget');
 }
 
 /**

@@ -70,6 +70,27 @@ async function attemptDashboardLogin(page: Page, email: string, password: string
   return result === 'ok';
 }
 
+/**
+ * Drive the login expecting SUCCESS, polling through the per-IP BffAuth rate
+ * limiter (5/60s). When the whole poueni suite runs back-to-back from one canary
+ * pod the limiter 429s the form submit (it just stays on /login →
+ * attemptDashboardLogin returns false). Wait out the 60s window and retry, up to
+ * a budget. Only the expect-success calls use this — the rejection check keeps
+ * the single-shot form so a genuinely-wrong password still fails fast.
+ */
+const RATE_LIMIT_WINDOW_MS = 15_000;
+const LOGIN_SUCCESS_BUDGET_MS = 120_000;
+async function loginExpectingSuccess(page: Page, email: string, password: string): Promise<void> {
+  const deadline = Date.now() + LOGIN_SUCCESS_BUDGET_MS;
+  let attempts = 0;
+  while (Date.now() < deadline) {
+    attempts += 1;
+    if (await attemptDashboardLogin(page, email, password)) return;
+    await page.waitForTimeout(RATE_LIMIT_WINDOW_MS);
+  }
+  throw new Error(`dashboard login expected to succeed did not within the rate-limit budget (${attempts} attempts)`);
+}
+
 /** Read one plus-addressed email, returning it and expunging it after. */
 async function readEmail(to: string, subjectIncludes: string): Promise<{ html: string; text: string; uid: number }> {
   const mailbox = new PoueniMailbox(loadPoueniMailboxConfig(), {
@@ -116,8 +137,7 @@ test.describe('Poueni forgot/reset password @poueni @auth @password-reset', () =
     expect(verifyRes.status(), 'verify endpoint returns the success page').toBe(200);
 
     // ── 3. baseline: original password logs in via the dashboard ────────
-    const oldLoginBeforeReset = await attemptDashboardLogin(page, email, OLD_PASSWORD);
-    expect(oldLoginBeforeReset, 'original password should log in after verify (baseline)').toBe(true);
+    await loginExpectingSuccess(page, email, OLD_PASSWORD);
 
     // ── 4. forgot-password request ──────────────────────────────────────
     await requestReset(request, email);
@@ -135,8 +155,7 @@ test.describe('Poueni forgot/reset password @poueni @auth @password-reset', () =
     await expect(page.locator('#formStatus')).toHaveAttribute('data-kind', 'success', { timeout: 15_000 });
 
     // ── 6. THE reported failure: new password must log in ───────────────
-    const newLogin = await attemptDashboardLogin(page, email, NEW_PASSWORD);
-    expect(newLogin, 'NEW password must log in via the dashboard after reset').toBe(true);
+    await loginExpectingSuccess(page, email, NEW_PASSWORD);
 
     // ── 6b. stale-session hygiene: visiting /login while ALREADY logged in
     //        must show the login form (LoginPage clears the session on mount),

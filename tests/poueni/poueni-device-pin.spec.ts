@@ -72,23 +72,18 @@ test.describe('Poueni device-PIN (Vite dashboard + bff-poueni 1.3.2)', () => {
     const { dashboardUrl } = getPoueniUrls();
 
     // ── 1. Sign in as the seeded test user ─────────────────────────────────
-    // Absolute goto + same-origin fetch (NOT the relative-nav login helper,
-    // which would resolve against the default baseURL — the wrong host here).
+    // Through the per-IP BffAuth rate limiter (5/60s): when the whole poueni
+    // suite runs back-to-back from one canary pod the shared limiter 429s the
+    // later logins, so poll-with-backoff instead of a single raw fetch.
+    // bffPost sets the explicit Origin + CSRF the BFF requires, and page.request
+    // shares the browser context, so the session cookie still lands for step 2.
     await page.goto(`${dashboardUrl}/login`);
     await page.waitForLoadState('domcontentloaded');
-    const loginStatus = await page.evaluate(
-      async (creds: { username: string; password: string }) => {
-        const res = await fetch('/bff/login', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json', 'X-BFF-Csrf': '1' },
-          body: JSON.stringify(creds),
-        });
-        return res.status;
-      },
-      { username: TEST_USER.username, password: TEST_USER.password },
-    );
-    expect(loginStatus, 'seeded test user signs in via /bff/login').toBe(HTTP_OK);
+    const loginResp = await bffPostThroughRateLimit(page.request, dashboardUrl, '/bff/login', {
+      username: TEST_USER.username,
+      password: TEST_USER.password,
+    });
+    expect(loginResp.status(), 'seeded test user signs in via /bff/login').toBe(HTTP_OK);
 
     // ── 2. ENROL a device PIN (retries the intermittent staging KC 502) ─────
     const enrollResp = await bffPostThroughTransientErrors(page.request, dashboardUrl, '/bff/pin/enroll', {
