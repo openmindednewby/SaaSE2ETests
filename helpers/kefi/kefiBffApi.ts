@@ -50,6 +50,19 @@ export function bffPost(
   });
 }
 
+/** PUTs a kefi BFF-proxied JSON endpoint (e.g. `/bff/api/tenants/*`) with CSRF + Origin. */
+export function bffPut(
+  request: APIRequestContext,
+  path: string,
+  data: Record<string, unknown>,
+): ReturnType<APIRequestContext['put']> {
+  const { webUrl } = getKefiUrls();
+  return request.put(`${webUrl}${path}`, {
+    headers: { [CSRF_HEADER]: CSRF_VALUE, Origin: webUrl },
+    data,
+  });
+}
+
 /**
  * Like {@link bffPost}, but polls through the per-IP rate limiter: an
  * empty-body 429 (the "BffAuth" sliding-window limiter) is retried on a
