@@ -173,7 +173,6 @@ export class AuthHelper {
    *                use this to mint a 'questioner' token even when the helper
    *                would default to 'onlinemenu'.
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(baseUrl?: string, realmOverride?: string) {
     const kcBase = resolveKcBaseUrl();
     this.realm = resolveRealm(realmOverride);
@@ -201,7 +200,6 @@ export class AuthHelper {
    * sent — KC issues per-realm JWTs without a tenant routing hint. Cleanup
    * endpoints downstream still get tenant context from the JWT's claims.
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async loginViaAPI(username: string, password: string, tenantId?: string): Promise<TokenResponse> {
     const body = new URLSearchParams();
     body.set('grant_type', 'password');

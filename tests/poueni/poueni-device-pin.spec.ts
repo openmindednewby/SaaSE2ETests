@@ -75,7 +75,7 @@ test.describe('Poueni device-PIN (Vite dashboard + bff-poueni 1.3.2)', () => {
     // Absolute goto + same-origin fetch (NOT the relative-nav login helper,
     // which would resolve against the default baseURL — the wrong host here).
     await page.goto(`${dashboardUrl}/login`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     const loginStatus = await page.evaluate(
       async (creds: { username: string; password: string }) => {
         const res = await fetch('/bff/login', {

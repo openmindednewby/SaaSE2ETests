@@ -88,6 +88,10 @@ export async function driveKeycloakPages(
       }
       await passwordField.fill(credentials.password).catch(() => undefined);
       await loginSubmit.click().catch(() => undefined);
+      // KC HOSTED pages (third-party markup, branching ceremony) have no stable
+      // app testIDs to wait on; settling the network before re-polling is the
+      // right tool here — unlike our own app, where actionable waits apply.
+      // eslint-disable-next-line no-networkidle/no-networkidle
       await page.waitForLoadState('networkidle').catch(() => undefined);
       continue;
     }
@@ -105,11 +109,16 @@ export async function driveKeycloakPages(
       'form#register input[type="submit"]',
     ]);
     if (clicked !== null) {
+      // KC hosted-page transition — settle before re-polling (see note above).
+      // eslint-disable-next-line no-networkidle/no-networkidle
       await page.waitForLoadState('networkidle').catch(() => undefined);
       continue;
     }
 
     // Nothing recognisable yet — the ceremony JS may be running; poll again.
+    // Polling an external KC page with branching transitions: a bounded delay is
+    // the correct pattern (there is no single app element to wait on here).
+    // eslint-disable-next-line no-wait-for-timeout/no-wait-for-timeout
     await page.waitForTimeout(KC_DRIVE_POLL_MS);
   }
 

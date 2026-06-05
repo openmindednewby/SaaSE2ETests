@@ -72,8 +72,8 @@ test.describe('Poueni passkey login (Vite dashboard + bff-poueni 1.3.1)', () => 
 
     // ── 1. Sign in via the dashboard login form (plain /bff/login ROPC) ────
     await page.goto(`${dashboardUrl}/login`);
-    // The login page clears any stale session on mount; let that settle first.
-    await page.waitForLoadState('networkidle');
+    // The login page clears any stale session on mount; let the document load.
+    await page.waitForLoadState('domcontentloaded');
     const loginResult = await page.evaluate(
       async (creds: { username: string; password: string }) => {
         const res = await fetch('/bff/login', {

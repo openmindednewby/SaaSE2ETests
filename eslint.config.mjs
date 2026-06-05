@@ -284,4 +284,30 @@ export default [
       'no-console-in-tests/no-console-in-tests': 'off',
     },
   },
+
+  // Standalone CommonJS scripts (e.g. stripe-smoke.js) — manual smoke runners
+  // executed via `node`, not part of the Playwright suite. They legitimately use
+  // Node globals (require / process / console), so declare them to satisfy the
+  // base `no-undef` rule (.cjs/.mjs are ignored above; bare .js needs this).
+  {
+    files: ['**/*.js'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: {
+        require: 'readonly',
+        module: 'readonly',
+        process: 'readonly',
+        console: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        setTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearTimeout: 'readonly',
+        clearInterval: 'readonly',
+        Buffer: 'readonly',
+        URL: 'readonly',
+        URLSearchParams: 'readonly',
+      },
+    },
+  },
 ];
