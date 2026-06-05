@@ -252,6 +252,15 @@ export function buildProjects(): ProjectConfig {
       testMatch: /poueni\/poueni-passkey\.spec\.ts/,
       use: CHROME,
     },
+    {
+      // Poueni device-PIN — the Vite dashboard's PIN-unlock rollout (#173).
+      // Absolute URLs via getPoueniUrls(); seeded poueni-realm test user.
+      name: 'poueni-device-pin',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /poueni\/poueni-device-pin\.spec\.ts/,
+      use: CHROME,
+    },
 
     // ---- Poueni forgot/reset-password E2E ----
     // Standalone — signs up a fresh canary tenant (plus-addressed on the
