@@ -286,5 +286,18 @@ export function buildProjects(): ProjectConfig {
       testMatch: /poueni\/poueni-password-reset\.spec\.ts/,
       use: CHROME,
     },
+
+    // ---- Poueni dual-marker live-map E2E (#184) ----
+    // Standalone — signs up a fresh canary tenant, verifies, logs into the
+    // dashboard, mints an API key, posts dual GPS+ML presence beacons, then
+    // asserts the /live map renders both markers + the GPS↔ML error. Timeout
+    // override: one IMAP wait (verify, ~30s typical / 90s budget) plus a login.
+    {
+      name: 'poueni-live-map',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /poueni\/poueni-live-map\.spec\.ts/,
+      use: CHROME,
+    },
   ];
 }
