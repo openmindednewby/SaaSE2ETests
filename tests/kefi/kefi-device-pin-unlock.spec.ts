@@ -47,6 +47,7 @@ import {
 } from '../../helpers/kefi/kefiMailboxClient.js';
 import {
   bffPost,
+  bffPut,
   bffPostThroughRateLimit,
   requireCookie,
   SESSION_COOKIE,
@@ -55,6 +56,7 @@ import {
   HTTP_UNAUTHORIZED,
   HTTP_TOO_MANY_REQUESTS,
 } from '../../helpers/kefi/kefiBffApi.js';
+import { getKefiUrls } from '../../helpers/kefi/kefiUrls.js';
 import { isRemoteTarget } from '../../helpers/target.js';
 
 // Serial — the negative/lockout phase mutates the single device record, and the
@@ -126,6 +128,22 @@ test.describe('Kefi device-PIN unlock — enrol, unlock, lockout, disable', () =
       const ownerCookies = await page.context().cookies();
       const deviceCookie = requireCookie(ownerCookies, DEVICE_COOKIE);
       requireCookie(ownerCookies, SESSION_COOKIE); // proves we enrolled from a real session
+
+      // ── 2b. PREFERRED METHOD round-trip through bff-kefi → TenantService (D5) ──
+      // The canary is a tenant owner (has a tenantId), so the tenant-scoped
+      // preferred-method write is authorised. Proves the bff-kefi tenants proxy
+      // reaches the new endpoint with a forwarded Bearer + CSRF.
+      const setPrefResp = await bffPut(
+        page.request,
+        '/bff/api/tenants/api/v1/me/login-method-preference',
+        { method: 'passkey' },
+      );
+      expect(setPrefResp.ok(), `set preferred method (got ${setPrefResp.status()})`).toBe(true);
+      const getPrefResp = await page.request.get(
+        `${getKefiUrls().webUrl}/bff/api/tenants/api/v1/me/preferences`,
+      );
+      const prefs = (await getPrefResp.json()) as { preferredLoginMethod?: string | null };
+      expect(prefs.preferredLoginMethod, 'preferred method round-trips').toBe('passkey');
 
       // ── 3. UNLOCK (happy path) via the UI on a remembered, logged-out device ──
       // A fresh context carrying ONLY the device cookie — no session.
