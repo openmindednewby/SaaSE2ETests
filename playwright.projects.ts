@@ -189,6 +189,17 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      // Kefi Phase F (#159) — a FREE tenant signs up, publishes (no Pro gate),
+      // and its page renders dynamically from config. Like kefi-lifecycle this
+      // drives a real signup → wizard → publish (kaniko build + kefi-landings
+      // rollout, 60-240s) then probes the canary's own /t/<slug>/ page.
+      name: 'kefi-free-publish',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-free-publish\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       name: 'kefi-device-pin',
       workers: 1,
       // Generous: the BFF's per-IP rate limiter (5 req/60s) sits in front of the

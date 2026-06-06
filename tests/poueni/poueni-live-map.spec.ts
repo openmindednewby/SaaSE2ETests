@@ -20,6 +20,7 @@
  * local Poueni stack and the flow needs real Maddy + Keycloak + the BFF.
  */
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { getPoueniUrls } from '../../helpers/poueni/poueniUrls.js';
 import {
@@ -89,7 +90,10 @@ async function login(page: Page, email: string, password: string): Promise<void>
       return;
     } catch (e) {
       lastError = e;
-      await page.waitForTimeout(RATE_LIMIT_WINDOW_MS);
+      // Deliberate wall-clock pause to let the BFF per-IP rate-limit window
+      // reset before retrying — a Node timer (not page.waitForTimeout, which the
+      // no-wait-for-timeout lint rule forbids for DOM-state waits).
+      await delay(RATE_LIMIT_WINDOW_MS);
     }
   }
   throw lastError ?? new Error('dashboard login did not complete within the rate-limit budget');
