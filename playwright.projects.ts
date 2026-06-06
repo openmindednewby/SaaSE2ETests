@@ -310,5 +310,17 @@ export function buildProjects(): ProjectConfig {
       testMatch: /poueni\/poueni-live-map\.spec\.ts/,
       use: CHROME,
     },
+
+    // ---- Poueni GDPR data-subject E2E (#180-completeness, Art. 15 + 17) ----
+    // Signs up a canary tenant, mints an API key, posts a contribution, then
+    // exercises export → erase → export to prove erasure works + the audit row
+    // survives. API-driven; needs real Maddy + KC for the signup/login.
+    {
+      name: 'poueni-gdpr',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /poueni\/poueni-gdpr\.spec\.ts/,
+      use: CHROME,
+    },
   ];
 }
