@@ -19,22 +19,15 @@
  * Tagged @poueni @presence @critical. Remote-only (prod/staging): there's no
  * local Poueni stack and the flow needs real Maddy + Keycloak + the BFF.
  */
-import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
-import { setTimeout as delay } from 'node:timers/promises';
+import { test, expect, type APIRequestContext } from '@playwright/test';
 
 import { getPoueniUrls } from '../../helpers/poueni/poueniUrls.js';
-import {
-  PoueniMailbox,
-  loadPoueniMailboxConfig,
-  newPoueniCanaryEmail,
-  extractPoueniVerifyUrl,
-} from '../../helpers/poueni/poueniMailbox.js';
+import { newPoueniCanaryEmail } from '../../helpers/poueni/poueniMailbox.js';
+import { signup, readVerifyUrl, login, rotateApiKey } from '../../helpers/poueni/poueniAuth.js';
 import { isRemoteTarget } from '../../helpers/target.js';
 
 test.describe.configure({ mode: 'serial' });
 
-const MAILBOX_TIMEOUT_MS = 90_000;
-const MAILBOX_POLL_MS = 2_000;
 const PASSWORD = 'LivePoueniPass-123';
 
 const urls = getPoueniUrls();
@@ -42,84 +35,6 @@ const urls = getPoueniUrls();
 // Nicosia apex — a GPS fix with the ML estimate ~15 m off it.
 const GPS_BASE = { lat: 35.1856, lng: 33.3823 };
 const ML_OFFSET = 0.00014; // ~15 m
-
-interface RotateApiKeyResponse {
-  apiKey: string;
-}
-
-async function signup(request: APIRequestContext, email: string): Promise<void> {
-  const res = await request.post(`${urls.apiUrl}/v1/public/signup`, {
-    data: { email, tenantName: 'E2E Live-Map Lab', password: PASSWORD },
-  });
-  expect(res.status(), 'signup should be accepted').toBe(202);
-}
-
-async function readEmail(to: string, subjectIncludes: string): Promise<{ html: string; text: string }> {
-  const mailbox = new PoueniMailbox(loadPoueniMailboxConfig(), {
-    timeoutMs: MAILBOX_TIMEOUT_MS,
-    pollIntervalMs: MAILBOX_POLL_MS,
-  });
-  const captured = await mailbox.waitForMessageTo(to, { subjectIncludes });
-  await mailbox.expungeMessages([captured.uid]).catch(() => undefined);
-  return { html: captured.bodyHtml ?? '', text: captured.bodyText };
-}
-
-/**
- * Log in via the dashboard form and stay authenticated. Retries on a 15s
- * backoff: when the whole poueni suite runs back-to-back from one canary pod the
- * per-IP BffAuth rate limiter (5/60s) 429s the submit (form just stays on
- * /login); a fresh signup+verify can also briefly 401 while Keycloak enables the
- * user. Both clear within a 60s window, so WAIT IT OUT — don't hammer (a tight
- * retry would only burn more rate-limit budget). The dual-marker behaviour under
- * test is unrelated to auth — this just keeps login from being the flaky part.
- */
-const RATE_LIMIT_WINDOW_MS = 15_000;
-const LOGIN_BUDGET_MS = 120_000;
-async function login(page: Page, email: string, password: string): Promise<void> {
-  const deadline = Date.now() + LOGIN_BUDGET_MS;
-  let lastError: unknown;
-  while (Date.now() < deadline) {
-    await page.context().clearCookies();
-    await page.goto(`${urls.dashboardUrl}/login`);
-    await page.locator('input[type="email"]').waitFor({ state: 'visible', timeout: 15_000 });
-    await page.locator('input[type="email"]').fill(email);
-    await page.locator('input[type="password"]').fill(password);
-    await page.locator('button[type="submit"]').click();
-    try {
-      await page.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 8_000 });
-      return;
-    } catch (e) {
-      lastError = e;
-      // Deliberate wall-clock pause to let the BFF per-IP rate-limit window
-      // reset before retrying — a Node timer (not page.waitForTimeout, which the
-      // no-wait-for-timeout lint rule forbids for DOM-state waits).
-      await delay(RATE_LIMIT_WINDOW_MS);
-    }
-  }
-  throw lastError ?? new Error('dashboard login did not complete within the rate-limit budget');
-}
-
-/**
- * Mint a tenant X-API-Key through the authenticated BFF. Runs as an IN-PAGE
- * fetch (not page.request) so the request carries the dashboard Origin the BFF's
- * CSRF middleware requires — exactly the call the dashboard's own
- * adminApi.rotateApiKey() makes.
- */
-async function rotateApiKey(page: Page): Promise<string> {
-  const result = await page.evaluate(async () => {
-    const res = await fetch('/bff/api/poueni/v1/admin/api-key/rotate', {
-      method: 'POST',
-      headers: { 'X-BFF-Csrf': '1', Accept: 'application/json' },
-      credentials: 'same-origin',
-    });
-    const text = await res.text();
-    return { status: res.status, text };
-  });
-  expect(result.status, `rotate-api-key should succeed (got ${result.status}: ${result.text})`).toBe(200);
-  const body = JSON.parse(result.text) as RotateApiKeyResponse;
-  expect(body.apiKey, 'rotate returns an apiKey').toMatch(/^poueni_/);
-  return body.apiKey;
-}
 
 /** Post one dual presence beacon (GPS + ML estimate ~15 m apart). */
 async function postBeacon(
@@ -156,15 +71,11 @@ test.describe('Poueni dual-marker live map @poueni @presence', () => {
     test.info().annotations.push({ type: 'deviceId', description: deviceId });
 
     // ── 1. signup ───────────────────────────────────────────────────────
-    await signup(request, email);
+    await signup(request, email, PASSWORD, 'E2E Live-Map Lab');
 
     // ── 2. verify (activates tenant + enables KC user) ──────────────────
-    const verifyEmail = await readEmail(email, 'Verify');
-    const verifyUrl = extractPoueniVerifyUrl({
-      uid: 0, subject: 'Verify', to: email, bodyText: verifyEmail.text, bodyHtml: verifyEmail.html,
-    });
-    expect(verifyUrl, 'verify URL present in signup email').not.toBeNull();
-    expect((await request.get(verifyUrl!)).status(), 'verify returns the success page').toBe(200);
+    const verifyUrl = await readVerifyUrl(email);
+    expect((await request.get(verifyUrl)).status(), 'verify returns the success page').toBe(200);
 
     // ── 3. dashboard login ──────────────────────────────────────────────
     await login(page, email, PASSWORD);

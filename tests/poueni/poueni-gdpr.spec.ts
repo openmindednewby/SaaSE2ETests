@@ -15,83 +15,18 @@
  * Tagged @poueni @gdpr @critical. Remote-only (prod/staging) — needs real Maddy
  * + Keycloak + the deployed API.
  */
-import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 import { getPoueniUrls } from '../../helpers/poueni/poueniUrls.js';
-import {
-  PoueniMailbox,
-  loadPoueniMailboxConfig,
-  newPoueniCanaryEmail,
-  extractPoueniVerifyUrl,
-} from '../../helpers/poueni/poueniMailbox.js';
+import { newPoueniCanaryEmail } from '../../helpers/poueni/poueniMailbox.js';
+import { signup, readVerifyUrl, login, rotateApiKey } from '../../helpers/poueni/poueniAuth.js';
 import { isRemoteTarget } from '../../helpers/target.js';
 
 test.describe.configure({ mode: 'serial' });
 
-const MAILBOX_TIMEOUT_MS = 90_000;
-const MAILBOX_POLL_MS = 2_000;
 const PASSWORD = 'GdprPoueniPass-123';
-const RATE_LIMIT_WINDOW_MS = 15_000;
-const LOGIN_BUDGET_MS = 120_000;
 
 const urls = getPoueniUrls();
-
-interface RotateApiKeyResponse {
-  apiKey: string;
-}
-
-async function signup(request: APIRequestContext, email: string): Promise<void> {
-  const res = await request.post(`${urls.apiUrl}/v1/public/signup`, {
-    data: { email, tenantName: 'E2E GDPR Lab', password: PASSWORD },
-  });
-  expect(res.status(), 'signup should be accepted').toBe(202);
-}
-
-async function readEmail(to: string, subjectIncludes: string): Promise<{ html: string; text: string }> {
-  const mailbox = new PoueniMailbox(loadPoueniMailboxConfig(), {
-    timeoutMs: MAILBOX_TIMEOUT_MS,
-    pollIntervalMs: MAILBOX_POLL_MS,
-  });
-  const captured = await mailbox.waitForMessageTo(to, { subjectIncludes });
-  await mailbox.expungeMessages([captured.uid]).catch(() => undefined);
-  return { html: captured.bodyHtml ?? '', text: captured.bodyText };
-}
-
-/** Log in, retrying on a 15s backoff to ride out the per-IP BffAuth limiter. */
-async function login(page: Page, email: string, password: string): Promise<void> {
-  const deadline = Date.now() + LOGIN_BUDGET_MS;
-  let lastError: unknown;
-  while (Date.now() < deadline) {
-    await page.context().clearCookies();
-    await page.goto(`${urls.dashboardUrl}/login`);
-    await page.locator('input[type="email"]').waitFor({ state: 'visible', timeout: 15_000 });
-    await page.locator('input[type="email"]').fill(email);
-    await page.locator('input[type="password"]').fill(password);
-    await page.locator('button[type="submit"]').click();
-    try {
-      await page.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 8_000 });
-      return;
-    } catch (e) {
-      lastError = e;
-      await page.waitForTimeout(RATE_LIMIT_WINDOW_MS);
-    }
-  }
-  throw lastError ?? new Error('dashboard login did not complete within the rate-limit budget');
-}
-
-/** Mint an API key via an in-page fetch (carries the dashboard Origin the BFF CSRF needs). */
-async function rotateApiKey(page: Page): Promise<string> {
-  const result = await page.evaluate(async () => {
-    const res = await fetch('/bff/api/poueni/v1/admin/api-key/rotate', {
-      method: 'POST',
-      headers: { 'X-BFF-Csrf': '1', Accept: 'application/json' },
-      credentials: 'same-origin',
-    });
-    return { status: res.status, text: await res.text() };
-  });
-  expect(result.status, `rotate-api-key should succeed (got ${result.status}: ${result.text})`).toBe(200);
-  return (JSON.parse(result.text) as RotateApiKeyResponse).apiKey;
-}
 
 test.describe('Poueni GDPR erasure + export @poueni @gdpr', () => {
   test.skip(!isRemoteTarget(), 'Poueni GDPR E2E targets prod/staging (real Maddy + KC + API); no local stack');
@@ -105,14 +40,10 @@ test.describe('Poueni GDPR erasure + export @poueni @gdpr', () => {
     test.info().annotations.push({ type: 'canaryEmail', description: email });
     test.info().annotations.push({ type: 'deviceId', description: deviceId });
 
-    await signup(request, email);
+    await signup(request, email, PASSWORD, 'E2E GDPR Lab');
 
-    const verifyEmail = await readEmail(email, 'Verify');
-    const verifyUrl = extractPoueniVerifyUrl({
-      uid: 0, subject: 'Verify', to: email, bodyText: verifyEmail.text, bodyHtml: verifyEmail.html,
-    });
-    expect(verifyUrl, 'verify URL present').not.toBeNull();
-    expect((await request.get(verifyUrl!)).status(), 'verify ok').toBe(200);
+    const verifyUrl = await readVerifyUrl(email);
+    expect((await request.get(verifyUrl)).status(), 'verify ok').toBe(200);
 
     await login(page, email, PASSWORD);
     const apiKey = await rotateApiKey(page);

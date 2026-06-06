@@ -23,8 +23,9 @@
  * Runs on staging + prod via E2E_TARGET; local is skipped.
  */
 
-import { test, expect, type Cookie } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
+import { HTTP_OK, requireCookie } from '../../helpers/bff-auth-api.js';
 import { getPoueniUrls } from '../../helpers/poueni/poueniUrls.js';
 import { isRemoteTarget } from '../../helpers/target.js';
 import {
@@ -35,7 +36,6 @@ import {
 
 const SESSION_COOKIE = '__Host-bff-poueni';
 const NAV_TIMEOUT_MS = 30_000;
-const HTTP_OK = 200;
 
 /** The seeded poueni-realm test user (created by seed-realm-users.ps1). */
 const TEST_USER = {
@@ -47,13 +47,6 @@ const TEST_USER = {
 const PASSKEY_BUTTON_TEST_ID = 'poueni-passkey-login-button';
 const PASSKEY_ERROR_TEST_ID = 'poueni-passkey-login-error';
 const PASSKEY_SETTINGS_ADD_TEST_ID = 'poueni-passkey-settings-add';
-
-/** Finds a captured cookie by name, asserting it exists. */
-function requireCookie(cookies: Cookie[], name: string): Cookie {
-  const cookie = cookies.find((c) => c.name === name);
-  expect(cookie, `cookie ${name} present`).toBeDefined();
-  return cookie!;
-}
 
 test.describe('Poueni passkey login (Vite dashboard + bff-poueni 1.3.1)', () => {
   test.skip(

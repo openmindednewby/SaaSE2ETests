@@ -17,9 +17,31 @@ import {
 
 export { KefiMailbox as PoueniMailbox };
 
+/** Shared IMAP polling budget for the poueni specs. */
+export const MAILBOX_TIMEOUT_MS = 90_000;
+export const MAILBOX_POLL_MS = 2_000;
+
 /** Build the IMAP config from the shared E2E_KEFI_MAILBOX_* env vars. */
 export function loadPoueniMailboxConfig(): ReturnType<typeof loadKefiMailboxConfig> {
   return loadKefiMailboxConfig();
+}
+
+/**
+ * Read one plus-addressed email on the shared bot mailbox, filtered by subject,
+ * and expunge it after (so a later poll for the same address can't re-match it).
+ * Shared by every poueni spec — was hand-rolled identically in each.
+ */
+export async function readEmail(
+  to: string,
+  subjectIncludes: string,
+): Promise<{ html: string; text: string; uid: number }> {
+  const mailbox = new KefiMailbox(loadKefiMailboxConfig(), {
+    timeoutMs: MAILBOX_TIMEOUT_MS,
+    pollIntervalMs: MAILBOX_POLL_MS,
+  });
+  const captured = await mailbox.waitForMessageTo(to, { subjectIncludes });
+  await mailbox.expungeMessages([captured.uid]).catch(() => undefined);
+  return { html: captured.bodyHtml ?? '', text: captured.bodyText, uid: captured.uid };
 }
 
 /**

@@ -19,22 +19,20 @@
  * Poueni stack in the dev loop, and the flow needs real Maddy + Keycloak.
  */
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
-import { setTimeout as delay } from 'node:timers/promises';
 
 import { getPoueniUrls } from '../../helpers/poueni/poueniUrls.js';
 import {
   PoueniMailbox,
   loadPoueniMailboxConfig,
   newPoueniCanaryEmail,
-  extractPoueniVerifyUrl,
+  readEmail,
   extractPoueniResetUrl,
 } from '../../helpers/poueni/poueniMailbox.js';
+import { signup, readVerifyUrl, login } from '../../helpers/poueni/poueniAuth.js';
 import { isRemoteTarget } from '../../helpers/target.js';
 
 test.describe.configure({ mode: 'serial' });
 
-const MAILBOX_TIMEOUT_MS = 90_000;
-const MAILBOX_POLL_MS = 2_000;
 const OLD_PASSWORD = 'OldPoueniPass-123';
 const NEW_PASSWORD = 'NewPoueniPass-456';
 
@@ -72,45 +70,13 @@ async function attemptDashboardLogin(page: Page, email: string, password: string
 }
 
 /**
- * Drive the login expecting SUCCESS, polling through the per-IP BffAuth rate
- * limiter (5/60s). When the whole poueni suite runs back-to-back from one canary
- * pod the limiter 429s the form submit (it just stays on /login →
- * attemptDashboardLogin returns false). Wait out the 60s window and retry, up to
- * a budget. Only the expect-success calls use this — the rejection check keeps
- * the single-shot form so a genuinely-wrong password still fails fast.
+ * Drive the login expecting SUCCESS, riding out the per-IP BffAuth limiter +
+ * KC-enable propagation via the shared rate-limit-aware `login`. The rejection
+ * check below keeps the single-shot `attemptDashboardLogin` so a genuinely-wrong
+ * password still fails fast.
  */
-const RATE_LIMIT_WINDOW_MS = 15_000;
-const LOGIN_SUCCESS_BUDGET_MS = 120_000;
 async function loginExpectingSuccess(page: Page, email: string, password: string): Promise<void> {
-  const deadline = Date.now() + LOGIN_SUCCESS_BUDGET_MS;
-  let attempts = 0;
-  while (Date.now() < deadline) {
-    attempts += 1;
-    if (await attemptDashboardLogin(page, email, password)) return;
-    // Deliberate wall-clock pause to let the BFF per-IP rate-limit window reset
-    // before retrying — a Node timer (not page.waitForTimeout, which the
-    // no-wait-for-timeout lint rule forbids for DOM-state waits).
-    await delay(RATE_LIMIT_WINDOW_MS);
-  }
-  throw new Error(`dashboard login expected to succeed did not within the rate-limit budget (${attempts} attempts)`);
-}
-
-/** Read one plus-addressed email, returning it and expunging it after. */
-async function readEmail(to: string, subjectIncludes: string): Promise<{ html: string; text: string; uid: number }> {
-  const mailbox = new PoueniMailbox(loadPoueniMailboxConfig(), {
-    timeoutMs: MAILBOX_TIMEOUT_MS,
-    pollIntervalMs: MAILBOX_POLL_MS,
-  });
-  const captured = await mailbox.waitForMessageTo(to, { subjectIncludes });
-  await mailbox.expungeMessages([captured.uid]).catch(() => undefined);
-  return { html: captured.bodyHtml ?? '', text: captured.bodyText, uid: captured.uid };
-}
-
-async function signup(request: APIRequestContext, email: string): Promise<void> {
-  const res = await request.post(`${urls.apiUrl}/v1/public/signup`, {
-    data: { email, tenantName: 'E2E Reset Lab', password: OLD_PASSWORD },
-  });
-  expect(res.status(), 'signup should be accepted').toBe(202);
+  await login(page, email, password);
 }
 
 async function requestReset(request: APIRequestContext, email: string): Promise<void> {
@@ -131,14 +97,11 @@ test.describe('Poueni forgot/reset password @poueni @auth @password-reset', () =
     test.info().annotations.push({ type: 'canaryEmail', description: email });
 
     // ── 1. signup ───────────────────────────────────────────────────────
-    await signup(request, email);
+    await signup(request, email, OLD_PASSWORD, 'E2E Reset Lab');
 
     // ── 2. verify (activates tenant + enables KC user) ──────────────────
-    const verifyEmail = await readEmail(email, 'Verify');
-    const verifyUrl = extractPoueniVerifyUrl({ uid: 0, subject: 'Verify', to: email, bodyText: verifyEmail.text, bodyHtml: verifyEmail.html });
-    expect(verifyUrl, 'verify URL present in signup email').not.toBeNull();
-    const verifyRes = await request.get(verifyUrl!);
-    expect(verifyRes.status(), 'verify endpoint returns the success page').toBe(200);
+    const verifyUrl = await readVerifyUrl(email);
+    expect((await request.get(verifyUrl)).status(), 'verify endpoint returns the success page').toBe(200);
 
     // ── 3. baseline: original password logs in via the dashboard ────────
     await loginExpectingSuccess(page, email, OLD_PASSWORD);
@@ -239,11 +202,9 @@ test.describe('Poueni forgot/reset password @poueni @auth @password-reset', () =
     // Need a real active tenant so the resend genuinely sends. Signup + verify.
     const email = newPoueniCanaryEmail();
     test.info().annotations.push({ type: 'canaryEmail', description: email });
-    await signup(request, email);
-    const verifyEmail = await readEmail(email, 'Verify');
-    const verifyUrl = extractPoueniVerifyUrl({ uid: 0, subject: 'Verify', to: email, bodyText: verifyEmail.text, bodyHtml: verifyEmail.html });
-    expect(verifyUrl, 'verify URL present').not.toBeNull();
-    expect((await request.get(verifyUrl!)).status(), 'verify ok').toBe(200);
+    await signup(request, email, OLD_PASSWORD, 'E2E Reset Lab');
+    const verifyUrl = await readVerifyUrl(email);
+    expect((await request.get(verifyUrl)).status(), 'verify ok').toBe(200);
 
     // Request the reset through the marketing form → success state appears.
     await page.goto(`${urls.marketingUrl}/forgot-password`);
