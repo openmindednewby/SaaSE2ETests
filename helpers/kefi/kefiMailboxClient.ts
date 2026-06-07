@@ -204,9 +204,31 @@ function extractCapturedEmail(msg: FetchMessageObject): CapturedEmail | null {
  * `/api/v1/auth/verify-email?token=...`).
  */
 export function extractVerifyUrl(email: CapturedEmail): string | null {
-  const body = email.bodyHtml ?? email.bodyText;
+  const body = unfoldQuotedPrintable(email.bodyHtml ?? email.bodyText);
   const matches = body.match(/https?:\/\/[^\s"<>]+verify[^\s"<>]*/gi);
   return matches?.[0] ?? null;
+}
+
+/**
+ * Extract the one-click unsubscribe URL from an unsubscribable lifecycle email
+ * (reminder / thank-you). The shared EmailLayout footer renders an
+ * `…/api/v1/unsubscribe/{token}` link; HTML entities (`&amp;`) are decoded so
+ * the URL is POSTable as-is.
+ */
+export function extractUnsubscribeUrl(email: CapturedEmail): string | null {
+  const body = unfoldQuotedPrintable(email.bodyHtml ?? email.bodyText);
+  const matches = body.match(/https?:\/\/[^\s"<>]+\/unsubscribe\/[^\s"<>]+/gi);
+  return matches?.[0]?.replace(/&amp;/g, '&') ?? null;
+}
+
+/**
+ * Remove quoted-printable soft line-breaks (`=\r\n`) so a long URL the SMTP
+ * transfer-encoding wrapped at 76 cols is rejoined into one contiguous token.
+ * The unsubscribe URL (base64url HMAC, ~100 chars) always wraps; the shorter
+ * verify URL usually doesn't — applying this to both is harmless and robust.
+ */
+function unfoldQuotedPrintable(body: string): string {
+  return body.replace(/=\r?\n/g, '');
 }
 
 function extractBodyText(source: string): string {

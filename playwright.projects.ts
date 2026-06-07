@@ -200,6 +200,18 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      // Kefi Phase 13 lifecycle emails (#185) — signs up a canary tenant, then
+      // exercises registration-confirmation + reminder (+dedup) + unsubscribe +
+      // thank-you through the real surfaces (public register, the canary-scoped
+      // seeding endpoints, the trigger sweeps, IMAP). Multiple IMAP waits +
+      // sweeps → 600s budget like its siblings.
+      name: 'kefi-email-lifecycle',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-email-lifecycle\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       name: 'kefi-device-pin',
       workers: 1,
       // Generous: the BFF's per-IP rate limiter (5 req/60s) sits in front of the
