@@ -25,6 +25,7 @@
 import { test, expect } from '@playwright/test';
 
 import {
+  bffPost,
   bffPostThroughRateLimit,
   bffPostThroughTransientErrors,
   requireCookie,
@@ -50,6 +51,10 @@ const CANARY_PIN_DIGITS = 6;
 const WRONG_PIN = '999999';
 /** Engine default MaxFailures is 5 → the 6th wrong attempt is device-locked. */
 const MAX_LOCKOUT_ITERATIONS = 12;
+/** Wider transient-retry budget for the flaky enrol KC grant (~48s). #187. */
+const ENROLL_RETRY_ATTEMPTS = 6;
+const ENROLL_RETRY_BACKOFF_MS = 8_000;
+const PIN_DISABLE_ENDPOINT = '/bff/pin/disable';
 
 const UNLOCK_GATE_TEST_ID = 'poueni-device-pin-unlock';
 const UNLOCK_INPUT_TEST_ID = 'poueni-device-pin-unlock-input';
@@ -64,6 +69,21 @@ test.describe('Poueni device-PIN (Vite dashboard + bff-poueni 1.3.2)', () => {
     TEST_USER.username === '' || TEST_USER.password === '',
     'TEST_USER_USERNAME / TEST_USER_PASSWORD not set in the target .env file',
   );
+
+  // Best-effort offline-session hygiene (#187): the test's own /bff/pin/disable
+  // (step 6) only runs on the happy path. A run that fails earlier would leave
+  // the enrolled PIN's KC offline session alive for the seeded user; those
+  // accumulate across nightly runs and degrade the next enrol's offline-access
+  // grant (the root cause of the flake). Revoking here on EVERY outcome keeps
+  // the seeded user's offline-session count flat. 401/no-session = nothing to do.
+  test.afterEach(async ({ page }) => {
+    const { dashboardUrl } = getPoueniUrls();
+    try {
+      await bffPost(page.request, dashboardUrl, PIN_DISABLE_ENDPOINT);
+    } catch {
+      // No live session / already disabled — nothing to clean up.
+    }
+  });
 
   test('enrol, unlock on a remembered device, repeat-unlock, lockout, disable', async ({
     browser,
@@ -85,11 +105,18 @@ test.describe('Poueni device-PIN (Vite dashboard + bff-poueni 1.3.2)', () => {
     });
     expect(loginResp.status(), 'seeded test user signs in via /bff/login').toBe(HTTP_OK);
 
-    // ── 2. ENROL a device PIN (retries the intermittent staging KC 502) ─────
-    const enrollResp = await bffPostThroughTransientErrors(page.request, dashboardUrl, '/bff/pin/enroll', {
-      pin: CANARY_PIN,
-      digits: CANARY_PIN_DIGITS,
-    });
+    // ── 2. ENROL a device PIN ──────────────────────────────────────────────
+    // The enrol triggers a BFF→Keycloak offline-access grant that is flakier
+    // under back-to-back nightly runs than the login-methods suite's grants, so
+    // use a WIDER transient-retry budget (~6 attempts / 8s ≈ 48s) to ride out a
+    // KC hiccup that the default 4×3s budget gives up on too soon (#187).
+    const enrollResp = await bffPostThroughTransientErrors(
+      page.request,
+      dashboardUrl,
+      '/bff/pin/enroll',
+      { pin: CANARY_PIN, digits: CANARY_PIN_DIGITS },
+      { maxAttempts: ENROLL_RETRY_ATTEMPTS, backoffMs: ENROLL_RETRY_BACKOFF_MS },
+    );
     expect(
       enrollResp.status(),
       'enroll OK — a persistent 502 means bff-poueni-client lacks the offline_access scope on the poueni realm',

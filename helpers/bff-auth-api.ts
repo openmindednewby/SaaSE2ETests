@@ -96,20 +96,36 @@ const HTTP_GATEWAY_TIMEOUT = 504;
 const TRANSIENT_RETRY_BACKOFF_MS = 3_000;
 const TRANSIENT_RETRY_MAX_ATTEMPTS = 4;
 
+/** Per-call override for the transient-retry budget (see {@link bffPostThroughTransientErrors}). */
+export interface TransientRetryOptions {
+  /** Number of retry attempts after a transient status (default 4). */
+  maxAttempts?: number;
+  /** Backoff between attempts in ms (default 3000). */
+  backoffMs?: number;
+}
+
 /**
  * Like {@link bffPostThroughRateLimit}, but ALSO retries transient upstream
  * errors (502/503/504) on a short backoff. The device-PIN enrol calls
- * `bff → Keycloak` for an offline-access grant; on staging that grant
- * occasionally 502s on a momentary KC hiccup (it succeeds on the next try).
- * Retrying here keeps the shared suite from flaking on an environment blip
- * without masking a persistent config error (which 502s every attempt).
+ * `bff → Keycloak` for an offline-access grant; that grant occasionally 502s on
+ * a momentary KC hiccup (it succeeds on the next try). Retrying here keeps the
+ * shared suite from flaking on an environment blip without masking a persistent
+ * config error (which 502s every attempt).
+ *
+ * The default budget (4 attempts / 3s) suits the login-methods suite. The
+ * poueni device-PIN enrol passes a WIDER budget via {@link TransientRetryOptions}
+ * because its KC offline-access grant is flakier under back-to-back nightly runs
+ * and needs more time to recover between attempts (#187).
  */
 export async function bffPostThroughTransientErrors(
   request: APIRequestContext,
   baseUrl: string,
   path: string,
   data?: Record<string, unknown>,
+  options?: TransientRetryOptions,
 ): Promise<Awaited<ReturnType<APIRequestContext['post']>>> {
+  const maxAttempts = options?.maxAttempts ?? TRANSIENT_RETRY_MAX_ATTEMPTS;
+  const backoffMs = options?.backoffMs ?? TRANSIENT_RETRY_BACKOFF_MS;
   let last: Awaited<ReturnType<APIRequestContext['post']>> | null = null;
   await expect
     .poll(
@@ -124,8 +140,8 @@ export async function bffPostThroughTransientErrors(
       },
       {
         message: `retrying transient upstream errors on ${path}`,
-        intervals: Array<number>(TRANSIENT_RETRY_MAX_ATTEMPTS).fill(TRANSIENT_RETRY_BACKOFF_MS),
-        timeout: TRANSIENT_RETRY_BACKOFF_MS * (TRANSIENT_RETRY_MAX_ATTEMPTS + 1),
+        intervals: Array<number>(maxAttempts).fill(backoffMs),
+        timeout: backoffMs * (maxAttempts + 1),
       },
     )
     .toBe('settled');
