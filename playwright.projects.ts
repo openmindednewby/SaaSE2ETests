@@ -322,5 +322,16 @@ export function buildProjects(): ProjectConfig {
       testMatch: /poueni\/poueni-gdpr\.spec\.ts/,
       use: CHROME,
     },
+
+    // ---- Poueni canary-cleanup E2E (#188/#184) ----
+    // Verifies the purge endpoint and doubles as the recurring teardown that
+    // drains accumulated poueni canary tenants on the nightly suite.
+    {
+      name: 'poueni-canary-cleanup',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /poueni\/poueni-canary-cleanup\.spec\.ts/,
+      use: CHROME,
+    },
   ];
 }
