@@ -67,6 +67,13 @@ export interface RegisterAttendeeInput {
   consentGiven: boolean;
 }
 
+/** Full public register response (#177 needs the attendee id + the advertised provider kind). */
+export interface RegisterAttendeeResult {
+  status: number;
+  attendeeExternalId: string | null;
+  paymentProviderKind: string | null;
+}
+
 export class KefiLifecycleClient {
   private readonly http: AxiosInstance;
   private readonly urls = getKefiUrls();
@@ -95,6 +102,35 @@ export class KefiLifecycleClient {
       },
     );
     return resp.status;
+  }
+
+  /**
+   * Public, anonymous register that returns the parsed body too (#177). Lets the
+   * payment spec capture the attendee externalId + assert the advertised
+   * `payment.providerKind`. Mirrors {@link registerAttendee}'s request shape.
+   */
+  async registerAttendeeFull(input: RegisterAttendeeInput): Promise<RegisterAttendeeResult> {
+    const resp = await this.http.post(
+      `/api/v1/t/${encodeURIComponent(input.slug)}/register`,
+      {
+        name: input.name,
+        surname: input.surname,
+        phone: input.phone,
+        email: input.email,
+        passCode: input.passCode,
+        proVideoOptIn: false,
+        consentGiven: input.consentGiven,
+      },
+    );
+    const data = (resp.data ?? {}) as {
+      attendeeExternalId?: string;
+      payment?: { providerKind?: string | null } | null;
+    };
+    return {
+      status: resp.status,
+      attendeeExternalId: data.attendeeExternalId ?? null,
+      paymentProviderKind: data.payment?.providerKind ?? null,
+    };
   }
 
   /** Move the canary tenant's event into a sweep window + ensure a pass. */

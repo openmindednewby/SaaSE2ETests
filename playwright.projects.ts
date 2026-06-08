@@ -212,6 +212,19 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      // Kefi #177 attendee Stripe-Checkout payments — signs up a canary tenant,
+      // stores dummy Stripe credentials, then proves the webhook reconciliation
+      // path (paid + idempotent replay + bad-signature + refund) with synthetically
+      // signed events (no external Stripe account needed). Layer 2 mints a real
+      // hosted session only when E2E_KEFI_STRIPE_TEST_SECRET is set. Signup + IMAP
+      // verify + multiple webhook round-trips → 600s budget like its siblings.
+      name: 'kefi-attendee-payment',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-attendee-payment\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       name: 'kefi-device-pin',
       workers: 1,
       // Generous: the BFF's per-IP rate limiter (5 req/60s) sits in front of the
