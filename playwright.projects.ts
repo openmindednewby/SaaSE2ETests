@@ -122,6 +122,8 @@ export function buildProjects(): ProjectConfig {
     chunk('questioner-active', 'questioner/quiz-active', [], ERV),
     chunk('questioner-answers', 'questioner/quiz-answers', [], ERV),
     chunk('questioner-security', 'questioner/security', [], ERV),
+    // Public/anonymous respondent flow — API-only (owner ROPC + no-auth context). ERV seeds the realm user; auth state is inert here.
+    chunk('questioner-public', 'questioner/public', [], ERV),
 
     // ---- Content (2 chunks) → katalogos-web ----
     chunk('content-api', 'content', ['content-api', 'content-api-advanced'], KAT),
@@ -310,11 +312,8 @@ export function buildProjects(): ProjectConfig {
     },
 
     // ---- Poueni forgot/reset-password E2E ----
-    // Standalone — signs up a fresh canary tenant (plus-addressed on the
-    // shared bot mailbox), verifies, then drives the full forgot→reset→login
-    // round-trip through the marketing reset page + the dashboard login form
-    // in a real browser. Timeout override: two IMAP waits (verify + reset
-    // emails, ~30s typical / 90s budget each) plus several browser logins.
+    // Standalone — signs up a canary tenant, verifies, then drives the full
+    // forgot→reset→login round-trip in a real browser. Timeout: two IMAP waits.
     {
       name: 'poueni-password-reset',
       workers: 1,
