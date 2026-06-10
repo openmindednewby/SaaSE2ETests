@@ -227,6 +227,18 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      // Kefi #4 per-event publish — one tenant signs up (signup + IMAP verify +
+      // wizard), creates a SECOND event, publishes both at distinct per-event
+      // slugs, edits a slug, and proves a registration books the named event.
+      // API-driven beyond the shared signup→wizard rig; the single IMAP verify
+      // wait dominates the wall-clock. 600s budget like its kefi siblings.
+      name: 'kefi-multi-event-publish',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-multi-event-publish\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       name: 'kefi-device-pin',
       workers: 1,
       // Generous: the BFF's per-IP rate limiter (5 req/60s) sits in front of the

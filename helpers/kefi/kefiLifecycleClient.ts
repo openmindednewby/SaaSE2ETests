@@ -65,13 +65,25 @@ export interface RegisterAttendeeInput {
   email: string;
   passCode: string;
   consentGiven: boolean;
+  /**
+   * Optional per-event slug (#4). When supplied, books THAT event; when absent,
+   * the tenant's latest event (backward-compatible). Omitted entirely from the
+   * request body when undefined so legacy callers send the exact same payload.
+   */
+  eventSlug?: string;
 }
 
-/** Full public register response (#177 needs the attendee id + the advertised provider kind). */
+/**
+ * Full public register response. #177 needs the attendee id + the advertised
+ * provider kind; #4 needs the booked event so the spec can assert WHICH event a
+ * registration landed on (`eventName` / `eventExternalId`).
+ */
 export interface RegisterAttendeeResult {
   status: number;
   attendeeExternalId: string | null;
   paymentProviderKind: string | null;
+  eventExternalId: string | null;
+  eventName: string | null;
 }
 
 export class KefiLifecycleClient {
@@ -91,46 +103,55 @@ export class KefiLifecycleClient {
   async registerAttendee(input: RegisterAttendeeInput): Promise<number> {
     const resp = await this.http.post(
       `/api/v1/t/${encodeURIComponent(input.slug)}/register`,
-      {
-        name: input.name,
-        surname: input.surname,
-        phone: input.phone,
-        email: input.email,
-        passCode: input.passCode,
-        proVideoOptIn: false,
-        consentGiven: input.consentGiven,
-      },
+      this.registerBody(input),
     );
     return resp.status;
   }
 
   /**
-   * Public, anonymous register that returns the parsed body too (#177). Lets the
-   * payment spec capture the attendee externalId + assert the advertised
-   * `payment.providerKind`. Mirrors {@link registerAttendee}'s request shape.
+   * Public, anonymous register that returns the parsed body too (#177 + #4).
+   * Lets the payment spec capture the attendee externalId + the advertised
+   * `payment.providerKind`, and the per-event spec assert WHICH event was booked
+   * (`eventName` / `eventExternalId`). Mirrors {@link registerAttendee}'s shape.
    */
   async registerAttendeeFull(input: RegisterAttendeeInput): Promise<RegisterAttendeeResult> {
     const resp = await this.http.post(
       `/api/v1/t/${encodeURIComponent(input.slug)}/register`,
-      {
-        name: input.name,
-        surname: input.surname,
-        phone: input.phone,
-        email: input.email,
-        passCode: input.passCode,
-        proVideoOptIn: false,
-        consentGiven: input.consentGiven,
-      },
+      this.registerBody(input),
     );
     const data = (resp.data ?? {}) as {
       attendeeExternalId?: string;
+      eventExternalId?: string;
+      eventName?: string;
       payment?: { providerKind?: string | null } | null;
     };
     return {
       status: resp.status,
       attendeeExternalId: data.attendeeExternalId ?? null,
       paymentProviderKind: data.payment?.providerKind ?? null,
+      eventExternalId: data.eventExternalId ?? null,
+      eventName: data.eventName ?? null,
     };
+  }
+
+  /**
+   * Build the public register request body. `eventSlug` is included ONLY when
+   * supplied so legacy callers send the identical pre-#4 payload.
+   */
+  private registerBody(input: RegisterAttendeeInput): Record<string, unknown> {
+    const body: Record<string, unknown> = {
+      name: input.name,
+      surname: input.surname,
+      phone: input.phone,
+      email: input.email,
+      passCode: input.passCode,
+      proVideoOptIn: false,
+      consentGiven: input.consentGiven,
+    };
+    if (input.eventSlug !== undefined) {
+      body.eventSlug = input.eventSlug;
+    }
+    return body;
   }
 
   /** Move the canary tenant's event into a sweep window + ensure a pass. */
