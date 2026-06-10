@@ -239,6 +239,19 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      // Kefi #5 custom domains — one tenant signs up (signup + IMAP verify +
+      // wizard), then exercises the custom-domain API contract: set a subdomain
+      // (CNAME instructions), reject apex, verify a non-resolving domain (Failed),
+      // optionally verify a wildcard-covered host (Active, via KEFI_CD_TEST_DOMAIN),
+      // and clear. API-driven beyond the shared signup→wizard rig; the IMAP verify
+      // wait dominates. 600s budget like its kefi siblings.
+      name: 'kefi-custom-domain',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-custom-domain\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       name: 'kefi-device-pin',
       workers: 1,
       // Generous: the BFF's per-IP rate limiter (5 req/60s) sits in front of the
