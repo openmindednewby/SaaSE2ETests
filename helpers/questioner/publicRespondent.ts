@@ -131,6 +131,57 @@ export async function submitPublicResponse(
   return { status: response.status(), body, rawText };
 }
 
+/**
+ * Resolve the erevna-web FRONTEND host root (no trailing slash).
+ *
+ * The embeddable survey route + its framing headers are served by the erevna-web
+ * nginx (NOT the questioner API). Reads `EREVNA_BASE_URL`; returns null when unset
+ * so a framing test can skip rather than hit the wrong host.
+ */
+export function resolveErevnaWebBase(): string | null {
+  const value = process.env.EREVNA_BASE_URL;
+  if (!value || value.trim().length === 0) return null;
+  return value.trim().replace(/\/+$/, '');
+}
+
+/**
+ * Create a fresh anonymous APIRequestContext bound to the erevna-web frontend host,
+ * or null when `EREVNA_BASE_URL` is unset. Callers MUST `dispose()` it when done.
+ */
+export async function createAnonymousWebContext(): Promise<APIRequestContext | null> {
+  const base = resolveErevnaWebBase();
+  if (base === null) return null;
+  return playwrightRequest.newContext({
+    baseURL: base,
+    ignoreHTTPSErrors: true,
+    timeout: API_TIMEOUT_MS,
+  });
+}
+
+/** Headers + status of a raw frontend GET (used to assert iframe framing policy). */
+export interface FramingResult {
+  status: number;
+  xFrameOptions: string | null;
+  contentSecurityPolicy: string | null;
+  bodyText: string;
+}
+
+/** GET a frontend route and return the framing-relevant headers + body. */
+export async function getFramingHeaders(
+  api: APIRequestContext,
+  path: string,
+): Promise<FramingResult> {
+  const response = await api.get(path, { failOnStatusCode: false });
+  const headers = response.headers();
+  const bodyText = await response.text().catch(() => '');
+  return {
+    status: response.status(),
+    xFrameOptions: headers['x-frame-options'] ?? null,
+    contentSecurityPolicy: headers['content-security-policy'] ?? null,
+    bodyText,
+  };
+}
+
 function parseJson<T>(text: string): T | null {
   if (!text) return null;
   try {
