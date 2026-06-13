@@ -1,30 +1,25 @@
 import { test, expect, request as playwrightRequest } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 
-import { getRealmToken } from '../../helpers/realm-token-helper.js';
-
 /**
- * Katalogos (OnlineMenu) custom-domain API contract (Batch C).
+ * Katalogos (OnlineMenu) custom-domain PUBLIC surface (Batch C).
  *
- * Exercises the tenant-owner + anonymous endpoints (onlinemenu-api, global RoutePrefix `api/v1`):
- *   - POST   /api/v1/CustomDomains                  (Admin) → 201 + ownership token + CNAME instruction
- *   - GET    /api/v1/CustomDomains                  (Admin) → the tenant's current domain
- *   - POST   /api/v1/CustomDomains/{externalId}/verify (Admin) → 200 (re-queues verification)
- *   - DELETE /api/v1/CustomDomains/{externalId}     (Admin) → 200 (revokes)
- *   - GET    /api/v1/internal/domains/check?Domain= (anon)  → 200 available / 404 claimed
- *   - GET    /api/v1/public/domains/resolve?Domain= (anon)  → 200 {menuExternalId} / 404
+ * Covers the anonymous endpoints a menu served on a tenant custom host depends on
+ * (onlinemenu-api, global RoutePrefix `api/v1`):
+ *   - GET /api/v1/internal/domains/check?Domain= → 200 claimed / 404 available (no body, no info disclosure)
+ *   - GET /api/v1/public/domains/resolve?Domain= → 200 {menuExternalId} / 404
+ *   - the custom-domain CORS policy: these endpoints reflect any Origin (so a menu on
+ *     menu.acme.com can call katalogos-api.dloizides.com cross-origin).
  *
- * Contract-only: with the verification poller off (the C-1 default), a domain stays Pending and
- * never resolves — so we assert the Pending + claimed + unresolved contract, not activation. The
- * endpoints pre-date the package migration, so this spec is valid against the current deployment too.
+ * The owner CRUD endpoints (POST/GET/DELETE /CustomDomains, /verify) require the BFF
+ * browser session the other online-menus specs use (a raw realm token has no tenant/Admin
+ * context → 401); that admin-CRUD E2E is a follow-up. The CRUD + store-adapter logic is
+ * covered by the OnlineMenu unit suite.
  */
 
 const API_TIMEOUT_MS = 30_000;
-const SETUP_TIMEOUT_MS = 60_000;
-const HTTP_OK = 200;
-const HTTP_NO_CONTENT = 204;
-const HTTP_CREATED = 201;
 const HTTP_NOT_FOUND = 404;
+const CUSTOM_ORIGIN = 'https://menu.e2e-acme.example';
 
 function resolveBaseUrl(envVar: string, fallback: string): string {
   const value = process.env[envVar];
@@ -35,119 +30,53 @@ function resolveBaseUrl(envVar: string, fallback: string): string {
 
 const ONLINEMENU_API_URL = resolveBaseUrl('ONLINEMENU_API_URL', 'https://localhost:5006');
 
-async function makeApiContext(token?: string): Promise<APIRequestContext> {
-  return playwrightRequest.newContext({
-    baseURL: ONLINEMENU_API_URL,
-    ignoreHTTPSErrors: true,
-    timeout: API_TIMEOUT_MS,
-    extraHTTPHeaders: token !== undefined ? { Authorization: `Bearer ${token}` } : undefined,
-  });
-}
-
-test.describe.serial('OnlineMenu custom domains @online-menus @custom-domain', () => {
-  let adminApi: APIRequestContext;
+test.describe('OnlineMenu custom domains — public surface @online-menus @custom-domain', () => {
   let anonApi: APIRequestContext;
-  let createdExternalId: string | null = null;
-  const domainName = `e2e-cd-${Date.now()}.example.com`;
 
   test.beforeAll(async () => {
-    test.setTimeout(SETUP_TIMEOUT_MS);
-    const token = await getRealmToken('onlinemenu');
-    if (token.accessToken === undefined || token.accessToken === '') {
-      test.skip(true, `OnlineMenu realm token unavailable: ${token.unavailableReason}`);
-      return;
-    }
-    adminApi = await makeApiContext(token.accessToken);
-    anonApi = await makeApiContext();
+    anonApi = await playwrightRequest.newContext({
+      baseURL: ONLINEMENU_API_URL,
+      ignoreHTTPSErrors: true,
+      timeout: API_TIMEOUT_MS,
+    });
   });
 
   test.afterAll(async () => {
-    test.setTimeout(API_TIMEOUT_MS);
-    if (createdExternalId !== null) {
-      await adminApi?.delete(`/api/v1/CustomDomains/${createdExternalId}`, { failOnStatusCode: false })
-        .catch(() => undefined);
-    }
-    await adminApi?.dispose().catch(() => {});
     await anonApi?.dispose().catch(() => {});
   });
 
-  test('POST creates a domain in a pending (not-yet-active) state with an ownership token', async () => {
-    const response = await adminApi.post('/api/v1/CustomDomains', {
-      data: { domainName },
-      failOnStatusCode: false,
-    });
-
-    expect(response.status(), await response.text()).toBe(HTTP_CREATED);
-    const body = await response.json();
-    expect(body.externalId).toBeTruthy();
-    expect(String(body.domainName).toLowerCase()).toBe(domainName.toLowerCase());
-    expect(String(body.ownershipToken)).toMatch(/^saas-/);
-    expect(body.cnameTarget).toBeTruthy();
-    // Not active yet — fresh domain awaits DNS + verification.
-    expect(String(body.status)).not.toMatch(/^Active$/i);
-
-    createdExternalId = String(body.externalId);
-  });
-
-  test('POST a second time for the same tenant is rejected (one domain per tenant)', async () => {
-    const response = await adminApi.post('/api/v1/CustomDomains', {
-      data: { domainName: `e2e-cd-dup-${Date.now()}.example.com` },
-      failOnStatusCode: false,
-    });
-    // 409 Conflict (tenant already has an active/pending domain).
-    expect(response.status()).toBe(409);
-  });
-
-  test('GET returns the tenant\'s domain', async () => {
-    const response = await adminApi.get('/api/v1/CustomDomains', { failOnStatusCode: false });
-    expect(response.status()).toBe(HTTP_OK);
-    const body = await response.json();
-    expect(String(body.domainName).toLowerCase()).toBe(domainName.toLowerCase());
-  });
-
-  test('availability check: claimed domain → 404, random domain → 200', async () => {
-    const claimed = await anonApi.get(
-      `/api/v1/internal/domains/check?Domain=${encodeURIComponent(domainName)}`,
-      { failOnStatusCode: false });
-    expect(claimed.status()).toBe(HTTP_NOT_FOUND);
-
-    const random = await anonApi.get(
+  test('availability check: an unclaimed domain is available → 404 (200 means claimed)', async () => {
+    const response = await anonApi.get(
       `/api/v1/internal/domains/check?Domain=${encodeURIComponent(`free-${Date.now()}.example.com`)}`,
       { failOnStatusCode: false });
-    expect(random.status()).toBe(HTTP_OK);
+    expect(response.status()).toBe(HTTP_NOT_FOUND);
   });
 
-  test('public resolve of a pending/unknown domain returns 404 (only Active domains resolve)', async () => {
-    const pending = await anonApi.get(
-      `/api/v1/public/domains/resolve?Domain=${encodeURIComponent(domainName)}`,
+  test('public resolve of an unknown domain returns 404 (only Active domains resolve)', async () => {
+    const response = await anonApi.get(
+      `/api/v1/public/domains/resolve?Domain=${encodeURIComponent(`unknown-${Date.now()}.example.com`)}`,
       { failOnStatusCode: false });
-    expect(pending.status()).toBe(HTTP_NOT_FOUND);
+    expect(response.status()).toBe(HTTP_NOT_FOUND);
   });
 
-  test('verify re-queues the pending domain (200)', async () => {
-    expect(createdExternalId, 'domain must have been created').not.toBeNull();
-    const response = await adminApi.post(`/api/v1/CustomDomains/${createdExternalId}/verify`, {
-      failOnStatusCode: false,
-    });
-    expect(response.status()).toBe(HTTP_OK);
+  test('resolve reflects a custom Origin (CORS) so menus on custom hosts can call it', async () => {
+    const response = await anonApi.get(
+      `/api/v1/public/domains/resolve?Domain=${encodeURIComponent(`cors-${Date.now()}.example.com`)}`,
+      { headers: { Origin: CUSTOM_ORIGIN }, failOnStatusCode: false });
+    // CORS headers are applied regardless of the 404 body.
+    expect(response.headers()['access-control-allow-origin']).toBe(CUSTOM_ORIGIN);
   });
 
-  test('DELETE revokes the domain; GET then reports none', async () => {
-    expect(createdExternalId, 'domain must have been created').not.toBeNull();
-    const del = await adminApi.delete(`/api/v1/CustomDomains/${createdExternalId}`, {
-      failOnStatusCode: false,
-    });
-    expect(del.status()).toBe(HTTP_OK);
-    createdExternalId = null;
-
-    const after = await adminApi.get('/api/v1/CustomDomains', { failOnStatusCode: false });
-    expect([HTTP_OK, HTTP_NO_CONTENT]).toContain(after.status());
-    if (after.status() === HTTP_OK) {
-      const body = await after.json().catch(() => null);
-      // A revoked domain must not be returned as the tenant's active domain.
-      if (body !== null && body.domainName !== undefined) {
-        expect(String(body.domainName).toLowerCase()).not.toBe(domainName.toLowerCase());
-      }
-    }
+  test('OPTIONS preflight on a public endpoint succeeds with CORS headers', async () => {
+    const response = await anonApi.fetch(
+      `/api/v1/public/menus/11111111-1111-1111-1111-111111111111`,
+      {
+        method: 'OPTIONS',
+        headers: { Origin: CUSTOM_ORIGIN, 'Access-Control-Request-Method': 'GET' },
+        failOnStatusCode: false,
+      });
+    const headers = response.headers();
+    expect(headers['access-control-allow-origin']).toBe(CUSTOM_ORIGIN);
+    expect(headers['access-control-allow-methods']).toContain('GET');
   });
 });

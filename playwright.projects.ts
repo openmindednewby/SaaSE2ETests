@@ -116,7 +116,8 @@ export function buildProjects(): ProjectConfig {
     chunk('online-menus-editor-uploads', 'online-menus', ['menu-content-upload-basic', 'menu-content-upload-create', 'menu-content-upload-advanced'], KAT),
     chunk('online-menus-public-preview', 'online-menus', ['menu-preview-and-external-link', 'menu-qr-code'], KAT),
     chunk('online-menus-public-viewer', 'online-menus', ['menu-public-page-load-basic', 'menu-public-page-load-viewer', 'public-viewer-active-filtering-basic', 'public-viewer-active-filtering-states'], KAT),
-    chunk('online-menus-custom-domain', 'online-menus', ['custom-domain'], KAT),
+    // Anonymous public-surface API test — no browser auth / tenant setup needed.
+    { name: 'online-menus-custom-domain', workers: 1, testMatch: /online-menus\/custom-domain\.spec\.ts/ },
 
     // ---- Questioner (4 chunks) → erevna-web ----
     chunk('questioner-templates', 'questioner/templates', [], ERV),
