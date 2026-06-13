@@ -33,6 +33,7 @@
     "test:online-menus:public": "cross-env SHELL=/bin/bash playwright test tests/online-menus/menu-preview-and-external-link.spec.ts tests/online-menus/menu-public-page-load-basic.spec.ts tests/online-menus/menu-public-page-load-viewer.spec.ts tests/online-menus/public-viewer-active-filtering-basic.spec.ts tests/online-menus/public-viewer-active-filtering-states.spec.ts",
     "test:online-menus:public-preview": "cross-env SHELL=/bin/bash playwright test tests/online-menus/menu-preview-and-external-link.spec.ts tests/online-menus/menu-qr-code.spec.ts",
     "test:online-menus:public-viewer": "cross-env SHELL=/bin/bash playwright test tests/online-menus/menu-public-page-load-basic.spec.ts tests/online-menus/menu-public-page-load-viewer.spec.ts tests/online-menus/public-viewer-active-filtering-basic.spec.ts tests/online-menus/public-viewer-active-filtering-states.spec.ts",
+    "test:online-menus:custom-domain": "cross-env SHELL=/bin/bash playwright test tests/online-menus/custom-domain.spec.ts",
     "test:online-menus:headed": "cross-env SHELL=/bin/bash playwright test --headed tests/online-menus",
     "test:content": "cross-env SHELL=/bin/bash playwright test tests/content",
     "test:content:api": "cross-env SHELL=/bin/bash playwright test tests/content/content-api.spec.ts tests/content/content-api-advanced.spec.ts",
