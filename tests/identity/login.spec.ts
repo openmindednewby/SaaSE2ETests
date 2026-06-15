@@ -58,49 +58,25 @@ test.describe('Login Flow @identity @auth', () => {
     await loginPage.loginAndWait(username, password);
   });
 
-  test('should show error with invalid credentials', async ({ page }) => {
-    // Already on login page from beforeEach
-    // Set up dialog handler BEFORE triggering the action - use a promise to properly wait
-    const dialogPromise = new Promise<string>((resolve) => {
-      const timeout = setTimeout(() => resolve(''), 10000); // 10 second timeout
-      page.once('dialog', async dialog => {
-        clearTimeout(timeout);
-        const message = dialog.message();
-        await dialog.accept();
-        resolve(message);
-      });
-    });
-
+  test('should show error with invalid credentials', async ({ page: _page }) => {
+    // Already on login page from beforeEach.
+    // The shared <LoginForm> (@dloizides/auth-web) surfaces a wrong-credential
+    // error INLINE (testID=auth-login-error), not via a window.alert dialog.
     await loginPage.login('invaliduser', 'invalidpassword');
 
-    // Wait for the dialog to be handled
-    const dialogMessage = await dialogPromise;
-
-    // The app shows an error via alert
-    expect(dialogMessage).toBeTruthy();
+    // A non-empty inline error must appear (the exact copy is "Incorrect
+    // username or password." but we assert only that some error text shows so
+    // the test is resilient to label/localisation changes).
+    await loginPage.expectErrorMessage(/\S/);
   });
 
-  test('should require username and password', async ({ page }) => {
-    // Already on login page from beforeEach
-    // Set up dialog handler BEFORE triggering the action
-    const dialogPromise = new Promise<string>((resolve) => {
-      const timeout = setTimeout(() => resolve(''), 5000);
-      page.once('dialog', async dialog => {
-        clearTimeout(timeout);
-        const message = dialog.message();
-        await dialog.accept();
-        resolve(message);
-      });
-    });
-
-    // Try to login without credentials
+  test('should require username and password', async ({ page: _page }) => {
+    // Already on login page from beforeEach.
+    // Submitting with empty fields shows the inline missing-fields error
+    // ("Enter both your username and password.").
     await loginPage.loginButton.click();
 
-    // Wait for the dialog to be handled
-    const dialogMessage = await dialogPromise;
-
-    // Should show validation message
-    expect(dialogMessage.toLowerCase()).toContain('enter');
+    await loginPage.expectErrorMessage(/enter/i);
   });
 
   test('should disable inputs while logging in', async ({ page: _page }) => {

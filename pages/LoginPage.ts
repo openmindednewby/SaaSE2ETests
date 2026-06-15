@@ -6,6 +6,7 @@ export class LoginPage extends BasePage {
   readonly usernameInput: Locator;
   readonly passwordInput: Locator;
   readonly loginButton: Locator;
+  readonly loginError: Locator;
   readonly loadingIndicator: Locator;
 
   constructor(page: Page) {
@@ -14,6 +15,9 @@ export class LoginPage extends BasePage {
     this.usernameInput = page.locator(testIdSelector(TestIds.USERNAME_INPUT));
     this.passwordInput = page.locator(testIdSelector(TestIds.PASSWORD_INPUT));
     this.loginButton = page.locator(testIdSelector(TestIds.LOGIN_BUTTON));
+    // Inline error text rendered by the shared <LoginForm> on missing-fields /
+    // invalid-credentials (replaces the legacy window.alert dialog).
+    this.loginError = page.locator(testIdSelector(TestIds.LOGIN_ERROR));
     this.loadingIndicator = page.locator('[role="progressbar"]');
   }
 
@@ -97,15 +101,15 @@ export class LoginPage extends BasePage {
   }
 
   /**
-   * Expect an error alert to appear (uses browser alert on web)
+   * Expect the inline login error to appear with a message matching the pattern.
+   *
+   * The shared `<LoginForm>` (@dloizides/auth-web) surfaces missing-fields and
+   * invalid-credential errors inline via a `testID=auth-login-error` text node
+   * (accessible, non-blocking) — it replaced the legacy `window.alert` dialog.
    */
-  async expectErrorAlert(messagePattern: RegExp) {
-    // The app uses window.alert on web platform
-    // We need to handle this with a dialog handler
-    this.page.once('dialog', async dialog => {
-      expect(dialog.message()).toMatch(messagePattern);
-      await dialog.accept();
-    });
+  async expectErrorMessage(messagePattern: RegExp) {
+    await expect(this.loginError).toBeVisible({ timeout: 10000 });
+    await expect(this.loginError).toHaveText(messagePattern);
   }
 
   /**

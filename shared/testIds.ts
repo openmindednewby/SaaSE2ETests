@@ -44,6 +44,9 @@ export const TestIds = {
   USERNAME_INPUT: 'auth-login-username',
   PASSWORD_INPUT: 'auth-login-password',
   LOGIN_BUTTON: 'auth-login-submit',
+  // Inline validation/credential error surfaced by the shared <LoginForm>
+  // (@dloizides/auth-web) — replaces the legacy window.alert error path.
+  LOGIN_ERROR: 'auth-login-error',
   LOGIN_SIGN_UP_LINK: 'login-sign-up-link',
 
   // Register page
