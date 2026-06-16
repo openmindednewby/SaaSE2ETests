@@ -121,6 +121,7 @@ export function buildProjects(): ProjectConfig {
 
     // ---- Questioner (4 chunks) → erevna-web ----
     chunk('questioner-templates', 'questioner/templates', [], ERV),
+    chunk('questioner-marketing', 'questioner/marketing', [], ERV),
     chunk('questioner-active', 'questioner/quiz-active', [], ERV),
     chunk('questioner-answers', 'questioner/quiz-answers', [], ERV),
     chunk('questioner-security', 'questioner/security', [], ERV),

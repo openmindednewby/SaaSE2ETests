@@ -3,6 +3,7 @@ export { BillingPage } from './BillingPage.js';
 export { BillingPricingPage } from './BillingPricingPage.js';
 export { ContentPage } from './ContentPage.js';
 export { LoginPage } from './LoginPage.js';
+export { MarketingPage } from './MarketingPage.js';
 export { MenuStylingAdvancedPage } from './MenuStylingAdvancedPage.js';
 export { MenuStylingPage } from './MenuStylingPage.js';
 export { NativeComponentsPage } from './NativeComponentsPage.js';
