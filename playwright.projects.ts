@@ -161,6 +161,19 @@ export function buildProjects(): ProjectConfig {
     chunk('showcase-visual', 'showcase', ['native-forms-combobox', 'native-forms-dark-theme', 'theme-preset-cards'], KAT),
     chunk('showcase-components', 'showcase', ['layout-full-width', 'native-components', 'products-api'], KAT),
 
+    // ---- Accessibility (axe) on PUBLIC no-auth surfaces ----
+    // Standalone project: scans erevna/katalogos public /login + the kefi
+    // marketing landing with axe-core. No auth, no multi-tenant deps, no
+    // baseURL override — the spec uses absolute URLs (per-target env, prod
+    // fallback). Read-only navigation + an axe scan, so safe against local /
+    // staging / prod. See tests/a11y/a11y.spec.ts + helpers/a11y.ts.
+    {
+      name: 'a11y-public',
+      workers: 1,
+      testMatch: /a11y\/.*\.spec\.ts/,
+      use: CHROME,
+    },
+
     // ---- Kefi landing parity (standalone vs kefi-managed) ----
     // Standalone project: hits the public prod URLs for KUCY + UBS and the
     // matching kefi-landings renders. No auth, no multi-tenant deps, no

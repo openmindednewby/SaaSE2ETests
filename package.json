@@ -110,6 +110,9 @@
     "test:menu-styling:categories": "cross-env SHELL=/bin/bash playwright test tests/menu-styling/category-styling.spec.ts tests/menu-styling/category-styling-advanced.spec.ts",
     "test:menu-styling:colors": "cross-env SHELL=/bin/bash playwright test tests/menu-styling/color-scheme.spec.ts tests/menu-styling/color-scheme-save.spec.ts tests/menu-styling/layout-templates.spec.ts",
     "test:menu-styling:text": "cross-env SHELL=/bin/bash playwright test tests/menu-styling/typography.spec.ts tests/menu-styling/typography-advanced.spec.ts tests/menu-styling/persistence.spec.ts tests/menu-styling/persistence-reload.spec.ts",
+    "test:a11y": "cross-env SHELL=/bin/bash playwright test --project=a11y-public",
+    "test:a11y:staging": "cross-env SHELL=/bin/bash E2E_TARGET=staging playwright test --project=a11y-public",
+    "test:a11y:prod": "cross-env SHELL=/bin/bash E2E_TARGET=prod playwright test --project=a11y-public",
     "test:smoke": "cross-env SHELL=/bin/bash playwright test tests/smoke",
     "test:logging": "cross-env SHELL=/bin/bash playwright test tests/logging --project=logging",
     "test:monitoring": "cross-env SHELL=/bin/bash playwright test tests/monitoring --project=monitoring",
@@ -171,6 +174,7 @@
     "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.11.3",
     "@eslint/js": "^9.0.0",
     "@playwright/test": "^1.48.0",
     "@types/node": "^22.0.0",
