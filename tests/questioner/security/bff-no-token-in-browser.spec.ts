@@ -68,12 +68,21 @@ test.describe('BFF — no token reachable from browser JS @questioner @bff @secu
     // the `questioner` realm and sets the httpOnly session cookie.
     const loginResult = await page.evaluate(
       async (creds: { username: string; password: string }): Promise<BffLoginResult> => {
-        const res = await fetch('/bff/login', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json', 'X-BFF-Csrf': '1' },
-          body: JSON.stringify({ username: creds.username, password: creds.password }),
-        });
+        // The erevna BFF fronts /bff/login with an auth rate limiter; a canary
+        // firing many auth ops can transiently hit HTTP 429. Retry with backoff
+        // (the limiter window drains) before asserting — mirrors loginAndWait.
+        const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+        let res!: Response;
+        for (let attempt = 1; attempt <= 5; attempt++) {
+          res = await fetch('/bff/login', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json', 'X-BFF-Csrf': '1' },
+            body: JSON.stringify({ username: creds.username, password: creds.password }),
+          });
+          if (res.status !== 429) break;
+          await sleep(attempt * 4000);
+        }
         let bodyHasToken = false;
         let bodyExcerpt = '';
         try {
