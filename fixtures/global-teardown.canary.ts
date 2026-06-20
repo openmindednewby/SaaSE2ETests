@@ -124,6 +124,62 @@ async function cleanupOneService(
   }
 }
 
+/**
+ * Run the canary data-cleanup sweep across all 6 services for the given run.
+ * Pure data teardown — does NOT touch the run lock. Exported so the in-cluster
+ * chunked runner (`scripts/run-canary-incluster.mjs`) can invoke it EXACTLY
+ * ONCE at the very end of a multi-process run, instead of once per chunk.
+ *
+ * Why this matters: the per-service cleanup endpoints delete every
+ * `e2ec-{runId8}-*` record — INCLUDING the shared tenant-admin Keycloak users
+ * that `multi-tenant.setup.ts` creates. The chunked runner runs setup, then
+ * each chunk, as its OWN `playwright test` process; Playwright's config-level
+ * `globalTeardown` fires at the end of EVERY such process. If the sweep ran
+ * per-process, the setup process's own teardown would delete the just-created
+ * tenant users before any chunk could log in as them → 401 Invalid user
+ * credentials. So the runner sets `E2E_CANARY_SKIP_TEARDOWN=1` for the
+ * intermediate processes (skipping the sweep but still releasing the lock) and
+ * calls this once at the end.
+ */
+export async function runCanaryCleanup(runId: string, accessToken: string, target: string): Promise<void> {
+  process.stdout.write(
+    [
+      '',
+      '─── canary teardown ───────────────────────────────────────',
+      `  target = ${target}`,
+      `  runId  = ${runId}`,
+      '',
+    ].join('\n'),
+  );
+
+  // Sequential, not parallel — cleanup endpoints touch shared DBs and we want
+  // ordered log output. The volume is 6 calls; latency is not a concern here.
+  let successCount = 0;
+  let failCount = 0;
+  for (const service of SERVICES) {
+    const result = await cleanupOneService(service, runId, accessToken);
+    if (result.ok) {
+      successCount += 1;
+      process.stdout.write(`  [ok]   ${service.name.padEnd(20)} ${result.detail}\n`);
+    } else {
+      failCount += 1;
+      process.stdout.write(`  [warn] ${service.name.padEnd(20)} ${result.detail}\n`);
+    }
+  }
+
+  process.stdout.write(
+    [
+      '',
+      `  summary: ${successCount} ok, ${failCount} failed`,
+      failCount > 0
+        ? '  orphan-cleanup CronJob will sweep any leaked e2ec-* records on the next weekly run.'
+        : '  all services cleaned successfully.',
+      '───────────────────────────────────────────────────────────',
+      '',
+    ].join('\n'),
+  );
+}
+
 async function canaryGlobalTeardown(_config: FullConfig): Promise<void> {
   const runId = process.env.E2E_CANARY_RUN_ID;
   const accessToken = process.env.E2E_CANARY_ACCESS_TOKEN;
@@ -131,6 +187,23 @@ async function canaryGlobalTeardown(_config: FullConfig): Promise<void> {
 
   if (!runId) {
     process.stdout.write('[canary-teardown] skipped — E2E_CANARY_RUN_ID unset (no canary setup ran)\n');
+    return;
+  }
+
+  // When the chunked in-cluster runner drives the suite it spawns setup + each
+  // chunk as separate `playwright test` processes, each of which fires this
+  // config-level globalTeardown. Running the data sweep here would delete the
+  // shared canary tenant users between processes (→ later chunks 401 on
+  // login). The runner sets E2E_CANARY_SKIP_TEARDOWN=1 so the sweep runs ONCE
+  // at the end (via runCanaryCleanup) instead. We STILL release the lock,
+  // because each process acquires its own in global-setup.canary.ts.
+  const skipSweep = (process.env.E2E_CANARY_SKIP_TEARDOWN ?? '').toLowerCase();
+  if (skipSweep === '1' || skipSweep === 'true') {
+    process.stdout.write(
+      `[canary-teardown] sweep skipped (E2E_CANARY_SKIP_TEARDOWN set) for runId=${runId} — ` +
+        'runner performs the final sweep. Releasing lock only.\n',
+    );
+    releaseCanaryLock();
     return;
   }
 
@@ -148,42 +221,7 @@ async function canaryGlobalTeardown(_config: FullConfig): Promise<void> {
       return;
     }
 
-    process.stdout.write(
-      [
-        '',
-        '─── canary teardown ───────────────────────────────────────',
-        `  target = ${target}`,
-        `  runId  = ${runId}`,
-        '',
-      ].join('\n'),
-    );
-
-    // Sequential, not parallel — cleanup endpoints touch shared DBs and we want
-    // ordered log output. The volume is 6 calls; latency is not a concern here.
-    let successCount = 0;
-    let failCount = 0;
-    for (const service of SERVICES) {
-      const result = await cleanupOneService(service, runId, accessToken);
-      if (result.ok) {
-        successCount += 1;
-        process.stdout.write(`  [ok]   ${service.name.padEnd(20)} ${result.detail}\n`);
-      } else {
-        failCount += 1;
-        process.stdout.write(`  [warn] ${service.name.padEnd(20)} ${result.detail}\n`);
-      }
-    }
-
-    process.stdout.write(
-      [
-        '',
-        `  summary: ${successCount} ok, ${failCount} failed`,
-        failCount > 0
-          ? '  orphan-cleanup CronJob will sweep any leaked e2ec-* records on the next weekly run.'
-          : '  all services cleaned successfully.',
-        '───────────────────────────────────────────────────────────',
-        '',
-      ].join('\n'),
-    );
+    await runCanaryCleanup(runId, accessToken, target);
   } finally {
     releaseCanaryLock();
   }

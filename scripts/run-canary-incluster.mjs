@@ -72,12 +72,45 @@ function runPlaywrightSingle(suite) {
 // ---------------------------------------------------------------------------
 
 /** Run the setup projects once. Their globalSetup mints the token + lock; the
- *  `setup` project writes playwright/.auth/user.json that every chunk reuses. */
+ *  `setup` project writes playwright/.auth/user.json that every chunk reuses.
+ *
+ *  E2E_CANARY_SKIP_TEARDOWN=1 — Playwright's globalTeardown is config-level, so
+ *  it fires at the end of EVERY `playwright test` process the runner spawns
+ *  (setup + each chunk). The canary teardown sweeps every `e2ec-{runId8}-*`
+ *  record, INCLUDING the shared tenant-admin users multi-tenant.setup.ts just
+ *  created. If that sweep ran here, the setup process would delete the tenant
+ *  users before any chunk could log in as them → 401 Invalid user credentials
+ *  in every multiTenant chunk. The flag makes globalTeardown skip the sweep
+ *  (it still releases the lock); the runner performs the sweep ONCE at the end
+ *  via runFinalCanaryCleanup(). */
 function runSetup() {
   const args = ['playwright', 'test', '--project=setup', '--project=multi-tenant-setup'];
   log(`[setup] npx ${args.join(' ')}`);
-  const r = spawnSync('npx', args, { cwd: E2E_ROOT, stdio: 'inherit', env: process.env });
+  const r = spawnSync('npx', args, {
+    cwd: E2E_ROOT,
+    stdio: 'inherit',
+    env: { ...process.env, E2E_CANARY_SKIP_TEARDOWN: '1' },
+  });
   return r.status === null ? 1 : r.status;
+}
+
+/** Final canary data sweep — run ONCE after all chunks complete. Re-runs the
+ *  lightweight `setup` project (auth.setup.ts) with E2E_CANARY_SKIP_TEARDOWN
+ *  UNSET, so its config-level globalSetup re-mints the superUser token (the
+ *  chunk processes' tokens died with their processes) and its globalTeardown
+ *  performs the real cleanup sweep across all 6 services + releases the lock.
+ *  Reuses the existing TS plumbing (token mint, env load, realm handling) with
+ *  no new projects. Best-effort: failure is logged, never changes exit code. */
+function runFinalCanaryCleanup() {
+  const args = ['playwright', 'test', '--project=setup'];
+  log(`[final-cleanup] npx ${args.join(' ')}`);
+  const env = { ...process.env };
+  delete env.E2E_CANARY_SKIP_TEARDOWN;
+  const r = spawnSync('npx', args, { cwd: E2E_ROOT, stdio: 'inherit', env });
+  if (r.status !== 0) {
+    log(`WARN: final canary cleanup exited ${r.status === null ? 'null' : r.status} — ` +
+      'orphan-cleanup CronJob will sweep any leaked e2ec-* records.');
+  }
 }
 
 /** Enumerate chunk-project names from `playwright test --list`, in definition
@@ -119,7 +152,11 @@ function runChunk(chunk) {
   const r = spawnSync('npx', args, {
     cwd: E2E_ROOT,
     stdio: 'inherit',
-    env: { ...process.env, PLAYWRIGHT_JSON_OUTPUT_NAME: jsonOut },
+    // E2E_CANARY_SKIP_TEARDOWN=1 — see runSetup(). The per-chunk globalTeardown
+    // must NOT sweep the shared canary users mid-run; the runner sweeps once at
+    // the end (runFinalCanaryCleanup). The chunk still releases the run lock it
+    // acquired in its own globalSetup.
+    env: { ...process.env, PLAYWRIGHT_JSON_OUTPUT_NAME: jsonOut, E2E_CANARY_SKIP_TEARDOWN: '1' },
   });
   return r.status === null ? 1 : r.status;
 }
@@ -354,6 +391,12 @@ async function main() {
       exits[chunk] = runChunk(chunk);
       log(`[chunk ${chunk}] exit ${exits[chunk]}`);
     }
+
+    // Sweep all canary data ONCE, now that every chunk has finished. The
+    // intermediate processes ran with E2E_CANARY_SKIP_TEARDOWN set so the
+    // shared tenant users survived for the whole run; this is where they get
+    // cleaned up. Best-effort — never affects the pass/fail exit code.
+    runFinalCanaryCleanup();
 
     summary = summarizeChunked(chunks);
     failed = Object.values(exits).some((c) => c !== 0);

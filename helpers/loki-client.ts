@@ -10,7 +10,11 @@
  * - GET /ready                    - readiness probe
  *
  * Labels used by the observability stack:
- *   ServiceName, Level, TenantId, Environment
+ *   ServiceName, level, TenantId, Environment
+ *
+ * NOTE: `level` is lowercase — Loki normalises Serilog property labels to
+ * lowercase on ingestion. `ServiceName` and `Environment` keep mixed case
+ * because they are explicit static push labels (not promoted properties).
  */
 
 import axios, { type AxiosInstance } from 'axios';
@@ -145,12 +149,18 @@ export class LokiClient {
 
   /**
    * Convenience: query error-level logs, optionally filtered by service.
+   *
+   * NOTE: Loki normalises the `Level` property to the lowercase label `level`
+   * when ingested (see Logging.Client/Extensions/LoggingServiceExtensions.cs
+   * — propertiesAsLabels promotes "Level" but Loki stores it as "level").
+   * The Promtail pipeline also writes `level` in lowercase. Always query with
+   * the lowercase form to match what is actually stored.
    */
   async queryErrors(serviceName?: string): Promise<LokiQueryResult> {
     const serviceSelector = serviceName
       ? `ServiceName="${serviceName}"`
       : 'ServiceName=~".+"';
-    return this.queryRange(`{${serviceSelector}, Level="Error"}`);
+    return this.queryRange(`{${serviceSelector}, level="error"}`);
   }
 
   /**

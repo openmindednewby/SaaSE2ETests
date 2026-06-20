@@ -17,9 +17,16 @@ import { monitoringConfigured, MONITORING_SKIP_REASON } from '../../helpers/feat
 const PROMETHEUS_URL =
   process.env.PROMETHEUS_URL ?? 'http://localhost:9090';
 
-/** Regex pattern matching known service container names */
-const SERVICE_CONTAINER_PATTERN =
-  '.*identity.*|.*questioner.*|.*onlinemenu.*|.*notification.*';
+/**
+ * Regex pattern matching known service pod names.
+ *
+ * NOTE: Kubernetes cAdvisor metrics scraped via kubelet (/metrics/cadvisor)
+ * expose container identity through the `pod` label (e.g. "tenant-api-57968bd9-xxx"),
+ * NOT a `name` label. The `name` label is only populated in standalone-Docker
+ * cAdvisor; it is absent in K3s/K8s environments. Queries must filter on `pod=~`.
+ */
+const SERVICE_POD_PATTERN =
+  '.*identity.*|.*questioner.*|.*onlinemenu.*|.*notification.*|.*tenant.*';
 
 test.describe('Container Metrics @monitoring', () => {
   // Observability stack is in-cluster only — skip on dev-PC staging/prod runs.
@@ -33,7 +40,7 @@ test.describe('Container Metrics @monitoring', () => {
 
   test('container CPU metrics are available for service containers', async () => {
     const result = await prometheus.getContainerCpu(
-      SERVICE_CONTAINER_PATTERN
+      SERVICE_POD_PATTERN
     );
 
     expect(result.status).toBe('success');
@@ -42,19 +49,19 @@ test.describe('Container Metrics @monitoring', () => {
       'Expected CPU metrics for at least one service container'
     ).toBeGreaterThan(0);
 
-    // Log which containers have CPU metrics
-    const containerNames = result.data.result.map(
-      (r) => r.metric.name ?? 'unknown'
+    // Log which pods have CPU metrics
+    const podNames = result.data.result.map(
+      (r) => r.metric.pod ?? r.metric.name ?? 'unknown'
     );
     test.info().annotations.push({
       type: 'info',
-      description: `CPU metrics found for containers: ${containerNames.join(', ')}`,
+      description: `CPU metrics found for pods: ${podNames.join(', ')}`,
     });
   });
 
   test('container memory metrics are available', async () => {
     const result = await prometheus.getContainerMemory(
-      SERVICE_CONTAINER_PATTERN
+      SERVICE_POD_PATTERN
     );
 
     expect(result.status).toBe('success');
@@ -70,7 +77,7 @@ test.describe('Container Metrics @monitoring', () => {
         const memoryBytes = parseFloat(value[1]);
         expect(
           memoryBytes,
-          `Container "${metric.metric.name}" memory should be > 0`
+          `Pod "${metric.metric.pod ?? metric.metric.name}" memory should be > 0`
         ).toBeGreaterThan(0);
       }
     }
@@ -81,32 +88,34 @@ test.describe('Container Metrics @monitoring', () => {
     });
   });
 
-  test('metrics include service name labels', async () => {
-    // Query raw container CPU metric to check labels
+  test('metrics include pod name labels', async () => {
+    // Query raw container CPU metric to check labels.
+    // In Kubernetes/K3s, cAdvisor metrics use `pod` (not `name`) to identify
+    // containers — `name` is only set in standalone-Docker cAdvisor.
     const result = await prometheus.query(
-      `container_cpu_usage_seconds_total{name=~"${SERVICE_CONTAINER_PATTERN}"}`
+      `container_cpu_usage_seconds_total{pod=~"${SERVICE_POD_PATTERN}",namespace="dloizides"}`
     );
 
     expect(result.status).toBe('success');
 
     if (result.data.result.length > 0) {
-      // Verify each result has a `name` label identifying the container
-      const hasNameLabel = result.data.result.every(
-        (r) => r.metric.name !== undefined
+      // Verify each result has a `pod` label identifying the container
+      const hasPodLabel = result.data.result.every(
+        (r) => r.metric.pod !== undefined
       );
       expect(
-        hasNameLabel,
-        'All container metrics should have a "name" label'
+        hasPodLabel,
+        'All container metrics should have a "pod" label'
       ).toBe(true);
 
-      // Check for additional labels like image, id
+      // Log available label keys for diagnostics
       const sampleMetric = result.data.result[0].metric;
       test.info().annotations.push({
         type: 'info',
         description: `Sample metric labels: ${Object.keys(sampleMetric).join(', ')}`,
       });
     } else {
-      // If no results, the container pattern may not match - skip gracefully
+      // If no results, the pod pattern may not match - skip gracefully
       test.info().annotations.push({
         type: 'warning',
         description: 'No container CPU metrics matched the service pattern',
@@ -116,8 +125,8 @@ test.describe('Container Metrics @monitoring', () => {
 
   test('network I/O metrics are available', async () => {
     const [rxResult, txResult] = await Promise.all([
-      prometheus.getContainerNetworkRx(SERVICE_CONTAINER_PATTERN),
-      prometheus.getContainerNetworkTx(SERVICE_CONTAINER_PATTERN),
+      prometheus.getContainerNetworkRx(SERVICE_POD_PATTERN),
+      prometheus.getContainerNetworkTx(SERVICE_POD_PATTERN),
     ]);
 
     expect(rxResult.status).toBe('success');

@@ -13,8 +13,18 @@ import { lokiConfigured, LOKI_SKIP_REASON } from '../../helpers/feature-gates.js
 
 const LOKI_URL = process.env.LOKI_URL ?? 'http://localhost:3100';
 
-/** Expected labels that should exist in the observability stack */
-const EXPECTED_LABELS = ['ServiceName', 'Level'];
+/**
+ * Expected labels that should exist in the observability stack.
+ *
+ * NOTE: Loki normalises label names to lowercase when ingested via the
+ * Serilog.Sinks.Grafana.Loki sink. Even though the sink is configured with
+ * `propertiesAsLabels: new[] { "TenantId", "Level" }` in Logging.Client, the
+ * stored label name is `level` (lowercase), not `Level`. `ServiceName` keeps
+ * its mixed case because it is declared as an explicit static label
+ * (`new LokiLabel { Key = "ServiceName", ... }`) rather than a promoted
+ * Serilog property — Loki preserves the casing of explicit push labels.
+ */
+const EXPECTED_LABELS = ['ServiceName', 'level'];
 
 test.describe('Loki Health @logging', () => {
   // Observability stack is in-cluster only — skip on dev-PC staging/prod runs.

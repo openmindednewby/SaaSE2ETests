@@ -6,7 +6,6 @@ export class LoginPage extends BasePage {
   readonly usernameInput: Locator;
   readonly passwordInput: Locator;
   readonly loginButton: Locator;
-  readonly loginError: Locator;
   readonly loadingIndicator: Locator;
 
   constructor(page: Page) {
@@ -15,9 +14,6 @@ export class LoginPage extends BasePage {
     this.usernameInput = page.locator(testIdSelector(TestIds.USERNAME_INPUT));
     this.passwordInput = page.locator(testIdSelector(TestIds.PASSWORD_INPUT));
     this.loginButton = page.locator(testIdSelector(TestIds.LOGIN_BUTTON));
-    // Inline error text rendered by the shared <LoginForm> on missing-fields /
-    // invalid-credentials (replaces the legacy window.alert dialog).
-    this.loginError = page.locator(testIdSelector(TestIds.LOGIN_ERROR));
     this.loadingIndicator = page.locator('[role="progressbar"]');
   }
 
@@ -101,15 +97,64 @@ export class LoginPage extends BasePage {
   }
 
   /**
-   * Expect the inline login error to appear with a message matching the pattern.
+   * Submit the login form and assert the resulting error message matches the
+   * pattern.
    *
-   * The shared `<LoginForm>` (@dloizides/auth-web) surfaces missing-fields and
-   * invalid-credential errors inline via a `testID=auth-login-error` text node
-   * (accessible, non-blocking) — it replaced the legacy `window.alert` dialog.
+   * The BaseClient `/login` screen (the SPA the @identity suite drives via
+   * BASE_URL) surfaces missing-fields and invalid-credential errors through a
+   * native browser dialog (`window.alert`, via `showAlert`), NOT an inline
+   * text node. Playwright auto-dismisses dialogs by default, so we register a
+   * one-shot `dialog` handler BEFORE clicking submit to capture the message,
+   * then dismiss it and assert. The `auth-login-error` inline testID exists in
+   * the per-app erevna/katalogos LoginForm, but not in this legacy SPA.
    */
-  async expectErrorMessage(messagePattern: RegExp) {
-    await expect(this.loginError).toBeVisible({ timeout: 10000 });
-    await expect(this.loginError).toHaveText(messagePattern);
+  async submitAndExpectError(
+    username: string,
+    password: string,
+    messagePattern: RegExp,
+  ) {
+    const dialogMessage = await this.captureLoginDialog(async () => {
+      await this.dismissOverlay();
+      await this.usernameInput.waitFor({ state: 'visible', timeout: 30000 });
+      await this.usernameInput.fill(username);
+      await this.passwordInput.fill(password);
+      await this.loginButton.click();
+    });
+
+    expect(dialogMessage, 'expected a login error dialog to appear').not.toBeNull();
+    expect(dialogMessage ?? '').toMatch(messagePattern);
+  }
+
+  /**
+   * Click submit with empty fields and assert the missing-fields error dialog.
+   */
+  async submitEmptyAndExpectError(messagePattern: RegExp) {
+    const dialogMessage = await this.captureLoginDialog(async () => {
+      await this.loginButton.click();
+    });
+
+    expect(dialogMessage, 'expected a missing-fields error dialog to appear').not.toBeNull();
+    expect(dialogMessage ?? '').toMatch(messagePattern);
+  }
+
+  /**
+   * Register a one-shot `dialog` handler, run `action` (which is expected to
+   * trigger a `window.alert`), capture + dismiss the dialog, and return its
+   * message. Returns null if no dialog appeared within the timeout.
+   */
+  private async captureLoginDialog(action: () => Promise<void>): Promise<string | null> {
+    const DIALOG_TIMEOUT = 10000;
+    const dialogPromise = this.page
+      .waitForEvent('dialog', { timeout: DIALOG_TIMEOUT })
+      .then(async (dialog) => {
+        const message = dialog.message();
+        await dialog.dismiss();
+        return message;
+      })
+      .catch(() => null);
+
+    await action();
+    return await dialogPromise;
   }
 
   /**

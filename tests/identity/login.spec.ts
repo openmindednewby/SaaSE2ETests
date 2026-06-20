@@ -60,23 +60,18 @@ test.describe('Login Flow @identity @auth', () => {
 
   test('should show error with invalid credentials', async ({ page: _page }) => {
     // Already on login page from beforeEach.
-    // The shared <LoginForm> (@dloizides/auth-web) surfaces a wrong-credential
-    // error INLINE (testID=auth-login-error), not via a window.alert dialog.
-    await loginPage.login('invaliduser', 'invalidpassword');
-
-    // A non-empty inline error must appear (the exact copy is "Incorrect
-    // username or password." but we assert only that some error text shows so
-    // the test is resilient to label/localisation changes).
-    await loginPage.expectErrorMessage(/\S/);
+    // The BaseClient /login screen surfaces a wrong-credential error via a
+    // native browser dialog (window.alert, see src/utils/showAlert), NOT an
+    // inline text node. We capture the dialog and assert it carries a non-empty
+    // message (resilient to label/localisation changes).
+    await loginPage.submitAndExpectError('invaliduser', 'invalidpassword', /\S/);
   });
 
   test('should require username and password', async ({ page: _page }) => {
     // Already on login page from beforeEach.
-    // Submitting with empty fields shows the inline missing-fields error
-    // ("Enter both your username and password.").
-    await loginPage.loginButton.click();
-
-    await loginPage.expectErrorMessage(/enter/i);
+    // Submitting with empty fields shows the missing-fields error dialog
+    // (FM('login.enterCredentials') = "Please enter username and password").
+    await loginPage.submitEmptyAndExpectError(/enter/i);
   });
 
   test('should disable inputs while logging in', async ({ page: _page }) => {

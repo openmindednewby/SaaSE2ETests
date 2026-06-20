@@ -170,54 +170,64 @@ export class PrometheusClient {
   }
 
   /**
-   * Get container CPU usage as a percentage for containers matching a name pattern.
+   * Get container CPU usage as a percentage for pods matching a name pattern.
    *
-   * @param containerNamePattern - Regex pattern for container names (e.g. ".*identity.*")
+   * Uses `pod=~` rather than `name=~` because in Kubernetes/K3s environments
+   * the cAdvisor metrics scraped via kubelet do not set the `name` label
+   * (that label is Docker-standalone only). The `pod` label is always present.
+   *
+   * @param podNamePattern - Regex pattern for pod names (e.g. ".*identity.*")
    */
   async getContainerCpu(
-    containerNamePattern: string
+    podNamePattern: string
   ): Promise<PrometheusQueryResult> {
     return this.query(
-      `sum(rate(container_cpu_usage_seconds_total{name=~"${containerNamePattern}"}[5m])) by (name) * 100`
+      `sum(rate(container_cpu_usage_seconds_total{pod=~"${podNamePattern}"}[5m])) by (pod) * 100`
     );
   }
 
   /**
-   * Get container memory usage in bytes for containers matching a name pattern.
+   * Get container memory usage in bytes for pods matching a name pattern.
    *
-   * @param containerNamePattern - Regex pattern for container names
+   * Uses `pod=~` — see {@link getContainerCpu} for rationale.
+   *
+   * @param podNamePattern - Regex pattern for pod names
    */
   async getContainerMemory(
-    containerNamePattern: string
+    podNamePattern: string
   ): Promise<PrometheusQueryResult> {
     return this.query(
-      `container_memory_usage_bytes{name=~"${containerNamePattern}"}`
+      `container_memory_usage_bytes{pod=~"${podNamePattern}"}`
     );
   }
 
   /**
-   * Get container network receive bytes for containers matching a name pattern.
+   * Get container network receive bytes for pods matching a name pattern.
    *
-   * @param containerNamePattern - Regex pattern for container names
+   * Uses `pod=~` — see {@link getContainerCpu} for rationale.
+   *
+   * @param podNamePattern - Regex pattern for pod names
    */
   async getContainerNetworkRx(
-    containerNamePattern: string
+    podNamePattern: string
   ): Promise<PrometheusQueryResult> {
     return this.query(
-      `sum(rate(container_network_receive_bytes_total{name=~"${containerNamePattern}"}[5m])) by (name)`
+      `sum(rate(container_network_receive_bytes_total{pod=~"${podNamePattern}"}[5m])) by (pod)`
     );
   }
 
   /**
-   * Get container network transmit bytes for containers matching a name pattern.
+   * Get container network transmit bytes for pods matching a name pattern.
    *
-   * @param containerNamePattern - Regex pattern for container names
+   * Uses `pod=~` — see {@link getContainerCpu} for rationale.
+   *
+   * @param podNamePattern - Regex pattern for pod names
    */
   async getContainerNetworkTx(
-    containerNamePattern: string
+    podNamePattern: string
   ): Promise<PrometheusQueryResult> {
     return this.query(
-      `sum(rate(container_network_transmit_bytes_total{name=~"${containerNamePattern}"}[5m])) by (name)`
+      `sum(rate(container_network_transmit_bytes_total{pod=~"${podNamePattern}"}[5m])) by (pod)`
     );
   }
 }
