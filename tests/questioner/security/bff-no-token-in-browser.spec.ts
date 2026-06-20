@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { getProjectUsers } from '../../../fixtures/test-data.js';
-import { retryWhileRateLimited } from '../../helpers/rate-limit.js';
+import { retryWhileRateLimited } from '../../../helpers/rate-limit.js';
 
 /**
  * Phase 2 BFF security verification — erevna-web (Step 4b).
@@ -99,7 +99,7 @@ test.describe('BFF — no token reachable from browser JS @questioner @bff @secu
     const loginResult = await retryWhileRateLimited(
       'bff-no-token /bff/login',
       attemptBffLogin,
-      (r) => r.status,
+      (r: BffLoginResult) => r.status,
     );
 
     expect(
