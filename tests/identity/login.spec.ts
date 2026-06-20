@@ -60,17 +60,17 @@ test.describe('Login Flow @identity @auth', () => {
 
   test('should show error with invalid credentials', async ({ page: _page }) => {
     // Already on login page from beforeEach.
-    // The BaseClient /login screen surfaces a wrong-credential error via a
-    // native browser dialog (window.alert, see src/utils/showAlert), NOT an
-    // inline text node. We capture the dialog and assert it carries a non-empty
+    // katalogos-web /login renders the shared @dloizides/auth-web LoginForm,
+    // which shows a wrong-credential error in an inline <Text testID=
+    // "auth-login-error"> ("Incorrect username or password."). Assert a non-empty
     // message (resilient to label/localisation changes).
     await loginPage.submitAndExpectError('invaliduser', 'invalidpassword', /\S/);
   });
 
   test('should require username and password', async ({ page: _page }) => {
     // Already on login page from beforeEach.
-    // Submitting with empty fields shows the missing-fields error dialog
-    // (FM('login.enterCredentials') = "Please enter username and password").
+    // Submitting with empty fields renders the missing-fields error inline
+    // (auth-web default label "Enter both your username and password.").
     await loginPage.submitEmptyAndExpectError(/enter/i);
   });
 

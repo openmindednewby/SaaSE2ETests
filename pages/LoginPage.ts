@@ -6,6 +6,7 @@ export class LoginPage extends BasePage {
   readonly usernameInput: Locator;
   readonly passwordInput: Locator;
   readonly loginButton: Locator;
+  readonly loginError: Locator;
   readonly loadingIndicator: Locator;
 
   constructor(page: Page) {
@@ -14,6 +15,7 @@ export class LoginPage extends BasePage {
     this.usernameInput = page.locator(testIdSelector(TestIds.USERNAME_INPUT));
     this.passwordInput = page.locator(testIdSelector(TestIds.PASSWORD_INPUT));
     this.loginButton = page.locator(testIdSelector(TestIds.LOGIN_BUTTON));
+    this.loginError = page.locator(testIdSelector(TestIds.LOGIN_ERROR));
     this.loadingIndicator = page.locator('[role="progressbar"]');
   }
 
@@ -97,64 +99,45 @@ export class LoginPage extends BasePage {
   }
 
   /**
-   * Submit the login form and assert the resulting error message matches the
-   * pattern.
+   * Submit the login form with the given (bad) credentials and assert the
+   * inline error message matches the pattern.
    *
-   * The BaseClient `/login` screen (the SPA the @identity suite drives via
-   * BASE_URL) surfaces missing-fields and invalid-credential errors through a
-   * native browser dialog (`window.alert`, via `showAlert`), NOT an inline
-   * text node. Playwright auto-dismisses dialogs by default, so we register a
-   * one-shot `dialog` handler BEFORE clicking submit to capture the message,
-   * then dismiss it and assert. The `auth-login-error` inline testID exists in
-   * the per-app erevna/katalogos LoginForm, but not in this legacy SPA.
+   * The @identity suite drives the per-app RN-web login (BASE_URL =
+   * katalogos-web `/login`), which renders the shared `@dloizides/auth-web`
+   * `<LoginForm>`. On a wrong credential the form's `runLogin` catches the BFF
+   * non-2xx and renders an inline `<Text testID="auth-login-error">` with the
+   * default `invalidCredentials` label ("Incorrect username or password.").
+   * RN-web maps `testID` → `data-testid`, so we assert that inline node — NOT a
+   * browser dialog (there is no `window.alert` on this screen).
    */
   async submitAndExpectError(
     username: string,
     password: string,
     messagePattern: RegExp,
   ) {
-    const dialogMessage = await this.captureLoginDialog(async () => {
-      await this.dismissOverlay();
-      await this.usernameInput.waitFor({ state: 'visible', timeout: 30000 });
-      await this.usernameInput.fill(username);
-      await this.passwordInput.fill(password);
-      await this.loginButton.click();
-    });
+    await this.dismissOverlay();
+    await this.usernameInput.waitFor({ state: 'visible', timeout: 30000 });
+    await this.usernameInput.fill(username);
+    await this.passwordInput.fill(password);
+    await this.loginButton.click();
 
-    expect(dialogMessage, 'expected a login error dialog to appear').not.toBeNull();
-    expect(dialogMessage ?? '').toMatch(messagePattern);
+    // Invalid-credential errors require a BFF round-trip; allow generous time.
+    await expect(this.loginError).toBeVisible({ timeout: 15000 });
+    await expect(this.loginError).toHaveText(messagePattern);
   }
 
   /**
-   * Click submit with empty fields and assert the missing-fields error dialog.
+   * Click submit with empty fields and assert the inline missing-fields error.
+   * `runLogin` short-circuits empty input and renders the `missingFields` label
+   * ("Enter both your username and password.") in the same inline error node.
    */
   async submitEmptyAndExpectError(messagePattern: RegExp) {
-    const dialogMessage = await this.captureLoginDialog(async () => {
-      await this.loginButton.click();
-    });
+    await this.dismissOverlay();
+    await this.loginButton.waitFor({ state: 'visible', timeout: 30000 });
+    await this.loginButton.click();
 
-    expect(dialogMessage, 'expected a missing-fields error dialog to appear').not.toBeNull();
-    expect(dialogMessage ?? '').toMatch(messagePattern);
-  }
-
-  /**
-   * Register a one-shot `dialog` handler, run `action` (which is expected to
-   * trigger a `window.alert`), capture + dismiss the dialog, and return its
-   * message. Returns null if no dialog appeared within the timeout.
-   */
-  private async captureLoginDialog(action: () => Promise<void>): Promise<string | null> {
-    const DIALOG_TIMEOUT = 10000;
-    const dialogPromise = this.page
-      .waitForEvent('dialog', { timeout: DIALOG_TIMEOUT })
-      .then(async (dialog) => {
-        const message = dialog.message();
-        await dialog.dismiss();
-        return message;
-      })
-      .catch(() => null);
-
-    await action();
-    return await dialogPromise;
+    await expect(this.loginError).toBeVisible({ timeout: 10000 });
+    await expect(this.loginError).toHaveText(messagePattern);
   }
 
   /**
