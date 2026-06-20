@@ -43,12 +43,25 @@ const API_TIMEOUT_MS = 15000;
 export class LokiClient {
   private client: AxiosInstance;
 
-  constructor(baseUrl: string = 'http://localhost:3100') {
+  /**
+   * The cluster whose logs to scope correlation queries to. Prod ships logs to
+   * the shared hub Loki via Promtail (stdout scraping), which labels lines
+   * `cluster=prod` (+ lowercase `service_name`) rather than the `ServiceName`
+   * label the direct Serilog sink uses. So a prod-targeted run must query by
+   * `{cluster="prod"}`; staging keeps the `ServiceName` scheme (its Serilog Loki
+   * sink works and tags lines with `ServiceName`). Empty for local.
+   */
+  private readonly clusterLabel: string;
+
+  constructor(baseUrl: string = 'http://localhost:3100', cluster?: string) {
     this.client = axios.create({
       baseURL: baseUrl.replace(/\/+$/, ''),
       timeout: API_TIMEOUT_MS,
       httpsAgent: sharedHttpsAgent,
     });
+    // Only prod is Promtail-only; staging's direct Serilog sink keeps ServiceName.
+    const target = cluster ?? process.env.E2E_TARGET ?? '';
+    this.clusterLabel = target === 'prod' ? 'prod' : '';
   }
 
   /**
@@ -142,9 +155,13 @@ export class LokiClient {
   async queryByCorrelationId(
     correlationId: string
   ): Promise<LokiQueryResult> {
-    return this.queryRange(
-      `{ServiceName=~".+"} |= \`${correlationId}\``
-    );
+    // On prod, logs reach the hub via Promtail under `{cluster="prod"}` (the
+    // direct Serilog sink, which would tag `ServiceName`, is not wired in prod).
+    // Elsewhere (staging/local) the Serilog sink tags `ServiceName`.
+    const selector = this.clusterLabel
+      ? `{cluster="${this.clusterLabel}"}`
+      : '{ServiceName=~".+"}';
+    return this.queryRange(`${selector} |= \`${correlationId}\``);
   }
 
   /**
