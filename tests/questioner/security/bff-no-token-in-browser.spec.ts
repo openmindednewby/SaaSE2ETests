@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { getProjectUsers } from '../../../fixtures/test-data.js';
+import { retryWhileRateLimited } from '../../helpers/rate-limit.js';
 
 /**
  * Phase 2 BFF security verification — erevna-web (Step 4b).
@@ -66,37 +67,39 @@ test.describe('BFF — no token reachable from browser JS @questioner @bff @secu
     // a same-origin POST to `/bff/login` with `credentials: 'include'` and the
     // `X-BFF-Csrf` anti-forgery header. `bff-erevna` terminates this against
     // the `questioner` realm and sets the httpOnly session cookie.
-    const loginResult = await page.evaluate(
-      async (creds: { username: string; password: string }): Promise<BffLoginResult> => {
-        // The erevna BFF fronts /bff/login with an auth rate limiter; a canary
-        // firing many auth ops can transiently hit HTTP 429. Retry with backoff
-        // (the limiter window drains) before asserting — mirrors loginAndWait.
-        const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-        let res!: Response;
-        for (let attempt = 1; attempt <= 5; attempt++) {
-          res = await fetch('/bff/login', {
+    // Perform one same-origin POST to /bff/login and report the outcome.
+    const attemptBffLogin = (): Promise<BffLoginResult> =>
+      page.evaluate(
+        async (creds: { username: string; password: string }): Promise<BffLoginResult> => {
+          const res = await fetch('/bff/login', {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json', 'X-BFF-Csrf': '1' },
             body: JSON.stringify({ username: creds.username, password: creds.password }),
           });
-          if (res.status !== 429) break;
-          await sleep(attempt * 4000);
-        }
-        let bodyHasToken = false;
-        let bodyExcerpt = '';
-        try {
-          const text = await res.text();
-          bodyHasToken = /access_?token|refresh_?token|"token"|eyJ[A-Za-z0-9_-]+\./i.test(text);
-          // Redact anything JWT-ish before the excerpt leaves the page context,
-          // then cap the length — this only exists to explain a FAILED login.
-          bodyExcerpt = text.replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, '<jwt>').slice(0, 200);
-        } catch {
-          // no body — fine
-        }
-        return { status: res.status, statusText: res.statusText, bodyHasToken, bodyExcerpt };
-      },
-      { username: adminUser.username, password: adminUser.password },
+          let bodyHasToken = false;
+          let bodyExcerpt = '';
+          try {
+            const text = await res.text();
+            bodyHasToken = /access_?token|refresh_?token|"token"|eyJ[A-Za-z0-9_-]+\./i.test(text);
+            // Redact anything JWT-ish before the excerpt leaves the page context,
+            // then cap the length — this only exists to explain a FAILED login.
+            bodyExcerpt = text.replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, '<jwt>').slice(0, 200);
+          } catch {
+            // no body — fine
+          }
+          return { status: res.status, statusText: res.statusText, bodyHasToken, bodyExcerpt };
+        },
+        { username: adminUser.username, password: adminUser.password },
+      );
+
+    // The erevna BFF fronts /bff/login with an auth rate limiter; a canary
+    // firing many auth ops can transiently hit HTTP 429. Retry with backoff
+    // (the limiter window drains) before asserting — mirrors loginAndWait.
+    const loginResult = await retryWhileRateLimited(
+      'bff-no-token /bff/login',
+      attemptBffLogin,
+      (r) => r.status,
     );
 
     expect(
