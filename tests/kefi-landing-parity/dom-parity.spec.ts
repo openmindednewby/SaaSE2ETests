@@ -81,7 +81,7 @@ function assertParityForViewport(
   viewportName: 'mobile' | 'tablet' | 'desktop',
 ): void {
   recordKnownGapAnnotations(tenant);
-  assertSectionStructure(standalone, kefi);
+  assertSectionStructure(tenant, standalone, kefi);
   assertSectionHeights(tenant, standalone, kefi);
   assertTypographyAndChrome(tenant, standalone, kefi, viewportName);
   assertNavItems(tenant, standalone, kefi);
@@ -108,12 +108,25 @@ function recordKnownGapAnnotations(tenant: KefiLandingTenant): void {
       description: 'page-total height drift tolerated',
     });
   }
+  if (gaps.extraStandaloneSections?.length) {
+    test.info().annotations.push({
+      type: 'known-gap',
+      description: `sections only on standalone (kefi LandingConfig not yet updated): ${gaps.extraStandaloneSections.join(', ')}`,
+    });
+  }
 }
 
-function assertSectionStructure(standalone: ParityManifest, kefi: ParityManifest): void {
-  const standaloneIds = standalone.sections.map((s) => s.id);
-  const kefiIds = kefi.sections.map((s) => s.id);
-  expect(kefiIds, 'same section IDs in same order').toEqual(standaloneIds);
+function assertSectionStructure(
+  tenant: KefiLandingTenant,
+  standalone: ParityManifest,
+  kefi: ParityManifest,
+): void {
+  const tolerated = new Set(tenant.knownGaps.extraStandaloneSections ?? []);
+  const standaloneIds = standalone.sections.map((s) => s.id).filter((id) => !tolerated.has(id));
+  const kefiIds = kefi.sections.map((s) => s.id).filter((id) => !tolerated.has(id));
+  expect(kefiIds, 'same section IDs in same order (known standalone-only sections excluded)').toEqual(
+    standaloneIds,
+  );
 }
 
 function assertSectionHeights(

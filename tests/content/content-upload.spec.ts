@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import path from 'path';
+import { TestIds, testIdSelector } from '../../shared/testIds.js';
 
 /**
  * E2E Tests for Content Upload Functionality
@@ -75,9 +76,6 @@ test.describe('Content Upload - Test IDs Contract @content-upload', () => {
    */
 
   test('should have all required content upload test IDs defined', async () => {
-    // Import testIds from shared module
-    const { TestIds } = await import('../../shared/testIds.js');
-
     // Verify all expected test IDs exist
     const requiredTestIds = [
       'CONTENT_UPLOADER',
@@ -106,8 +104,6 @@ test.describe('Content Upload - Test IDs Contract @content-upload', () => {
   });
 
   test('test IDs should follow naming convention', async () => {
-    const { TestIds } = await import('../../shared/testIds.js');
-
     // Content-related test IDs should use lowercase with hyphens
     const contentTestIds = [
       TestIds.CONTENT_UPLOADER,
@@ -124,8 +120,6 @@ test.describe('Content Upload - Test IDs Contract @content-upload', () => {
   });
 
   test('testIdSelector helper should generate valid CSS selector', async () => {
-    const { TestIds, testIdSelector } = await import('../../shared/testIds.js');
-
     const selector = testIdSelector(TestIds.CONTENT_UPLOADER);
     expect(selector).toBe('[data-testid="content-uploader"]');
   });

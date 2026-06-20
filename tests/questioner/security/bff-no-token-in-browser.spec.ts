@@ -36,7 +36,16 @@ const EREVNA_BASE_URL =
 
 interface BffLoginResult {
   status: number;
+  statusText: string;
   bodyHasToken: boolean;
+  /**
+   * Short, token-redacted excerpt of the login response body. Only used to
+   * make a FAILED login actionable in the canary report (404 = route missing,
+   * 401 = bad creds / user not seeded in the questioner realm, 403 = CSRF
+   * rejected, 5xx = BFF/Keycloak error). Never contains a token: any JWT-ish
+   * run is stripped before the value leaves the page context.
+   */
+  bodyExcerpt: string;
 }
 
 test.describe('BFF — no token reachable from browser JS @questioner @bff @security', () => {
@@ -66,18 +75,25 @@ test.describe('BFF — no token reachable from browser JS @questioner @bff @secu
           body: JSON.stringify({ username: creds.username, password: creds.password }),
         });
         let bodyHasToken = false;
+        let bodyExcerpt = '';
         try {
           const text = await res.text();
           bodyHasToken = /access_?token|refresh_?token|"token"|eyJ[A-Za-z0-9_-]+\./i.test(text);
+          // Redact anything JWT-ish before the excerpt leaves the page context,
+          // then cap the length — this only exists to explain a FAILED login.
+          bodyExcerpt = text.replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, '<jwt>').slice(0, 200);
         } catch {
           // no body — fine
         }
-        return { status: res.status, bodyHasToken };
+        return { status: res.status, statusText: res.statusText, bodyHasToken, bodyExcerpt };
       },
       { username: adminUser.username, password: adminUser.password },
     );
 
-    expect(loginResult.status, 'POST /bff/login must succeed').toBe(200);
+    expect(
+      loginResult.status,
+      `POST /bff/login must succeed — got ${loginResult.status} ${loginResult.statusText} for user "${adminUser.username}" at ${EREVNA_BASE_URL}; body: ${loginResult.bodyExcerpt}`,
+    ).toBe(200);
     expect(loginResult.bodyHasToken, 'the /bff/login response body must NOT carry a token').toBe(false);
 
     // 1. The opaque BFF session cookie must be present and httpOnly + Secure.
