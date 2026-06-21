@@ -19,7 +19,12 @@ import type { KefiAdminClient } from './kefiAdminClient.js';
 export interface CustomDomainStatusDto {
   customDomain: string | null;
   status: 'None' | 'PendingDns' | 'Active' | 'Failed';
+  /** CNAME host for a subdomain; null for an apex domain or when none is set. */
   cnameTarget: string | null;
+  /** DNS record type — 'CNAME' (subdomain) or 'A' (apex, #240); null when none. */
+  recordType: 'CNAME' | 'A' | null;
+  /** A-record IP for an apex domain (recordType === 'A'); null otherwise. */
+  apexTarget: string | null;
   verifiedAt: string | null;
   lastError: string | null;
 }
