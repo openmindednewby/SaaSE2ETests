@@ -159,7 +159,8 @@ test.describe.serial('Menu Content Upload @online-menus @content-upload', () => 
     await contentPage.expectMenuItemImageVisible(0, 0);
   });
 
-  test('should save menu with uploaded image', async () => {
+  // eslint-disable-next-line no-empty-pattern
+  test('should save menu with uploaded image', async ({}, testInfo) => {
     expect(testMenuName, 'Test menu not created').toBeTruthy();
 
     // Open the editor explicitly instead of assuming the previous test left it
@@ -171,7 +172,17 @@ test.describe.serial('Menu Content Upload @online-menus @content-upload', () => 
     await expect(menusPage.menuEditor).toBeVisible({ timeout: 10000 });
     await editorPage.expandCategory(0);
 
-    // Save the menu (with the uploaded image when the upload test ran).
+    // The upload test (:142) only set the image in the editor's in-memory state;
+    // navigating away above discarded it, so a fresh re-open has no image and the
+    // Save below would persist an IMAGELESS menu — making the persist-after-reload
+    // test (:184) impossible to pass. Re-upload here so the Save actually persists
+    // an item image (matches this test's name). Firefox skips file uploads.
+    if (!testInfo.project.name.includes('firefox')) {
+      await contentPage.uploadImageToMenuItem(0, 0, testImagePath);
+      await contentPage.expectMenuItemImageVisible(0, 0);
+    }
+
+    // Save the menu (with the uploaded image on non-Firefox).
     await editorPage.saveMenuEditor();
 
     // Wait for any loading to complete
