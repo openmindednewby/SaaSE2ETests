@@ -130,8 +130,10 @@ test.describe('Correlation Tracking @logging', () => {
     // Check if the correlation ID appears across multiple services
     const result = await loki.queryByCorrelationId(correlationId);
     const entries = LokiClient.flattenEntries(result);
+    // Direct Serilog sink (staging) tags `ServiceName`; prod ships via Promtail
+    // which uses the lowercase `service_name` label — accept either.
     const uniqueServices = new Set(
-      entries.map((e) => e.labels.ServiceName).filter(Boolean)
+      entries.map((e) => e.labels.ServiceName ?? e.labels.service_name).filter(Boolean)
     );
 
     test.info().annotations.push({

@@ -1,20 +1,17 @@
 /**
- * Log Verification E2E Tests
- *
- * Validates that the Grafana Loki logging pipeline is operational:
- * - Loki is healthy and accepting logs
- * - User actions generate logs in Loki
- * - Logs include correct ServiceName labels
- * - Logs include TenantId when authenticated
- * - Error logs are captured with proper level
+ * Log Verification E2E Tests — validates the Grafana Loki logging pipeline:
+ * Loki health, user actions generate logs, ServiceName labels, TenantId on
+ * authenticated requests, and error-level capture.
  */
-
 import { test, expect } from '@playwright/test';
 
 import { LokiClient } from '../../helpers/loki-client.js';
 import { lokiConfigured, LOKI_SKIP_REASON } from '../../helpers/feature-gates.js';
+import { getCanarySuperUserToken } from '../../helpers/canary-prefix.js';
 
 const LOKI_URL = process.env.LOKI_URL ?? 'http://localhost:3100';
+const ONLINEMENU_URL =
+  process.env.ONLINEMENU_API_URL ?? 'http://localhost:5006';
 
 /** Container name patterns for services that write logs */
 const SERVICE_NAMES = [
@@ -102,22 +99,30 @@ test.describe('Log Verification @logging', () => {
   });
 
   test('logs include TenantId when authenticated', async ({ request }) => {
-    // Make an authenticated API request that should produce a log with TenantId
-    const response = await request.get('/api/v1/menus', {
-      timeout: 10000,
-    }).catch(() => null);
+    // TenantId is only enriched onto an AUTHENTICATED request's completion log
+    // (UseSerilogRequestLogging reads the tenant claim). So hit the OnlineMenu
+    // API directly with the canary superUser bearer — the default `request`
+    // baseURL is the SPA (no API auth) and would never produce a TenantId log.
+    const token = getCanarySuperUserToken();
+    if (!token) {
+      test.skip(true, 'No canary superUser token (local/dev run)');
+      return;
+    }
+    const response = await request
+      .get(`${ONLINEMENU_URL}/api/v1/menus`, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 10000,
+      })
+      .catch(() => null);
 
     if (!response) {
-      test.skip(true, 'API endpoint not reachable');
+      test.skip(true, 'OnlineMenu API endpoint not reachable');
       return;
     }
 
-    // Poll Loki for logs that contain TenantId
+    // Poll Loki (cluster-aware) for a log line carrying the TenantId property.
     await expect(async () => {
-      const result = await loki.queryRange(
-        '{ServiceName=~".+"} |~ `TenantId`',
-        { limit: 10 }
-      );
+      const result = await loki.queryByLineMatch('TenantId');
       const count = LokiClient.countEntries(result);
       expect(
         count,

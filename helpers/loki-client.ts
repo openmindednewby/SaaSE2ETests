@@ -165,6 +165,18 @@ export class LokiClient {
   }
 
   /**
+   * Convenience: query logs whose line matches a regex `|~` filter, scoped to
+   * the active cluster (prod → Promtail `{cluster="prod"}`; else the Serilog
+   * sink's `{ServiceName=~".+"}`). Use for content checks like TenantId.
+   */
+  async queryByLineMatch(filter: string): Promise<LokiQueryResult> {
+    const selector = this.clusterLabel
+      ? `{cluster="${this.clusterLabel}"}`
+      : '{ServiceName=~".+"}';
+    return this.queryRange(`${selector} |~ \`${filter}\``, { limit: 10 });
+  }
+
+  /**
    * Convenience: query error-level logs, optionally filtered by service.
    *
    * NOTE: Loki normalises the `Level` property to the lowercase label `level`
