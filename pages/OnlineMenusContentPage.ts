@@ -287,11 +287,21 @@ export class OnlineMenusContentPage extends BasePage {
 
     await expect(async () => {
       const result = await this.previewModal.evaluate((modal: HTMLElement) => {
+        // Katalogos serves preview images same-origin through the BFF
+        // (e.g. "/bff/api/content/..."), or as a blob:/data: URL from an authed
+        // fetch — all CORS-safe. Accept any real src scheme, including a relative path.
+        const isLoadedUrl = (u: string) =>
+          u.startsWith('http://') || u.startsWith('https://') ||
+          u.startsWith('blob:') || u.startsWith('data:') || u.startsWith('/');
+
         const images = modal.querySelectorAll('img');
         const validImages: string[] = [];
         images.forEach((img) => {
           const src = img.getAttribute('src') ?? '';
-          if (src.startsWith('http://') || src.startsWith('https://')) {
+          const el = img as HTMLImageElement;
+          // "Loaded without CORS error" = real src AND the image actually decoded
+          // (a CORS-blocked image has naturalWidth === 0 even with a src set).
+          if (src && isLoadedUrl(src) && el.complete && el.naturalWidth > 0) {
             validImages.push(src);
           }
         });
@@ -302,7 +312,7 @@ export class OnlineMenusContentPage extends BasePage {
           const bgImage = style.backgroundImage;
           if (bgImage !== 'none' && bgImage !== '') {
             const urlMatch = bgImage.match(/url\(["']?([^"')]+)["']?\)/);
-            if (urlMatch?.[1]?.startsWith('http')) {
+            if (urlMatch?.[1] && isLoadedUrl(urlMatch[1])) {
               validImages.push(urlMatch[1]);
             }
           }
