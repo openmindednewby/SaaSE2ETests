@@ -296,6 +296,32 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      // Kefi KEFI-2 freemium gates — FAST API-contract tier (`@api`). NO browser
+      // and NO signup/IMAP/wizard: a platform-admin createTenant mints a Free
+      // tenant and KC master-admin provisions a no-wizard ROPC-able owner, then
+      // the 403/2xx gate contract is asserted directly against kefi-api. Lands in
+      // seconds (vs the wizard-based spec's minutes); master-admin-only (staging).
+      // 120s ceiling is generous head-room — the real run is a handful of seconds.
+      name: 'kefi-pro-gates-api',
+      workers: 1,
+      timeout: 120_000,
+      testMatch: /kefi\/kefi-pro-gates-api\.spec\.ts/,
+      use: CHROME,
+    },
+    {
+      // Kefi KEFI-2 freemium gates — FULL UI tier (`@ui`). Real browser: one
+      // tenant signs up (signup + IMAP verify + FREE wizard), then the spec
+      // asserts the ProGateCard locks + upgrade CTAs render, the CTA routes to
+      // /organizer/pricing, and a Pro grant + reload reveals the real forms.
+      // Signup + IMAP verify dominate the wall-clock → 600s budget like its
+      // kefi siblings.
+      name: 'kefi-pro-gates-ui',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-pro-gates-ui\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       name: 'kefi-device-pin',
       workers: 1,
       // Generous: the BFF's per-IP rate limiter (5 req/60s) sits in front of the

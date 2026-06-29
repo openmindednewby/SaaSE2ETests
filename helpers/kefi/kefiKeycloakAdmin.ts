@@ -115,6 +115,120 @@ export async function createEphemeralNonAdminUser(input: {
   return { userId, username: input.username, password: input.password };
 }
 
+/** The kefi realm role every tenant owner holds — mirrors `KefiRoles.TenantOwner`. */
+const TENANT_OWNER_ROLE = 'tenant-owner';
+
+/** The three KC Admin API params threaded through the owner-provisioning calls. */
+interface KcAdminCtx {
+  kcUrl: string;
+  kcRealm: string;
+  adminToken: string;
+}
+
+/**
+ * Create a fully-set-up kefi-realm TENANT-OWNER user via the KC Admin API and
+ * link it to an existing tenant — the fast, no-wizard owner the API-tier
+ * freemium-gate spec ROPCs as.
+ *
+ * It mirrors the product's `BuildCreatePublicSignupUserRequest` (username =
+ * email, non-empty firstName/lastName for VERIFY_PROFILE, the `tenantId`
+ * attribute that drives the token's tenant claim) and assigns the
+ * `tenant-owner` realm role that every gated `/admin` endpoint requires — but
+ * with `emailVerified: true` + no required actions so ROPC sign-in works
+ * immediately (the real signup leaves VERIFY_EMAIL to the app layer).
+ *
+ * Master-admin-only (staging carries the creds; prod does not). The caller MUST
+ * `deleteEphemeralUser` it in teardown — the kefi canary sweep keys off the
+ * tenant slug, and this user is provisioned independently of that flow.
+ */
+export async function createTenantOwnerUser(input: {
+  email: string;
+  password: string;
+  tenantId: string;
+}): Promise<EphemeralKefiUser> {
+  const { kcUrl, kcRealm } = getKefiUrls();
+  const adminToken = await mintMasterAdminToken();
+  const ctx: KcAdminCtx = { kcUrl, kcRealm, adminToken };
+  const userId = await createOwnerUserRecord(ctx, input);
+  await assignRealmRole(ctx, userId, TENANT_OWNER_ROLE);
+  return { userId, username: input.email, password: input.password };
+}
+
+/** POST the owner user record; returns its KC id (parsed from the Location header). */
+async function createOwnerUserRecord(
+  ctx: KcAdminCtx,
+  input: { email: string; password: string; tenantId: string },
+): Promise<string> {
+  const resp = await axios.post(
+    `${ctx.kcUrl}/admin/realms/${ctx.kcRealm}/users`,
+    {
+      username: input.email,
+      email: input.email,
+      enabled: true,
+      emailVerified: true,
+      firstName: 'E2E',
+      lastName: 'Owner',
+      requiredActions: [],
+      attributes: { tenantId: [input.tenantId] },
+      credentials: [{ type: 'password', value: input.password, temporary: false }],
+    },
+    {
+      headers: { Authorization: `Bearer ${ctx.adminToken}`, 'Content-Type': 'application/json' },
+      httpsAgent: sharedHttpsAgent,
+      timeout: HTTP_TIMEOUT_MS,
+      validateStatus: () => true,
+    },
+  );
+  if (resp.status !== HTTP_CREATED) {
+    throw new Error(
+      `[kefiKeycloakAdmin] create-owner-user expected 201, got ${resp.status}: ${JSON.stringify(resp.data)}`,
+    );
+  }
+  const location = (resp.headers.location ?? resp.headers.Location) as string | undefined;
+  const userId = location?.split('/').pop() ?? '';
+  if (!userId) {
+    throw new Error('[kefiKeycloakAdmin] create-owner-user returned no Location/user-id');
+  }
+  return userId;
+}
+
+/** Look the realm role up by name, then add it to the user's realm role-mappings. */
+async function assignRealmRole(ctx: KcAdminCtx, userId: string, roleName: string): Promise<void> {
+  const roleResp = await axios.get(
+    `${ctx.kcUrl}/admin/realms/${ctx.kcRealm}/roles/${encodeURIComponent(roleName)}`,
+    {
+      headers: { Authorization: `Bearer ${ctx.adminToken}` },
+      httpsAgent: sharedHttpsAgent,
+      timeout: HTTP_TIMEOUT_MS,
+      validateStatus: () => true,
+    },
+  );
+  if (roleResp.status !== HTTP_OK) {
+    throw new Error(
+      `[kefiKeycloakAdmin] get-role '${roleName}' expected 200, got ${roleResp.status}: ${JSON.stringify(roleResp.data)}`,
+    );
+  }
+  const role = roleResp.data as { id?: string; name?: string };
+  if (!role.id || !role.name) {
+    throw new Error(`[kefiKeycloakAdmin] role '${roleName}' response missing id/name`);
+  }
+  const mapResp = await axios.post(
+    `${ctx.kcUrl}/admin/realms/${ctx.kcRealm}/users/${userId}/role-mappings/realm`,
+    [{ id: role.id, name: role.name }],
+    {
+      headers: { Authorization: `Bearer ${ctx.adminToken}`, 'Content-Type': 'application/json' },
+      httpsAgent: sharedHttpsAgent,
+      timeout: HTTP_TIMEOUT_MS,
+      validateStatus: () => true,
+    },
+  );
+  if (mapResp.status !== HTTP_NO_CONTENT && mapResp.status !== HTTP_OK) {
+    throw new Error(
+      `[kefiKeycloakAdmin] assign-role '${roleName}' expected 204, got ${mapResp.status}: ${JSON.stringify(mapResp.data)}`,
+    );
+  }
+}
+
 /** Delete an ephemeral user by id. Never throws — teardown must not mask failures. */
 export async function deleteEphemeralUser(userId: string): Promise<void> {
   try {
