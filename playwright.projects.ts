@@ -243,6 +243,21 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      // Kefi QR ticket render + door check-in (KEFI-1 gap) — signs up a canary
+      // tenant (signup + IMAP verify + wizard), seeds a Published event, then
+      // proves the attendee-ticket path through the real surfaces: register
+      // mints an HMAC token, the public ticket endpoint renders/verifies it,
+      // a tampered/bogus token 404s, the confirmed→checked-in lifecycle is
+      // reflected on the ticket, a double check-in is an idempotent no-op, and
+      // the door-staff door list is role-gated. Signup + IMAP verify dominate
+      // the wall-clock → 600s budget like its kefi siblings.
+      name: 'kefi-qr-checkin',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-qr-checkin\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       // Kefi #4 per-event publish — one tenant signs up (signup + IMAP verify +
       // wizard), creates a SECOND event, publishes both at distinct per-event
       // slugs, edits a slug, and proves a registration books the named event.

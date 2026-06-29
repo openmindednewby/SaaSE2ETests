@@ -84,6 +84,14 @@ export interface RegisterAttendeeResult {
   paymentProviderKind: string | null;
   eventExternalId: string | null;
   eventName: string | null;
+  /**
+   * The HMAC-signed ticket token minted at registration (P4.3). Drives the QR /
+   * check-in spec, which fetches the public ticket page with it. Null when the
+   * register call did not return one (e.g. a non-201 response).
+   */
+  ticketToken: string | null;
+  /** The relative ticket path — `/ticket/{token}` — returned alongside the token. */
+  ticketPath: string | null;
 }
 
 export class KefiLifecycleClient {
@@ -124,6 +132,8 @@ export class KefiLifecycleClient {
       eventExternalId?: string;
       eventName?: string;
       payment?: { providerKind?: string | null } | null;
+      ticketToken?: string;
+      ticketPath?: string;
     };
     return {
       status: resp.status,
@@ -131,6 +141,8 @@ export class KefiLifecycleClient {
       paymentProviderKind: data.payment?.providerKind ?? null,
       eventExternalId: data.eventExternalId ?? null,
       eventName: data.eventName ?? null,
+      ticketToken: data.ticketToken ?? null,
+      ticketPath: data.ticketPath ?? null,
     };
   }
 
