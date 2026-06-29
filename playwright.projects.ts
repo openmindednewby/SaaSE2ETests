@@ -268,6 +268,19 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      // Kefi KEFI-2 freemium gates — one tenant signs up (signup + IMAP verify +
+      // wizard) on the DEFAULT Free plan, then asserts a Free tenant is 403 on a
+      // 2nd event, a custom domain, and a stripe-credentials store (clear stays
+      // allowed), and that a platform-admin Pro grant unblocks the same three
+      // calls. API-driven beyond the shared signup→wizard rig; the IMAP verify
+      // wait dominates. 600s budget like its kefi siblings.
+      name: 'kefi-pro-gates',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-pro-gates\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       name: 'kefi-device-pin',
       workers: 1,
       // Generous: the BFF's per-IP rate limiter (5 req/60s) sits in front of the

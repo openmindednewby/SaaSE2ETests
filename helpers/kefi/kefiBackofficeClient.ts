@@ -128,6 +128,23 @@ export class KefiBackofficeClient {
 
   /** List every platform tenant (admin), then return the one matching `tenantId`, or null. */
   async getTenantById(tenantId: string): Promise<KefiTenantDto | null> {
+    return this.findTenant((t) => t.tenantId === tenantId);
+  }
+
+  /**
+   * List every platform tenant (admin), then return the first whose slug starts
+   * with `prefix`, or null. Used by the freemium-gate spec to resolve a
+   * canary tenant's id (it only knows its `e2c-{canaryId}-` slug prefix) so it
+   * can grant Pro via PUT /platform/tenants/{id}/subscription.
+   */
+  async findTenantBySlugPrefix(prefix: string): Promise<KefiTenantDto | null> {
+    return this.findTenant((t) => t.slug.startsWith(prefix));
+  }
+
+  /** Shared list-and-find over GET /platform/tenants. Throws on a non-200 list. */
+  private async findTenant(
+    predicate: (t: KefiTenantDto) => boolean,
+  ): Promise<KefiTenantDto | null> {
     const bearer = await this.admin.getBearer();
     const resp = await this.http.get<{ tenants: KefiTenantDto[] }>('/api/v1/platform/tenants', {
       headers: { Authorization: `Bearer ${bearer}` },
@@ -137,7 +154,7 @@ export class KefiBackofficeClient {
         `[kefiBackofficeClient] list-tenants expected 200, got ${resp.status}: ${JSON.stringify(resp.data)}`,
       );
     }
-    return resp.data.tenants.find((t) => t.tenantId === tenantId) ?? null;
+    return resp.data.tenants.find(predicate) ?? null;
   }
 
   /**
