@@ -298,6 +298,18 @@ export function buildProjects(): ProjectConfig {
       use: { ...CHROME, ...(kefiWebUrl ? { baseURL: kefiWebUrl } : {}) },
     },
     {
+      // Kefi back-office manual subscription override (KEFI-1 punch-list #1) —
+      // platform super-admin marks a tenant Pro WITHOUT Stripe via
+      // PUT /platform/tenants/{id}/subscription, then the spec asserts persist +
+      // the 400 (bad plan) / 403 (non-admin) walls. Pure-API: create tenant +
+      // a few admin calls + one non-admin ROPC mint — no signup/wizard/IMAP, so
+      // it finishes in seconds. Standard timeout is plenty.
+      name: 'kefi-backoffice-approval',
+      workers: 1,
+      testMatch: /kefi\/kefi-backoffice-approval\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       // Password-reset revokes remembered devices (unified-login #169 Batch 6
       // Seam 1). Signup + IMAP verify + PIN enrol + forgot/reset email round-trip
       // + the stale-device 401 assertion. Timeout is dominated by the per-IP
