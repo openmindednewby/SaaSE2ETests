@@ -34,6 +34,10 @@ import {
   loadKefiMailboxConfig,
 } from '../../helpers/kefi/kefiMailboxClient.js';
 import { probeDynamicLandingRender } from '../../helpers/kefi/kefiDynamicLandingProbe.js';
+import {
+  expectTenantRootServes200,
+  sweepSiblingTenantRoots,
+} from '../../helpers/kefi/kefiTenantRootProbe.js';
 import { isRemoteTarget } from '../../helpers/target.js';
 
 // Serial — shares the single bot mailbox + the single kefi-landings Deployment
@@ -119,15 +123,35 @@ test.describe('Kefi Phase F — free-tier dynamic publish', () => {
 
       // Regression guard (#160): the tenant-ROOT path itself must serve 200,
       // not just the per-event page. A just-published tenant whose root-landing
-      // fetch raced to null at build time used to silently drop
+      // fetch fell back to null at build time used to silently drop
       // /t/<slug>/index.html → the "Your page is live!" link the editor hands
-      // the client 403'd while /t/<slug>/<eventSlug>/ still 200'd. Assert the
-      // probe hit the tenant-ROOT path and it returned 200.
+      // the client 403'd while /t/<slug>/<eventSlug>/ still 200'd.
+      //
+      // The marker probe above can early-return on the per-event content, so
+      // assert the ROOT explicitly with its own retried poll (the rollout can
+      // briefly 502 before the new image settles).
       expect(
         probe.url.endsWith(`/t/${publishResult.tenantSlug}/`),
         'probe targeted the tenant-ROOT path',
       ).toBe(true);
-      expect(probe.status, 'tenant-ROOT path serves 200').toBe(200);
+      const canaryRoot = await expectTenantRootServes200(publishResult.tenantSlug);
+      expect(canaryRoot.status, 'canary tenant-ROOT path serves 200').toBe(200);
+
+      // Systemic guard (429-storm fix): the canary's publish rebuilt the WHOLE
+      // kefi-landings image — getStaticPaths re-fetches EVERY published tenant.
+      // The old single-slug check passed even when the build's 429 storm dropped
+      // OTHER tenants' roots. Sweep a sample of config-only sibling roots and
+      // assert none 403/404 — that would mean the rebuild dropped their
+      // index.html. (Canary orphans `e2c-…` are excluded by the sweep.)
+      const siblings = await sweepSiblingTenantRoots({
+        excludeSlugs: [publishResult.tenantSlug],
+      });
+      expect(
+        siblings.forbidden,
+        `sibling tenant roots dropped by the rebuild (403/404): ${siblings.forbidden
+          .map((p) => `${p.slug}=${String(p.status)}`)
+          .join(', ')}`,
+      ).toEqual([]);
 
       // ── 6. Sweep — one of each resource class should be deleted ───────
       const cleanup = await adminClient.canaryCleanup(ctx.canaryId);
