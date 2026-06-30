@@ -117,6 +117,18 @@ test.describe('Kefi Phase F — free-tier dynamic publish', () => {
       });
       expect(probe.missingMarkers, 'dynamic landing markers').toEqual([]);
 
+      // Regression guard (#160): the tenant-ROOT path itself must serve 200,
+      // not just the per-event page. A just-published tenant whose root-landing
+      // fetch raced to null at build time used to silently drop
+      // /t/<slug>/index.html → the "Your page is live!" link the editor hands
+      // the client 403'd while /t/<slug>/<eventSlug>/ still 200'd. Assert the
+      // probe hit the tenant-ROOT path and it returned 200.
+      expect(
+        probe.url.endsWith(`/t/${publishResult.tenantSlug}/`),
+        'probe targeted the tenant-ROOT path',
+      ).toBe(true);
+      expect(probe.status, 'tenant-ROOT path serves 200').toBe(200);
+
       // ── 6. Sweep — one of each resource class should be deleted ───────
       const cleanup = await adminClient.canaryCleanup(ctx.canaryId);
       expect(cleanup.tenantsDeleted).toBe(1);
