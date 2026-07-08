@@ -92,6 +92,9 @@ export function buildProjects(): ProjectConfig {
     { name: 'logging', workers: 1, testMatch: /logging\/(?!stress).*\.spec\.ts/, dependencies: ['setup'] },
     { name: 'monitoring', workers: 1, testMatch: /monitoring\/.*\.spec\.ts/, dependencies: ['setup'] },
     { name: 'cross-product-isolation', workers: 1, testMatch: /cross-product-isolation\/.*\.spec\.ts/, dependencies: ['setup'] },
+    // Ichnos (crypto AML) — @api health/smoke tier (M0-9). No browser/auth needed.
+    // The @ui portal-login tier is added in M1 with the screening screens.
+    { name: 'ichnos-api', workers: 1, testMatch: /ichnos\/ichnos-api\.spec\.ts/, dependencies: ['setup'] },
 
     // ---- Identity chunks (auth state, no multi-tenant users) ----
     // auth-methods-canary is a pure-API spec (no UI); the loaded storageState is
@@ -115,7 +118,7 @@ export function buildProjects(): ProjectConfig {
     chunk('online-menus-editor-categories', 'online-menus', ['menu-editor-categories-focus', 'menu-editor-categories-crud', 'menu-editor-categories-switching', 'menu-duplicate-names'], KAT),
     chunk('online-menus-editor-uploads', 'online-menus', ['menu-content-upload-basic', 'menu-content-upload-create', 'menu-content-upload-advanced'], KAT),
     chunk('online-menus-public-preview', 'online-menus', ['menu-preview-and-external-link', 'menu-qr-code'], KAT),
-    chunk('online-menus-public-viewer', 'online-menus', ['menu-public-page-load-basic', 'menu-public-page-load-viewer', 'public-viewer-active-filtering-basic', 'public-viewer-active-filtering-states'], KAT),
+    chunk('online-menus-public-viewer', 'online-menus', ['menu-public-page-load-basic', 'menu-public-page-load-viewer', 'menu-public-anon-cold-load', 'public-viewer-active-filtering-basic', 'public-viewer-active-filtering-states'], KAT),
     // Anonymous public-surface API test — no browser auth / tenant setup needed.
     { name: 'online-menus-custom-domain', workers: 1, testMatch: /online-menus\/custom-domain\.spec\.ts/ },
 
@@ -462,6 +465,26 @@ export function buildProjects(): ProjectConfig {
       workers: 1,
       timeout: 300_000,
       testMatch: /poueni\/poueni-canary-cleanup\.spec\.ts/,
+      use: CHROME,
+    },
+
+    // ---- Gate B — post-deploy real-UI login probe (P0-02) + golden paths ----
+    // Drives each product's ACTUAL rendered login UI (real pointer/keyboard) on
+    // the live public URL and asserts it lands on an authed route that renders
+    // (not the P0-01 error boundary). The permanent net for dead Sign-in
+    // buttons / post-login dead-ends that the API-level login path can't catch.
+    // Every `prod-gate/*.spec.ts` is auto-collected by the testMatch glob — incl.
+    // the Move-7 golden-path specs ({erevna-survey,kefi-event,katalogos-menu}-
+    // golden-path) that fail the gate on UX breakage, not just crashes.
+    // Run against prod/staging: `E2E_TARGET=prod npx playwright test --project=prod-gate`.
+    // Reads per-product baseURL + creds from .env.<target>(.secrets); each spec
+    // self-skips if its creds/env are absent. Longer timeout: RN-web hydrate + a
+    // real Keycloak/BFF round-trip (golden-path specs raise it per-test as needed).
+    {
+      name: 'prod-gate',
+      workers: 1,
+      timeout: 90_000,
+      testMatch: /prod-gate\/.*\.spec\.ts/,
       use: CHROME,
     },
   ];
