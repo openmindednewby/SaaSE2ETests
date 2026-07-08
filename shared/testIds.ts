@@ -61,6 +61,22 @@ export const TestIds = {
   REGISTER_SUBMIT_BUTTON: 'register-submit-button',
   REGISTER_SIGN_IN_LINK: 'register-sign-in-link',
 
+  // Landing navbar (marketing) — P1-08 self-serve signup entry point
+  LANDING_NAV_REGISTER_BUTTON: 'landing-nav-register-button',
+
+  // First-run welcome wizard (dashboard) — P1-08 self-serve signup journey.
+  // Values mirror katalogos-web src/shared/testIds/dashboardTestIds.ts.
+  WELCOME_WIZARD: 'welcome-wizard',
+  WELCOME_WIZARD_PROGRESS: 'welcome-wizard-progress',
+  WELCOME_WIZARD_STEP: 'welcome-wizard-step',
+  WELCOME_WIZARD_BUSINESS_NAME_INPUT: 'welcome-wizard-business-name-input',
+  WELCOME_WIZARD_LOGO_UPLOAD: 'welcome-wizard-logo-upload',
+  WELCOME_WIZARD_MENU_NAME_INPUT: 'welcome-wizard-menu-name-input',
+  WELCOME_WIZARD_MENU_DESCRIPTION_INPUT: 'welcome-wizard-menu-description-input',
+  WELCOME_WIZARD_CONTINUE_BUTTON: 'welcome-wizard-continue-button',
+  WELCOME_WIZARD_SKIP_BUTTON: 'welcome-wizard-skip-button',
+  WELCOME_WIZARD_COMPLETE_BUTTON: 'welcome-wizard-complete-button',
+
   // Verify-email page (POST /bff/verify-email)
   VERIFY_EMAIL_PAGE: 'verify-email-page',
   VERIFY_EMAIL_LOADING: 'verify-email-loading',
