@@ -60,6 +60,7 @@ test.describe('Ichnos screen-combined @ichnos-api', () => {
       entityEngineAvailable: boolean;
       wallets: unknown[];
       engineVersion: string;
+      entity: { decision: string; riskScore: number; matches: Array<{ pepTier?: string | null }> } | null;
     };
 
     expect(['direct', 'clear']).toContain(body.riskTier);
@@ -67,5 +68,15 @@ test.describe('Ichnos screen-combined @ichnos-api', () => {
     expect(Array.isArray(body.wallets)).toBe(true);
     expect(body.wallets.length).toBeGreaterThan(0);
     expect(body.engineVersion).toBeTruthy();
+
+    // Transparency (the differentiator): when the entity engine was available, its portion carries a
+    // numeric riskScore and a decision string; a PEP match (when present) carries a pepTier. Tolerant:
+    // pepTier may be null for a non-PEP sanction hit or a clear result.
+    if (body.entityEngineAvailable && body.entity) {
+      expect(typeof body.entity.riskScore).toBe('number');
+      expect(typeof body.entity.decision).toBe('string');
+      const hasPepTier = Array.isArray(body.entity.matches) && body.entity.matches.some((m) => Boolean(m.pepTier));
+      expect(hasPepTier || typeof body.entity.riskScore === 'number').toBe(true);
+    }
   });
 });

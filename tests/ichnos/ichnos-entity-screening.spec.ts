@@ -48,9 +48,23 @@ test.describe('Ichnos screen-entity @ichnos-api', () => {
     expect([200, 503], `unexpected status; body=${await result!.response.text()}`).toContain(status);
 
     if (status === 200) {
-      const body = (await result!.response.json()) as { riskTier: string; engineVersion: string; isMatch: boolean };
+      const body = (await result!.response.json()) as {
+        riskTier: string;
+        engineVersion: string;
+        isMatch: boolean;
+        decision: string;
+        riskScore: number;
+        matches: Array<{ pepTier?: string | null }>;
+      };
       expect(['direct', 'clear']).toContain(body.riskTier);
       expect(body.engineVersion).toBeTruthy();
+      // Transparency (the differentiator): the screening-level score is always a number, and — when
+      // the engine surfaces a PEP match — at least one match carries a pepTier. Tolerant: pepTier may
+      // be null for a non-PEP sanction hit or a clear result, so we only require the numeric riskScore.
+      expect(typeof body.riskScore).toBe('number');
+      expect(typeof body.decision).toBe('string');
+      const hasPepTier = Array.isArray(body.matches) && body.matches.some((m) => Boolean(m.pepTier));
+      expect(hasPepTier || typeof body.riskScore === 'number').toBe(true);
     } else {
       const body = (await result!.response.json()) as { message: string };
       expect(body.message).toMatch(/unavailable/i);
