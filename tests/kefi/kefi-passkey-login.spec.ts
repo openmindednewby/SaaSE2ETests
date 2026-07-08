@@ -59,6 +59,21 @@ test.describe.configure({ mode: 'serial' });
 const SESSION_COOKIE = '__Host-bff-kefi';
 const NAV_TIMEOUT_MS = 30_000;
 
+/**
+ * `/bff/passkey/login` sits behind the BFF's per-IP "BffAuth" limiter (5 req/60s)
+ * — the same limiter the device-PIN spec's unlock/disable calls poll through.
+ * Under full-suite concurrency the kefi projects share ONE egress IP, so the
+ * login-initiation navigation can catch a 429: the BFF returns an empty-body
+ * 429 (a BLANK page) instead of the 302 to Keycloak, and the browser never
+ * reaches the ceremony. Proven 2026-07-08: the trace of a concurrent run shows
+ * `GET /bff/passkey/login → 429`, while the spec passes in isolation. A real
+ * user never shares that IP. So retry the SPA-driven initiation, backing off
+ * ~one limiter window between tries, until the KC ceremony actually starts.
+ */
+const PASSKEY_LOGIN_INIT_ATTEMPTS = 5;
+const PASSKEY_LOGIN_KC_TIMEOUT_MS = 18_000;
+const PASSKEY_LOGIN_INIT_BACKOFF_MS = 15_000;
+
 test.describe('Kefi passkey — register, sign out, sign in with passkey', () => {
   test.skip(
     !isRemoteTarget(),
@@ -130,13 +145,31 @@ test.describe('Kefi passkey — register, sign out, sign in with passkey', () =>
       await page.context().clearCookies();
 
       // ── 5. SIGN IN with the passkey from the login surface ───────────────
-      await passkeyPage.gotoLoginAndExpectPasskeyButton();
-      await passkeyPage.clickSignInWithPasskey();
+      // Retry the initiation through the per-IP limiter (see constants above): a
+      // rate-limited /bff/passkey/login returns a blank 429 and never reaches KC,
+      // so re-drive from /login, backing off ~one limiter window, until the
+      // ceremony starts. In isolation this succeeds on the first attempt.
+      let reachedKeycloak = false;
+      for (let attempt = 1; attempt <= PASSKEY_LOGIN_INIT_ATTEMPTS; attempt++) {
+        await passkeyPage.gotoLoginAndExpectPasskeyButton();
+        await passkeyPage.clickSignInWithPasskey();
+        reachedKeycloak = await page
+          .waitForURL(() => isOnKeycloak(page), { timeout: PASSKEY_LOGIN_KC_TIMEOUT_MS })
+          .then(() => true)
+          .catch(() => false);
+        if (reachedKeycloak) break;
+        // Rate-limited initiation (blank 429) — drain the per-IP window, retry.
+        // eslint-disable-next-line no-wait-for-timeout/no-wait-for-timeout -- draining a real per-IP rate-limit window; a blank 429 page has no app element to await on
+        await page.waitForTimeout(PASSKEY_LOGIN_INIT_BACKOFF_MS);
+      }
+      expect(
+        reachedKeycloak,
+        'passkey login initiation reached Keycloak — a persistent blank/no-redirect here (after waiting out the per-IP limiter) would mean /bff/passkey/login is genuinely failing, not just rate-limited',
+      ).toBe(true);
 
       // /bff/passkey/login → KC's usernameless WebAuthn ceremony. The virtual
       // authenticator's resident credential identifies + verifies the user with
       // no typing at all; drive any incidental KC page just in case.
-      await page.waitForURL(() => isOnKeycloak(page), { timeout: NAV_TIMEOUT_MS });
       await driveKeycloakPages(page, { email: ctx.email, password: ctx.password });
 
       // Back at the app, signed in: the BFF set a fresh session cookie.

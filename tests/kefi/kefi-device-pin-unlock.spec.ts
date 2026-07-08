@@ -46,7 +46,6 @@ import {
   loadKefiMailboxConfig,
 } from '../../helpers/kefi/kefiMailboxClient.js';
 import {
-  bffPost,
   bffPut,
   bffPostThroughRateLimit,
   requireCookie,
@@ -116,7 +115,16 @@ test.describe('Kefi device-PIN unlock — enrol, unlock, lockout, disable', () =
       });
 
       // ── 2. ENROL: bind a device PIN to this strong session ──────────────
-      const enrollResp = await bffPost(page.request, '/bff/pin/enroll', {
+      // Enroll sits behind the BFF's per-IP "BffAuth" limiter (5 req/60s) — the
+      // SAME limiter the unlock/disable calls below already poll through. Under
+      // full-suite concurrency the kefi projects share ONE egress IP, so a bare
+      // enroll can catch an (empty-body) 429 from that limiter before it reaches
+      // the enroll logic at all — a harness artifact (proven 2026-07-08: the spec
+      // passes in isolation, 429s only under concurrent kefi projects), never a
+      // real single-user path. Poll through the limiter so the assertion tests
+      // the REAL enroll result (a real error — e.g. the 502 below — still surfaces
+      // immediately, since only empty-body 429s are retried).
+      const enrollResp = await bffPostThroughRateLimit(page.request, '/bff/pin/enroll', {
         pin: CANARY_PIN,
         digits: CANARY_PIN_DIGITS,
       });
