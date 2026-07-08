@@ -92,9 +92,10 @@ export function buildProjects(): ProjectConfig {
     { name: 'logging', workers: 1, testMatch: /logging\/(?!stress).*\.spec\.ts/, dependencies: ['setup'] },
     { name: 'monitoring', workers: 1, testMatch: /monitoring\/.*\.spec\.ts/, dependencies: ['setup'] },
     { name: 'cross-product-isolation', workers: 1, testMatch: /cross-product-isolation\/.*\.spec\.ts/, dependencies: ['setup'] },
-    // Ichnos (crypto AML) — @api health/smoke tier (M0-9). No browser/auth needed.
-    // The @ui portal-login tier is added in M1 with the screening screens.
-    { name: 'ichnos-api', workers: 1, testMatch: /ichnos\/ichnos-api\.spec\.ts/, dependencies: ['setup'] },
+    // Ichnos (crypto AML) — @api tier: health/smoke (M0-9) + screen-address (M1-1). No browser
+    // needed; the authed screening assertions opportunistically use an ichnos-realm ROPC token.
+    // The @ui portal-login tier is added in M1-4 with the screening screens.
+    { name: 'ichnos-api', workers: 1, testMatch: /ichnos\/ichnos-.*\.spec\.ts/, dependencies: ['setup'] },
 
     // ---- Identity chunks (auth state, no multi-tenant users) ----
     // auth-methods-canary is a pure-API spec (no UI); the loaded storageState is
