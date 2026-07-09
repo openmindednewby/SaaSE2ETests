@@ -21,16 +21,12 @@
  *     teardown reuses `signup-teardown` (the public register endpoint rejects the
  *     reserved `e2ec-` canary prefix, so the canary sweep can't reclaim it).
  *
- * OPT-IN — BLOCKED ON A BACKEND DEPLOY. Anonymous public-menu viewing is currently
- * BROKEN on prod: onlinemenu-api returns 401 on the anonymous
- * `GET /public/menus/{id}`, so the diner never sees the menu. A backend fix is in
- * flight. Until it deploys this gate would fail for a reason outside this repo, so
- * it stays behind RUN_KATALOGOS_PUBLIC_GATE=1 (exactly the signup-journey opt-in
- * pattern in `katalogos-signup.spec.ts`). Flip it on — and drop this gate so it
- * runs nightly — once the anon-GET 401 fix is verified green on the target.
- *
- * Run (once unblocked): `E2E_TARGET=<target> RUN_KATALOGOS_PUBLIC_GATE=1 \
- *   npx playwright test --project=prod-gate`.
+ * NIGHTLY. The anonymous public-menu-view path is green on prod (the P1-08 fix:
+ * the frontend hooks now call the VERSIONED `/api/v1/public/...` endpoints, so the
+ * diner's cold anonymous load renders). Verified 2026-07-09 (this spec passed on
+ * E2E_TARGET=prod). The former RUN_KATALOGOS_PUBLIC_GATE opt-in has been dropped so
+ * it runs nightly alongside the other golden paths; it still self-gates on
+ * KATALOGOS_BASE_URL + canary mode.
  */
 import { test, expect, type Page } from '@playwright/test';
 
@@ -59,10 +55,6 @@ const pendingCleanup: SignupTeardownTarget[] = [];
 test.describe('katalogos menu golden path', () => {
   test.skip(!baseUrl, 'KATALOGOS_BASE_URL not set for this target');
   test.skip(!isCanaryMode(), 'runs only on canary (staging/prod) targets');
-  test.skip(
-    process.env.RUN_KATALOGOS_PUBLIC_GATE !== '1',
-    'Blocked on the anon public-menu-view fix: onlinemenu-api currently returns 401 on the anonymous GET /public/menus/{id}. A backend fix is in flight — opt in with RUN_KATALOGOS_PUBLIC_GATE=1 once it is deployed + verified, then drop this gate so it runs nightly.',
-  );
 
   // Real Keycloak/BFF + RN-web hydrate + a post-publish public-cache wait make this
   // long; a couple of retries keep it reliable for nightly. afterEach reclaims each
