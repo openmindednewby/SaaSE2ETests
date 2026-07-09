@@ -16,10 +16,14 @@ const VISIBILITY_TIMEOUT_MS = 30_000;
 export class KefiPasskeyPage {
   constructor(private readonly page: Page) {}
 
-  private readonly loginPasskeyButton = () => this.page.getByTestId('kefi-login-passkey-button');
-  private readonly loginPasskeyError = () => this.page.getByTestId('kefi-login-passkey-error');
-  private readonly settingsAddButton = () => this.page.getByTestId('kefi-passkey-settings-add');
-  private readonly settingsSuccess = () => this.page.getByTestId('kefi-passkey-settings-success');
+  private readonly loginPasskeyButton = () =>
+    this.page.getByTestId('kefi-auth-passkey-login-button');
+  private readonly loginPasskeyError = () =>
+    this.page.getByTestId('kefi-auth-passkey-login-error');
+  private readonly settingsAddButton = () =>
+    this.page.getByTestId('kefi-auth-passkey-settings-add');
+  private readonly settingsSuccess = () =>
+    this.page.getByTestId('kefi-auth-passkey-settings-success');
 
   /**
    * Navigates to /login and asserts the "Sign in with a passkey" button renders

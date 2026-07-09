@@ -145,10 +145,16 @@ test.describe('Kefi passkey — register, sign out, sign in with passkey', () =>
       await page.context().clearCookies();
 
       // ── 5. SIGN IN with the passkey from the login surface ───────────────
+      // The migrated login surface renders the SHARED PasskeyLoginButton, which
+      // runs the same-origin in-page ceremony first (bff-kefi's RP is configured).
+      // This credential was registered via the KC ceremony (step 3), so it lives
+      // in Keycloak — NOT in the in-page RP store — and the in-page attempt cannot
+      // see it and does not redirect. So, exactly like the shared login-methods
+      // suite, click the button and, if it did not reach Keycloak, fall back to the
+      // legacy KC-redirect login endpoint (the hook's own never-regress path).
       // Retry the initiation through the per-IP limiter (see constants above): a
       // rate-limited /bff/passkey/login returns a blank 429 and never reaches KC,
-      // so re-drive from /login, backing off ~one limiter window, until the
-      // ceremony starts. In isolation this succeeds on the first attempt.
+      // so back off ~one limiter window and re-drive until the ceremony starts.
       let reachedKeycloak = false;
       for (let attempt = 1; attempt <= PASSKEY_LOGIN_INIT_ATTEMPTS; attempt++) {
         await passkeyPage.gotoLoginAndExpectPasskeyButton();
@@ -157,6 +163,14 @@ test.describe('Kefi passkey — register, sign out, sign in with passkey', () =>
           .waitForURL(() => isOnKeycloak(page), { timeout: PASSKEY_LOGIN_KC_TIMEOUT_MS })
           .then(() => true)
           .catch(() => false);
+        if (!reachedKeycloak) {
+          // In-page attempt ran instead of redirecting — force the legacy path.
+          await page.goto(`${webUrl}/bff/passkey/login?returnUrl=/organizer`);
+          reachedKeycloak = await page
+            .waitForURL(() => isOnKeycloak(page), { timeout: PASSKEY_LOGIN_KC_TIMEOUT_MS })
+            .then(() => true)
+            .catch(() => false);
+        }
         if (reachedKeycloak) break;
         // Rate-limited initiation (blank 429) — drain the per-IP window, retry.
         // eslint-disable-next-line no-wait-for-timeout/no-wait-for-timeout -- draining a real per-IP rate-limit window; a blank 429 page has no app element to await on
@@ -164,7 +178,7 @@ test.describe('Kefi passkey — register, sign out, sign in with passkey', () =>
       }
       expect(
         reachedKeycloak,
-        'passkey login initiation reached Keycloak — a persistent blank/no-redirect here (after waiting out the per-IP limiter) would mean /bff/passkey/login is genuinely failing, not just rate-limited',
+        'passkey login reached Keycloak (via the button or the redirect fallback) — a persistent blank/no-redirect here (after waiting out the per-IP limiter) would mean /bff/passkey/login is genuinely failing, not just rate-limited',
       ).toBe(true);
 
       // /bff/passkey/login → KC's usernameless WebAuthn ceremony. The virtual
