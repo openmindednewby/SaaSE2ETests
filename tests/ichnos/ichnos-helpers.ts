@@ -115,3 +115,159 @@ export async function waitForHealthy(
   }
   return { response: last, url };
 }
+
+// ---------------------------------------------------------------------------
+// M1-10 two-tier E2E — BFF onboarding (F1), API keys (F3), batch (F4), billing (F7).
+// ---------------------------------------------------------------------------
+
+/**
+ * The ichnos-web SPA host — same origin as the `bff-ichnos` BFF. `/bff/*` auth
+ * endpoints and the `/bff/api/*` proxy both live here. Resolved from
+ * ICHNOS_WEB_URL (staging: https://staging.app.ichnos.dloizides.com); when unset
+ * the onboarding + portal specs `test.skip` gracefully (dev PC can't reach it).
+ */
+export function resolveIchnosWebUrl(): string | null {
+  const envUrl = process.env.ICHNOS_WEB_URL;
+  if (envUrl && envUrl.trim()) return envUrl.trim().replace(/\/+$/, '');
+  return null;
+}
+
+export const ICHNOS_WEB_URL = resolveIchnosWebUrl();
+
+/** The BFF's anti-forgery contract — every state-changing `/bff/*` call needs this header + an allow-listed Origin. */
+export const BFF_CSRF_HEADER = 'X-BFF-Csrf';
+export const BFF_CSRF_VALUE = '1';
+
+/** A well-formed, plainly non-sanctioned address — screens as "clear". */
+export const CLEAR_BTC_ADDRESS = { chain: 'BTC', address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' };
+
+/** A REAL OFAC-listed TRON address — screens as a DIRECT "direct" hit against OFAC. */
+export const SANCTIONED_TRX_ADDRESS = { chain: 'TRX', address: 'TNiq9AXBp9EjUqhDhrwrfvAA8U3GUQZH81' };
+
+/** Shared strong password for the E2E-registered onboarding user. */
+export const ICHNOS_E2E_PASSWORD = 'Str0ng!ichnosE2e1';
+
+/**
+ * POST a `/bff/*` endpoint with the CSRF header + explicit Origin the BFF
+ * requires (Playwright's request context — unlike a browser — does not add
+ * Origin). Returns null on a transport error so the caller can `test.skip`.
+ * Cookies set by the BFF (the session cookie) persist on the caller's request
+ * context, so a register → login → proxied-screen chain shares one session.
+ */
+export async function bffTryPost(
+  request: APIRequestContext,
+  webUrl: string,
+  path: string,
+  data: unknown,
+): Promise<APIResponse | null> {
+  try {
+    return await request.post(`${webUrl}${path}`, {
+      headers: { [BFF_CSRF_HEADER]: BFF_CSRF_VALUE, Origin: webUrl, 'Content-Type': 'application/json' },
+      data: data as never,
+      timeout: 20_000,
+    });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Derive a Keycloak-legal username from an email. TenantService's register
+ * validator only allows letters, digits, underscore, dot, or dash — so the raw
+ * email (with its `@`) 400s. Mirrors ichnos-web's deriveUsername exactly. The
+ * user still signs in by email (Keycloak resolves email → user).
+ */
+const USERNAME_DISALLOWED = /[^a-z0-9._-]+/g;
+export function deriveUsername(email: string): string {
+  return email.trim().toLowerCase().replace(USERNAME_DISALLOWED, '-');
+}
+
+/** A unique email per run (timestamp + random) so each register creates a fresh tenant. */
+export function uniqueIchnosEmail(): string {
+  const stamp = `${Date.now().toString(36)}${Math.floor(Math.random() * 1_000_000).toString(36)}`;
+  return `ichnos-e2e-${stamp}@example.com`;
+}
+
+/** A freshly-registered onboarding user + the raw register response. */
+export interface RegisteredIchnosUser {
+  email: string;
+  username: string;
+  password: string;
+  response: APIResponse;
+}
+
+/**
+ * Register a FRESH ichnos user via the BFF (`POST /bff/register`). Username is
+ * DERIVED from the email (raw email 400s); a unique email per run means a fresh
+ * tenant each time. Returns null when the BFF is unreachable.
+ */
+export async function registerIchnosUser(
+  request: APIRequestContext,
+  webUrl: string,
+): Promise<RegisteredIchnosUser | null> {
+  const email = uniqueIchnosEmail();
+  const username = deriveUsername(email);
+  const response = await bffTryPost(request, webUrl, '/bff/register', {
+    firstName: 'Ichnos',
+    lastName: 'E2E',
+    username,
+    email,
+    password: ICHNOS_E2E_PASSWORD,
+    tenantName: `Ichnos E2E ${username}`,
+    verifyUrlTemplate: `${webUrl}/verify-email?token={token}`,
+  });
+  if (!response) return null;
+  return { email, username, password: ICHNOS_E2E_PASSWORD, response };
+}
+
+/**
+ * Log in via the BFF (`POST /bff/login`). The BFF field is `username`, set to
+ * the EMAIL — Keycloak resolves email → user (register needs an @-free username;
+ * login does not). Mirrors the shipped bffAuthClient.login call.
+ */
+export function bffLogin(
+  request: APIRequestContext,
+  webUrl: string,
+  email: string,
+  password: string,
+): Promise<APIResponse | null> {
+  return bffTryPost(request, webUrl, '/bff/login', { username: email, password });
+}
+
+/** The plaintext-once result of issuing a customer API key. */
+export interface IssueApiKeyResult {
+  id: string;
+  plaintext: string;
+  prefix: string;
+  label: string;
+  createdAt: string;
+}
+
+/**
+ * Issue a customer API key (JWT-authed `POST /v1/api-keys`). Returns the parsed
+ * result (plaintext returned ONCE) on a 2xx, else null.
+ */
+export async function issueApiKey(
+  request: APIRequestContext,
+  token: string,
+  label = 'e2e',
+): Promise<IssueApiKeyResult | null> {
+  const result = await tryRequest(request, '/v1/api-keys', {
+    method: 'POST',
+    data: { label },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  });
+  if (!result || result.response.status() >= 300) return null;
+  return (await result.response.json()) as IssueApiKeyResult;
+}
+
+/**
+ * Build a Playwright multipart body for a CSV upload. FastEndpoints binds the
+ * `IFormFile File` from a form field named `file` (case-insensitive).
+ */
+export function csvMultipart(
+  csv: string,
+  filename = 'batch.csv',
+): { file: { name: string; mimeType: string; buffer: Buffer } } {
+  return { file: { name: filename, mimeType: 'text/csv', buffer: Buffer.from(csv, 'utf-8') } };
+}

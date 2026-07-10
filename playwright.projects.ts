@@ -49,6 +49,7 @@ interface ChunkOpts {
 export function buildProjects(): ProjectConfig {
   const erevnaUrl = process.env.EREVNA_BASE_URL;
   const kefiWebUrl = process.env.KEFI_WEB_URL;
+  const ichnosWebUrl = process.env.ICHNOS_WEB_URL;
 
   /**
    * Build one chunk project. `dir` is the path under tests/; `files` is the
@@ -92,10 +93,21 @@ export function buildProjects(): ProjectConfig {
     { name: 'logging', workers: 1, testMatch: /logging\/(?!stress).*\.spec\.ts/, dependencies: ['setup'] },
     { name: 'monitoring', workers: 1, testMatch: /monitoring\/.*\.spec\.ts/, dependencies: ['setup'] },
     { name: 'cross-product-isolation', workers: 1, testMatch: /cross-product-isolation\/.*\.spec\.ts/, dependencies: ['setup'] },
-    // Ichnos (crypto AML) — @api tier: health/smoke (M0-9) + screen-address (M1-1). No browser
-    // needed; the authed screening assertions opportunistically use an ichnos-realm ROPC token.
-    // The @ui portal-login tier is added in M1-4 with the screening screens.
-    { name: 'ichnos-api', workers: 1, testMatch: /ichnos\/ichnos-.*\.spec\.ts/, dependencies: ['setup'] },
+    // Ichnos (crypto AML) — @api tier: health/smoke (M0-9), screen-address/entity/combined + report (M1-1..3),
+    // and the M1-10 sellable flows: onboarding (F1), API keys (F3), batch CSV (F4), billing (F7). No browser
+    // needed; the authed assertions opportunistically use an ichnos-realm ROPC token. The negative-lookbehind
+    // excludes `*.ui.spec.ts` (the @ui portal tier), which runs in the browser `ichnos-ui` project below.
+    { name: 'ichnos-api', workers: 1, testMatch: /ichnos\/ichnos-.*(?<!\.ui)\.spec\.ts/, dependencies: ['setup'] },
+    // Ichnos @ui portal tier (F1 onboarding driven in a real browser). baseURL = ICHNOS_WEB_URL; the spec
+    // `test.skip`s gracefully when it is unset (the dev PC can't reach WireGuard-only staging — this runs
+    // in-cluster on the nightly runner). Matches only `ichnos/*.ui.spec.ts`.
+    {
+      name: 'ichnos-ui',
+      workers: 1,
+      testMatch: /ichnos\/.*\.ui\.spec\.ts/,
+      use: { ...CHROME, ...(ichnosWebUrl ? { baseURL: ichnosWebUrl } : {}) },
+      dependencies: ['setup'],
+    },
 
     // ---- Identity chunks (auth state, no multi-tenant users) ----
     // auth-methods-canary is a pure-API spec (no UI); the loaded storageState is
