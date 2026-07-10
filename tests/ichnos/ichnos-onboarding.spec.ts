@@ -15,9 +15,10 @@ import {
   registerIchnosUser,
 } from './ichnos-helpers.js';
 
-// The BFF proxies `/bff/api/v1/*` to ichnos-api (the shipped screeningClient path). The `ichnos` segment
-// downstream is the SPA's own product, so an unprefixed `/v1/...` resolves to ichnos-api after `/bff/api`.
-const BFF_SCREEN_PATH = '/bff/api/v1/screenings/address';
+// The BFF proxies `/bff/api/<segment>/*` to a downstream service; the ichnos segment routes to ichnos-api.
+// Verified live: `/bff/api/ichnos/v1/screenings/address` → authed 200 / unauth 401; the segment-less
+// `/bff/api/v1/...` returns 405 (no matching downstream route).
+const BFF_SCREEN_PATH = '/bff/api/ichnos/v1/screenings/address';
 
 const HTTP_OK = 200;
 const HTTP_CONFLICT = 409;
