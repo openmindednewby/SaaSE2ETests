@@ -271,3 +271,29 @@ export function csvMultipart(
 ): { file: { name: string; mimeType: string; buffer: Buffer } } {
   return { file: { name: filename, mimeType: 'text/csv', buffer: Buffer.from(csv, 'utf-8') } };
 }
+
+// --- M3 Wave-4 — monitoring / alerts / webhooks / regulator packs shared bits ---
+/** HTTP 402 — the Growth+ plan gate response emitted by PlanGate.WritePaymentRequiredAsync. */
+export const PAYMENT_REQUIRED = 402;
+
+/** Bearer Authorization header (GET/DELETE); jsonAuth adds JSON content-type (POST/PUT). */
+export function bearer(token: string): Record<string, string> {
+  return { Authorization: `Bearer ${token}` };
+}
+export function jsonAuth(token: string): Record<string, string> {
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+}
+
+/** A PUBLIC https webhook sink the nightly runner can reach (both-channels delivery E2E); unset → skip. */
+export const ICHNOS_WEBHOOK_SINK_URL: string | null = (() => {
+  const envUrl = process.env.ICHNOS_WEBHOOK_SINK_URL;
+  return envUrl && envUrl.trim() ? envUrl.trim().replace(/\/+$/, '') : null;
+})();
+
+/** Whether an IMAP inbox is configured to assert a real alert EMAIL (host+user+password). */
+export function hasEmailInboxConfigured(): boolean {
+  const host = process.env.ICHNOS_IMAP_HOST?.trim() || process.env.IMAP_HOST?.trim();
+  const user = process.env.ICHNOS_IMAP_USER?.trim() || process.env.IMAP_USER?.trim();
+  const pass = process.env.ICHNOS_IMAP_PASSWORD?.trim() || process.env.IMAP_PASSWORD?.trim();
+  return Boolean(host && user && pass);
+}
