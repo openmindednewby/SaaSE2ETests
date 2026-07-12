@@ -43,6 +43,8 @@
     "test:content:upload": "cross-env SHELL=/bin/bash playwright test tests/content/content-upload.spec.ts",
     "test:content:headed": "cross-env SHELL=/bin/bash playwright test --headed tests/content",
     "test:ichnos": "cross-env SHELL=/bin/bash playwright test tests/ichnos",
+    "test:agora": "cross-env SHELL=/bin/bash playwright test tests/agora",
+    "test:agora:api": "cross-env SHELL=/bin/bash playwright test tests/agora/agora-api.spec.ts --project=agora-api",
     "test:ichnos:api": "cross-env SHELL=/bin/bash playwright test tests/ichnos/ichnos-api.spec.ts --project=ichnos-api",
     "test:ichnos:onboarding": "cross-env SHELL=/bin/bash playwright test tests/ichnos/ichnos-onboarding.spec.ts --project=ichnos-api",
     "test:ichnos:apikeys": "cross-env SHELL=/bin/bash playwright test tests/ichnos/ichnos-apikeys.spec.ts --project=ichnos-api",

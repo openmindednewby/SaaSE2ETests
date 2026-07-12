@@ -98,6 +98,12 @@ export function buildProjects(): ProjectConfig {
     // needed; the authed assertions opportunistically use an ichnos-realm ROPC token. The negative-lookbehind
     // excludes `*.ui.spec.ts` (the @ui portal tier), which runs in the browser `ichnos-ui` project below.
     { name: 'ichnos-api', workers: 1, testMatch: /ichnos\/ichnos-.*(?<!\.ui)\.spec\.ts/, dependencies: ['setup'] },
+    // Agora (eShop) — @api tier: health/smoke on the ES-02 walking skeleton. No browser
+    // needed. The spec `test.skip`s gracefully when AGORA_API_URL is unreachable (the
+    // dev PC cannot reach WireGuard-only staging, where agora-api actually runs), so it
+    // is safe in every environment. ES-04+ extend it with real endpoints; ES-09 adds the
+    // @ui tier (an `agora-ui` project mirroring `ichnos-ui`).
+    { name: 'agora-api', workers: 1, testMatch: /agora\/agora-api\.spec\.ts/, dependencies: ['setup'] },
     // Ichnos @ui portal tier (F1 onboarding driven in a real browser). baseURL = ICHNOS_WEB_URL; the spec
     // `test.skip`s gracefully when it is unset (the dev PC can't reach WireGuard-only staging — this runs
     // in-cluster on the nightly runner). Matches only `ichnos/*.ui.spec.ts`.
