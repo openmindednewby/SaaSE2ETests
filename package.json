@@ -52,6 +52,7 @@
     "test:ichnos:billing": "cross-env SHELL=/bin/bash playwright test tests/ichnos/ichnos-billing.spec.ts --project=ichnos-api",
     "test:ichnos:monitoring": "cross-env SHELL=/bin/bash playwright test tests/ichnos/ichnos-monitoring.spec.ts --project=ichnos-api",
     "test:ichnos:webhooks": "cross-env SHELL=/bin/bash playwright test tests/ichnos/ichnos-webhooks.spec.ts --project=ichnos-api",
+    "test:ichnos:alert-delivery": "cross-env SHELL=/bin/bash playwright test tests/ichnos/ichnos-alert-delivery.spec.ts --project=ichnos-api",
     "test:ichnos:regulator-pack": "cross-env SHELL=/bin/bash playwright test tests/ichnos/ichnos-regulator-pack.spec.ts --project=ichnos-api",
     "test:ichnos:m3": "cross-env SHELL=/bin/bash playwright test tests/ichnos/ichnos-monitoring.spec.ts tests/ichnos/ichnos-webhooks.spec.ts tests/ichnos/ichnos-regulator-pack.spec.ts --project=ichnos-api",
     "test:ichnos:flows": "cross-env SHELL=/bin/bash playwright test tests/ichnos/ichnos-onboarding.spec.ts tests/ichnos/ichnos-apikeys.spec.ts tests/ichnos/ichnos-batch.spec.ts tests/ichnos/ichnos-billing.spec.ts --project=ichnos-api",
