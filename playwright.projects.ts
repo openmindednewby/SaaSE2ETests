@@ -50,6 +50,10 @@ export function buildProjects(): ProjectConfig {
   const erevnaUrl = process.env.EREVNA_BASE_URL;
   const kefiWebUrl = process.env.KEFI_WEB_URL;
   const ichnosWebUrl = process.env.ICHNOS_WEB_URL;
+  const agoraWebUrl = process.env.AGORA_WEB_URL;
+  // Optional: pin *.agora.dloizides.com to a specific node for the BROWSER only.
+  // See the `agora-ui` project below for why. Unset = use normal DNS.
+  const agoraWebHostIp = process.env.AGORA_WEB_HOST_IP;
 
   /**
    * Build one chunk project. `dir` is the path under tests/; `files` is the
@@ -98,12 +102,53 @@ export function buildProjects(): ProjectConfig {
     // needed; the authed assertions opportunistically use an ichnos-realm ROPC token. The negative-lookbehind
     // excludes `*.ui.spec.ts` (the @ui portal tier), which runs in the browser `ichnos-ui` project below.
     { name: 'ichnos-api', workers: 1, testMatch: /ichnos\/ichnos-.*(?<!\.ui)\.spec\.ts/, dependencies: ['setup'] },
-    // Agora (eShop) — @api tier: health/smoke on the ES-02 walking skeleton. No browser
-    // needed. The spec `test.skip`s gracefully when AGORA_API_URL is unreachable (the
-    // dev PC cannot reach WireGuard-only staging, where agora-api actually runs), so it
-    // is safe in every environment. ES-04+ extend it with real endpoints; ES-09 adds the
-    // @ui tier (an `agora-ui` project mirroring `ichnos-ui`).
-    { name: 'agora-api', workers: 1, testMatch: /agora\/agora-api\.spec\.ts/, dependencies: ['setup'] },
+    // Agora (eShop) — @api tier. Health probes, the full merchant-admin CRUD surface
+    // (products / categories / coupons / stock / shop settings), and the cross-tenant
+    // isolation rig. Seed-based, no browser, seconds.
+    //
+    // The testMatch was WIDENED from the ES-02 scaffold (which pinned the single
+    // `agora-api.spec.ts` file and therefore silently ignored every spec added after
+    // it). The negative lookbehind excludes `*.ui.spec.ts`, which is the browser tier
+    // in the `agora-ui` project below — same split as ichnos.
+    //
+    // Every spec `test.skip`s gracefully when agora-api is unreachable or the merchant
+    // credentials are unset, so this is safe to run in any environment.
+    //
+    // NO `dependencies: ['setup']` — deliberately. The `setup` project drives the LEGACY
+    // BaseClient/katalogos browser login to bake a storageState. Agora needs none of it:
+    // the @api tier mints its own agora-realm ROPC token and the @ui tier drives the real
+    // BFF login form. Depending on `setup` only coupled this suite to an unrelated app's
+    // availability — on staging that login fails, which took the whole Agora suite down
+    // with it for a reason that has nothing to do with Agora.
+    { name: 'agora-api', workers: 1, testMatch: /agora\/agora-.*(?<!\.ui)\.spec\.ts/ },
+    // Agora @ui tier — the merchant admin driven in a real browser against the DEPLOYED
+    // app (bff-agora serves the SPA same-origin, so baseURL is the BFF host).
+    //
+    // host-resolver-rules: on the dev PC, `staging.app.agora.dloizides.com` resolves via
+    // the public *.dloizides.com catch-all to the PROD node, which does not serve this
+    // app — so the browser would 404. Rather than require an admin-privileged Windows
+    // hosts-file edit, map the host to the staging node for the browser process only.
+    // AGORA_WEB_HOST_IP is unset in-cluster (where normal DNS already resolves), so this
+    // adds no args there. ignoreHTTPSErrors: staging has no LE cert (WireGuard-only), so
+    // Traefik serves its default self-signed cert — the deliberate standing posture.
+    {
+      name: 'agora-ui',
+      workers: 1,
+      testMatch: /agora\/.*\.ui\.spec\.ts/,
+      use: {
+        ...CHROME,
+        ...(agoraWebUrl ? { baseURL: agoraWebUrl } : {}),
+        ignoreHTTPSErrors: true,
+        ...(agoraWebHostIp
+          ? {
+              launchOptions: {
+                args: [`--host-resolver-rules=MAP *.agora.dloizides.com ${agoraWebHostIp}`],
+              },
+            }
+          : {}),
+      },
+      // No `setup` dependency — see the agora-api project above.
+    },
     // Ichnos @ui portal tier (F1 onboarding driven in a real browser). baseURL = ICHNOS_WEB_URL; the spec
     // `test.skip`s gracefully when it is unset (the dev PC can't reach WireGuard-only staging — this runs
     // in-cluster on the nightly runner). Matches only `ichnos/*.ui.spec.ts`.
