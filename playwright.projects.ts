@@ -466,6 +466,19 @@ export function buildProjects(): ProjectConfig {
       use: { ...CHROME, ...(erevnaUrl ? { baseURL: erevnaUrl } : {}) },
     },
     {
+      // SEC-2 — sign-out must END the IdP session, across kefi / katalogos / erevna / poueni.
+      // Asserts the contract that BITES (after sign-out a fresh authorize must PROMPT for
+      // credentials), NOT the hollow "/bff/me returns 401" — which passes even while the bug
+      // is live. Carries its own controls (a live session must still silently re-auth; a
+      // password/ROPC sign-out must NOT navigate to the IdP), so the suite cannot go green
+      // vacuously. Absolute per-app URLs from env; serial, since each app signs in for real.
+      name: 'sec2-logout',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /identity\/sec2-front-channel-logout\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       // Poueni passkey — the Vite dashboard's passkey-only rollout (no PIN leg;
       // see the Poueni decision in the Increment-3 task doc). Absolute URLs via
       // getPoueniUrls(); seeded poueni-realm test user.
