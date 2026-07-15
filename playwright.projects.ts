@@ -51,9 +51,11 @@ export function buildProjects(): ProjectConfig {
   const kefiWebUrl = process.env.KEFI_WEB_URL;
   const ichnosWebUrl = process.env.ICHNOS_WEB_URL;
   const agoraWebUrl = process.env.AGORA_WEB_URL;
-  // Optional: pin *.agora.dloizides.com to a specific node for the BROWSER only.
-  // See the `agora-ui` project below for why. Unset = use normal DNS.
-  const agoraWebHostIp = process.env.AGORA_WEB_HOST_IP;
+  // NB: agora's browser DNS override is NOT read here. Its staging hosts live in
+  // SAAS_STAGING_HOSTNAMES, so the GLOBAL E2E_HOST_OVERRIDE_IP mechanism in
+  // playwright.config.ts maps them in a single `--host-resolver-rules` flag. A
+  // per-project second flag conflicts (Chrome honours only one). See the agora-ui
+  // project below.
 
   /**
    * Build one chunk project. `dir` is the path under tests/; `files` is the
@@ -139,13 +141,14 @@ export function buildProjects(): ProjectConfig {
         ...CHROME,
         ...(agoraWebUrl ? { baseURL: agoraWebUrl } : {}),
         ignoreHTTPSErrors: true,
-        ...(agoraWebHostIp
-          ? {
-              launchOptions: {
-                args: [`--host-resolver-rules=MAP *.agora.dloizides.com ${agoraWebHostIp}`],
-              },
-            }
-          : {}),
+        // NB: host-resolver-rules is NOT set here on purpose. The agora staging
+        // hosts are in SAAS_STAGING_HOSTNAMES (fixtures/host-override.ts), so the
+        // GLOBAL override in playwright.config.ts already MAPs them for the browser —
+        // in ONE `--host-resolver-rules` flag with every staging host comma-joined.
+        // Emitting a second flag here (as this project used to) does NOT merge: Chrome
+        // honours only ONE `--host-resolver-rules` flag, so the later one silently WON
+        // and dropped the agora rule, sending the browser to public DNS → prod → 404.
+        // That was the whole "agora @ui lands on a 404" bug.
       },
       // No `setup` dependency — see the agora-api project above.
     },

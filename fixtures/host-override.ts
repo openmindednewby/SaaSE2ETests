@@ -84,6 +84,15 @@ const SAAS_STAGING_HOSTNAMES = [
   'poueni.staging.dloizides.com',
   'app.poueni.staging.dloizides.com',
   'api.poueni.staging.dloizides.com',
+  // Agora (eShop). Its hosts are MULTI-LABEL (`staging.app.agora...`,
+  // `staging.agora-api...`), so — like every entry above — the browser's own
+  // resolver only reaches the staging node via these explicit MAP rules; public
+  // DNS is a multi-level catch-all CNAME to the PROD node, which has no agora
+  // ingress → Traefik 404. (The web host is multi-label so it also escapes the
+  // Node-side `staging.<one-label>.dloizides.com` regex; the api host does match
+  // it, so the @api tier resolves without any override.)
+  'staging.app.agora.dloizides.com',
+  'staging.agora-api.dloizides.com',
 ] as const;
 
 const PATCHED_SENTINEL = Symbol.for('e2e.host-override.patched');
