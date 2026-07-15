@@ -20,8 +20,16 @@ test.describe('Agora public storefront — buyer journey @agora-storefront', () 
 
   test.beforeEach(async ({ page }) => {
     // Clear any per-shop cart so each test starts empty (cart is localStorage).
+    // addInitScript fires on EVERY document (every navigation), so it must clear
+    // only ONCE per test — otherwise the `/cart/` navigation later in the buyer
+    // journey would wipe the very cart the test just built, failing the cart
+    // assertions for a harness reason, not a product one. Guard with
+    // sessionStorage: it persists across same-origin navigations within this
+    // test's (isolated) context but is fresh for the next test.
     await page.addInitScript(() => {
       try {
+        if (sessionStorage.getItem('__agoraCartCleared')) return;
+        sessionStorage.setItem('__agoraCartCleared', '1');
         Object.keys(localStorage)
           .filter((k) => k.startsWith('agora_cart_'))
           .forEach((k) => localStorage.removeItem(k));
