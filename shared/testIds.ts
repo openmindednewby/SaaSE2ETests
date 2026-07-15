@@ -501,6 +501,29 @@ export const TestIds = {
   MARKETING_CAMPAIGN_SUBJECT_INPUT: 'marketing-campaign-subject-input',
   MARKETING_CAMPAIGN_BODY_INPUT: 'marketing-campaign-body-input',
   MARKETING_CAMPAIGN_CREATE_BUTTON: 'marketing-campaign-create-button',
+
+  // Agora (eShop) ES-07 billing / subscription / legal — MIRROR of
+  // agora-web/src/shared/testIds.ts (the `BILLING_*`, `SUBSCRIPTION_BANNER*`, `LEGAL_*`
+  // additions). Agora-prefixed so they never collide with the legacy `BILLING_SETTINGS_*`
+  // block above (a different app). The Agora suite (pages/agora/*, tests/agora/*) uses the
+  // raw string values directly — matching the rest of the Agora page objects, which are
+  // deliberately decoupled from this legacy barrel — so these constants are the parity
+  // record that keeps the two files from drifting on the magic strings.
+  AGORA_BILLING_SCREEN: 'agora-billing-screen',
+  AGORA_BILLING_SUMMARY: 'billing-summary',
+  AGORA_BILLING_STATUS_BADGE: 'billing-status-badge',
+  AGORA_BILLING_DETAIL: 'billing-detail',
+  AGORA_BILLING_CTA: 'billing-cta',
+  AGORA_BILLING_NO_MANAGE: 'billing-no-manage',
+  AGORA_SUBSCRIPTION_BANNER: 'subscription-banner',
+  AGORA_SUBSCRIPTION_BANNER_CTA: 'subscription-banner-cta',
+  AGORA_LEGAL_TERMS_LINK: 'legal-terms-link',
+  AGORA_LEGAL_PRIVACY_LINK: 'legal-privacy-link',
+  // Rendered by the shared @dloizides/legal-ui modals the footer opens.
+  AGORA_LEGAL_TERMS_SCREEN: 'terms-of-service-screen',
+  AGORA_LEGAL_TERMS_CLOSE: 'terms-of-service-close',
+  AGORA_LEGAL_PRIVACY_SCREEN: 'privacy-policy-screen',
+  AGORA_LEGAL_PRIVACY_CLOSE: 'privacy-policy-close',
 } as const;
 
 // Type for testID values

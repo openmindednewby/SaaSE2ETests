@@ -263,6 +263,25 @@ export class AgoraApi {
   checkout(body: CheckoutBody): Promise<APIResponse> {
     return this.request.post(url('/checkout'), { headers: { 'Content-Type': 'application/json' }, data: body });
   }
+
+  // ------------------------------------------------------- billing (ES-07, €2/mo platform)
+  /**
+   * GET /billing/subscription — the tenant's PLATFORM subscription snapshot. NOT plan-gated
+   * (a paused merchant must still reach it). The FIRST call lazily starts the 30-day trial.
+   */
+  getBillingSubscription(): Promise<APIResponse> {
+    return this.request.get(url('/billing/subscription'), { headers: bearer(this.token) });
+  }
+
+  /** POST /billing/checkout-session — €2/mo Checkout on Agora's OWN platform Stripe. Not gated. */
+  createBillingCheckoutSession(): Promise<APIResponse> {
+    return this.request.post(url('/billing/checkout-session'), { headers: jsonAuth(this.token), data: {} });
+  }
+
+  /** POST /billing/portal-session — Stripe Billing Portal. 409 before a Stripe customer exists. */
+  createBillingPortalSession(): Promise<APIResponse> {
+    return this.request.post(url('/billing/portal-session'), { headers: jsonAuth(this.token), data: {} });
+  }
 }
 
 /** Unique-ish suffix so parallel/repeat runs never collide on a unique constraint. */

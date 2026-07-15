@@ -93,6 +93,11 @@ const SAAS_STAGING_HOSTNAMES = [
   // it, so the @api tier resolves without any override.)
   'staging.app.agora.dloizides.com',
   'staging.agora-api.dloizides.com',
+  // Agora public STOREFRONT (ES-05) — the seeded staging demo shop. The storefront
+  // resolves the shop from the Host subdomain (`{shop}.agora.dloizides.com` → shop
+  // slug), and `staging.demo.agora.dloizides.com` → slug `demo`. Multi-label, so it
+  // too needs the explicit browser MAP + is why AGORA_STOREFRONT_URL points here.
+  'staging.demo.agora.dloizides.com',
 ] as const;
 
 const PATCHED_SENTINEL = Symbol.for('e2e.host-override.patched');

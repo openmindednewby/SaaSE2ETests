@@ -141,8 +141,11 @@ export class AgoraAdminPage {
     await this.usernameInput.fill(username);
     await this.passwordInput.fill(password);
     await this.loginSubmit.click();
-    // The shell only mounts once the BFF session cookie is set and /bff/me returns 200.
-    await this.adminShell.waitFor({ state: 'visible', timeout: 30_000 });
+    // The shell only mounts once the BFF session cookie is set and /bff/me returns 200. Give it the
+    // SAME 60s the username input gets: on a cold pod/BFF the post-login /bff/me round-trip is the
+    // very same cold-start, and a 30s cap here was the flake that timed out this hook on a cold
+    // staging pod (agora-orders.ui / agora-admin.ui login) while the input's own 60s wait passed.
+    await this.adminShell.waitFor({ state: 'visible', timeout: 60_000 });
   }
 
   /**
