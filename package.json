@@ -59,6 +59,7 @@
     "test:ichnos:ui": "cross-env SHELL=/bin/bash playwright test --project=ichnos-ui",
     "test:agora:ui": "cross-env SHELL=/bin/bash playwright test --project=agora-ui",
     "test:agora:admin": "cross-env SHELL=/bin/bash playwright test --project=agora-api --project=agora-ui",
+    "test:agora:storefront": "cross-env SHELL=/bin/bash playwright test --project=agora-api --project=agora-ui --grep @agora-storefront",
     "test:notification": "cross-env SHELL=/bin/bash playwright test tests/notifications",
     "test:notifications": "npm run test:notification --",
     "test:notification:headed": "cross-env SHELL=/bin/bash playwright test --headed tests/notifications",
