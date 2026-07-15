@@ -10,6 +10,7 @@ import { expect, test } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 import { AgoraApi, uniqueSuffix } from './agora-client.js';
 import type { UpdateShopBody } from './agora-client.js';
+import { FAKE_WEBHOOK_SECRET } from './agora-stripe.js';
 import { AGORA_API_URL, MERCHANT_A, getAgoraToken, tokenClaim, tryRequest } from './agora-helpers.js';
 
 const CONFLICT = 409;
@@ -94,7 +95,7 @@ test.describe('Agora orders + Stripe connection @agora-api', () => {
     // any probe. The UI surfaces this inline (RFC7807 errors[].reason) — see the @ui tier.
     const res = await api.updateStripe({
       stripeSecretKey: 'not-a-real-key',
-      stripeWebhookSecret: 'whsec_deadbeefdeadbeefdeadbeef',
+      stripeWebhookSecret: FAKE_WEBHOOK_SECRET,
       paymentsEnabled: true,
     });
     expect(res.status(), await res.text()).toBe(BAD_REQUEST);
@@ -118,7 +119,7 @@ test.describe('Agora orders + Stripe connection @agora-api', () => {
     // is exactly the failure the feature exists to catch (a green tick, then a lost first customer).
     const res = await api.updateStripe({
       stripeSecretKey: `sk_test_${uniqueSuffix().replace(/-/g, '')}bogus000000`,
-      stripeWebhookSecret: 'whsec_deadbeefdeadbeefdeadbeef',
+      stripeWebhookSecret: FAKE_WEBHOOK_SECRET,
       paymentsEnabled: true,
     });
     expect(res.status(), await res.text()).toBe(BAD_REQUEST);

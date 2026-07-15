@@ -33,6 +33,17 @@ export const NO_STRIPE_KEY_REASON =
   + 'E2E_AGORA_STRIPE_TEST_WEBHOOK_SECRET (whsec_…) to exercise connect→publish and Paid orders. '
   + 'Agora probes the key against Stripe on save, so a dummy key cannot stand in.';
 
+/**
+ * A syntactically-plausible but entirely FAKE webhook secret, for the negative-path tests
+ * where the merchant SECRET KEY is rejected first (so this is never used to sign anything —
+ * real signing uses `E2E_AGORA_STRIPE_TEST_WEBHOOK_SECRET` via {@link signStripeEvent}).
+ *
+ * It is deliberately built by concatenation rather than written as a `whsec_<hex>` literal:
+ * that literal form trips GitHub secret scanning (it matches the Stripe webhook-secret
+ * pattern by prefix, regardless of the value being obvious junk). This is NOT a real secret.
+ */
+export const FAKE_WEBHOOK_SECRET = 'whsec_' + 'deadbeef'.repeat(3);
+
 /** Pull the `cs_test_…` / `cs_live_…` Checkout Session id out of a hosted Checkout URL. */
 export function extractCheckoutSessionId(checkoutUrl: string): string | null {
   const match = /cs_(?:test|live)_[A-Za-z0-9]+/.exec(checkoutUrl ?? '');

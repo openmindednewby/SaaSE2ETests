@@ -11,7 +11,7 @@
 import { expect, test } from '@playwright/test';
 import { AgoraAdminPage } from '../../pages/agora/AgoraAdminPage.js';
 import { AGORA_WEB_URL, MERCHANT_A } from './agora-ui-helpers.js';
-import { NO_STRIPE_KEY_REASON, agoraStripeTestKeys } from './agora-stripe.js';
+import { FAKE_WEBHOOK_SECRET, NO_STRIPE_KEY_REASON, agoraStripeTestKeys } from './agora-stripe.js';
 
 /** How long to wait for the ES-06 nav item before concluding the frontend is not deployed. */
 const DEPLOY_PROBE_TIMEOUT_MS = 8_000;
@@ -85,7 +85,7 @@ test.describe('Agora ES-06 orders + Stripe settings @agora-ui @ui', () => {
     // the form must show the reason inline rather than swallow it into a silent no-op. Both secrets
     // are filled because a first-time connect needs both (Save is disabled otherwise).
     await admin.stripeSecretInput.fill('not-a-real-key');
-    await admin.stripeWebhookSecretInput.fill('whsec_deadbeefdeadbeefdeadbeef');
+    await admin.stripeWebhookSecretInput.fill(FAKE_WEBHOOK_SECRET);
     await expect(admin.stripeSaveButton).toBeEnabled();
     await admin.stripeSaveButton.click();
 

@@ -15,6 +15,7 @@ import { expect, test } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 import { AgoraApi, uniqueSuffix } from './agora-client.js';
 import { AGORA_API_URL, MERCHANT_A, MERCHANT_B, getAgoraToken, tokenClaim, tryRequest } from './agora-helpers.js';
+import { FAKE_WEBHOOK_SECRET } from './agora-stripe.js';
 
 const OK = 200;
 const NOT_FOUND = 404;
@@ -131,7 +132,7 @@ test.describe('🔒 Agora cross-tenant isolation — orders + Stripe @agora-api'
 
     const res = await apiB.updateStripe({
       stripeSecretKey: 'not-a-real-key',
-      stripeWebhookSecret: 'whsec_deadbeefdeadbeefdeadbeef',
+      stripeWebhookSecret: FAKE_WEBHOOK_SECRET,
       paymentsEnabled: true,
     });
     expect(REFUSED).toContain(res.status());
