@@ -21,6 +21,7 @@ export class AgoraAdminPage {
   readonly navProducts: Locator;
   readonly navCategories: Locator;
   readonly navCoupons: Locator;
+  readonly navOrders: Locator;
   readonly navSettings: Locator;
 
   // Products
@@ -46,10 +47,29 @@ export class AgoraAdminPage {
   readonly couponValueInput: Locator;
   readonly couponSaveButton: Locator;
 
+  // Orders
+  readonly ordersScreen: Locator;
+  readonly ordersTable: Locator;
+  readonly ordersEmpty: Locator;
+  readonly ordersStatusFilter: Locator;
+  readonly orderDetailScreen: Locator;
+  readonly orderFulfilButton: Locator;
+  readonly orderRefundButton: Locator;
+  readonly orderNoActions: Locator;
+
   // Settings
   readonly settingsScreen: Locator;
   readonly publishToggle: Locator;
   readonly publishBlockedNotice: Locator;
+
+  // Settings → Payments (Stripe connection)
+  readonly stripeCard: Locator;
+  readonly stripeSecretInput: Locator;
+  readonly stripeWebhookSecretInput: Locator;
+  readonly stripePaymentsSwitch: Locator;
+  readonly stripeSaveButton: Locator;
+  readonly stripeSaveError: Locator;
+  readonly stripeDisconnectButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -63,6 +83,7 @@ export class AgoraAdminPage {
     this.navProducts = page.getByTestId('nav-products');
     this.navCategories = page.getByTestId('nav-categories');
     this.navCoupons = page.getByTestId('nav-coupons');
+    this.navOrders = page.getByTestId('nav-orders');
     this.navSettings = page.getByTestId('nav-settings');
 
     this.productsScreen = page.getByTestId('agora-products-screen');
@@ -87,9 +108,26 @@ export class AgoraAdminPage {
     this.couponValueInput = page.getByTestId('coupon-value-input');
     this.couponSaveButton = page.getByTestId('coupon-save-button');
 
+    this.ordersScreen = page.getByTestId('agora-orders-screen');
+    this.ordersTable = page.getByTestId('orders-table');
+    this.ordersEmpty = page.getByTestId('orders-empty');
+    this.ordersStatusFilter = page.getByTestId('orders-status-filter');
+    this.orderDetailScreen = page.getByTestId('agora-order-detail-screen');
+    this.orderFulfilButton = page.getByTestId('order-fulfil-button');
+    this.orderRefundButton = page.getByTestId('order-refund-button');
+    this.orderNoActions = page.getByTestId('order-no-actions');
+
     this.settingsScreen = page.getByTestId('agora-settings-screen');
     this.publishToggle = page.getByTestId('publish-toggle');
     this.publishBlockedNotice = page.getByTestId('shop-publish-blocked');
+
+    this.stripeCard = page.getByTestId('stripe-card');
+    this.stripeSecretInput = page.getByTestId('stripe-secret-input');
+    this.stripeWebhookSecretInput = page.getByTestId('stripe-webhook-secret-input');
+    this.stripePaymentsSwitch = page.getByTestId('stripe-payments-switch');
+    this.stripeSaveButton = page.getByTestId('stripe-save-button');
+    this.stripeSaveError = page.getByTestId('stripe-save-error');
+    this.stripeDisconnectButton = page.getByTestId('stripe-disconnect-button');
   }
 
   /** Log in through the REAL BFF form (ROPC server-side; no token ever reaches the browser). */

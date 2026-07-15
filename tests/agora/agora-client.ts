@@ -52,6 +52,31 @@ export interface UpdateShopBody {
   logoStorageKey?: string | null;
 }
 
+/** `PUT /shop/stripe`. Blank secret = "keep the stored one"; the key is PROBED against Stripe. */
+export interface UpdateStripeBody {
+  stripeSecretKey?: string | null;
+  stripeWebhookSecret?: string | null;
+  paymentsEnabled: boolean;
+}
+
+/** One basket line. Note the shape: NO price — the server re-derives every number. */
+export interface CheckoutItemBody {
+  variantId: string;
+  quantity: number;
+}
+
+/** `POST /checkout` — anonymous. `fulfilment`: 0 = Pickup, 1 = Delivery on the wire. */
+export interface CheckoutBody {
+  shopSlug: string;
+  items: CheckoutItemBody[];
+  couponCode?: string | null;
+  customerName: string;
+  email: string;
+  phone?: string | null;
+  fulfilment: number;
+  shipping?: null;
+}
+
 function url(path: string): string {
   return `${AGORA_API_URL}${AGORA_API_PREFIX}${path}`;
 }
@@ -194,6 +219,49 @@ export class AgoraApi {
 
   dashboardSummary(): Promise<APIResponse> {
     return this.request.get(url('/dashboard/summary'), { headers: bearer(this.token) });
+  }
+
+  // ------------------------------------------------------------ stripe connect
+  /** GET /shop/stripe — connection status + the webhook URL. NEVER returns a secret. */
+  getStripe(): Promise<APIResponse> {
+    return this.request.get(url('/shop/stripe'), { headers: bearer(this.token) });
+  }
+
+  /** PUT /shop/stripe — store/replace the merchant's OWN key. The key is probed against Stripe. */
+  updateStripe(body: UpdateStripeBody): Promise<APIResponse> {
+    return this.request.put(url('/shop/stripe'), { headers: jsonAuth(this.token), data: body });
+  }
+
+  /** DELETE /shop/stripe — disconnect. Idempotent. */
+  disconnectStripe(): Promise<APIResponse> {
+    return this.request.delete(url('/shop/stripe'), { headers: bearer(this.token) });
+  }
+
+  // -------------------------------------------------------------------- orders
+  /** GET /orders — paged, newest first, optional `?status=Paid|Pending|…`. */
+  listOrders(query = ''): Promise<APIResponse> {
+    return this.request.get(url(`/orders${query}`), { headers: bearer(this.token) });
+  }
+
+  /** GET /orders/{id} — includes allowedTransitions. Foreign/unknown id → 404. */
+  getOrder(id: string): Promise<APIResponse> {
+    return this.request.get(url(`/orders/${id}`), { headers: bearer(this.token) });
+  }
+
+  /** POST /orders/{id}/fulfill — Paid → Fulfilled. 409 from any other state. */
+  fulfillOrder(id: string): Promise<APIResponse> {
+    return this.request.post(url(`/orders/${id}/fulfill`), { headers: jsonAuth(this.token), data: {} });
+  }
+
+  /** POST /orders/{id}/refund — Paid/Fulfilled → Refunded (Admin only). */
+  refundOrder(id: string): Promise<APIResponse> {
+    return this.request.post(url(`/orders/${id}/refund`), { headers: jsonAuth(this.token), data: {} });
+  }
+
+  // ------------------------------------------------------------------ checkout
+  /** POST /checkout — ANONYMOUS; needs a connected+enabled Stripe or it refuses. */
+  checkout(body: CheckoutBody): Promise<APIResponse> {
+    return this.request.post(url('/checkout'), { headers: { 'Content-Type': 'application/json' }, data: body });
   }
 }
 
