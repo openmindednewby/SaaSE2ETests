@@ -30,13 +30,27 @@ const ES06_FRONTEND_NOT_DEPLOYED =
   + '(no Orders nav, no Stripe settings card). Backend IS live (all @api pass). '
   + 'Redeploy agora-web (manage.sh deploy agora-web); these then run for real.';
 
+/**
+ * The flagship test's title, shared between the `test(...)` declaration and the beforeEach gate.
+ * The flagship needs a real Stripe TEST key; when none is wired it must skip in <1s. Evaluating
+ * the key gate against `testInfo.title` at the TOP of beforeEach — before any login/probe — means
+ * an unset key skips instantly instead of hanging the hook for the full 30s per-test cap while
+ * login + the ES-06 deploy probe run for a test that can never execute.
+ */
+const FLAGSHIP_TITLE = '🔴 FLAGSHIP: connecting Stripe re-enables publish WITHOUT a page reload';
+
 test.describe('Agora ES-06 orders + Stripe settings @agora-ui @ui', () => {
   let admin: AgoraAdminPage;
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
     const password = process.env.AGORA_TEST_PASSWORD?.trim();
     test.skip(!AGORA_WEB_URL, 'AGORA_WEB_URL unset — the merchant admin is not reachable');
     test.skip(!password, 'AGORA_TEST_PASSWORD unset');
+
+    // Fast-skip the flagship BEFORE any slow work (login/probe) when no real Stripe key is wired,
+    // so an owner-gated skip costs <1s instead of hanging the hook for the full 30s cap.
+    const isFlagship = testInfo.title === FLAGSHIP_TITLE;
+    test.skip(isFlagship && !agoraStripeTestKeys(), NO_STRIPE_KEY_REASON);
 
     admin = new AgoraAdminPage(page);
     await admin.login(MERCHANT_A, password as string);
@@ -95,7 +109,9 @@ test.describe('Agora ES-06 orders + Stripe settings @agora-ui @ui', () => {
     await expect(admin.publishToggle).toBeDisabled();
   });
 
-  test('🔴 FLAGSHIP: connecting Stripe re-enables publish WITHOUT a page reload', async () => {
+  test(FLAGSHIP_TITLE, async () => {
+    // The beforeEach already fast-skipped this test when no key is wired (see FLAGSHIP_TITLE), so
+    // reaching here means a real key is present. Re-read it for the fill() calls; the `!` is safe.
     const keys = agoraStripeTestKeys();
     test.skip(!keys, NO_STRIPE_KEY_REASON);
 
