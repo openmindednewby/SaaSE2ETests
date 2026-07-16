@@ -524,6 +524,39 @@ export const TestIds = {
   AGORA_LEGAL_TERMS_CLOSE: 'terms-of-service-close',
   AGORA_LEGAL_PRIVACY_SCREEN: 'privacy-policy-screen',
   AGORA_LEGAL_PRIVACY_CLOSE: 'privacy-policy-close',
+
+  // Agora (eShop) ES-08 onboarding wizard — MIRROR of the `ONBOARDING_*` block in
+  // agora-web/src/shared/testIds.ts. Agora-prefixed here so they never collide with any
+  // other product's ids. The Agora suite (pages/agora/AgoraOnboardingPage, tests/agora/
+  // agora-onboarding*.spec) uses the raw string values directly (like the rest of the Agora
+  // page objects), so these constants are the parity record that stops the two files drifting.
+  AGORA_ONBOARDING_SCREEN: 'agora-onboarding-screen',
+  AGORA_ONBOARDING_WIZARD: 'onboarding-wizard',
+  AGORA_ONBOARDING_PROGRESS: 'onboarding-progress',
+  AGORA_ONBOARDING_BACK: 'onboarding-back',
+  AGORA_ONBOARDING_CONTINUE: 'onboarding-continue',
+  AGORA_ONBOARDING_SKIP: 'onboarding-skip',
+  AGORA_ONBOARDING_DASHBOARD_CTA: 'onboarding-dashboard-cta',
+  AGORA_ONBOARDING_NAME_INPUT: 'onboarding-name-input',
+  AGORA_ONBOARDING_SLUG_INPUT: 'onboarding-slug-input',
+  AGORA_ONBOARDING_EMAIL_INPUT: 'onboarding-email-input',
+  AGORA_ONBOARDING_SLUG_STATUS: 'onboarding-slug-status',
+  AGORA_ONBOARDING_SLUG_SUGGESTION: 'onboarding-slug-suggestion',
+  AGORA_ONBOARDING_PRESET_PICKER: 'onboarding-preset-picker',
+  AGORA_ONBOARDING_TAGLINE_INPUT: 'onboarding-tagline-input',
+  AGORA_ONBOARDING_LOGO: 'onboarding-logo',
+  AGORA_ONBOARDING_LOGO_UPLOAD: 'onboarding-logo-upload',
+  AGORA_ONBOARDING_PRODUCT_NAME_INPUT: 'onboarding-product-name-input',
+  AGORA_ONBOARDING_PRODUCT_PRICE_INPUT: 'onboarding-product-price-input',
+  AGORA_ONBOARDING_PRODUCT_SAVE: 'onboarding-product-save',
+  AGORA_ONBOARDING_SHIPPING_FEE_INPUT: 'onboarding-shipping-fee-input',
+  AGORA_ONBOARDING_SHIPPING_PICKUP_SWITCH: 'onboarding-shipping-pickup-switch',
+  AGORA_ONBOARDING_STRIPE_SKIP_NOTE: 'onboarding-stripe-skip-note',
+  AGORA_ONBOARDING_PUBLISH_BUTTON: 'onboarding-publish-button',
+  AGORA_ONBOARDING_PUBLISH_URL: 'onboarding-publish-url',
+  AGORA_ONBOARDING_PUBLISH_COPY: 'onboarding-publish-copy',
+  AGORA_ONBOARDING_PUBLISH_QR: 'onboarding-publish-qr',
+  AGORA_ONBOARDING_PUBLISH_BLOCKED: 'onboarding-publish-blocked',
 } as const;
 
 // Type for testID values
