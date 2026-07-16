@@ -1,6 +1,13 @@
 import type { Locator, Page } from '@playwright/test';
 
 /**
+ * Ceiling for a heavy write round-trip (create-save → the editor transitioning into edit-mode and
+ * the image uploader mounting). Well under the suite's 30s per-test cap; a web-first wait returns
+ * the instant the condition is met, so this only engages when staging is slow under full-suite load.
+ */
+const SAVE_ROUNDTRIP_MS = 15_000;
+
+/**
  * Page object for the Agora merchant admin (agora-web), served same-origin by bff-agora.
  *
  * Ids come from agora-web/src/shared/testIds.ts plus the shared kit's own stable ids
@@ -146,6 +153,41 @@ export class AgoraAdminPage {
     // very same cold-start, and a 30s cap here was the flake that timed out this hook on a cold
     // staging pod (agora-orders.ui / agora-admin.ui login) while the input's own 60s wait passed.
     await this.adminShell.waitFor({ state: 'visible', timeout: 60_000 });
+  }
+
+  /**
+   * Create a product from the "New product" editor and return the id the server assigned.
+   *
+   * On the first save the editor does NOT return to the list — it switches to "Edit product" on the
+   * freshly-created row and the image uploader (which needs a product id to attach to) appears, so
+   * the id is now the last URL segment. Shared by the create-with-image test and the edit/stock
+   * test, which each add their own assertions on top of this arrange step.
+   */
+  async createProduct(fields: {
+    name: string;
+    price: string;
+    description?: string;
+    stock?: string;
+  }): Promise<string> {
+    await this.navProducts.click();
+    await this.productsScreen.waitFor({ state: 'visible' });
+    await this.productAddButton.click();
+    await this.productEditorScreen.waitFor({ state: 'visible' });
+
+    await this.productNameInput.fill(fields.name);
+    if (fields.description !== undefined) {
+      await this.productDescriptionInput.fill(fields.description);
+    }
+    await this.variantPrice0.fill(fields.price);
+    if (fields.stock !== undefined) {
+      await this.variantStock0.fill(fields.stock);
+    }
+    await this.productSaveButton.click();
+
+    // The uploader only mounts once the product EXISTS, so its appearance IS the save-completed
+    // signal. Explicit ceiling: this server round-trip + editor transition is the heavy step.
+    await this.productImageUpload.waitFor({ state: 'visible', timeout: SAVE_ROUNDTRIP_MS });
+    return new URL(this.page.url()).pathname.split('/').pop() ?? '';
   }
 
   /**
