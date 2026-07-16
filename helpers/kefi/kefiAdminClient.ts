@@ -158,12 +158,13 @@ export class KefiAdminClient {
    * Cached per-spec so a subsequent putLandingConfig + publish reuse the
    * same token (KC default access-token lifetime is 5 min; spec is faster).
    */
-  async getTenantOwnerBearer(input: {
-    email: string;
-    password: string;
-  }): Promise<string> {
+  async getTenantOwnerBearer(
+    input: { email: string; password: string },
+    opts: { forceRefresh?: boolean } = {},
+  ): Promise<string> {
     const clientSecret = requireSecret('KEFI_BFF_CLIENT_SECRET', this.options.clientSecret);
     const cacheKey = `${input.email}::${clientSecret.slice(0, 8)}`;
+    if (opts.forceRefresh) this.tenantOwnerTokens.delete(cacheKey);
     const cached = this.tenantOwnerTokens.get(cacheKey);
     if (cached) return cached;
 
@@ -256,7 +257,7 @@ export class KefiAdminClient {
   }): Promise<PublishLandingResult> {
     const timeoutMs = input.timeoutMs ?? 240_000;
     const pollIntervalMs = input.pollIntervalMs ?? 5_000;
-    const bearer = await this.getTenantOwnerBearer({
+    let bearer = await this.getTenantOwnerBearer({
       email: input.ownerEmail,
       password: input.ownerPassword,
     });
@@ -280,6 +281,10 @@ export class KefiAdminClient {
         }
       } else if (resp.status === 404) {
         // The Job hasn't been visible to the K8s informer yet — keep polling.
+      } else if (resp.status === 401) {
+        // Owner bearer expired mid-poll (KC token ~5 min < a long kaniko build) — re-mint.
+        bearer = await this.getTenantOwnerBearer(
+          { email: input.ownerEmail, password: input.ownerPassword }, { forceRefresh: true });
       } else {
         throw new Error(
           `[kefiAdminClient] publish-status expected 200, got ${resp.status}: ${JSON.stringify(resp.data)}`,
