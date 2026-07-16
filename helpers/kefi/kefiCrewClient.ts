@@ -127,8 +127,35 @@ export class KefiCrewClient {
   }
 
   /**
-   * The #267 operator step: set the crew member's password + emailVerified +
-   * clear requiredActions via the KC admin API, so ROPC sign-in works.
+   * SELF-SERVE set-password (task #274): redeem the reset token from the invite
+   * "set your password" email against the shared identity API's reset-password
+   * endpoint — the SAME backend the kefi-web `/reset-password` page posts to via
+   * the BFF. This is the app-hosted path that REPLACES the KC-admin
+   * {@link provisionLogin} workaround: no operator, no Keycloak admin, just the
+   * emailed link the invitee clicks. After this the crew member can ROPC sign in.
+   */
+  async redeemSetPassword(token: string, password: string): Promise<void> {
+    const identityApiUrl = process.env.IDENTITY_API_URL;
+    if (!identityApiUrl) {
+      throw new Error('[kefiCrewClient] IDENTITY_API_URL is unset — needed to redeem the set-password token');
+    }
+    const resp = await this.http.post<{ success?: boolean; message?: string }>(
+      `${identityApiUrl.replace(/\/$/, '')}/api/v1/auth/reset-password`,
+      { token, newPassword: password },
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+    if (resp.status !== HTTP_OK || resp.data.success !== true) {
+      throw new Error(
+        `[kefiCrewClient] reset-password redeem expected 200/success, got ${resp.status}: ${JSON.stringify(resp.data)}`,
+      );
+    }
+  }
+
+  /**
+   * The #267/legacy operator step: set the crew member's password +
+   * emailVerified + clear requiredActions via the KC admin API, so ROPC sign-in
+   * works. SUPERSEDED for the happy path by {@link redeemSetPassword} (task
+   * #274) — retained to document/exercise the old operator workaround.
    */
   async provisionLogin(userId: string, password: string): Promise<void> {
     const token = await this.getKcAdminToken();

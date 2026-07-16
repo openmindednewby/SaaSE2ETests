@@ -210,6 +210,31 @@ export function extractVerifyUrl(email: CapturedEmail): string | null {
 }
 
 /**
+ * Extract the "set your password" / reset-password URL from an invite or
+ * forgot-password email (task #274). Matches the first https:// URL containing
+ * `/reset-password`; the kefi-web SPA renders it as
+ * `https://<host>/reset-password?token=<opaque>`. Quoted-printable soft breaks
+ * are unfolded first so a wrapped token is rejoined.
+ */
+export function extractResetUrl(email: CapturedEmail): string | null {
+  const body = unfoldQuotedPrintable(email.bodyHtml ?? email.bodyText);
+  const matches = body.match(/https?:\/\/[^\s"<>]+\/reset-password[^\s"<>]*/gi);
+  return matches?.[0]?.replace(/&amp;/g, '&') ?? null;
+}
+
+/**
+ * Pull the URL-decoded reset token out of a reset-password email's link
+ * (`…/reset-password?token=<encoded>`). Returns null when no reset URL / token
+ * is present.
+ */
+export function extractResetToken(email: CapturedEmail): string | null {
+  const url = extractResetUrl(email);
+  if (!url) return null;
+  const match = url.match(/[?&]token=([^&\s"<>]+)/i);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/**
  * Extract the one-click unsubscribe URL from an unsubscribable lifecycle email
  * (reminder / thank-you). The shared EmailLayout footer renders an
  * `…/api/v1/unsubscribe/{token}` link; HTML entities (`&amp;`) are decoded so

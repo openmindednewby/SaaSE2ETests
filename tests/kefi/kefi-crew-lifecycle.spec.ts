@@ -45,6 +45,7 @@ import { newCanaryContext, type KefiCanaryContext } from '../../helpers/kefi/kef
 import {
   KefiMailbox,
   extractVerifyUrl,
+  extractResetToken,
   loadKefiMailboxConfig,
   type CapturedEmail,
 } from '../../helpers/kefi/kefiMailboxClient.js';
@@ -71,30 +72,49 @@ function crewRoster(ctx: KefiCanaryContext): CrewMember[] {
 }
 
 /**
- * Invite → assert the #267 gap (pre-provision login FAILS) → provision password
- * + emailVerified → login SUCCEEDS with the role + tenantId claim. Returns the
- * crew KC user id for teardown.
+ * SELF-SERVE (task #274): invite → the invitee receives an app-hosted "set your
+ * password" email → assert the fail-closed gap (BEFORE setting a password the
+ * account still CANNOT log in — same fail-closed guarantee the old #267 KC-admin
+ * path proved) → redeem the emailed token via the reset-password backend → login
+ * SUCCEEDS with the role + tenantId claim. NO operator / Keycloak-admin step.
+ * Returns the crew KC user id for teardown.
  */
-async function inviteProvisionAndVerifyLogin(input: {
+async function inviteSetPasswordAndVerifyLogin(input: {
   crew: KefiCrewClient;
+  mailbox: KefiMailbox;
   owner: OwnerCreds;
   member: CrewMember;
   password: string;
   expectedTenantId: string;
 }): Promise<string> {
-  const { crew, owner, member, password, expectedTenantId } = input;
+  const { crew, mailbox, owner, member, password, expectedTenantId } = input;
   const userId = await crew.invite(owner, member);
 
-  const preProvision = await crew.tryLogin(member.email, password);
+  // Fail-closed: an invited account has NO credentials yet, so it cannot log in
+  // until the invitee sets a password via the emailed link. (This is the #267
+  // guarantee — the OLD invite left the account un-loginable with no way in bar
+  // an operator; the NEW invite ships a self-serve link but is still closed
+  // until that link is used.)
+  const preSetPassword = await crew.tryLogin(member.email, password);
   expect(
-    preProvision.ok,
-    `#267 gap: invited ${member.role} must NOT be able to log in before KC-admin password-set`,
+    preSetPassword.ok,
+    `#274 fail-closed: invited ${member.role} must NOT log in before setting a password`,
   ).toBe(false);
 
-  await crew.provisionLogin(userId, password);
-  const token = await crew.login(member.email, password);
-  expect(token.roles, `${member.role} carries its realm role after login`).toContain(member.role);
-  expect(token.tenantId, `${member.role} token carries the tenant's externalId`).toBe(expectedTenantId);
+  // The invite triggered a "set your password" email via the reused
+  // forgot-password machinery. Pull the single-use token from the invitee's
+  // inbox (plus-addressed off the shared bot mailbox) and redeem it — the
+  // app-hosted set-password flow, no KC-admin.
+  const captured = await mailbox.waitForMessageTo(member.email, { subjectIncludes: 'password' });
+  const token = extractResetToken(captured);
+  expect(token, `set-password token in the email to ${member.email}`).not.toBeNull();
+  await mailbox.expungeMessages([captured.uid]).catch(() => undefined);
+
+  await crew.redeemSetPassword(token!, password);
+
+  const decoded = await crew.login(member.email, password);
+  expect(decoded.roles, `${member.role} carries its realm role after login`).toContain(member.role);
+  expect(decoded.tenantId, `${member.role} token carries the tenant's externalId`).toBe(expectedTenantId);
   return userId;
 }
 
@@ -138,7 +158,7 @@ async function registerVerifyOnboard(input: {
 test.describe('Kefi crew lifecycle — register → onboard → invite → crew login', () => {
   test.skip(!isRemoteTarget(), 'Kefi crew-lifecycle E2E targets staging+prod; local stack not wired in dev-loop yet');
 
-  test('@api invited crew (organizer/ambassador/dj) each log in with role + tenantId after KC provisioning', async () => {
+  test('@api invited crew (organizer/ambassador/dj) each self-serve set-password via email, then log in with role + tenantId', async () => {
     test.skip(
       !masterAdminAvailable(),
       'The @api tier provisions a no-wizard owner via KC master-admin; only staging carries those creds.',
@@ -147,6 +167,9 @@ test.describe('Kefi crew lifecycle — register → onboard → invite → crew 
     const admin = new KefiAdminClient();
     const backoffice = new KefiBackofficeClient(admin);
     const crew = new KefiCrewClient(admin);
+    // The set-password email lands in the shared bot mailbox (plus-addressed per
+    // crew member); 90s window absorbs the SMTP queue + DKIM signing.
+    const mailbox = new KefiMailbox(loadKefiMailboxConfig(), { timeoutMs: 90_000, pollIntervalMs: 2_000 });
     test.info().annotations.push({ type: 'canaryId', description: ctx.canaryId });
 
     const crewIds: string[] = [];
@@ -159,8 +182,8 @@ test.describe('Kefi crew lifecycle — register → onboard → invite → crew 
       const ownerCreds: OwnerCreds = { ownerEmail: ctx.email, ownerPassword: ctx.password };
 
       for (const member of crewRoster(ctx)) {
-        const id = await inviteProvisionAndVerifyLogin({
-          crew, owner: ownerCreds, member, password: ctx.password, expectedTenantId: created.tenantId,
+        const id = await inviteSetPasswordAndVerifyLogin({
+          crew, mailbox, owner: ownerCreds, member, password: ctx.password, expectedTenantId: created.tenantId,
         });
         crewIds.push(id);
       }
