@@ -300,6 +300,19 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      // Kefi crew-lifecycle (#267) — the full "from registration all the way"
+      // chain: register → verify → onboard → invite crew → each crew member logs
+      // in with the right role + tenantId. Three tests: @api (fast, no browser),
+      // @ui (real signup + wizard + a real sign-in), @slow (duplicate landing +
+      // publish/kaniko). Signup + IMAP verify + the publish build dominate the
+      // wall-clock → 600s budget like its kefi siblings.
+      name: 'kefi-crew-lifecycle',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-crew-lifecycle\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       // Kefi #177 attendee Stripe-Checkout payments — signs up a canary tenant,
       // stores dummy Stripe credentials, then proves the webhook reconciliation
       // path (paid + idempotent replay + bad-signature + refund) with synthetically
