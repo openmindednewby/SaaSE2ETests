@@ -20,7 +20,6 @@ const PRODUCT_STOCK = 42;
 const RESTOCK_COUNT = 7;
 const COUPON_PERCENT = 15;
 const SHIPPING_FLAT_FEE = 4.5;
-const CONFLICT = 409;
 
 /** A minimal, valid option-less product. `variants: null` is required — the
  *  validator rejects a blank-named variant, so an option-less product MUST put
@@ -243,20 +242,26 @@ test.describe('Agora merchant admin CRUD @agora-api', () => {
     expect(((await readBack.json()) as { slug: string }).slug).toBe(slug);
   });
 
-  test('refuses to publish a shop with no Stripe credentials', async () => {
-    // NOT a bug and NOT a temporary hack: a shop must not be able to go live
-    // before the merchant's own Stripe credentials are stored, and the endpoint
-    // that stores them is ES-06. This test PINS that refusal — if it ever starts
-    // passing, an unpayable shop just went live.
-    const published = await api.publishShop();
-    expect(published.status()).toBe(CONFLICT);
-    expect(await published.text()).toContain('STRIPE_NOT_CONNECTED');
+  test('publishes browse-only without Stripe — live but acceptsOrders:false (ES-08)', async () => {
+    // ES-08 reversed the old ES-06 invariant: publishing no longer requires Stripe. A shop with
+    // content goes LIVE in BROWSE-ONLY mode — browsable but not order-accepting — until the merchant
+    // connects their own Stripe (which flips `acceptsOrders`). The old 409 STRIPE_NOT_CONNECTED
+    // refusal is gone; this test now PINS the browse-only guarantee (live, but no orders without a
+    // way to be paid). Self-contained: ensure a product so `canPublish` is met, then restore draft.
+    const created = await api.createProduct(productBody(`Publish fixture ${uniqueSuffix()}`));
+    expect(created.ok(), await created.text()).toBeTruthy();
+    const productId = ((await created.json()) as { externalId: string }).externalId;
+    createdProducts.push(productId);
 
-    const shop = await api.getShop();
-    if (shop.status() === 200) {
-      const body = (await shop.json()) as { canPublish: boolean; stripeConnected: boolean };
-      expect(body.stripeConnected).toBe(false);
-      expect(body.canPublish).toBe(false);
+    try {
+      const published = await api.publishShop();
+      expect(published.status(), await published.text()).toBe(200);
+      const body = (await published.json()) as { isPublished: boolean; acceptsOrders: boolean };
+      expect(body.isPublished, 'a shop with content publishes').toBe(true);
+      expect(body.acceptsOrders, 'without Stripe it is browse-only — live but not taking orders').toBe(false);
+    } finally {
+      // Never leave MERCHANT_A's shop publicly live: back to draft for the next test/run.
+      await api.unpublishShop();
     }
   });
 

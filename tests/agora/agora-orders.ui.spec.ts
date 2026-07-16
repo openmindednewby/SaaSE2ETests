@@ -74,23 +74,20 @@ test.describe('Agora ES-06 orders + Stripe settings @agora-ui @ui', () => {
     await expect(admin.ordersEmpty.or(admin.ordersTable), 'orders list settles to empty-state or grid').toBeVisible();
   });
 
-  test('the Stripe settings card renders NOT-connected and the publish button is inert', async () => {
+  test('the Stripe settings card renders NOT-connected with write-only secret fields', async () => {
     await admin.navSettings.click();
     await expect(admin.settingsScreen).toBeVisible();
 
-    // The connect card is present and the write-only secret fields exist.
+    // The connect card is present and the write-only secret fields exist. Stripe is OPTIONAL post
+    // ES-08: connecting it flips a browse-only shop to order-accepting; it no longer gates publish
+    // (the content gate does — proven at the @api tier), so the publish control is simply present.
     await expect(admin.stripeCard).toBeVisible();
     await expect(admin.stripeSecretInput).toBeVisible();
     await expect(admin.stripeWebhookSecretInput).toBeVisible();
-
-    // A shop with no Stripe cannot go live: the toggle is genuinely disabled (not merely styled),
-    // and the blocked notice says why.
     await expect(admin.publishToggle).toBeVisible();
-    await expect(admin.publishToggle).toBeDisabled();
-    await expect(admin.publishBlockedNotice).toBeVisible();
   });
 
-  test('a rejected Stripe key is surfaced INLINE, and the shop stays unpublishable', async () => {
+  test('a rejected Stripe key is surfaced INLINE (not swallowed)', async () => {
     await admin.navSettings.click();
     await expect(admin.settingsScreen).toBeVisible();
     await expect(admin.stripeCard).toBeVisible();
@@ -105,8 +102,8 @@ test.describe('Agora ES-06 orders + Stripe settings @agora-ui @ui', () => {
 
     await expect(admin.stripeSaveError, 'the rejection must be shown inline, not swallowed').toBeVisible();
     await expect(admin.stripeSaveError).not.toBeEmpty();
-    // And the publish gate never opened on a rejected key.
-    await expect(admin.publishToggle).toBeDisabled();
+    // (Post ES-08 the publish control is no longer coupled to the Stripe connection — a rejected key
+    // surfaces inline without changing publishability, which the content gate now owns.)
   });
 
   test(FLAGSHIP_TITLE, async () => {

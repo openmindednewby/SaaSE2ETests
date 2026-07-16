@@ -55,16 +55,16 @@ test.describe('Agora merchant admin @agora-ui @ui', () => {
     expect(tokenInJs, 'no access token may be reachable from JS').toBeNull();
   });
 
-  test('the publish button is DISABLED until Stripe is connected', async () => {
-    // A shop that could go live without payment credentials would take orders it can never
-    // charge for. `POST /shop/publish` 409s (ES-06 owns Stripe), and the UI must not even let
-    // the merchant fire it. Assert the control is genuinely inert, not merely styled grey.
+  test('the settings screen exposes the publish control — publish is no longer Stripe-gated (ES-08)', async () => {
+    // ES-08 reversed the old ES-06 invariant: publishing no longer requires Stripe. A shop with
+    // content goes live in BROWSE-ONLY mode; connecting Stripe later flips it to order-accepting.
+    // So the settings publish control is present and is NOT gated on the Stripe connection — the
+    // content gate decides (proven deterministically at the @api tier). We assert the control
+    // renders but not its enabled/disabled state: that now depends on whether the shared merchant's
+    // shop currently has content, not on Stripe, so pinning it here would be a shared-state flake.
     await admin.navSettings.click();
     await expect(admin.settingsScreen).toBeVisible();
-
     await expect(admin.publishToggle).toBeVisible();
-    await expect(admin.publishToggle).toBeDisabled();
-    await expect(admin.publishBlockedNotice).toBeVisible();
   });
 
   // The ES-04 brief's journey — create+image -> appears-in-list -> edit -> stock-to-0 -> coupon —

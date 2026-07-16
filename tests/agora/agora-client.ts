@@ -209,12 +209,18 @@ export class AgoraApi {
   }
 
   /**
-   * ALWAYS 409 STRIPE_NOT_CONNECTED today, for every merchant. That is CORRECT:
-   * a shop cannot go live until the merchant's own Stripe credentials are stored,
-   * and the endpoint that stores them is ES-06. Do not "fix" the 409.
+   * POST /shop/publish. ES-08 reversed the old ES-06 invariant: publishing no longer requires
+   * Stripe. A shop with content (canPublish) goes LIVE in browse-only mode — `isPublished:true`
+   * but `acceptsOrders:false` — until the merchant connects their own Stripe, which flips it to
+   * order-accepting. (Publishing with NO content still 409s the content gate.)
    */
   publishShop(): Promise<APIResponse> {
     return this.request.post(url('/shop/publish'), { headers: jsonAuth(this.token), data: {} });
+  }
+
+  /** POST /shop/unpublish — take the shop back to draft. Always allowed; idempotent. */
+  unpublishShop(): Promise<APIResponse> {
+    return this.request.post(url('/shop/unpublish'), { headers: jsonAuth(this.token), data: {} });
   }
 
   dashboardSummary(): Promise<APIResponse> {

@@ -39,37 +39,34 @@ test.describe('Agora public storefront — buyer journey @agora-storefront', () 
     });
   });
 
-  test('browse -> product -> add to cart -> cart is correct', async ({ page }) => {
+  // ES-08: the demo shop is published in BROWSE-ONLY mode — it has no owner Stripe key connected,
+  // so products are browsable but not orderable. The old buyer journey (add-to-cart → cart →
+  // checkout) is not demonstrable against a browse-only shop, so this proves the browse-only
+  // storefront the ES-08 brief describes: products browse, the buy control is inert, and a calm
+  // "isn't accepting orders yet" banner explains why. (Full add-to-cart/checkout coverage returns
+  // the moment an order-accepting demo/fixture shop exists — see the task report's coverage note.)
+  test('browse -> product -> the shop is BROWSE-ONLY (buy disabled + banner)', async ({ page }) => {
     const gotoRes = await page.goto(`${STOREFRONT_URL}/`, { waitUntil: 'domcontentloaded' });
     test.skip(gotoRes === null || !gotoRes.ok(), `storefront home not reachable at ${STOREFRONT_URL}`);
 
-    // The shop home shows a product shelf; open the first non-sold-out product.
-    const firstProduct = page.locator('.pcard:not(.pcard--soldout)').first();
-    await expect(firstProduct, 'the demo shop must list at least one buyable product').toBeVisible();
+    // The shop home shows a browsable product shelf; open the first product.
+    const firstProduct = page.locator('.pcard').first();
+    await expect(firstProduct, 'the demo shop must list at least one browsable product').toBeVisible();
     await firstProduct.click();
 
-    // Product page: an enabled Add-to-cart control.
+    // Product page: the Add-to-cart control is present but INERT, and reads "Browsing only".
     const addBtn = page.locator('[data-add]');
     await expect(addBtn).toBeVisible();
-    await expect(addBtn).toBeEnabled();
-    await addBtn.click();
+    await expect(addBtn, 'a browse-only shop must not allow add-to-cart').toBeDisabled();
+    await expect(page.locator('[data-add-label]')).toHaveText(/browsing only/i);
 
-    // The header cart badge reflects the add (shown, count 1).
-    const badge = page.locator('[data-cart-badge]');
-    await expect(badge).toBeVisible();
-    await expect(badge).toHaveText('1');
-
-    // The cart page lists exactly the one line, with a non-empty subtotal.
-    await page.goto(`${STOREFRONT_URL}/cart/`, { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('[data-cart-lines] .cline')).toHaveCount(1);
-    const subtotal = page.locator('[data-subtotal]');
-    await expect(subtotal).toBeVisible();
-    await expect(subtotal).not.toHaveText('—');
-    // The checkout CTA is present (the handoff itself needs a real Stripe key).
-    await expect(page.locator('[data-checkout-link]')).toBeVisible();
+    // The calm "isn't accepting orders yet" banner explains the browse-only state.
+    const banner = page.locator('.browseonly');
+    await expect(banner, 'the browse-only banner must be present').toBeVisible();
+    await expect(banner).toContainText(/accepting orders/i);
   });
 
-  test('a sold-out variant is shown but NOT addable', async ({ page }) => {
+  test('a sold-out product is shown with a "Sold out" marker and is not addable', async ({ page }) => {
     const gotoRes = await page.goto(`${STOREFRONT_URL}/products/`, { waitUntil: 'domcontentloaded' });
     test.skip(gotoRes === null || !gotoRes.ok(), `storefront catalogue not reachable at ${STOREFRONT_URL}`);
 
@@ -79,13 +76,15 @@ test.describe('Agora public storefront — buyer journey @agora-storefront', () 
 
     // The tile is shown with a "Sold out" marker (visible, not hidden).
     await expect(soldOutCard).toBeVisible();
+    await expect(soldOutCard).toContainText(/sold out/i);
     await soldOutCard.click();
 
-    // On the product page the add control is disabled and reads "Sold out".
+    // On the product page the add control is disabled — the product is sold out AND (in the demo
+    // shop's browse-only state) the whole shop refuses orders. Either way it must never be addable.
     const addBtn = page.locator('[data-add]');
     await expect(addBtn).toBeVisible();
     await expect(addBtn).toBeDisabled();
-    await expect(page.locator('[data-add-label]')).toHaveText(/sold out/i);
+    await expect(page.locator('[data-add-label]')).toHaveText(/sold out|browsing only/i);
   });
 
   test('an unknown storefront path renders a branded 404 (not a raw error)', async ({ page }) => {

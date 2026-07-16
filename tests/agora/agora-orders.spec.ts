@@ -13,7 +13,6 @@ import type { UpdateShopBody } from './agora-client.js';
 import { FAKE_WEBHOOK_SECRET } from './agora-stripe.js';
 import { AGORA_API_URL, MERCHANT_A, getAgoraToken, tokenClaim, tryRequest } from './agora-helpers.js';
 
-const CONFLICT = 409;
 const BAD_REQUEST = 400;
 const NOT_FOUND = 404;
 const FORBIDDEN = 403;
@@ -82,11 +81,34 @@ test.describe('Agora orders + Stripe connection @agora-api', () => {
     expect(conn.secretKeyLast4 ?? null).toBeNull();
   });
 
-  test('POST /shop/publish is refused 409 STRIPE_NOT_CONNECTED before any key is stored', async () => {
-    // Pins the refusal: if this ever starts passing, an unpayable shop just went live.
-    const published = await api.publishShop();
-    expect(published.status()).toBe(CONFLICT);
-    expect(await published.text()).toContain('STRIPE_NOT_CONNECTED');
+  test('publishing without Stripe succeeds browse-only — live but acceptsOrders:false (ES-08)', async () => {
+    // ES-08 reversed the old ES-06 refusal: publishing no longer needs Stripe. A shop with content
+    // goes LIVE in browse-only mode (isPublished:true, acceptsOrders:false) — browsable but not
+    // order-accepting — until the merchant connects their own Stripe. Self-contained: ensure a
+    // product so the content gate is met, publish, assert browse-only, then restore the draft state.
+    const created = await api.createProduct({
+      name: `Publish fixture ${uniqueSuffix()}`,
+      description: null,
+      categoryId: null,
+      sortOrder: 0,
+      price: 9.99,
+      stockCount: 5,
+      sku: `E2E-${uniqueSuffix()}`,
+      variants: null,
+    });
+    expect(created.ok(), await created.text()).toBeTruthy();
+    const productId = ((await created.json()) as { externalId: string }).externalId;
+
+    try {
+      const published = await api.publishShop();
+      expect(published.status(), await published.text()).toBe(OK);
+      const shop = (await published.json()) as { isPublished: boolean; acceptsOrders: boolean };
+      expect(shop.isPublished, 'a shop with content publishes').toBe(true);
+      expect(shop.acceptsOrders, 'without Stripe it is browse-only — live but not taking orders').toBe(false);
+    } finally {
+      await api.unpublishShop();
+      await api.deleteProduct(productId);
+    }
   });
 
   // ------------------------------------------------------------ invalid-key rejection
