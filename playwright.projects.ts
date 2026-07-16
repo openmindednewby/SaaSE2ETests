@@ -458,6 +458,80 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      // Kefi registration-request submit → approve/reject (#276 gap #1). @api: the
+      // full submit→list→approve/reject state machine (master-admin provisions the
+      // Pro tenant + owner + ambassador). @ui: the organizer approvals surface. The
+      // signup/@ui leg's IMAP verify + the master-admin provisioning dominate the
+      // wall-clock → 600s budget like its kefi siblings.
+      name: 'kefi-registration-approval',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-registration-approval\.spec\.ts/,
+      use: CHROME,
+    },
+    {
+      // Kefi critical path (#276 gap #2) — registration → approval → payment
+      // (signed Stripe webhook) → door check-in, chained end-to-end. @slow: spans
+      // approval + a webhook round-trip + reconciliation (no kaniko). 600s budget.
+      name: 'kefi-critical-path',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-critical-path\.spec\.ts/,
+      use: CHROME,
+    },
+    {
+      // Kefi organizer attendee bulk-import (#265 / #276 gap #3) — JSON + multipart
+      // CSV import, dedup-by-email, per-row errors. Pure @api (master-admin
+      // provisions the tenant); no browser/IMAP → the standard-ish 300s is plenty.
+      name: 'kefi-attendee-import',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-attendee-import\.spec\.ts/,
+      use: CHROME,
+    },
+    {
+      // Kefi organizer dashboard / P&L (#276 gap #4) — seeds genuinely-paid
+      // attendees via the import path (RecordPayment moves gross/net) and asserts
+      // the P&L numbers + the Draft-event safe-zeros case. Pure @api → 300s budget.
+      name: 'kefi-organizer-pnl',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-organizer-pnl\.spec\.ts/,
+      use: CHROME,
+    },
+    {
+      // Kefi role-surface render smoke (#276 gap #5) — dj / media / ambassador /
+      // audit dashboards each render for their role without tripping the error
+      // boundary. @ui: a fresh browser context per role user (master-admin
+      // provisions them). Multiple logins → 600s budget.
+      name: 'kefi-role-surfaces',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-role-surfaces\.spec\.ts/,
+      use: CHROME,
+    },
+    {
+      // Kefi published poster + pass RENDER (#266 / #276 gap #7) — publishes a
+      // landing carrying price tiers + a real-image poster and asserts they RENDER
+      // on the served page (extends publish coverage from "published" to
+      // "rendered"). @slow: kaniko publish build → 900s test budget, 600s poll.
+      name: 'kefi-poster-passes-render',
+      workers: 1,
+      timeout: 900_000,
+      testMatch: /kefi\/kefi-poster-passes-render\.spec\.ts/,
+      use: CHROME,
+    },
+    {
+      // Kefi attendee GDPR export + erasure (#276 gap #6) — anonymous, ticket-token
+      // keyed data-subject export + right-to-erasure (idempotent). Pure @api
+      // (master-admin seeds the event) → 300s budget.
+      name: 'kefi-gdpr',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-gdpr\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       // Katalogos device-PIN + passkey via the SHARED auth-web 1.4.0 components
       // (unified-login Increment 3). Uses the seeded realm test user + the global
       // baseURL (katalogos-web per E2E_TARGET) — no canary signup/IMAP needed.

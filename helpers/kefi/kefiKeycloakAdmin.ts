@@ -146,18 +146,44 @@ export async function createTenantOwnerUser(input: {
   password: string;
   tenantId: string;
 }): Promise<EphemeralKefiUser> {
+  return createTenantUserWithRole({ ...input, role: TENANT_OWNER_ROLE, lastName: 'Owner' });
+}
+
+/**
+ * Create a fully-set-up kefi-realm user carrying an ARBITRARY tenant-scoped
+ * realm role (organizer / ambassador / dj / media / door-staff / tenant-owner)
+ * and link it to an existing tenant. The generalised form of
+ * {@link createTenantOwnerUser} — the crew-surface + registration-approval specs
+ * need an ambassador/dj/media user the same way the freemium-gate spec needs an
+ * owner. Master-admin-only (staging); the caller MUST `deleteEphemeralUser` it
+ * in teardown (the kefi canary sweep keys off the tenant slug, not this user).
+ */
+export async function createTenantUserWithRole(input: {
+  email: string;
+  password: string;
+  tenantId: string;
+  role: string;
+  firstName?: string;
+  lastName?: string;
+}): Promise<EphemeralKefiUser> {
   const { kcUrl, kcRealm } = getKefiUrls();
   const adminToken = await mintMasterAdminToken();
   const ctx: KcAdminCtx = { kcUrl, kcRealm, adminToken };
-  const userId = await createOwnerUserRecord(ctx, input);
-  await assignRealmRole(ctx, userId, TENANT_OWNER_ROLE);
+  const userId = await createOwnerUserRecord(ctx, {
+    email: input.email,
+    password: input.password,
+    tenantId: input.tenantId,
+    firstName: input.firstName ?? 'E2E',
+    lastName: input.lastName ?? 'User',
+  });
+  await assignRealmRole(ctx, userId, input.role);
   return { userId, username: input.email, password: input.password };
 }
 
 /** POST the owner user record; returns its KC id (parsed from the Location header). */
 async function createOwnerUserRecord(
   ctx: KcAdminCtx,
-  input: { email: string; password: string; tenantId: string },
+  input: { email: string; password: string; tenantId: string; firstName: string; lastName: string },
 ): Promise<string> {
   const resp = await axios.post(
     `${ctx.kcUrl}/admin/realms/${ctx.kcRealm}/users`,
@@ -166,8 +192,8 @@ async function createOwnerUserRecord(
       email: input.email,
       enabled: true,
       emailVerified: true,
-      firstName: 'E2E',
-      lastName: 'Owner',
+      firstName: input.firstName,
+      lastName: input.lastName,
       requiredActions: [],
       attributes: { tenantId: [input.tenantId] },
       credentials: [{ type: 'password', value: input.password, temporary: false }],

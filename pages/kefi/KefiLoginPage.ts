@@ -36,6 +36,22 @@ export class KefiLoginPage {
   }
 
   /**
+   * Password sign-in that only waits for the SPA to LEAVE /login — no
+   * onboarding/role navigation. The BFF session cookie is set by the login POST,
+   * so a subsequent `page.goto(<role surface>)` is authenticated. Used by the
+   * role-surface smoke + the approvals-UI spec, where the caller drives the exact
+   * destination itself (`signInAndExpectOnboarding` is organizer-onboarding only).
+   */
+  async signIn(input: { email: string; password: string }): Promise<void> {
+    await this.usernameInput.fill(input.email);
+    await this.passwordInput.fill(input.password);
+    await Promise.all([
+      this.page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 30_000 }),
+      this.submitButton.click(),
+    ]);
+  }
+
+  /**
    * Sign in with the supplied credentials. A `tenant-owner` (the canary's
    * role) is routed to `/admin` by `postLoginRouteTable` — NOT to
    * `/organizer/onboarding`. OnboardingGate only fires on `/organizer/*`, so

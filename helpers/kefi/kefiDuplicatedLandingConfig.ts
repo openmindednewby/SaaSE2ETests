@@ -33,18 +33,25 @@ interface DisplayPoster {
 /**
  * Build a SavedLandingDto that copies the KUCY-shaped config and adds
  * canary-prefixed display passes (€15 / €30 / €20, mirroring ubb) + a poster.
- * `imageUrl`/`downloadUrl` are null (no real asset) — a valid value the
- * validator accepts.
+ *
+ * By default the poster `imageUrl`/`downloadUrl` are null (no real asset) — a
+ * valid value the validator accepts. Pass `opts.posterImageUrl` (an absolute
+ * http(s) URL) when a spec needs the poster to actually RENDER an `<img>` on the
+ * published page (the #266 render-coverage spec) rather than just publish clean.
  */
-export function buildDuplicatedLandingConfig(prefix: string): SavedLandingDto {
+export function buildDuplicatedLandingConfig(
+  prefix: string,
+  opts: { posterImageUrl?: string | null } = {},
+): SavedLandingDto {
   const base = buildKucyShapedConfig(prefix);
+  const posterImageUrl = opts.posterImageUrl ?? null;
   const passes: DisplayPass[] = [
     { id: 'party', name: `${prefix}Party Pass`, price: '€15', description: 'Evening party only' },
     { id: 'full', name: `${prefix}Full Pass`, price: '€30', featured: true, badge: 'Best Value', description: 'Workshops + parties' },
     { id: 'garden', name: `${prefix}Garden Pass`, price: '€20', description: 'Garden room access' },
   ];
   const posters: DisplayPoster[] = [
-    { id: 'poster-1', title: `${prefix}Main Poster`, imageUrl: null, downloadUrl: null },
+    { id: 'poster-1', title: `${prefix}Main Poster`, imageUrl: posterImageUrl, downloadUrl: null },
   ];
   // Build config as a variable first so the extra display keys are carried
   // structurally (a nested object LITERAL would trip TS excess-property checks).

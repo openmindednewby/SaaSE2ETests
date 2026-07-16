@@ -30,6 +30,22 @@ export interface TicketResponse {
   passCode: string | null;
 }
 
+/** The slice of the GDPR export (`TicketDataExportDto.Attendee`) the GDPR spec asserts on. */
+export interface TicketExportResponse {
+  status: number;
+  attendeeExternalId: string | null;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  isErased: boolean | null;
+}
+
+/** The GDPR erasure result (`TicketErasureResultDto`) — `attendeeErased` is the idempotency signal. */
+export interface TicketErasureResponse {
+  status: number;
+  attendeeErased: boolean | null;
+}
+
 export class KefiTicketClient {
   private readonly http: AxiosInstance;
   private readonly urls = getKefiUrls();
@@ -65,6 +81,37 @@ export class KefiTicketClient {
   async getMediaTicketStatus(token: string): Promise<number> {
     const resp = await this.http.get(`/api/v1/mediaTicket/${encodeURIComponent(token)}`);
     return resp.status;
+  }
+
+  /**
+   * GET the anonymous GDPR data-subject export (`/ticket/{token}/export`). 200 +
+   * the token-holder's own attendee PII on a valid token; 404 otherwise. After an
+   * erasure, `isErased` is true and the contact PII is cleared.
+   */
+  async exportTicketData(token: string): Promise<TicketExportResponse> {
+    const resp = await this.http.get(`/api/v1/ticket/${encodeURIComponent(token)}/export`);
+    const attendee = ((resp.data ?? {}) as { attendee?: {
+      externalId?: string; name?: string; email?: string | null; phone?: string | null; isErased?: boolean;
+    } }).attendee ?? {};
+    return {
+      status: resp.status,
+      attendeeExternalId: attendee.externalId ?? null,
+      name: attendee.name ?? null,
+      email: attendee.email ?? null,
+      phone: attendee.phone ?? null,
+      isErased: attendee.isErased ?? null,
+    };
+  }
+
+  /**
+   * POST the anonymous GDPR right-to-erasure (`/ticket/{token}/erasure`). 200 +
+   * `{ attendeeErased }` on a valid token (true the first time, false as an
+   * idempotent no-op thereafter); 404 for a bogus token.
+   */
+  async eraseTicketData(token: string): Promise<TicketErasureResponse> {
+    const resp = await this.http.post(`/api/v1/ticket/${encodeURIComponent(token)}/erasure`);
+    const data = (resp.data ?? {}) as { attendeeErased?: boolean };
+    return { status: resp.status, attendeeErased: data.attendeeErased ?? null };
   }
 
   /**
