@@ -490,6 +490,16 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      // Kefi organizer hard-delete-attendee (#278) — import one attendee then
+      // delete it; assert the row is gone; cross-tenant/unknown → 404. Pure @api
+      // (master-admin provisions the tenant); no browser/IMAP → 300s is plenty.
+      name: 'kefi-attendee-delete',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-attendee-delete\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       // Kefi organizer dashboard / P&L (#276 gap #4) — seeds genuinely-paid
       // attendees via the import path (RecordPayment moves gross/net) and asserts
       // the P&L numbers + the Draft-event safe-zeros case. Pure @api → 300s budget.
