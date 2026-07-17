@@ -109,7 +109,9 @@ export class KefiTicketClient {
    * idempotent no-op thereafter); 404 for a bogus token.
    */
   async eraseTicketData(token: string): Promise<TicketErasureResponse> {
-    const resp = await this.http.post(`/api/v1/ticket/${encodeURIComponent(token)}/erasure`);
+    // Empty JSON body so FastEndpoints gets an application/json Content-Type
+    // (a bodyless POST to a typed-request endpoint 415s).
+    const resp = await this.http.post(`/api/v1/ticket/${encodeURIComponent(token)}/erasure`, {});
     const data = (resp.data ?? {}) as { attendeeErased?: boolean };
     return { status: resp.status, attendeeErased: data.attendeeErased ?? null };
   }

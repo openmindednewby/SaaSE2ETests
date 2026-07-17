@@ -110,7 +110,10 @@ export class KefiRegistrationClient {
   ): Promise<StatusAnd<RegistrationRequestDto | unknown>> {
     const resp = await this.http.post<RegistrationRequestDto>(
       `/api/v1/organizer/registration-requests/${encodeURIComponent(requestExternalId)}/approve`,
-      undefined,
+      // Empty JSON body: the approve endpoint has a typed request (route-bound id),
+      // so FastEndpoints needs an application/json Content-Type or it 415s. axios
+      // sets it from the object body (matches how the UI calls the endpoint).
+      {},
       { headers: this.authHeaders(bearer) },
     );
     return { status: resp.status, data: resp.data };
