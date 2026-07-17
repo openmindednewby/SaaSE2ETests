@@ -51,6 +51,11 @@ export function buildProjects(): ProjectConfig {
   const kefiWebUrl = process.env.KEFI_WEB_URL;
   const ichnosWebUrl = process.env.ICHNOS_WEB_URL;
   const agoraWebUrl = process.env.AGORA_WEB_URL;
+  // Zygos: the console is the ONLY public entry (BFF + SPA same-origin). Unlike the other
+  // *_WEB_URL vars this has a real default rather than being left unset — the deployed host
+  // is the only place the suite CAN run (see the zygos-api/zygos-ui projects below), so an
+  // unset var would silently skip the whole suite instead of testing the one target it has.
+  const zygosWebUrl = process.env.ZYGOS_WEB_URL || 'https://app.zygos.dloizides.com';
   // NB: agora's browser DNS override is NOT read here. Its staging hosts live in
   // SAAS_STAGING_HOSTNAMES, so the GLOBAL E2E_HOST_OVERRIDE_IP mechanism in
   // playwright.config.ts maps them in a single `--host-resolver-rules` flag. A
@@ -161,6 +166,35 @@ export function buildProjects(): ProjectConfig {
       testMatch: /ichnos\/.*\.ui\.spec\.ts/,
       use: { ...CHROME, ...(ichnosWebUrl ? { baseURL: ichnosWebUrl } : {}) },
       dependencies: ['setup'],
+    },
+
+    // ---- Zygos (payment ops back-office) — ZY-18, two-tier ----
+    //
+    // 🔴 BOTH tiers target the DEPLOYED console at ZYGOS_WEB_URL (default
+    // https://app.zygos.dloizides.com), and there is no local/in-cluster alternative:
+    //
+    //  - zygos-api.dloizides.com DNS is not live (owner-gated) and zygos-api is a
+    //    staging-placed workload, so the API's ONLY public path is through the BFF at
+    //    `/bff/api/zygos/api/v1` — the same hop the browser takes.
+    //  - the session rides a `__Host-bff-zygos` cookie, and `__Host-` cookies REQUIRE
+    //    HTTPS by spec. A plain-HTTP in-cluster run cannot carry the session at all, so
+    //    "just point it at the service DNS" is not available even in principle.
+    //
+    // No `setup` dependency, and no storageState: like agora, this suite mints its own
+    // sessions (real /bff/login as the seeded zygos-realm fixture users). The shared
+    // `setup` project bakes a KATALOGOS/BaseClient storageState that is inert here — and
+    // depending on it once took the whole Agora suite down on staging for a reason that
+    // had nothing to do with Agora. Every spec `test.skip`s gracefully when the console is
+    // unreachable or the fixture users are unseeded.
+    //
+    // ignoreHTTPSErrors is deliberately NOT set: app.zygos.dloizides.com is a real Let's
+    // Encrypt host, so a bad cert there is a genuine failure worth seeing.
+    { name: 'zygos-api', workers: 1, testMatch: /zygos\/zygos-.*(?<!\.ui)\.spec\.ts/ },
+    {
+      name: 'zygos-ui',
+      workers: 1,
+      testMatch: /zygos\/.*\.ui\.spec\.ts/,
+      use: { ...CHROME, baseURL: zygosWebUrl },
     },
 
     // ---- Identity chunks (auth state, no multi-tenant users) ----
