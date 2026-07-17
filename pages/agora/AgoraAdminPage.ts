@@ -95,7 +95,10 @@ export class AgoraAdminPage {
 
     this.productsScreen = page.getByTestId('agora-products-screen');
     this.productsTable = page.getByTestId('products-table');
-    this.productsSearch = page.getByTestId('products-search');
+    // The shared declarative `<Filters>` bar (ui-tables 1.11.0) wraps each field in a
+    // labelled shell: the `products-search` id is on the wrapper View; the fillable
+    // <input> carries the `-input` suffix.
+    this.productsSearch = page.getByTestId('products-search-input');
     this.productAddButton = page.getByTestId('product-add-button');
 
     this.productEditorScreen = page.getByTestId('agora-product-editor-screen');
