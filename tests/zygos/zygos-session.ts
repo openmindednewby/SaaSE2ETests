@@ -12,13 +12,71 @@ import { expect, request as playwrightRequest } from '@playwright/test';
 
 import { ZYGOS_API_PREFIX, ZYGOS_TEST_PASSWORD, ZYGOS_WEB_URL, jsonCsrfHeaders } from './zygos-helpers.js';
 
-import type { APIRequestContext } from '@playwright/test';
+import type { APIRequestContext, APIResponse } from '@playwright/test';
 
 /** One authenticated console session: a cookie jar + the origin, exactly like the browser has. */
 export interface ZygosSession {
   readonly username: string;
   readonly context: APIRequestContext;
   dispose(): Promise<void>;
+}
+
+/** Bounded — a 429 that never clears is a real defect and must still fail the run. */
+const RATE_LIMIT_MAX_RETRIES = 5;
+/**
+ * ⚠️ EXPONENTIAL, and that is not decoration — it is this file's own warning applied to itself.
+ *
+ * `loginAs` below records that the limiter is a **SLIDING** window, so a tight retry loop keeps
+ * the window permanently saturated and the budget never recovers: *"the retry defeats itself"*.
+ * A flat 2s poll against a 60s/100 window is exactly that mistake. Backing off 2→4→8→16→32s
+ * (62s total) outlives the window, so the budget genuinely ages out.
+ */
+const RATE_LIMIT_BASE_WAIT_MS = 2_000;
+const TOO_MANY_REQUESTS = 429;
+
+/**
+ * 🔴 THE API BUDGET IS 100 REQUESTS PER 60 SECONDS, PER USER — and this suite spends it.
+ *
+ * `RateLimiting.Defaults` partitions the global limiter **by user id when authenticated** (by IP
+ * only when anonymous). That is the right design: an EMI's ops team of five each get their own
+ * budget, and 100/min is ~1.7 req/s sustained — ample for a human.
+ *
+ * But every spec here acts as the SAME user, so the whole run drains ONE bucket in ~40s. The
+ * suite legitimately does the work of many operators at once. Without this, roughly one run in
+ * three failed with a 429 on an unrelated assertion — a flake that looked like a product bug and
+ * was not. **The limiter is correct; the suite has to behave like a real client and back off.**
+ *
+ * Deliberately NOT a blanket "retry anything that failed": only 429, only a bounded number of
+ * times, honouring `Retry-After`. A 429 that outlives the budget still fails the run — otherwise
+ * this would hide the very rate-limit regression it looks like.
+ */
+function withRateLimitBackoff(context: APIRequestContext): APIRequestContext {
+  const verbs = ['get', 'post', 'put', 'patch', 'delete', 'fetch', 'head'] as const;
+
+  return new Proxy(context, {
+    get(target, prop, receiver) {
+      const original = Reflect.get(target, prop, receiver);
+      if (typeof original !== 'function' || !verbs.includes(prop as (typeof verbs)[number])) {
+        return typeof original === 'function' ? original.bind(target) : original;
+      }
+
+      return async (...args: unknown[]): Promise<APIResponse> => {
+        let response = (await original.apply(target, args)) as APIResponse;
+
+        for (let attempt = 0; attempt < RATE_LIMIT_MAX_RETRIES && response.status() === TOO_MANY_REQUESTS; attempt++) {
+          const retryAfter = Number(response.headers()['retry-after']);
+          const waitMs =
+            Number.isFinite(retryAfter) && retryAfter > 0
+              ? retryAfter * 1_000
+              : RATE_LIMIT_BASE_WAIT_MS * 2 ** attempt;
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+          response = (await original.apply(target, args)) as APIResponse;
+        }
+
+        return response;
+      };
+    },
+  });
 }
 
 /**
@@ -80,7 +138,7 @@ async function restoreSession(username: string): Promise<ZygosSession | null> {
     // Verify against a real authenticated endpoint. A parked cookie that silently expired would
     // otherwise turn every downstream assertion into a confusing 401.
     const probe = await context.get(`${ZYGOS_API_PREFIX}/payment-instructions?pageSize=1`, { timeout: 15_000 });
-    if (probe.ok()) return { username, context, dispose: () => context.dispose() };
+    if (probe.ok()) return { username, context: withRateLimitBackoff(context), dispose: () => context.dispose() };
   } catch {
     /* fall through — treat as stale */
   }
@@ -108,7 +166,7 @@ async function attemptLogin(username: string, password: string): Promise<LoginOu
       data: { username, password },
       timeout: 20_000,
     });
-    if (res.ok()) return { kind: 'ok', session: { username, context, dispose: () => context.dispose() } };
+    if (res.ok()) return { kind: 'ok', session: { username, context: withRateLimitBackoff(context), dispose: () => context.dispose() } };
 
     await context.dispose();
     if (res.status() === 429) return { kind: 'throttled' };

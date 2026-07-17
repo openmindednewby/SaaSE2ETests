@@ -96,9 +96,20 @@ test.describe('Zygos maker-checker @zygos-api @api', () => {
 
     if (editedBy) {
       // A MATERIAL edit — this is what makes the editor a Contributor.
+      //
+      // The creditor is REPLACED wholesale, so it must carry a complete counterparty.
+      // This previously omitted `iban`, which silently stripped it — and the draft still
+      // reached `Validated`, because no request validation ran anywhere in the service
+      // (D1). A payment with no creditor IBAN could be submitted to a provider. Once the
+      // validators were actually registered, `validate` started refusing it correctly and
+      // this fixture was exposed as building an invalid payment. The product is right;
+      // the edit is what was wrong.
       const editRes = await editedBy.update(
         created.externalId,
-        instructionBody(tag, { amount: 222.75, creditor: { name: `Creditor ${tag} REDIRECTED`, country: 'DE' } }),
+        instructionBody(tag, {
+          amount: 222.75,
+          creditor: { name: `Creditor ${tag} REDIRECTED`, iban: 'DE89370400440532013000', country: 'DE' },
+        }),
       );
       expect(editRes.status(), `edit by ${editedBy.actor} failed: ${await bodyText(editRes)}`).toBe(200);
     }
