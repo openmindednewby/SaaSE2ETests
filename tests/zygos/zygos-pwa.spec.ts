@@ -67,29 +67,36 @@ test.describe('Zygos PWA surface @zygos-api @api', () => {
 
 test.describe('Zygos PWA registration @zygos-ui @ui', () => {
   test('🔴 the service worker actually takes control in a real browser', async ({ page }) => {
-    await page.goto(`${ZYGOS_WEB_URL}/`, { waitUntil: 'domcontentloaded' });
+    // 🔴 MUST wait for the `load` event, not `domcontentloaded`: the registration is scheduled in
+    // the +html.tsx `load` handler (behind requestIdleCallback). At domcontentloaded it has not even
+    // been queued yet, and Playwright's headless idle-scheduler can starve requestIdleCallback long
+    // past a short timeout — which is exactly why the earlier `domcontentloaded` + 15s wait flaked
+    // while the SW controls the page within ~5s in a real interactive browser (verified by hand).
+    await page.goto(`${ZYGOS_WEB_URL}/`, { waitUntil: 'load' });
 
-    // The registration runs on `load` behind requestIdleCallback, then install→activate→claim().
-    // waitForFunction below is the actionable wait that spans the load event + lifecycle.
-    // Wait (actionably) until a service worker is ACTIVE for this origin — the browser drives the
-    // registration lifecycle, so this is the correct signal, not a fixed sleep.
-    const SW_TIMEOUT_MS = 15000;
-    await page.waitForFunction(
+    // `navigator.serviceWorker.ready` is the CANONICAL "a worker is active for this scope" signal —
+    // it resolves whenever activation completes, however late the idle callback fired, so it absorbs
+    // the requestIdleCallback delay instead of racing it. Wrapped in waitForFunction (not awaited
+    // raw) so a genuinely-never-registering shell fails with a clean timeout rather than hanging.
+    const SW_TIMEOUT_MS = 30000;
+    const activeUrl = await page.waitForFunction(
       async () => {
-        if (!('serviceWorker' in navigator)) return false;
-        const registration = await navigator.serviceWorker.getRegistration();
-        return registration?.active != null || navigator.serviceWorker.controller != null;
+        if (!('serviceWorker' in navigator)) return null;
+        const registration = await navigator.serviceWorker.ready;
+        return registration.active?.scriptURL ?? null;
       },
       undefined,
-      { timeout: SW_TIMEOUT_MS },
+      { timeout: SW_TIMEOUT_MS, polling: 500 },
     );
 
-    // `controller` is set once the worker claims the page (clients.claim() in activate);
-    // `active.scriptURL` proves a worker is at least installed+activated for this scope.
+    // One reload so the now-active worker is guaranteed to CONTROL the page (controller is only set
+    // for pages that started under a worker, or after clients.claim() — a reload removes that race).
+    await page.reload({ waitUntil: 'load' });
     const controllerUrl = await page.evaluate(async () => {
       const registration = await navigator.serviceWorker.getRegistration();
       return navigator.serviceWorker.controller?.scriptURL ?? registration?.active?.scriptURL ?? null;
     });
+    void activeUrl;
 
     expect(
       controllerUrl,
