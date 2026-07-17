@@ -41,10 +41,21 @@ test.describe.configure({ mode: 'serial' });
 
 const CANARY_EVENT_DAYS_AHEAD = 90;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const PUBLISH_BUILD_TIMEOUT_MS = 900_000;
-const PUBLISH_POLL_TIMEOUT_MS = 600_000;
+// The kaniko publish build runs on staging's memory-tight single kefi-landings
+// Deployment, where a cold build has been observed to take ~8-12 min (vs a few
+// minutes on prod). The budgets below are deliberately generous so a slow — but
+// still succeeding — staging build does not false-fail this @slow spec:
+//   • test ceiling (25 min) > signup/wizard (~2-3 min) + poll (up to 15 min) +
+//     render probe (up to 4 min), with headroom.
+//   • poll (15 min) comfortably covers the worst-case ~12 min build.
+// If a run STILL cannot reach Succeeded inside this budget it is a staging
+// resource limit (the feature publishes fine on prod), not a product defect —
+// the spec is @slow + owns its own Playwright project, so it is fully isolated
+// from the core lane and cannot block it.
+const PUBLISH_BUILD_TIMEOUT_MS = 1_500_000;
+const PUBLISH_POLL_TIMEOUT_MS = 900_000;
 const PUBLISH_POLL_INTERVAL_MS = 8_000;
-const RENDER_PROBE_TIMEOUT_MS = 180_000;
+const RENDER_PROBE_TIMEOUT_MS = 240_000;
 
 function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
