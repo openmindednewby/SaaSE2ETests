@@ -37,7 +37,9 @@ const T = {
 
   instructionsScreen: 'zygos-instructions-screen',
   instructionsNew: 'zygos-instructions-new',
-  instructionsSearch: 'zygos-instructions-search',
+  // The list's search box moved onto the shared `@dloizides/ui-tables` `Filters` bar, whose
+  // text field renders its input at `${fieldTestID}-input` (the field's testID is the wrapper).
+  instructionsSearch: 'zygos-instructions-search-input',
 
   formScreen: 'zygos-instruction-form-screen',
   formSubmit: 'zygos-instruction-form-submit',
