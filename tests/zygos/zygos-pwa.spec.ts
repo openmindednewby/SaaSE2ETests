@@ -72,6 +72,12 @@ test.describe('Zygos PWA registration @zygos-ui @ui', () => {
     // been queued yet, and Playwright's headless idle-scheduler can starve requestIdleCallback long
     // past a short timeout — which is exactly why the earlier `domcontentloaded` + 15s wait flaked
     // while the SW controls the page within ~5s in a real interactive browser (verified by hand).
+    // 'load' is REQUIRED here and is the subject of the test, not laziness. The registration is
+    // scheduled inside the +html.tsx `load` handler; at 'domcontentloaded' it has not been queued
+    // yet, so an actionable wait would be racing work that has not started. The actionable wait
+    // still happens — it is `navigator.serviceWorker.ready` below — this only picks the lifecycle
+    // point to start from.
+    // eslint-disable-next-line no-wait-until-slow/no-wait-until-slow
     await page.goto(`${ZYGOS_WEB_URL}/`, { waitUntil: 'load' });
 
     // `navigator.serviceWorker.ready` is the CANONICAL "a worker is active for this scope" signal —
@@ -91,6 +97,12 @@ test.describe('Zygos PWA registration @zygos-ui @ui', () => {
 
     // One reload so the now-active worker is guaranteed to CONTROL the page (controller is only set
     // for pages that started under a worker, or after clients.claim() — a reload removes that race).
+    // The reload IS the mechanism under test, not a workaround: `navigator.serviceWorker.controller`
+    // is only set for a page that STARTED under a worker (or after clients.claim()), so a freshly
+    // registered worker never controls the page that registered it. Reloading is the only way to
+    // observe control, which is the property that actually matters to a user. 'load' for the same
+    // reason as the initial navigation above.
+    // eslint-disable-next-line no-page-reload/no-page-reload, no-wait-until-slow/no-wait-until-slow
     await page.reload({ waitUntil: 'load' });
     const controllerUrl = await page.evaluate(async () => {
       const registration = await navigator.serviceWorker.getRegistration();

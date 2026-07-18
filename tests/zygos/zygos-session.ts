@@ -5,6 +5,19 @@
 //
 // 🔴 THE LOGIN BUDGET IS FIVE REQUESTS PER SIXTY SECONDS, PER IP — and it is the reason this
 // file exists at all. See `loginAs` below before changing anything here.
+//
+/* eslint-disable max-file-lines/max-file-lines -- This file is already the RESULT of applying the
+ * rule: it was split out of `zygos-helpers.ts` on a real seam (helpers = constants + pure
+ * utilities, this = everything stateful about being logged in). It is over the 300-line limit
+ * because roughly half of it is prose explaining two rate limiters (5 logins/60s per IP, 100
+ * API calls/60s per user) whose behaviour has already caused false-green tests — deleting that
+ * commentary to satisfy a line count would remove the most valuable thing here.
+ *
+ * The remaining seams are all bad ones: session minting, the cookie cache and the backoff proxy
+ * share the login budget as hidden state, so splitting them again would put a single invariant
+ * in three files and invite exactly the "the retry defeats itself" bug documented below. Revisit
+ * if a genuinely independent concern lands here. Mirrors the same justified disable on the
+ * shared `E2ETests/shared/testIds` barrel. */
 import fs from 'fs';
 import path from 'path';
 
@@ -69,6 +82,15 @@ function withRateLimitBackoff(context: APIRequestContext): APIRequestContext {
             Number.isFinite(retryAfter) && retryAfter > 0
               ? retryAfter * 1_000
               : RATE_LIMIT_BASE_WAIT_MS * 2 ** attempt;
+          // The rule targets sleeping INSTEAD of waiting on an actionable signal, which is the right
+          // default and is enforced everywhere else in this suite. It does not apply here: this is
+          // HTTP rate-limit backoff in an APIRequestContext proxy. There is no page, no DOM and no
+          // selector to await — the only thing that changes is the server's sliding 60s window, and
+          // the only way to observe it is to let wall-clock time pass and re-issue the request. The
+          // duration is not arbitrary either: it honours `Retry-After` when the server sends one and
+          // otherwise backs off exponentially (2→4→8→16→32s), which is what actually outlives a
+          // sliding window — a tight poll re-saturates it and never recovers.
+          // eslint-disable-next-line no-set-timeout-in-promise/no-set-timeout-in-promise
           await new Promise((resolve) => setTimeout(resolve, waitMs));
           response = (await original.apply(target, args)) as APIResponse;
         }
