@@ -71,3 +71,15 @@ visual-qa-screenshots/**
 playwright-report/
 playwright-report-games/
 test-results/
+
+# Ad-hoc debug probes (probe.mjs, probe2.mjs, …). These are throwaway scripts an
+# agent writes to poke a live surface while debugging; they are not specs and
+# Playwright never runs them (testMatch requires *.spec.ts).
+#
+# They are ignored rather than committed because `manage.sh deploy playwright-e2e`
+# REFUSES a dirty build context (docker build ships the working tree, not HEAD).
+# A scratch file that keeps reappearing therefore blocks every E2E image rebuild
+# and forces a race of commit-vs-recreate with whoever is actively debugging.
+# Ignoring them keeps the tree clean, keeps scratch OUT of the shipped image, and
+# leaves the debugging workflow untouched.
+probe*.mjs

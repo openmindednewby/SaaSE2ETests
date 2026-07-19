@@ -25,3 +25,6 @@ error-copy.md
 .gitignore
 .vscode
 .idea
+
+# Ad-hoc debug probes — never ship scratch in the image (see .gitignore).
+probe*.mjs
