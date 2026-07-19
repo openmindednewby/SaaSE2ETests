@@ -112,6 +112,20 @@ export function buildProjects(): ProjectConfig {
     // production defects; `workers: 1` because it performs a login per portal and auth is rate
     // limited (5/60s per IP).
     { name: 'i18n-fleet', workers: 1, testMatch: /i18n\/.*\.spec\.ts/, dependencies: ['setup'] },
+    // Fleet-wide security guards. Currently the demo-credential publication check: no credential a
+    // portal publishes via `GET /bff/config` may be a seeded privileged-account password, on ANY of
+    // the seven portals. Generalised from `zygos/zygos-public-surface.spec.ts`, which proved the
+    // pattern on one portal while six others carried the same exposure unguarded.
+    //
+    // NO `dependencies: ['setup']` on purpose — every assertion here is anonymous (that is the
+    // whole point: it asks what a stranger can reach), and depending on auth setup would make a
+    // security guard skip whenever the shared login happens to be broken.
+    // The `tests[/\\]` anchor is load-bearing: an unanchored /security\/.*\.spec\.ts/ also swept in
+    // tests/questioner/security/*.spec.ts, dragging two authenticated questioner specs into an
+    // anonymous project with no `setup` dependency — where they failed for lack of a session and
+    // looked like security findings. Both separators are matched because Playwright reports
+    // Windows paths with backslashes.
+    { name: 'security-fleet', workers: 1, testMatch: /tests[/\\]security[/\\].*\.spec\.ts/ },
     // Ichnos (crypto AML) — @api tier: health/smoke (M0-9), screen-address/entity/combined + report (M1-1..3),
     // and the M1-10 sellable flows: onboarding (F1), API keys (F3), batch CSV (F4), billing (F7). No browser
     // needed; the authed assertions opportunistically use an ichnos-realm ROPC token. The negative-lookbehind
