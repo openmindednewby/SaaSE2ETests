@@ -40,10 +40,40 @@ const STEP_COMMIT_MS = 15_000;
 // (mirrors agora-admin.ui.spec.ts; `import.meta.url` is unusable under this repo's TS module setting).
 const IMAGE_FIXTURE = path.join(process.cwd(), 'fixtures', 'files', 'test-image.png');
 
-/** API-clean MERCHANT_B after a browser journey: unpublish + sweep the ES08 products it created. */
+/**
+ * API-clean MERCHANT_B after a browser journey: unpublish + sweep the ES08 products it created.
+ *
+ * 🔴 A CLEANUP THAT CANNOT CLEAN MUST SAY SO. The previous version was `if (!token) return;` — a
+ * SILENT no-op, and it cost this test its own correctness in a way that took a full triage to see:
+ *
+ *   `getAgoraToken` returns null (never throws) when the KC URL or credentials are missing.
+ *   `AGORA_E2E_CLIENT_SECRET` is set in .env.staging.secrets and MISSING from .env.prod.secrets,
+ *   so on prod the token is null → cleanup returned silently → the shop was NEVER unpublished →
+ *   `es08onboarding` stayed PUBLICLY PUBLISHED on production → every later run of this @critical
+ *   test reached step 6, found the wizard rendering its already-live variant (no publish button),
+ *   and failed with a bare 15s timeout that reads exactly like "the wizard is broken".
+ *
+ * So one missing secret produced a permanently-red @critical test, a publicly-live test shop, and a
+ * failure message pointing at the wrong thing. None of it was visible, because the one line that
+ * could have said "I did not clean up" chose to say nothing.
+ *
+ * This does NOT throw: it runs in the test's `finally`, and throwing here would replace the real
+ * failure with a cleanup error. It writes a loud, greppable line instead, naming the variable and
+ * the consequence.
+ */
 async function cleanup(request: APIRequestContext, password: string): Promise<void> {
   const token = await getAgoraToken(ONBOARDING_MERCHANT, password);
-  if (!token) return;
+  if (!token) {
+    process.stdout.write(
+      `🔴 [agora-onboarding-ui-cleanup] DID NOT CLEAN UP — could not mint a token for ` +
+        `${ONBOARDING_MERCHANT}. AGORA_E2E_CLIENT_SECRET is almost certainly unset for this target ` +
+        `(it is present in .env.staging.secrets and missing from .env.prod.secrets). ` +
+        `CONSEQUENCE: the "${ONBOARDING_SHOP_SLUG}" shop is left PUBLICLY PUBLISHED, and every ` +
+        `subsequent run of this test will fail at the publish step because the wizard renders its ` +
+        `already-live variant. Fix the environment, not this test.\n`,
+    );
+    return;
+  }
   const note = await cleanupOnboardingShop(request, token);
   process.stdout.write(`[agora-onboarding-ui-cleanup] ${note}\n`);
 }
