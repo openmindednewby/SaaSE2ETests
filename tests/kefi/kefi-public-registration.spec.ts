@@ -57,6 +57,56 @@ test.describe('Kefi public registration', () => {
   test.skip(!isRemoteTarget(), 'Kefi event-ops E2E targets a deployed environment');
   test.skip(!fixtureTenantAvailable(), FIXTURE_TENANT_SKIP_REASON);
 
+  // ⚠️ ORDER MATTERS (the file runs serially).
+  //
+  // The route allows 5 requests / 60 s per IP, and the two `@api` tests spend
+  // exactly that budget between them. The `@api` client waits the window out on
+  // a 429, but the `@ui` test submits through the BROWSER — there is no retry
+  // hook there, so a 429 surfaces as a bare "the form POST is accepted" failure
+  // that looks like a product bug and is not one. Running the un-retryable
+  // browser submit FIRST gives it the fresh budget.
+  test('@ui the public register form submits and shows the success panel', async ({ page }) => {
+    const ops = await openEventOps();
+    const form = new KefiPublicRegisterPage(page);
+    let createdEmail = '';
+    try {
+      createdEmail = fixtureAttendeeEmail(ops.marker, 'ui');
+      await form.goto(ops.tenant.siteUrl);
+
+      await form.fill({
+        name: 'E2E',
+        surname: `${ops.marker}-ui`,
+        phone: PHONE,
+        email: createdEmail,
+        passCode: DEFAULT_PASS_CODE,
+        consent: true,
+      });
+
+      const status = await form.submitAndAwaitResponse(ops.tenant.slug);
+      expect(status, 'the form POST is accepted').toBe(HTTP_CREATED);
+      await form.expectSuccess();
+
+      // The row must really exist server-side — a success panel rendered from a
+      // stale/optimistic branch would otherwise pass. Reading it back also gives
+      // us the id we need to delete it.
+      const { KefiDoorLedgerClient } = await import(
+        '../../helpers/kefi/kefiDoorLedgerClient.js'
+      );
+      const ledger = new KefiDoorLedgerClient();
+      const view = await ledger.getLedgerByBearer(
+        ops.tenant.slug,
+        ops.bearer,
+        ops.tenant.eventExternalId,
+      );
+      const row = (view.data as { attendees: { email: string | null; attendeeExternalId: string }[] })
+        .attendees.find((a) => a.email === createdEmail);
+      expect(row, 'the UI registration reached the database').toBeDefined();
+      ops.trackAttendee(row!.attendeeExternalId);
+    } finally {
+      const failures = await ops.cleanup();
+      expect(failures, 'every row this test created was cleaned up').toEqual([]);
+    }
+  });
   test('@api rejects a registration without consent, with a bad pass, or for an unknown tenant', async () => {
     const tenant = getKefiFixtureTenant();
     const register = new KefiPublicRegisterClient();
@@ -161,46 +211,4 @@ test.describe('Kefi public registration', () => {
     }
   });
 
-  test('@ui the public register form submits and shows the success panel', async ({ page }) => {
-    const ops = await openEventOps();
-    const form = new KefiPublicRegisterPage(page);
-    let createdEmail = '';
-    try {
-      createdEmail = fixtureAttendeeEmail(ops.marker, 'ui');
-      await form.goto(ops.tenant.siteUrl);
-
-      await form.fill({
-        name: 'E2E',
-        surname: `${ops.marker}-ui`,
-        phone: PHONE,
-        email: createdEmail,
-        passCode: DEFAULT_PASS_CODE,
-        consent: true,
-      });
-
-      const status = await form.submitAndAwaitResponse(ops.tenant.slug);
-      expect(status, 'the form POST is accepted').toBe(HTTP_CREATED);
-      await form.expectSuccess();
-
-      // The row must really exist server-side — a success panel rendered from a
-      // stale/optimistic branch would otherwise pass. Reading it back also gives
-      // us the id we need to delete it.
-      const { KefiDoorLedgerClient } = await import(
-        '../../helpers/kefi/kefiDoorLedgerClient.js'
-      );
-      const ledger = new KefiDoorLedgerClient();
-      const view = await ledger.getLedgerByBearer(
-        ops.tenant.slug,
-        ops.bearer,
-        ops.tenant.eventExternalId,
-      );
-      const row = (view.data as { attendees: { email: string | null; attendeeExternalId: string }[] })
-        .attendees.find((a) => a.email === createdEmail);
-      expect(row, 'the UI registration reached the database').toBeDefined();
-      ops.trackAttendee(row!.attendeeExternalId);
-    } finally {
-      const failures = await ops.cleanup();
-      expect(failures, 'every row this test created was cleaned up').toEqual([]);
-    }
-  });
 });

@@ -66,7 +66,15 @@ export interface StatusAnd<T> {
   data: T;
 }
 
-const UTF8_BOM = '﻿';
+/**
+ * The decoded UTF-8 byte-order mark (bytes `EF BB BF` → `U+FEFF`).
+ *
+ * Written as an escape, never as a literal character: a raw BOM in a source
+ * file is invisible in every editor and diff, and tooling may normalise or
+ * strip it — which silently turns the "the export has a BOM" assertion into a
+ * test that can never pass.
+ */
+const UTF8_BOM = '\uFEFF';
 
 export class KefiAttendeeAdminClient {
   private readonly http: AxiosInstance;
@@ -96,18 +104,27 @@ export class KefiAttendeeAdminClient {
   }
 
   /**
-   * GET the attendee CSV export. The response is requested as text with NO axios
-   * transform so the exact bytes (BOM, CRLF, quoting) survive to the assertions.
+   * GET the attendee CSV export.
+   *
+   * Requested as an ARRAYBUFFER and decoded here by hand, deliberately: this
+   * endpoint's contract is byte-level (UTF-8 BOM, CRLF terminators, RFC-4180
+   * quoting), and axios's `responseType: 'text'` path SILENTLY STRIPS the
+   * leading BOM while decoding. Asserting "the export has a BOM" against that
+   * decoded string is a test that can never pass no matter how correct the
+   * server is. Reading the raw bytes is the only way to assert what was
+   * actually sent.
    */
   async exportCsv(bearer: string, eventExternalId?: string): Promise<CsvExportResponse> {
     const resp = await this.http.get('/api/v1/admin/attendees/export', {
       headers: this.authHeaders(bearer),
       params: eventExternalId === undefined ? undefined : { eventExternalId },
-      responseType: 'text',
-      transformResponse: [(data: unknown) => data],
+      responseType: 'arraybuffer',
     });
 
-    const raw = typeof resp.data === 'string' ? resp.data : '';
+    // A non-2xx (401/404) carries a JSON/empty body, not CSV — decode either way.
+    const raw = Buffer.isBuffer(resp.data)
+      ? resp.data.toString('utf8')
+      : Buffer.from((resp.data ?? []) as ArrayBuffer).toString('utf8');
     const hadBom = raw.startsWith(UTF8_BOM);
     return {
       status: resp.status,

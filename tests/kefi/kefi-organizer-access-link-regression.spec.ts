@@ -48,11 +48,23 @@ test.describe('Kefi organizer surface survives an existing access link', () => {
   }) => {
     const ops = await openEventOps();
 
-    // Capture anything React or the browser throws during render. `pageerror`
-    // fires for an uncaught exception even when a boundary swallows the UI
-    // damage, so this catches the crash class directly rather than by proxy.
+    // Capture anything thrown during render.
+    //
+    // BOTH listeners are needed. A React error boundary CATCHES the exception,
+    // so in a production build `pageerror` frequently never fires — React
+    // re-throws to `console.error` instead. Listening only for `pageerror`
+    // would let the exact crash this spec guards against slip past silently,
+    // which is how a "renders fine" assertion can pass over a dead dashboard.
     const pageErrors: string[] = [];
     page.on('pageerror', (error) => pageErrors.push(error.message));
+    page.on('console', (message) => {
+      if (message.type() !== 'error') return;
+      const text = message.text();
+      // Keep only real exceptions; a failed asset/401 probe is not a crash.
+      if (text.includes('TypeError') || text.includes('ReferenceError')) {
+        pageErrors.push(text.split('\n')[0]);
+      }
+    });
 
     try {
       // ── 1. Make the dangerous state exist ───────────────────────────────
@@ -75,6 +87,18 @@ test.describe('Kefi organizer surface survives an existing access link', () => {
       await organizer.gotoEvent(ops.tenant.eventExternalId);
 
       // ── 3. It renders ───────────────────────────────────────────────────
+      // Assert "nothing threw" FIRST. If the dashboard crashed, the exception
+      // text is the diagnosis; a bare "element not found" from expectRendered()
+      // would report the symptom and hide the cause.
+      await expect
+        .poll(() => pageErrors, {
+          message:
+            'no uncaught exception while rendering the organizer surface ' +
+            '(a null string field reaching a string method kills the WHOLE dashboard)',
+          timeout: 20_000,
+        })
+        .toEqual([]);
+
       await organizer.expectRendered();
 
       // The sections that used to disappear behind the boundary are all here.
@@ -98,7 +122,7 @@ test.describe('Kefi organizer surface survives an existing access link', () => {
         'our minted link is rendered as a row (the null-bearing row WAS traversed)',
       ).toBeVisible({ timeout: 30_000 });
 
-      // ── 4. Nothing threw ────────────────────────────────────────────────
+      // ── 4. Still nothing threw, after the whole surface settled ─────────
       expect(
         pageErrors,
         'no uncaught error was raised while rendering the organizer surface',

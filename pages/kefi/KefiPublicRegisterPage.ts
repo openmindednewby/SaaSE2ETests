@@ -48,9 +48,14 @@ export class KefiPublicRegisterPage {
   }
 
   /**
-   * Fill every field. `passCode` selects the matching radio in the pass group —
-   * the tiles are `<input type="radio" name="passCode" value="{code}">`, so the
-   * value selector is exact and independent of the tile's display label.
+   * Fill every field.
+   *
+   * `passCode` is selected by clicking the pass TILE, not the radio input.
+   * The radios are styled away (`.reg-pass-option input { position:absolute;
+   * opacity:0; pointer-events:none }`) and the visible tile is the click
+   * target, so `radio.check()` times out on an un-actionable element. Clicking
+   * the label is both what a real visitor does and what actually works — the
+   * radio is then asserted checked, so a broken tile→radio binding still fails.
    */
   async fill(input: {
     name: string;
@@ -64,8 +69,15 @@ export class KefiPublicRegisterPage {
     await this.surnameInput.fill(input.surname);
     await this.phoneInput.fill(input.phone);
     await this.emailInput.fill(input.email);
-    await this.page.locator(`input[name="passCode"][value="${input.passCode}"]`).check();
+    await this.selectPass(input.passCode);
     if (input.consent) await this.consentCheckbox.check();
+  }
+
+  /** Click the visible pass tile and confirm its hidden radio became selected. */
+  async selectPass(passCode: string): Promise<void> {
+    const radio = this.page.locator(`input[name="passCode"][value="${passCode}"]`);
+    await this.page.locator(`label.reg-pass-option:has(${`input[value="${passCode}"]`})`).click();
+    await expect(radio, `the "${passCode}" pass tile selects its radio`).toBeChecked();
   }
 
   /**
