@@ -30,6 +30,7 @@
 // build and the credential is k8s config. So the join has to be a TEST, and this is it.
 import { expect, test } from '@playwright/test';
 
+import { retryWhileRateLimited } from '../../helpers/rate-limit.js';
 import { ZYGOS_TEST_PASSWORD, ZYGOS_WEB_URL, bodyText, bodyJson, jsonCsrfHeaders } from './zygos-helpers.js';
 
 /** The marketing site that PRINTS the demo credential to the public. */
@@ -67,10 +68,20 @@ test.describe('Zygos public surface @zygos-api @api', () => {
 
     // 🔴 THE ASSERTION THAT MATTERS. Not "a demo user exists" — that would pass while the page
     // showed a stale password. This logs in with THE EXACT STRINGS the page hands the visitor.
-    const res = await request.post(`${ZYGOS_WEB_URL}/bff/login`, {
-      headers: jsonCsrfHeaders(),
-      data: { username: demo.publishedUsername, password: demo.publishedPassword },
-    });
+    //
+    // Retried on 429 for the same reason as the shared-password probe below: `/bff/login` is rate
+    // limited 5/60s per IP, and an un-retried 429 fails this with "the credentials advertised on
+    // the login page DO NOT WORK" — an alarming, wrong conclusion drawn from an empty body. A
+    // request still 429 after all retries surfaces as a real failure, so nothing is masked.
+    const res = await retryWhileRateLimited(
+      'zygos advertised demo credential /bff/login',
+      () =>
+        request.post(`${ZYGOS_WEB_URL}/bff/login`, {
+          headers: jsonCsrfHeaders(),
+          data: { username: demo.publishedUsername, password: demo.publishedPassword },
+        }),
+      (r) => r.status(),
+    );
     expect(
       res.status(),
       `The credentials advertised on the login page DO NOT WORK — every visitor sent to the demo is bounced. body: ${await bodyText(res)}`,
@@ -117,10 +128,29 @@ test.describe('Zygos public surface @zygos-api @api', () => {
       ZYGOS_TEST_PASSWORD,
     );
 
-    const res = await request.post(`${ZYGOS_WEB_URL}/bff/login`, {
-      headers: jsonCsrfHeaders(),
-      data: { username: demo.publishedUsername, password: ZYGOS_TEST_PASSWORD },
-    });
+    // 🔴 THIS PROBE MUST RETRY ON 429, AND THE REASON IS THE ASSERTION BELOW.
+    //
+    // `/bff/login` is rate limited (5/60s per IP). This spec sits downstream of the login-heavy
+    // zygos-auth suite, so in a full sweep the limiter routinely answers 429 here — with an EMPTY
+    // body. A bare `.toBe(401)` then fails, and the message it prints is the most alarming one in
+    // the file: "the estate-wide credential is now effectively public". That is a FALSE ALARM on a
+    // security-critical assertion, and a security test that cries wolf is a security test people
+    // learn to skip. Observed 2026-07-19: failed in-sweep with 429/empty body, passed in isolation
+    // seconds later against the same unchanged deployment.
+    //
+    // Retrying does NOT weaken the guard: `retryWhileRateLimited` surfaces a request that is STILL
+    // 429 after all attempts as a real failure, so a genuinely broken limiter is never masked. The
+    // strict `.toBe(401)` is deliberately KEPT — the point is to get a real answer from the server
+    // before judging it, not to accept a wider range of answers.
+    const res = await retryWhileRateLimited(
+      'zygos demo user vs shared platform password /bff/login',
+      () =>
+        request.post(`${ZYGOS_WEB_URL}/bff/login`, {
+          headers: jsonCsrfHeaders(),
+          data: { username: demo.publishedUsername, password: ZYGOS_TEST_PASSWORD },
+        }),
+      (r) => r.status(),
+    );
     expect(
       res.status(),
       `the demo user accepts the shared platform password ⇒ it was swept back into testUsers and the estate-wide credential is now effectively public. body: ${await bodyText(res)}`,
