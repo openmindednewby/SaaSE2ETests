@@ -24,6 +24,7 @@
 
 import axios, { type AxiosInstance } from 'axios';
 import { sharedHttpsAgent } from '../http-agent.js';
+import { retryWhileRateLimited } from '../rate-limit.js';
 import { getKefiUrls } from './kefiUrls.js';
 
 const HTTP_TIMEOUT_MS = 30_000;
@@ -71,6 +72,11 @@ export interface StatusAnd<T> {
   data: T;
 }
 
+/** A register response, plus the `Retry-After` header the limiter may send. */
+export interface RegisterResponse extends StatusAnd<RegisterAttendeeResult | unknown> {
+  retryAfter: unknown;
+}
+
 /** True when the response is the per-IP registration rate limit, not a product failure. */
 export function isRateLimited(status: number): boolean {
   return status === HTTP_TOO_MANY_REQUESTS;
@@ -104,40 +110,41 @@ export class KefiPublicRegisterClient {
   async register(
     slug: string,
     body: RegisterAttendeeBody,
-  ): Promise<StatusAnd<RegisterAttendeeResult | unknown>> {
+  ): Promise<RegisterResponse> {
     const resp = await this.http.post<RegisterAttendeeResult>(
       `/api/v1/t/${encodeURIComponent(slug)}/register`,
       body,
     );
-    return { status: resp.status, data: resp.data };
+    return {
+      status: resp.status,
+      data: resp.data,
+      retryAfter: resp.headers['retry-after'],
+    };
   }
 
   /**
    * POST the registration, backing off and retrying while the per-IP limiter is
    * returning 429.
    *
-   * This is NOT a "sleep until the UI settles" — no assertion can substitute for
-   * waiting out a fixed-window rate limiter, and every spec in this suite shares
-   * one source IP with every other spec (and with any concurrently running
-   * suite). Without this, a green suite becomes red purely from scheduling.
-   *
-   * The window is 60 s in every environment (`RateLimiting:Auth`), so one wait of
-   * a little over a window is always enough to clear it; two attempts cover a
-   * request that arrives at the very start of a saturated window.
+   * This is NOT a "sleep until the UI settles" — no web-first assertion can
+   * substitute for waiting out a fixed-window rate limiter, and every spec in
+   * this suite shares one source IP with every other spec (and with any
+   * concurrently running suite). Without this, a green suite goes red purely
+   * from scheduling. It delegates to the repo's canonical
+   * {@link retryWhileRateLimited}, which honours `Retry-After` when the limiter
+   * sends one. A request that is STILL 429 after every retry is returned as-is,
+   * so a genuinely broken limiter surfaces as a real assertion failure rather
+   * than being masked.
    */
   async registerWithBackoff(
     slug: string,
     body: RegisterAttendeeBody,
-    maxAttempts = 3,
-  ): Promise<StatusAnd<RegisterAttendeeResult | unknown>> {
-    let last = await this.register(slug, body);
-    for (let attempt = 1; attempt < maxAttempts && isRateLimited(last.status); attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_WINDOW_MS));
-      last = await this.register(slug, body);
-    }
-    return last;
+  ): Promise<RegisterResponse> {
+    return retryWhileRateLimited(
+      `POST /t/${slug}/register`,
+      () => this.register(slug, body),
+      (response) => response.status,
+      (response) => response.retryAfter,
+    );
   }
 }
-
-/** The `RateLimiting:Auth` fixed window (60 s) plus a small margin. */
-const RATE_LIMIT_WINDOW_MS = 63_000;

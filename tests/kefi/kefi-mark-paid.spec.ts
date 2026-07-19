@@ -171,7 +171,7 @@ test.describe('Kefi mark-attendee-paid', () => {
 
   test('@ui the organizer Paid/Unpaid toggle flips the badge and persists', async ({ page }) => {
     const ops = await openEventOps();
-    const payments = new KefiAttendeeAdminClient();
+
     try {
       const attendee = await ops.registerAttendee('paid-ui');
 
