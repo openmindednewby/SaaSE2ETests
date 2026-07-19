@@ -190,12 +190,43 @@ export function acquireCanaryLock(runId: string): void {
  * Release the canary run lock. Best-effort — never throws. A failed release
  * just leaves a lock the orphan-cleanup CronJob will expire after 30 min.
  */
-export function releaseCanaryLock(): void {
+export function releaseCanaryLock(runId?: string): void {
   if ((process.env.E2E_LOCK_DISABLED ?? '').toLowerCase() === 'true') return;
 
   const k = resolveKubectl();
   const name = lockName();
   const ns = namespace();
+
+  // 🔴 ONLY RELEASE A LOCK THIS RUN ACTUALLY OWNS.
+  //
+  // The release used to be an unconditional `kubectl delete`, which broke the very mutual
+  // exclusion the lock exists to provide — and it is reachable on the MOST COMMON failure path,
+  // not some exotic one:
+  //
+  //   run A acquires the lock and starts testing
+  //   run B starts, `acquireCanaryLock` THROWS "REFUSING TO START — already in progress"
+  //   Playwright still runs globalTeardown for run B
+  //   run B deletes A's lock  ⇒  run C may now start CONCURRENTLY with A, against prod
+  //
+  // Observed twice during the 2026-07-19 sweep: each refused run printed "REFUSING TO START"
+  // immediately followed by "released canary-run-lock-prod" — releasing a lock it never held.
+  // The ConfigMap has always recorded its owner's runId; the release simply never read it.
+  //
+  // Absent lock, unreadable lock, or no runId passed ⇒ fall through to the old behaviour, so a
+  // genuine cleanup path can never be blocked by this check.
+  if (runId !== undefined) {
+    const get = runKubectl(k, ['get', 'configmap', name, '-n', ns, '-o', 'jsonpath={.data.runId}']);
+    const heldRunId = get.ok ? get.stdout.trim() : '';
+    if (heldRunId !== '' && heldRunId !== runId) {
+      process.stderr.write(
+        `[canary-lock] NOT releasing ${name} — it belongs to runId=${heldRunId.slice(0, 8)}…, ` +
+          `not to this run (${runId.slice(0, 8)}…). This run never acquired it (most likely it ` +
+          `refused to start because that run is still going). Deleting it here would let a third ` +
+          `run start concurrently against '${process.env.E2E_TARGET ?? 'unknown'}'.\n`,
+      );
+      return;
+    }
+  }
 
   const del = runKubectl(k, ['delete', 'configmap', name, '-n', ns, '--ignore-not-found']);
   if (del.spawnFailed) {

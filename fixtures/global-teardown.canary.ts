@@ -203,7 +203,7 @@ async function canaryGlobalTeardown(_config: FullConfig): Promise<void> {
       `[canary-teardown] sweep skipped (E2E_CANARY_SKIP_TEARDOWN set) for runId=${runId} — ` +
         'runner performs the final sweep. Releasing lock only.\n',
     );
-    releaseCanaryLock();
+    releaseCanaryLock(runId);
     return;
   }
 
@@ -211,6 +211,10 @@ async function canaryGlobalTeardown(_config: FullConfig): Promise<void> {
   // matter how the cleanup below fares — a leaked lock would block every
   // future run for 30 min (until the orphan-cleanup CronJob expires it). The
   // `finally` guarantees release even on the `!accessToken` early-return path.
+  //
+  // `runId` is passed so the release can verify OWNERSHIP: teardown also runs when
+  // global-setup THREW because another run held the lock, and an unconditional delete there
+  // released the other run's lock. See the note in helpers/canary-lock.ts.
   try {
     if (!accessToken) {
       process.stderr.write(
@@ -223,7 +227,7 @@ async function canaryGlobalTeardown(_config: FullConfig): Promise<void> {
 
     await runCanaryCleanup(runId, accessToken, target);
   } finally {
-    releaseCanaryLock();
+    releaseCanaryLock(runId);
   }
 }
 
