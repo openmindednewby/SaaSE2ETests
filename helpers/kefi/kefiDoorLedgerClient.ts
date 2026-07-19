@@ -77,6 +77,35 @@ export interface LedgerPromoter {
   paid: boolean;
 }
 
+/** One person a promoter referred, as the promoter sees them. */
+export interface LedgerCrewReferral {
+  name: string;
+  surname: string | null;
+  pass: string;
+  paidEur: number;
+  paid: boolean;
+  paidOn: string | null;
+}
+
+/**
+ * The viewer's OWN crew deal (`LedgerCrewDto`) — terms, expected payout and the
+ * people they brought.
+ *
+ * Present on the PROMOTER-scope branch only; null for door, ledger and organizer
+ * callers. `expectedPayoutEur` is copied from the P&L promoter line and never
+ * recomputed here, so the promoter's view and the organizer's books cannot
+ * disagree.
+ */
+export interface LedgerCrew {
+  promoterName: string;
+  role: string;
+  termsHtml: string | null;
+  paidReferralCount: number;
+  expectedPayoutEur: number;
+  settled: boolean;
+  referrals: LedgerCrewReferral[];
+}
+
 /** The scope-filtered ledger payload (`LedgerViewDto`). */
 export interface LedgerView {
   scope: string;
@@ -86,6 +115,8 @@ export interface LedgerView {
   promoters: LedgerPromoter[];
   attendees: LedgerAttendee[];
   pnl: LedgerPnl | null;
+  /** The viewer's own crew deal. Promoter scope only; null everywhere else. */
+  crew: LedgerCrew | null;
 }
 
 /** A raw `{ status, data }` pair so the spec can assert either. */

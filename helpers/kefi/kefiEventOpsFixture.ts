@@ -31,10 +31,19 @@
  */
 
 import { KefiAdminClient } from './kefiAdminClient.js';
-import { KefiAccessLinkClient, type CreateAccessLinkInput } from './kefiAccessLinkClient.js';
+import {
+  KefiAccessLinkClient,
+  type CreateAccessLinkInput,
+  type CreatedAccessLink,
+} from './kefiAccessLinkClient.js';
 import { KefiAttendeeDeleteClient } from './kefiAttendeeDeleteClient.js';
 import { KefiDoorLedgerClient } from './kefiDoorLedgerClient.js';
 import { KefiImportClient, type ImportAttendeeRow } from './kefiImportClient.js';
+import {
+  KefiMessageTemplateClient,
+  type CreateMessageTemplateInput,
+  type MessageTemplate,
+} from './kefiMessageTemplateClient.js';
 import { KefiPublicRegisterClient, isRateLimited } from './kefiPublicRegisterClient.js';
 import {
   fixtureAttendeeEmail,
@@ -62,6 +71,12 @@ export interface MintedLink {
   scope: string;
   token: string;
   url: string;
+  /**
+   * The full mint-time DTO. Carries the fields a spec cannot recover later —
+   * `expiresAt`, `oneTime`, `status` at mint — so an expiry assertion does not
+   * have to re-list the whole event to find its own link.
+   */
+  created: CreatedAccessLink;
 }
 
 /**
@@ -76,6 +91,7 @@ export interface EventOpsSession {
   marker: string;
   admin: KefiAdminClient;
   links: KefiAccessLinkClient;
+  templates: KefiMessageTemplateClient;
 
   /** Self-register one attendee through the real public route. Tracked for deletion. */
   registerAttendee(discriminator: string, passCode?: string): Promise<CreatedAttendee>;
@@ -83,9 +99,12 @@ export interface EventOpsSession {
   importAttendee(row: ImportAttendeeRow): Promise<CreatedAttendee>;
   /** Mint an access link. Tracked for revocation. */
   mintLink(input: CreateAccessLinkInput): Promise<MintedLink>;
+  /** Create a message template. Tracked for deletion. */
+  createTemplate(input: CreateMessageTemplateInput): Promise<MessageTemplate>;
   /** Record an id created outside the helpers so teardown still reaches it. */
   trackAttendee(externalId: string): void;
   trackLink(externalId: string): void;
+  trackTemplate(externalId: string): void;
   /** Revoke + delete everything this session created. Never throws. */
   cleanup(): Promise<string[]>;
 }
@@ -100,6 +119,7 @@ export async function openEventOps(): Promise<EventOpsSession> {
   });
 
   const links = new KefiAccessLinkClient();
+  const templates = new KefiMessageTemplateClient();
   const register = new KefiPublicRegisterClient();
   const imports = new KefiImportClient();
   const deletes = new KefiAttendeeDeleteClient();
@@ -107,6 +127,7 @@ export async function openEventOps(): Promise<EventOpsSession> {
 
   const createdAttendees: string[] = [];
   const createdLinks: string[] = [];
+  const createdTemplates: string[] = [];
 
   async function registerAttendee(
     discriminator: string,
@@ -203,8 +224,26 @@ export async function openEventOps(): Promise<EventOpsSession> {
     return { ...minted, scope: input.scope };
   }
 
+  async function createTemplate(input: CreateMessageTemplateInput): Promise<MessageTemplate> {
+    const created = await templates.createOrThrow(bearer, tenant.eventExternalId, input);
+    createdTemplates.push(created.externalId);
+    return created;
+  }
+
   async function cleanup(): Promise<string[]> {
     const failures: string[] = [];
+
+    for (const templateId of createdTemplates) {
+      try {
+        const resp = await templates.remove(bearer, tenant.eventExternalId, templateId);
+        // 204 = deleted, 404 = the spec already deleted it. Anything else is real.
+        if (resp.status !== 204 && resp.status !== 404) {
+          failures.push(`delete message-template ${templateId} → ${resp.status}`);
+        }
+      } catch (error) {
+        failures.push(`delete message-template ${templateId} threw: ${String(error)}`);
+      }
+    }
 
     for (const linkId of createdLinks) {
       try {
@@ -233,6 +272,7 @@ export async function openEventOps(): Promise<EventOpsSession> {
       }
     }
 
+    createdTemplates.length = 0;
     createdLinks.length = 0;
     createdAttendees.length = 0;
     return failures;
@@ -244,11 +284,14 @@ export async function openEventOps(): Promise<EventOpsSession> {
     marker,
     admin,
     links,
+    templates,
     registerAttendee,
     importAttendee,
     mintLink,
+    createTemplate,
     trackAttendee: (externalId: string) => void createdAttendees.push(externalId),
     trackLink: (externalId: string) => void createdLinks.push(externalId),
+    trackTemplate: (externalId: string) => void createdTemplates.push(externalId),
     cleanup,
   };
 }

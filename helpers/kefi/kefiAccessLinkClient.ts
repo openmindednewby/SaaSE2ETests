@@ -30,6 +30,13 @@ const HTTP_TIMEOUT_MS = 30_000;
 export const ACCESS_LINK_SCOPES = ['Door', 'Ledger', 'Promoter'] as const;
 export type AccessLinkScope = (typeof ACCESS_LINK_SCOPES)[number];
 
+/**
+ * The organizer-facing lifecycle status of a link (`AccessLinkDto.status`).
+ * Display precedence is Revoked → Expired → Used → Active.
+ */
+export const ACCESS_LINK_STATUSES = ['Active', 'Expired', 'Used', 'Revoked'] as const;
+export type AccessLinkStatus = (typeof ACCESS_LINK_STATUSES)[number];
+
 /** The mint-time response (`CreatedAccessLinkDto`) — the only carrier of the token. */
 export interface CreatedAccessLink {
   externalId: string;
@@ -37,6 +44,14 @@ export interface CreatedAccessLink {
   scope: string;
   /** The one-time recipient URL; the raw token is its `token` query param. */
   url: string;
+  /** The instant the link dies, or null when it never expires. */
+  expiresAt: string | null;
+  /** True when the link was minted for a single working session. */
+  oneTime: boolean;
+  /** Always null at mint time — a brand-new link has never been used. */
+  usedAt: string | null;
+  /** Always "Active" for a freshly minted link. */
+  status: string;
   createdDate: string;
 }
 
@@ -48,6 +63,14 @@ export interface AccessLinkRow {
   promoterExternalId: string | null;
   promoterName: string | null;
   revoked: boolean;
+  /** The instant the link dies, or null when it never expires. */
+  expiresAt: string | null;
+  /** True when the link was minted for a single working session. */
+  oneTime: boolean;
+  /** The instant a one-time link was first used, or null while untouched. */
+  usedAt: string | null;
+  /** Computed per request against the current clock — never stored. */
+  status: string;
   createdDate: string;
 }
 
@@ -64,6 +87,14 @@ export interface CreateAccessLinkInput {
   scope: string;
   /** Required for (and only meaningful on) a `Promoter` link. */
   promoterExternalId?: string;
+  /**
+   * Days until the link expires (1..365). Omit for a link that never expires.
+   * Deliberately `number`, not a bounded type — the specs send out-of-range
+   * values to assert the validation wall.
+   */
+  expiresInDays?: number;
+  /** Spend the link on its first use (plus a server-side grace window). */
+  oneTime?: boolean;
 }
 
 /**
@@ -143,7 +174,7 @@ export class KefiAccessLinkClient {
     bearer: string,
     eventExternalId: string,
     input: CreateAccessLinkInput,
-  ): Promise<{ externalId: string; token: string; url: string }> {
+  ): Promise<{ externalId: string; token: string; url: string; created: CreatedAccessLink }> {
     const resp = await this.mint(bearer, eventExternalId, input);
     if (resp.status !== 201) {
       throw new Error(
@@ -156,6 +187,7 @@ export class KefiAccessLinkClient {
       externalId: created.externalId,
       token: tokenFromAccessLinkUrl(created.url),
       url: created.url,
+      created,
     };
   }
 

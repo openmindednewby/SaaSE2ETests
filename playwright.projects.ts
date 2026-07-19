@@ -649,6 +649,104 @@ export function buildProjects(): ProjectConfig {
       use: EVENT_OPS_BROWSER,
     },
     {
+      // Access-link EXPIRY / one-time — the expiry window + its validation, the
+      // Used-on-first-touch stamp (asserted via the organizer status, because the
+      // 30-minute grace window makes the hard 404 untestable in a spec), and the
+      // 404-for-every-dead-reason vs 403-for-wrong-page distinction the door and
+      // crew pages branch on. Pure @api → 300s.
+      name: 'kefi-access-link-expiry',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-access-link-expiry\.spec\.ts/,
+      use: EVENT_OPS_BROWSER,
+    },
+    {
+      // The 404-vs-403 wall on its own: a dead link (revoked / unknown / right-
+      // shape-wrong-value) is 404 for EVERY reason so a leaked link cannot be
+      // fingerprinted, while a LIVE token on an action it lacks rank for is 403.
+      // The door/ledger/crew pages render those two codes as two different
+      // screens, so collapsing them is a user-visible bug. Pure @api → 300s.
+      name: 'kefi-access-link-dead-vs-forbidden',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-access-link-dead-vs-forbidden\.spec\.ts/,
+      use: EVENT_OPS_BROWSER,
+    },
+    {
+      // Message templates — the per-event email/WhatsApp copy. Pins the two bugs
+      // that shipped here: `channel` is immutable and the server IGNORES it on a
+      // PUT (FastEndpoints discards undeclared fields, so the old portal claimed
+      // success while nothing changed), and an unknown {{token}} renders as the
+      // EMPTY STRING rather than echoing back into a recipient's inbox. Plus
+      // create/list/delete, the subject-per-channel rule and the one-default-per-
+      // channel invariant. Pure @api → 300s.
+      name: 'kefi-message-templates',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-message-templates\.spec\.ts/,
+      use: EVENT_OPS_BROWSER,
+    },
+    {
+      // Message-template CRUD — create/list/delete, the validation walls, the
+      // authorization walls, and the subject-per-channel rule (an Email template
+      // keeps its subject; a WhatsApp one drops a submitted subject rather than
+      // storing one the channel cannot use). Pure @api → 300s.
+      name: 'kefi-message-templates-crud',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-message-templates-crud\.spec\.ts/,
+      use: EVENT_OPS_BROWSER,
+    },
+    {
+      // Message-template DEFAULTS — "at most one default per (event, channel)",
+      // enforced twice (use case + filtered unique index) and therefore able to
+      // disagree with itself.
+      //
+      // ⚠️ EXPECTED RED: promoting an OLDER template to default via PUT returns
+      // 500 (EF emits the promote UPDATE before the demote UPDATE, tripping
+      // IX_EventMessageTemplates_EventId_Channel_Default). Left failing on
+      // purpose — it is a real server bug, not a flaky test. Pure @api → 300s.
+      name: 'kefi-message-template-defaults',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-message-template-defaults\.spec\.ts/,
+      use: EVENT_OPS_BROWSER,
+    },
+    {
+      // Crew payout page — the promoter's own view. @api pins the payout against
+      // the organizer's P&L line (they read the same number by construction); @ui
+      // pins the three outcome panels apart, because "your link is dead" and
+      // "your link is for a different page" used to be the same screen. Browser
+      // leg + a crew-terms write/restore → 600s.
+      name: 'kefi-crew-payout',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-crew-payout\.spec\.ts/,
+      use: EVENT_OPS_BROWSER,
+    },
+    {
+      // Crew LINK STATES — which of the three outcome panels the crew page shows
+      // for a Promoter link, a live-but-wrong Door link, a revoked link and no
+      // link at all. Pins "wrong page" apart from "dead link", which the page
+      // used to conflate. @ui, three page loads → 600s.
+      name: 'kefi-crew-link-states',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-crew-link-states\.spec\.ts/,
+      use: EVENT_OPS_BROWSER,
+    },
+    {
+      // Print / Save-as-PDF affordance across door + ledger + crew. Deliberately
+      // shallow (stylesheet + control presence, no real PDF): what regresses is
+      // one of three near-identical pages losing the affordance while the others
+      // keep it. Token-free @ui, creates nothing → 300s.
+      name: 'kefi-print-affordance',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-print-affordance\.spec\.ts/,
+      use: EVENT_OPS_BROWSER,
+    },
+    {
       // Door check-in — persistence-verified toggle + the Promoter-cannot-check-in
       // scope wall (@api), and the real door page (@ui). 600s for the browser leg.
       name: 'kefi-door-checkin',
