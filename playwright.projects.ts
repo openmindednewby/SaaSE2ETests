@@ -29,6 +29,8 @@ type Project = ProjectConfig[number];
 // Calling it post-load is what makes the env vars visible.
 
 const CHROME = devices['Desktop Chrome'];
+/** Kefi event-ops browser budget — see the note above that project block. */
+const EVENT_OPS_BROWSER = { ...devices['Desktop Chrome'], navigationTimeout: 45_000, actionTimeout: 15_000 };
 const AUTH = 'playwright/.auth/user.json';
 
 type AppName = 'erevna' | 'katalogos';
@@ -582,6 +584,12 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     // ---- Kefi event-ops suite (shipped door/ledger/access-link surfaces) ----
+    // `use` for the browser-driving legs. The global navigationTimeout is 15s,
+    // which is too tight for a COLD load of the kefi-web Expo bundle or a static
+    // tenant landing page — the suite failed intermittently on `page.goto`
+    // timeouts that had nothing to do with the product. Raised here only, so the
+    // rest of the matrix keeps its tighter budget.
+
     // These drive a PUBLISHED fixture tenant (KEFI_FIXTURE_*) rather than a
     // canary, because the register/door/ledger pages are STATIC Astro routes
     // baked per slug at publish time — a fresh canary slug has no page until a
@@ -596,7 +604,7 @@ export function buildProjects(): ProjectConfig {
       workers: 1,
       timeout: 600_000,
       testMatch: /kefi\/kefi-public-registration\.spec\.ts/,
-      use: CHROME,
+      use: EVENT_OPS_BROWSER,
     },
     {
       // Mark-attendee-paid both directions (@api) + the organizer Paid/Unpaid
@@ -605,7 +613,7 @@ export function buildProjects(): ProjectConfig {
       workers: 1,
       timeout: 600_000,
       testMatch: /kefi\/kefi-mark-paid\.spec\.ts/,
-      use: CHROME,
+      use: EVENT_OPS_BROWSER,
     },
     {
       // Attendee CSV export — exact header row, row-count parity with the API,
@@ -614,7 +622,7 @@ export function buildProjects(): ProjectConfig {
       workers: 1,
       timeout: 300_000,
       testMatch: /kefi\/kefi-attendee-export\.spec\.ts/,
-      use: CHROME,
+      use: EVENT_OPS_BROWSER,
     },
     {
       // Access links — mint/list/revoke, the revoked-token wall, and the
@@ -624,7 +632,7 @@ export function buildProjects(): ProjectConfig {
       workers: 1,
       timeout: 300_000,
       testMatch: /kefi\/kefi-access-links\.spec\.ts/,
-      use: CHROME,
+      use: EVENT_OPS_BROWSER,
     },
     {
       // Door check-in — persistence-verified toggle + the Promoter-cannot-check-in
@@ -633,7 +641,7 @@ export function buildProjects(): ProjectConfig {
       workers: 1,
       timeout: 600_000,
       testMatch: /kefi\/kefi-door-checkin\.spec\.ts/,
-      use: CHROME,
+      use: EVENT_OPS_BROWSER,
     },
     {
       // Ledger / P&L — internal consistency of the computed numbers (@api) and
@@ -642,7 +650,7 @@ export function buildProjects(): ProjectConfig {
       workers: 1,
       timeout: 600_000,
       testMatch: /kefi\/kefi-ledger-pnl\.spec\.ts/,
-      use: CHROME,
+      use: EVENT_OPS_BROWSER,
     },
     {
       // ⚠️ REGRESSION GUARD: once ANY access link existed, the organizer surface
@@ -652,7 +660,7 @@ export function buildProjects(): ProjectConfig {
       workers: 1,
       timeout: 600_000,
       testMatch: /kefi\/kefi-organizer-access-link-regression\.spec\.ts/,
-      use: CHROME,
+      use: EVENT_OPS_BROWSER,
     },
     {
       // Katalogos device-PIN + passkey via the SHARED auth-web 1.4.0 components

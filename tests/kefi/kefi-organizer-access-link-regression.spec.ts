@@ -87,17 +87,22 @@ test.describe('Kefi organizer surface survives an existing access link', () => {
       await organizer.gotoEvent(ops.tenant.eventExternalId);
 
       // ── 3. It renders ───────────────────────────────────────────────────
-      // Assert "nothing threw" FIRST. If the dashboard crashed, the exception
-      // text is the diagnosis; a bare "element not found" from expectRendered()
-      // would report the symptom and hide the cause.
-      await expect
-        .poll(() => pageErrors, {
-          message:
-            'no uncaught exception while rendering the organizer surface ' +
-            '(a null string field reaching a string method kills the WHOLE dashboard)',
-          timeout: 20_000,
-        })
-        .toEqual([]);
+      // Settle FIRST. The dashboard mounts before all of its queries resolve, so
+      // a crash caused by a late response lands AFTER the header appears —
+      // asserting the header alone can pass against a surface that dies a moment
+      // later. (`expect.poll(...).toEqual([])` is NOT a substitute: an empty
+      // array passes on the first tick, so it would return before any error had
+      // a chance to arrive.)
+      await organizer.waitForTerminalState();
+
+      // Then assert "nothing threw" BEFORE asserting on elements: if the
+      // dashboard crashed, the exception text is the diagnosis, whereas a bare
+      // "element not found" reports the symptom and hides the cause.
+      expect(
+        pageErrors,
+        'no uncaught exception while rendering the organizer surface ' +
+          '(a null string field reaching a string method kills the WHOLE dashboard)',
+      ).toEqual([]);
 
       await organizer.expectRendered();
 

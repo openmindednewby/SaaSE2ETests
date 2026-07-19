@@ -23,6 +23,8 @@ export class KefiOrganizerPage {
   readonly eventHeader: Locator;
   /** The app error boundary's reload button — must NEVER be present. */
   readonly errorBoundaryReload: Locator;
+  /** The boundary's visible button, matched by role — a testID-independent signal. */
+  readonly errorBoundaryFallback: Locator;
   readonly attendeesSection: Locator;
   readonly accessLinksSection: Locator;
   readonly accessLinkNameInput: Locator;
@@ -36,6 +38,7 @@ export class KefiOrganizerPage {
     this.page = page;
     this.eventHeader = page.getByTestId('organizer-event-header');
     this.errorBoundaryReload = page.getByTestId('error-boundary-reload-button');
+    this.errorBoundaryFallback = page.getByRole('button', { name: /^(Reload|Try Again)$/ });
     this.attendeesSection = page.getByTestId('organizer-attendees');
     this.accessLinksSection = page.getByTestId('organizer-access-links');
     this.accessLinkNameInput = page.getByTestId('organizer-access-link-name');
@@ -50,6 +53,26 @@ export class KefiOrganizerPage {
   async gotoEvent(eventExternalId: string): Promise<void> {
     const { webUrl } = getKefiUrls();
     await this.page.goto(`${webUrl}/organizer?event=${encodeURIComponent(eventExternalId)}`);
+  }
+
+  /**
+   * Wait until the surface reaches a TERMINAL state — either it mounted, or the
+   * app error boundary took over.
+   *
+   * Why this is separate from {@link expectRendered}: the dashboard mounts
+   * before all of its queries resolve, so a crash caused by a late-arriving
+   * response happens AFTER the header is already on screen. Asserting the header
+   * alone can therefore pass against a surface that dies a moment later. Callers
+   * settle here first, then assert what they actually care about.
+   *
+   * The boundary is matched by testID OR by its visible "Reload" button, so a
+   * missing/renamed testID cannot silently turn a crash into a timeout.
+   */
+  async waitForTerminalState(): Promise<void> {
+    await expect(
+      this.eventHeader.or(this.errorBoundaryReload).or(this.errorBoundaryFallback).first(),
+      'the organizer surface reached a terminal state (mounted, or crashed)',
+    ).toBeVisible({ timeout: 45_000 });
   }
 
   /**
