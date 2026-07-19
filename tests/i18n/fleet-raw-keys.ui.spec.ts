@@ -186,8 +186,49 @@ async function expectNoRawKeys(page: Page, portal: Portal, screen: string): Prom
   );
 }
 
+/**
+ * 🔴 SKIPPED IS NOT PASSED — and where full fleet coverage is CLAIMED, "not scanned" must FAIL.
+ *
+ * A portal whose base URL or password is unset `test.skip`s below. That is right on a dev PC,
+ * where a portal may genuinely be unreachable. It is CATASTROPHIC in the nightly, because a
+ * skipped test exits 0: the Job goes green, the summary email says PASS, and the Daily Report
+ * agrees — while the portal was never looked at.
+ *
+ * That is not hypothetical. `AGORA_WEB_URL` was set in `.env.staging` and MISSING from
+ * `.env.prod`, so `resolveAgoraWebUrl()` returned null and agora's ENTIRE @ui tier skipped on
+ * production for its whole existence. It reported green by omission the entire time — and agora
+ * is the portal that had 23 raw keys rendering to real users. Green-because-we-did-not-look is
+ * the exact failure this suite exists to end; leaving it reachable here would be self-defeating.
+ *
+ * So the nightly sets I18N_REQUIRE_ALL_PORTALS=1 to assert the contract "this environment covers
+ * every portal". Under it, an unconfigured portal raises a LOUD FAILURE naming the missing
+ * variable instead of quietly vanishing from the run. Unset (dev PC), skipping still applies.
+ */
+const REQUIRE_ALL_PORTALS = process.env.I18N_REQUIRE_ALL_PORTALS === '1';
+
 for (const portal of PORTALS) {
   test.describe(`i18n raw-key guard — ${portal.label} @i18n @ui`, () => {
+    const missingSetting = portal.baseUrl.trim() === '' ? 'base URL' : 'password';
+    const unconfigured = portal.baseUrl.trim() === '' || portal.password.trim() === '';
+
+    if (unconfigured && REQUIRE_ALL_PORTALS) {
+      test(`${portal.label}: MUST be configured — a skipped portal is not a scanned portal`, () => {
+        throw new Error(
+          `${portal.label} was NOT SCANNED: its ${missingSetting} is unset, and ` +
+            `I18N_REQUIRE_ALL_PORTALS=1 declares that this environment covers the whole fleet.\n\n` +
+            `This is a FAILURE and not a skip on purpose. Skipping here is how agora's entire UI ` +
+            `tier went untested on production: AGORA_WEB_URL was set for staging and missing for ` +
+            `prod, so the portal silently dropped out of every run and the suite reported green ` +
+            `by omission for months.\n\n` +
+            `Fix the ENVIRONMENT, not this test: set the portal's base URL in E2ETests/.env.<target> ` +
+            `and its credentials in the job's secret (see the guards CronJob's envFrom). If a portal ` +
+            `genuinely does not exist on this target, remove it from PORTALS with a comment saying ` +
+            `why — an explicit deletion is reviewable; a silent skip is not.`,
+        );
+      });
+      return;
+    }
+
     // 🔴 ONE LOGIN PER PORTAL, NOT ONE PER SCREEN — and that is a correctness fix, not an
     // optimisation. Auth is rate limited to 5 logins / 60s per IP. A `beforeEach` login meant
     // agora's SIXTH screen tripped the limiter, the retry backoff then blew the 30s test
@@ -198,9 +239,10 @@ for (const portal of PORTALS) {
     test.describe.configure({ mode: 'serial' });
 
     test.skip(
-      portal.baseUrl.trim() === '' || portal.password.trim() === '',
+      unconfigured,
       `${portal.label}: base URL or credentials not configured for this E2E target — ` +
-        `NOT a pass, this portal was not scanned.`,
+        `NOT a pass, this portal was not scanned. (Set I18N_REQUIRE_ALL_PORTALS=1 to make this ` +
+        `a hard failure, as the nightly does.)`,
     );
 
     let context: BrowserContext;
