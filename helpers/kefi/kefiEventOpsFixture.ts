@@ -33,6 +33,7 @@
 import { KefiAdminClient } from './kefiAdminClient.js';
 import { KefiAccessLinkClient, type CreateAccessLinkInput } from './kefiAccessLinkClient.js';
 import { KefiAttendeeDeleteClient } from './kefiAttendeeDeleteClient.js';
+import { KefiDoorLedgerClient } from './kefiDoorLedgerClient.js';
 import { KefiImportClient, type ImportAttendeeRow } from './kefiImportClient.js';
 import { KefiPublicRegisterClient, isRateLimited } from './kefiPublicRegisterClient.js';
 import {
@@ -173,7 +174,6 @@ export async function openEventOps(): Promise<EventOpsSession> {
 
   /** Look up an attendee id by its (unique, suite-generated) email. */
   async function resolveAttendeeIdByEmail(email: string): Promise<string> {
-    const { KefiDoorLedgerClient } = await import('./kefiDoorLedgerClient.js');
     const ledger = new KefiDoorLedgerClient();
     const resp = await ledger.getLedgerByBearer(
       tenant.slug,

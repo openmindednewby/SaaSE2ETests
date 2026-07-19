@@ -32,6 +32,7 @@ import {
   KefiPublicRegisterClient,
   allValidationMessages,
 } from '../../helpers/kefi/kefiPublicRegisterClient.js';
+import { KefiDoorLedgerClient } from '../../helpers/kefi/kefiDoorLedgerClient.js';
 import { openEventOps } from '../../helpers/kefi/kefiEventOpsFixture.js';
 import {
   fixtureAttendeeEmail,
@@ -89,9 +90,6 @@ test.describe('Kefi public registration', () => {
       // The row must really exist server-side — a success panel rendered from a
       // stale/optimistic branch would otherwise pass. Reading it back also gives
       // us the id we need to delete it.
-      const { KefiDoorLedgerClient } = await import(
-        '../../helpers/kefi/kefiDoorLedgerClient.js'
-      );
       const ledger = new KefiDoorLedgerClient();
       const view = await ledger.getLedgerByBearer(
         ops.tenant.slug,

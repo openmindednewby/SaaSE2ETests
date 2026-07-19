@@ -24,7 +24,8 @@
 
 import axios, { type AxiosInstance } from 'axios';
 import { sharedHttpsAgent } from '../http-agent.js';
-import { retryWhileRateLimited } from '../rate-limit.js';
+import { setTimeout as delay } from 'timers/promises';
+
 import { getKefiUrls } from './kefiUrls.js';
 
 const HTTP_TIMEOUT_MS = 30_000;
@@ -123,28 +124,55 @@ export class KefiPublicRegisterClient {
   }
 
   /**
-   * POST the registration, backing off and retrying while the per-IP limiter is
-   * returning 429.
+   * POST the registration, waiting out the per-IP limiter on a 429.
    *
    * This is NOT a "sleep until the UI settles" — no web-first assertion can
-   * substitute for waiting out a fixed-window rate limiter, and every spec in
-   * this suite shares one source IP with every other spec (and with any
-   * concurrently running suite). Without this, a green suite goes red purely
-   * from scheduling. It delegates to the repo's canonical
-   * {@link retryWhileRateLimited}, which honours `Retry-After` when the limiter
-   * sends one. A request that is STILL 429 after every retry is returned as-is,
-   * so a genuinely broken limiter surfaces as a real assertion failure rather
-   * than being masked.
+   * substitute for waiting out a rate limiter, and every spec in this suite
+   * shares one source IP with every other spec. Without this, a green suite
+   * goes red purely from scheduling.
+   *
+   * It deliberately does NOT use the shared `retryWhileRateLimited`: that helper
+   * does capped EXPONENTIAL backoff totalling ~30 s, and this limiter is a FIXED
+   * 60 s window (`RateLimiting:Auth` = 5 permits / 60 s in every environment).
+   * Exponential backoff that tops out below the window length can never clear it
+   * — it just burns 30 s and fails anyway, which is exactly what it did here.
+   * For a fixed window the only correct wait is the window itself.
+   *
+   * A request that is STILL 429 after both retries is returned as-is, so a
+   * genuinely broken limiter surfaces as a real failure rather than being masked.
    */
   async registerWithBackoff(
     slug: string,
     body: RegisterAttendeeBody,
   ): Promise<RegisterResponse> {
-    return retryWhileRateLimited(
-      `POST /t/${slug}/register`,
-      () => this.register(slug, body),
-      (response) => response.status,
-      (response) => response.retryAfter,
-    );
+    let response = await this.register(slug, body);
+    for (let attempt = 0; isRateLimited(response.status) && attempt < MAX_WINDOW_WAITS; attempt++) {
+      const waitMs = resolveWindowWaitMs(response.retryAfter);
+      process.stdout.write(
+        `[rate-limit] POST /t/${slug}/register got 429 — waiting out the ` +
+          `${waitMs}ms fixed window (attempt ${attempt + 1}/${MAX_WINDOW_WAITS})\n`,
+      );
+      await delay(waitMs);
+      response = await this.register(slug, body);
+    }
+    return response;
   }
+}
+
+/** How many full windows to wait out before giving up and reporting the 429. */
+const MAX_WINDOW_WAITS = 2;
+
+/** `RateLimiting:Auth` window (60 s) plus a margin for clock skew. */
+const WINDOW_WAIT_MS = 63_000;
+
+/**
+ * Honour `Retry-After` (seconds) when the limiter sends one; otherwise wait a
+ * full window. Never waits less than the header asks for.
+ */
+function resolveWindowWaitMs(retryAfter: unknown): number {
+  const seconds = Number(retryAfter);
+  if (Number.isFinite(seconds) && seconds > 0) {
+    return Math.max(seconds * 1000, WINDOW_WAIT_MS);
+  }
+  return WINDOW_WAIT_MS;
 }
