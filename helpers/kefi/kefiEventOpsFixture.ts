@@ -113,7 +113,7 @@ export async function openEventOps(): Promise<EventOpsSession> {
   ): Promise<CreatedAttendee> {
     const surname = `${marker}-${discriminator}`;
     const email = fixtureAttendeeEmail(marker, discriminator);
-    const resp = await register.register(tenant.slug, {
+    const resp = await register.registerWithBackoff(tenant.slug, {
       name: 'E2E',
       surname,
       phone: '+35799000000',

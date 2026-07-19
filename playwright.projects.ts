@@ -581,6 +581,79 @@ export function buildProjects(): ProjectConfig {
       testMatch: /kefi\/kefi-gdpr\.spec\.ts/,
       use: CHROME,
     },
+    // ---- Kefi event-ops suite (shipped door/ledger/access-link surfaces) ----
+    // These drive a PUBLISHED fixture tenant (KEFI_FIXTURE_*) rather than a
+    // canary, because the register/door/ledger pages are STATIC Astro routes
+    // baked per slug at publish time — a fresh canary slug has no page until a
+    // kaniko rebuild. Each spec creates and then deletes/revokes its own rows.
+    // See E2ETests/docs/kefi-event-ops-e2e.md.
+    {
+      // Public self-registration — the consent-required regression (a real prod
+      // incident), the invalid pass code, the unknown tenant, plus the real
+      // static register form. The register route is rate-limited 5/60s per IP,
+      // and the client waits the window out on a 429 → generous budget.
+      name: 'kefi-public-registration',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-public-registration\.spec\.ts/,
+      use: CHROME,
+    },
+    {
+      // Mark-attendee-paid both directions (@api) + the organizer Paid/Unpaid
+      // toggle (@ui). The @ui leg logs in to kefi-web → 600s like its siblings.
+      name: 'kefi-mark-paid',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-mark-paid\.spec\.ts/,
+      use: CHROME,
+    },
+    {
+      // Attendee CSV export — exact header row, row-count parity with the API,
+      // RFC-4180 escaping verified with an independent parser. Pure @api → 300s.
+      name: 'kefi-attendee-export',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-attendee-export\.spec\.ts/,
+      use: CHROME,
+    },
+    {
+      // Access links — mint/list/revoke, the revoked-token wall, and the
+      // scope-filtering contract (Ledger sees pnl, Door sees people-not-money,
+      // Promoter sees only their own slice). Pure @api → 300s.
+      name: 'kefi-access-links',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-access-links\.spec\.ts/,
+      use: CHROME,
+    },
+    {
+      // Door check-in — persistence-verified toggle + the Promoter-cannot-check-in
+      // scope wall (@api), and the real door page (@ui). 600s for the browser leg.
+      name: 'kefi-door-checkin',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-door-checkin\.spec\.ts/,
+      use: CHROME,
+    },
+    {
+      // Ledger / P&L — internal consistency of the computed numbers (@api) and
+      // the rendered ledger page (@ui). 600s for the browser leg.
+      name: 'kefi-ledger-pnl',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-ledger-pnl\.spec\.ts/,
+      use: CHROME,
+    },
+    {
+      // ⚠️ REGRESSION GUARD: once ANY access link existed, the organizer surface
+      // crashed on load (`null.toLowerCase` on a list row). Mint a Door link,
+      // then load the dashboard and assert it renders. Must never regress.
+      name: 'kefi-organizer-access-link-regression',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-organizer-access-link-regression\.spec\.ts/,
+      use: CHROME,
+    },
     {
       // Katalogos device-PIN + passkey via the SHARED auth-web 1.4.0 components
       // (unified-login Increment 3). Uses the seeded realm test user + the global

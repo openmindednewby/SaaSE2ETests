@@ -111,4 +111,33 @@ export class KefiPublicRegisterClient {
     );
     return { status: resp.status, data: resp.data };
   }
+
+  /**
+   * POST the registration, backing off and retrying while the per-IP limiter is
+   * returning 429.
+   *
+   * This is NOT a "sleep until the UI settles" — no assertion can substitute for
+   * waiting out a fixed-window rate limiter, and every spec in this suite shares
+   * one source IP with every other spec (and with any concurrently running
+   * suite). Without this, a green suite becomes red purely from scheduling.
+   *
+   * The window is 60 s in every environment (`RateLimiting:Auth`), so one wait of
+   * a little over a window is always enough to clear it; two attempts cover a
+   * request that arrives at the very start of a saturated window.
+   */
+  async registerWithBackoff(
+    slug: string,
+    body: RegisterAttendeeBody,
+    maxAttempts = 3,
+  ): Promise<StatusAnd<RegisterAttendeeResult | unknown>> {
+    let last = await this.register(slug, body);
+    for (let attempt = 1; attempt < maxAttempts && isRateLimited(last.status); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_WINDOW_MS));
+      last = await this.register(slug, body);
+    }
+    return last;
+  }
 }
+
+/** The `RateLimiting:Auth` fixed window (60 s) plus a small margin. */
+const RATE_LIMIT_WINDOW_MS = 63_000;
