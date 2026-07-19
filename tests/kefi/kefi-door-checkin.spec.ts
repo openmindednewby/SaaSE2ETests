@@ -38,9 +38,22 @@ import { isRemoteTarget } from '../../helpers/target.js';
 test.describe.configure({ mode: 'serial' });
 
 const HTTP_OK = 200;
+const HTTP_BAD_REQUEST = 400;
 const HTTP_FORBIDDEN = 403;
 const HTTP_NOT_FOUND = 404;
-const UNKNOWN_ATTENDEE_ID = '00000000-0000-0000-0000-000000000000';
+
+/**
+ * A well-formed but non-existent attendee id.
+ *
+ * Deliberately NOT the all-zeros GUID: `CheckInAttendeeValidator` applies
+ * `NotEmpty()` to `attendeeExternalId`, so `Guid.Empty` is rejected as a
+ * MALFORMED request (400) before the lookup ever runs. Using it here would
+ * assert the validator, not the not-found path — two different behaviours that
+ * happen to both be "an error".
+ */
+const UNKNOWN_ATTENDEE_ID = 'a1b2c3d4-0000-4000-8000-abcdefabcdef';
+/** The empty GUID — the validator's own case, asserted separately below. */
+const EMPTY_ATTENDEE_ID = '00000000-0000-0000-0000-000000000000';
 
 test.describe('Kefi door check-in', () => {
   test.skip(!isRemoteTarget(), 'Kefi event-ops E2E targets a deployed environment');
@@ -165,6 +178,17 @@ test.describe('Kefi door check-in', () => {
         ).status,
         'an attendee outside the token event is not found',
       ).toBe(HTTP_NOT_FOUND);
+      expect(
+        (
+          await door.checkIn({
+            slug: ops.tenant.slug,
+            token: doorLink.token,
+            attendeeExternalId: EMPTY_ATTENDEE_ID,
+            checkedIn: true,
+          })
+        ).status,
+        'an empty attendee id is a malformed request, rejected before any lookup',
+      ).toBe(HTTP_BAD_REQUEST);
     } finally {
       const failures = await ops.cleanup();
       expect(failures, 'every link and row this test created was cleaned up').toEqual([]);
