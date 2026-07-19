@@ -104,6 +104,12 @@ export function buildProjects(): ProjectConfig {
     { name: 'logging', workers: 1, testMatch: /logging\/(?!stress).*\.spec\.ts/, dependencies: ['setup'] },
     { name: 'monitoring', workers: 1, testMatch: /monitoring\/.*\.spec\.ts/, dependencies: ['setup'] },
     { name: 'cross-product-isolation', workers: 1, testMatch: /cross-product-isolation\/.*\.spec\.ts/, dependencies: ['setup'] },
+    // Fleet-wide i18n raw-key guard. Portal-agnostic: it drives agora/erevna/katalogos through
+    // their own BFF login and scans each screen's text AND a11y attributes for keys that `FM()`
+    // rendered as literal dotted names. Generalised from the zygos scanner that found real
+    // production defects; `workers: 1` because it performs a login per portal and auth is rate
+    // limited (5/60s per IP).
+    { name: 'i18n-fleet', workers: 1, testMatch: /i18n\/.*\.spec\.ts/, dependencies: ['setup'] },
     // Ichnos (crypto AML) — @api tier: health/smoke (M0-9), screen-address/entity/combined + report (M1-1..3),
     // and the M1-10 sellable flows: onboarding (F1), API keys (F3), batch CSV (F4), billing (F7). No browser
     // needed; the authed assertions opportunistically use an ichnos-realm ROPC token. The negative-lookbehind
@@ -215,7 +221,7 @@ export function buildProjects(): ProjectConfig {
     chunk('smoke', 'smoke', [], ERV),
 
     // ---- Online Menus (5 chunks) → katalogos-web ----
-    chunk('online-menus-crud', 'online-menus', ['menu-activation', 'menu-crud-with-activation', 'menu-display-order-sorting', 'bff-no-token-in-browser'], KAT),
+    chunk('online-menus-crud', 'online-menus', ['menu-activation', 'menu-crud-with-activation', 'menu-display-order-sorting', 'bff-no-token-in-browser', 'logout-kills-server-session'], KAT),
     chunk('online-menus-editor-categories', 'online-menus', ['menu-editor-categories-focus', 'menu-editor-categories-crud', 'menu-editor-categories-switching', 'menu-duplicate-names'], KAT),
     chunk('online-menus-editor-uploads', 'online-menus', ['menu-content-upload-basic', 'menu-content-upload-create', 'menu-content-upload-advanced'], KAT),
     chunk('online-menus-public-preview', 'online-menus', ['menu-preview-and-external-link', 'menu-qr-code'], KAT),
