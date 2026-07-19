@@ -16,10 +16,31 @@ export const BIG_SCROLL_PX = 3000;
  * fits and NOTHING scrolls, so the first version of this test "passed" its reposition check and
  * then failed its close check having never moved a pixel — it looked like a product defect and was
  * not. Verified by probe: at 900px `document.scrollHeight === clientHeight` and there is no
- * scrollable ancestor at all; at 600px the form's container becomes scrollable and the trigger can
- * genuinely leave the viewport.
+ * scrollable ancestor at all; below that the form's container becomes scrollable and the trigger
+ * can genuinely leave the viewport.
+ *
+ * 🔴 RECALIBRATED 2026-07-19 (600 → 460) — AND WHY THIS CONSTANT IS LOAD-BEARING.
+ *
+ * The shared-forms wave (ui-forms 1.9.1 / ui-layout 1.13.0) gave `Field` a `spacing` model and
+ * retired 7 of the 16 `marginBottom: 0` cancel hacks, so this form renders MORE COMPACTLY than it
+ * did. That shrank its scroll headroom below what this test needs, and the test began failing on
+ * its PRECONDITION — "the trigger is still on screen after scrolling" — while the behaviour it
+ * actually guards was fine. Measured on prod at width 1280, trigger top constant at 209px:
+ *
+ *     height=600  headroom=186  trigger ends at  +23  ← FAILS: 23px short, cannot leave viewport
+ *     height=520  headroom=266  trigger ends at  -57  ← ok
+ *     height=460  headroom=326  trigger ends at -117  ← ok, chosen (comfortable margin)
+ *     height=380  headroom=406  trigger ends at -197  ← ok
+ *
+ * This is a recalibration, NOT a relaxation: at 600px the close-on-out-of-view assertion had
+ * become UNREACHABLE, so the test could no longer fail on the defect it exists to catch. Lowering
+ * the viewport restores its power. Nothing about the assertions changed.
+ *
+ * If this fails again on the precondition, the form got more compact again — re-measure and lower
+ * this number. Do NOT weaken the `toBeLessThan(0)` assertion to make it pass; that would leave a
+ * test that cannot detect a detached menu.
  */
-export const SHORT_VIEWPORT = { width: 1280, height: 600 };
+export const SHORT_VIEWPORT = { width: 1280, height: 460 };
 
 /**
  * Scroll the form's own scroll container and report what actually happened.
