@@ -38,6 +38,13 @@ export interface ImportAttendeeRow {
   gender?: string;
   note?: string;
   expected?: boolean;
+  /**
+   * Display name of the referring promoter. Resolved to a promoter id by name
+   * (`BulkImportAttendeesHandler`), so it must match an existing promoter on the
+   * event exactly — the only way an E2E can create a promoter-referred attendee
+   * (the public register form has no referral field).
+   */
+  referredBy?: string;
 }
 
 /** The import summary (`AttendeeImportResult`), camelCased on the wire. */
