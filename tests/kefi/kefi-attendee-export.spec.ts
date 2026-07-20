@@ -39,10 +39,18 @@ const HTTP_UNAUTHORIZED = 401;
 const HTTP_NOT_FOUND = 404;
 const UNKNOWN_EVENT_ID = '00000000-0000-0000-0000-000000000000';
 
-/** The ledger schema's column order — the header row IS the import contract. */
+/**
+ * The ledger schema's column order — the header row IS the import contract.
+ * Mirrors `AttendeeLedgerCsvWriter.Header` in Kefi.UseCases; keep the two in
+ * lockstep. `passNumber` is appended LAST on purpose (the bulk-import parser
+ * matches by header name and tolerates unknown columns, so an exported file
+ * still round-trips) — this spec previously omitted it and failed against the
+ * shipped export regardless of which tenant it ran on.
+ */
 const EXPECTED_HEADER = [
   'name', 'surname', 'email', 'phone', 'level', 'role', 'gender', 'pass',
   'paidEur', 'paymentMethod', 'paidOn', 'paid', 'expected', 'referredBy', 'note',
+  'passNumber',
 ];
 
 /**

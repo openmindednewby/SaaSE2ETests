@@ -31,6 +31,44 @@ type Project = ProjectConfig[number];
 const CHROME = devices['Desktop Chrome'];
 /** Kefi event-ops browser budget — see the note above that project block. */
 const EVENT_OPS_BROWSER = { ...devices['Desktop Chrome'], navigationTimeout: 45_000, actionTimeout: 15_000 };
+/**
+ * Kefi event-ops at PHONE width — the viewport most UBB attendees will buy on.
+ *
+ * `devices['Pixel 5']` is a real device descriptor (393×851, dpr 2.75,
+ * `isMobile: true`, `hasTouch: true`, a mobile UA), not merely a narrow window.
+ * That distinction matters: `isMobile` makes Chromium honour the page's
+ * `<meta name="viewport">` and emulate a mobile visual viewport, so a layout that
+ * only breaks under real mobile viewport semantics is reproduced rather than
+ * papered over by a desktop engine at 393px. Chromium-only — the suite is
+ * Chromium-only, and Firefox/WebKit reject `isMobile`.
+ */
+const EVENT_OPS_MOBILE = { ...devices['Pixel 5'], navigationTimeout: 45_000, actionTimeout: 15_000 };
+
+/**
+ * The three phone/tablet classes the UBB attendee + organizer surfaces are
+ * proven against. Device DESCRIPTORS, not bare viewport sizes, so `isMobile`,
+ * `hasTouch`, the device-pixel-ratio and the mobile UA are all realistic —
+ * a narrow desktop window does not reproduce mobile viewport semantics.
+ *
+ *  - iPhone 8    375×667  — the "iPhone SE" screen people actually mean. NOTE:
+ *                           Playwright's own `devices['iPhone SE']` is the
+ *                           2016 FIRST-generation SE at 320×568, not the
+ *                           375×667 SE2/SE3 in wide use today. Naming the
+ *                           descriptor by feel gives you a screen 55px
+ *                           narrower than intended — harsher, but not the one
+ *                           being targeted. `iPhone 8` is the 375×667 entry.
+ *  - iPhone 13   390×664  — the 390-class modern phone. (Playwright's height
+ *                           is the usable viewport, below the 844px physical
+ *                           screen, because browser chrome is excluded.)
+ *  - iPad Mini   768×1024 — the stack/unstack BOUNDARY. The organizer promoter
+ *                           table card-stacks BELOW 768px, so a tablet sitting
+ *                           exactly at the breakpoint proves the comparison is
+ *                           `<` and not `<=`.
+ */
+const UBB_PHONE_SE = { ...devices['iPhone 8'], navigationTimeout: 45_000, actionTimeout: 15_000 };
+const UBB_PHONE_MODERN = { ...devices['iPhone 13'], navigationTimeout: 45_000, actionTimeout: 15_000 };
+const UBB_TABLET = { ...devices['iPad Mini'], navigationTimeout: 45_000, actionTimeout: 15_000 };
+
 const AUTH = 'playwright/.auth/user.json';
 
 type AppName = 'erevna' | 'katalogos';
@@ -597,6 +635,111 @@ export function buildProjects(): ProjectConfig {
       testMatch: /kefi\/kefi-gdpr\.spec\.ts/,
       use: CHROME,
     },
+    // ---- UBB pre-sale suite (tiered pricing / pass numbers / ticket) ----
+    // Grouped as one block rather than four scattered entries to keep this file
+    // from growing further. All three drive the PUBLISHED UBB fixture tenant,
+    // register their own rows through the real public route, delete them in
+    // `finally`, and assert the roster returns to its starting size — UBB holds
+    // REAL pre-sale attendees that must never be touched.
+    // The register route is rate-limited 5/60s per IP → workers:1 + a generous
+    // budget, since `registerWithBackoff` waits out a full 60s window on a 429.
+    ...(
+      [
+        // Tiered pricing — window contiguity (no gap/overlap), the Cyprus-local
+        // -midnight boundaries, ascending prices, and the FlatPrice backward-
+        // compat control for every non-tiered pass. Pure reads.
+        'kefi-ubb-tiered-pricing',
+        // Price parity — the money surface. Asserts every surface that QUOTES a
+        // price agrees with the one that CHARGES it, ending in the suite's
+        // central assertion: what the register FORM shows === what the server
+        // RECORDS. Registers one attendee and deletes it.
+        'kefi-ubb-price-parity',
+        // Pass numbers — uniqueness across the live roster, presence on the
+        // ledger/ticket/CSV, and the never-renumbered stability guarantee.
+        'kefi-ubb-pass-numbers',
+        // Ticket surface — the payload, `payment: null` (not a hollow object),
+        // the no-secret-leak scan on a token-only public endpoint, the forged
+        // token wall, and the absolute-and-resolving ticketUrl.
+        'kefi-ubb-ticket-surface',
+        // Back-office → public ticket — the CROSSING. Every sibling verifies one
+        // surface against itself; this one writes as the organizer (authed admin
+        // route) and reads as the attendee (anonymous HMAC token), which is the
+        // only way to prove confirm-payment and mark-attended actually reach the
+        // buyer's own ticket. Registers its own rows and deletes them.
+        'kefi-ubb-payment-to-ticket',
+      ] as const
+    ).map((specName) => ({
+      name: specName,
+      workers: 1,
+      timeout: 600_000,
+      testMatch: new RegExp(`kefi/${specName}\\.spec\\.ts`),
+      use: EVENT_OPS_BROWSER,
+    })),
+    {
+      // UBB at PHONE width — the first phone-viewport coverage in this repo.
+      // Separate project rather than a member of the block above because it is
+      // the ONLY one that must not run at desktop width: its `use` is the test.
+      // Measures geometry without scrolling, since Playwright's actionability
+      // auto-scroll is exactly what hides an off-screen pay button.
+      name: 'kefi-ubb-mobile',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-ubb-mobile\.spec\.ts/,
+      use: EVENT_OPS_MOBILE,
+    },
+    // ---- UBB mobile: ambassador picker + organizer promoter table ----------
+    // One project PER DEVICE CLASS rather than one project running three
+    // viewports, because the device is the variable under test: a failure has
+    // to name the screen it happened on ("...[ubb-picker-iphone-se]") or the
+    // report cannot tell "broken everywhere" from "broken on the small one",
+    // which is the entire question being asked here.
+    ...(
+      [
+        { suffix: 'iphone-375', device: UBB_PHONE_SE },
+        { suffix: 'iphone-390', device: UBB_PHONE_MODERN },
+        { suffix: 'ipad-mini', device: UBB_TABLET },
+      ] as const
+    ).flatMap(({ suffix, device }) => [
+      {
+        // The ambassador picker on the public register form. Drives a LOCAL
+        // kefi-landings build by default (KEFI_LANDINGS_PREVIEW_URL) because
+        // UBB's published site does not carry the picker until it is
+        // republished — see the spec header. Never writes to production.
+        name: `ubb-picker-${suffix}`,
+        workers: 1,
+        timeout: 300_000,
+        testMatch: /kefi\/kefi-ubb-mobile-picker\.spec\.ts/,
+        use: device,
+      },
+      {
+        // The picker's resilience (endpoint down / empty) + its geometry.
+        // Split from the behaviour spec purely to keep both files readable.
+        name: `ubb-picker-resilience-${suffix}`,
+        workers: 1,
+        timeout: 300_000,
+        testMatch: /kefi\/kefi-ubb-picker-resilience\.spec\.ts/,
+        use: device,
+      },
+      {
+        // The attendee ticket at this width. Invalid-token path only — see the
+        // spec header on why a valid ticket is not rendered against UBB.
+        name: `ubb-ticket-${suffix}`,
+        workers: 1,
+        timeout: 300_000,
+        testMatch: /kefi\/kefi-ubb-ticket-mobile\.spec\.ts/,
+        use: device,
+      },
+      {
+        // The organizer promoter table's card-stack below 768px. Read-only
+        // against the deployed kefi-web: it never presses Retire, which would
+        // write to the live tenant.
+        name: `ubb-promoters-${suffix}`,
+        workers: 1,
+        timeout: 600_000,
+        testMatch: /kefi\/kefi-ubb-promoters-mobile\.spec\.ts/,
+        use: device,
+      },
+    ]),
     // ---- Kefi event-ops suite (shipped door/ledger/access-link surfaces) ----
     // `use` for the browser-driving legs. The global navigationTimeout is 15s,
     // which is too tight for a COLD load of the kefi-web Expo bundle or a static

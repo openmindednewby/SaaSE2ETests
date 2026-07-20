@@ -28,6 +28,23 @@ export interface TicketResponse {
   statusLabel: string | null;
   eventExternalId: string | null;
   passCode: string | null;
+  /** Human-readable pass number (`UBB-0163`) — what the buyer quotes at the door. */
+  passNumber: string | null;
+  /** Whether the attendee has actually paid. Drives "not valid until paid". */
+  paid: boolean | null;
+  /**
+   * The tenant's payment instructions block.
+   *
+   * MUST be `null` when the tenant has configured no payment provider — NOT an
+   * object of empty strings. A hollow object renders as a payment panel with
+   * blank fields, which reads to a buyer as "pay here" with nowhere to pay.
+   * `undefined` (key absent) is distinguished from `null` by {@link paymentKeyPresent}.
+   */
+  payment: unknown;
+  /** True when the response body actually carried a `payment` key. */
+  paymentKeyPresent: boolean;
+  /** The raw serialized body — so a spec can scan it for secret-bearing fields. */
+  raw: string;
 }
 
 /** The slice of the GDPR export (`TicketDataExportDto.Attendee`) the GDPR spec asserts on. */
@@ -66,6 +83,9 @@ export class KefiTicketClient {
       attendeeExternalId?: string;
       status?: string;
       passCode?: string;
+      passNumber?: string;
+      paid?: boolean;
+      payment?: unknown;
       event?: { externalId?: string } | null;
     };
     return {
@@ -74,6 +94,11 @@ export class KefiTicketClient {
       statusLabel: data.status ?? null,
       eventExternalId: data.event?.externalId ?? null,
       passCode: data.passCode ?? null,
+      passNumber: data.passNumber ?? null,
+      paid: data.paid ?? null,
+      payment: data.payment,
+      paymentKeyPresent: Object.prototype.hasOwnProperty.call(data, 'payment'),
+      raw: JSON.stringify(resp.data ?? null),
     };
   }
 
