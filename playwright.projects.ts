@@ -91,6 +91,10 @@ export function buildProjects(): ProjectConfig {
   const kefiWebUrl = process.env.KEFI_WEB_URL;
   const ichnosWebUrl = process.env.ICHNOS_WEB_URL;
   const agoraWebUrl = process.env.AGORA_WEB_URL;
+  // Digital Kin's PUBLIC site. Deliberately left with NO default, unlike zygos:
+  // the site is not deployed until Plan 6, and a default would make the suite
+  // fail against a host that does not exist instead of skipping with a reason.
+  const digitalKinSiteUrl = process.env.DIGITALKIN_SITE_URL;
   // Zygos: the console is the ONLY public entry (BFF + SPA same-origin). Unlike the other
   // *_WEB_URL vars this has a real default rather than being left unset — the deployed host
   // is the only place the suite CAN run (see the zygos-api/zygos-ui projects below), so an
@@ -216,6 +220,31 @@ export function buildProjects(): ProjectConfig {
         // That was the whole "agora @ui lands on a 404" bug.
       },
       // No `setup` dependency — see the agora-api project above.
+    },
+    // --- Digital Kin PUBLIC guide site (Plan 3 Task 15) ----------------------
+    // The site is ANONYMOUS end to end: no login, no cookies, no sessions. So no
+    // `setup` dependency and no storageState — depending on `setup` would couple
+    // this suite to an unrelated app's login, which is the coupling the agora
+    // projects above were fixed to remove.
+    //
+    // ⚠️ NOT DEPLOYED UNTIL PLAN 6 (k8s manifest, ingress, DNS, TLS). Both tiers
+    // `test.skip` with a reason while DIGITALKIN_SITE_URL is unset, so this is
+    // safe to run in any environment and never fakes a pass.
+    //
+    // The negative lookbehind excludes `*.ui.spec.ts` — same @api/@ui split as
+    // agora and ichnos.
+    { name: 'digital-kin-api', workers: 1, testMatch: /digital-kin\/.*(?<!\.ui)\.spec\.ts/ },
+    {
+      name: 'digital-kin-ui',
+      workers: 1,
+      testMatch: /digital-kin\/.*\.ui\.spec\.ts/,
+      use: {
+        ...CHROME,
+        ...(digitalKinSiteUrl ? { baseURL: digitalKinSiteUrl } : {}),
+        // Staging has no LE cert (WireGuard-only), so Traefik serves its default
+        // self-signed cert — the deliberate standing posture for this fleet.
+        ignoreHTTPSErrors: true,
+      },
     },
     // Ichnos @ui portal tier (F1 onboarding driven in a real browser). baseURL = ICHNOS_WEB_URL; the spec
     // `test.skip`s gracefully when it is unset (the dev PC can't reach WireGuard-only staging — this runs
