@@ -716,6 +716,44 @@ export function buildProjects(): ProjectConfig {
       testMatch: /kefi\/kefi-ubb-mobile\.spec\.ts/,
       use: EVENT_OPS_MOBILE,
     },
+    {
+      // ---- Organizer registration-notifications card (desktop) ------------
+      // The organizer's "tell me when someone registers" editor. SERIAL and
+      // single-worker by construction: the file logs in ONCE and shares that
+      // page across its tests, because concurrent Keycloak password grants
+      // against a real organizer account have produced transient 401s.
+      name: 'kefi-registration-notifications',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-registration-notifications\.spec\.ts/,
+      use: EVENT_OPS_BROWSER,
+    },
+    {
+      // The card's REFUSAL paths (recipient cap, invalid address) plus the
+      // accessibility assertion. Split from the behavioural project so a known
+      // a11y defect cannot cascade-skip the semantics in serial mode.
+      name: 'kefi-registration-notifications-validation',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-registration-notifications-validation\.spec\.ts/,
+      use: EVENT_OPS_BROWSER,
+    },
+    // ---- Registration-notifications card at PHONE width --------------------
+    // One project PER DEVICE CLASS, same reasoning as the UBB block below: a
+    // failure has to name the screen it happened on, or the report cannot tell
+    // "broken everywhere" from "broken only on the small one".
+    ...(
+      [
+        { suffix: 'iphone-375', device: UBB_PHONE_SE },
+        { suffix: 'iphone-390', device: UBB_PHONE_MODERN },
+      ] as const
+    ).map(({ suffix, device }) => ({
+      name: `kefi-registration-notifications-${suffix}`,
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-registration-notifications-mobile\.spec\.ts/,
+      use: device,
+    })),
     // ---- UBB mobile: ambassador picker + organizer promoter table ----------
     // One project PER DEVICE CLASS rather than one project running three
     // viewports, because the device is the variable under test: a failure has
