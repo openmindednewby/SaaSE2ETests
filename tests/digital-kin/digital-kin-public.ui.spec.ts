@@ -160,6 +160,65 @@ test.describe('Digital Kin public site UI @digital-kin-ui @digital-kin', () => {
     expect(new URL(page.url()).searchParams.get('locale')).toBe('en');
   });
 
+  test('🔴 the YouTube facade AND the player it becomes both fill a 16:9 box', async ({ page }) => {
+    // The facade sized correctly and the PLAYER did not. YouTubeEmbed styled the
+    // iframe with a scoped `.dk-video__frame`, but Astro stamps its component hash
+    // at build time and the iframe is made with createElement at runtime, so the
+    // rule could never match. The player fell back to the CSS replaced-element
+    // default: measured 304x154 inside a correct 1147x645 box on the live site.
+    //
+    // Asserting only the facade — the obvious test to write — passes against that
+    // bug. The assertion has to survive the click.
+    await page.goto(`${site}${DK_ROUTES.home}`, { waitUntil: 'domcontentloaded' });
+
+    const guide = page.locator('a[href^="/odigos/"]').first();
+    test.skip((await guide.count()) === 0, 'No guide linked from the home page.');
+    await guide.click();
+    await page.waitForLoadState('domcontentloaded');
+
+    const box = page.locator('.dk-video').first();
+    test.skip((await box.count()) === 0, 'This guide carries no video.');
+    await box.scrollIntoViewIfNeeded();
+
+    const ratioOf = async (locator: ReturnType<typeof page.locator>): Promise<number> => {
+      const size = await locator.boundingBox();
+      return size === null || size.height === 0 ? 0 : size.width / size.height;
+    };
+
+    const SIXTEEN_BY_NINE = 16 / 9;
+
+    expect(await ratioOf(box), 'the facade box is not 16:9').toBeCloseTo(SIXTEEN_BY_NINE, 1);
+
+    const facade = await box.boundingBox();
+    await box.locator('button').click();
+
+    const frame = box.locator('iframe');
+    await expect(frame).toBeVisible();
+
+    const player = await frame.boundingBox();
+    expect(player, 'no iframe after the click').not.toBeNull();
+
+    // Same box as the facade, not merely "16:9 at some size" — a 300x150 default is
+    // 2:1, but a player that filled the width and collapsed the height would still
+    // need catching, and so would one that jumped size on click.
+    expect(
+      Math.abs((player?.width ?? 0) - (facade?.width ?? 0)),
+      'the player does not fill the column the facade filled',
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs((player?.height ?? 0) - (facade?.height ?? 0)),
+      'the player jumped height when it replaced the facade',
+    ).toBeLessThanOrEqual(1);
+    expect(await ratioOf(frame), 'the player is not 16:9').toBeCloseTo(SIXTEEN_BY_NINE, 1);
+
+    // Privacy host and no page-load autoplay are load-bearing, not incidental.
+    expect(await frame.getAttribute('src')).toContain('youtube-nocookie.com');
+
+    // No iframe exists before the click — that IS the privacy guarantee, and it is
+    // what makes the post-click `autoplay=1` a user-initiated play rather than an
+    // ambush. Proven by the facade assertions above running against a poster.
+  });
+
   test('🔴 every primary nav path resolves — the GREEK slugs, not the briefed English ones', async ({ page }) => {
     // Plan 3's briefs specified /search, /useful, /about, /help, /downloads four
     // separate times. All five 404. Nothing in either repo's toolchain resolves
