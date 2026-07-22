@@ -16,6 +16,56 @@ export const DIGITALKIN_SITE_URL: string | null =
   process.env.DIGITALKIN_SITE_URL?.trim().replace(/\/+$/, '') || null;
 
 /**
+ * The ADMIN CMS origin — the surface Sophia authors in.
+ *
+ * 🔴 THIS MUST BE THE INGRESS HOSTNAME, NOT A NODEPORT. The BFF enforces an
+ * `Origin` allow-list (`Bff:Csrf:AllowedOrigins` in Bff.DigitalKin's
+ * appsettings.json) on every state-changing request. It lists only
+ * `https://admin.digitalkin.dloizides.com`,
+ * `https://staging.admin.digitalkin.dloizides.com` and `http://localhost:8088`.
+ *
+ * Pointing this at the staging NodePort (`http://10.0.0.2:30358`) makes the SPA
+ * load and the login form render — and then EVERY login returns
+ * `403 {"error":"Anti-forgery validation failed."}`, because the NodePort origin
+ * is not on the list. The bare SPA service (`:30359`) is worse: it has no BFF at
+ * all, so `POST /bff/login` hits the static-file server and returns 405 while
+ * `GET /bff/me` returns the SPA's own index.html with a 200. Both look like
+ * "the CMS is up" from the outside. Verified live 2026-07-22.
+ */
+export const DIGITALKIN_ADMIN_URL: string | null =
+  process.env.DIGITALKIN_ADMIN_URL?.trim().replace(/\/+$/, '') || null;
+
+/** Master account — full access, including taxonomy writes. */
+export const DIGITALKIN_MASTER_USER: string | null =
+  process.env.DIGITALKIN_DEMO_MASTER_USER?.trim() || null;
+export const DIGITALKIN_MASTER_PASSWORD: string | null =
+  process.env.DIGITALKIN_DEMO_MASTER_PASSWORD?.trim() || null;
+
+/** Admin account — guides/media only; must NOT reach taxonomy. */
+export const DIGITALKIN_ADMIN_USER: string | null =
+  process.env.DIGITALKIN_DEMO_ADMIN_USER?.trim() || null;
+export const DIGITALKIN_ADMIN_PASSWORD: string | null =
+  process.env.DIGITALKIN_DEMO_ADMIN_PASSWORD?.trim() || null;
+
+/** True when the authoring tier has everything it needs to run for real. */
+export function hasAdminCredentials(): boolean {
+  return (
+    DIGITALKIN_ADMIN_URL !== null &&
+    DIGITALKIN_MASTER_USER !== null &&
+    DIGITALKIN_MASTER_PASSWORD !== null
+  );
+}
+
+/**
+ * A run-unique prefix for content this suite creates on the REAL public site.
+ * Deliberately greppable so `sitemap.xml | grep e2e-dk-` finds anything the
+ * teardown missed.
+ */
+export function dkTag(): string {
+  return `e2e-dk-${Date.now().toString().slice(-8)}`;
+}
+
+/**
  * The purge shared secret, if the runner has been given one.
  *
  * Only the REJECTION cases are asserted without it — proving an unauthenticated
