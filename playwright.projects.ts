@@ -985,6 +985,18 @@ export function buildProjects(): ProjectConfig {
       use: EVENT_OPS_BROWSER,
     },
     {
+      // Kefi organizer TAB restructure (backlog C1, kefi-web 723eaa5) — 8-tab
+      // shell on @dloizides/ui-layout Tabs: all tabs render + selectable, one
+      // panel at a time, ?tab= deep-link + reload persistence, Ledger exports,
+      // Door render, and the C3 promoter-panel-in-viewport regression. @ui,
+      // one shared sign-in for the file → 600s budget.
+      name: 'kefi-organizer-tabs',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-organizer-tabs\.spec\.ts/,
+      use: EVENT_OPS_BROWSER,
+    },
+    {
       // Katalogos device-PIN + passkey via the SHARED auth-web 1.4.0 components
       // (unified-login Increment 3). Uses the seeded realm test user + the global
       // baseURL (katalogos-web per E2E_TARGET) — no canary signup/IMAP needed.
