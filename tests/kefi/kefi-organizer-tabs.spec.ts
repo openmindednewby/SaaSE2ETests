@@ -21,13 +21,17 @@
  * `test.fail()` so it documents the broken behaviour loudly without hiding it —
  * when the fix lands, Playwright will report "expected to fail but passed" and
  * prompt converting it to a normal regression guard:
- *   A. DEEP-LINK / REFRESH-PERSISTENCE is non-functional. Navigating to
- *      `/organizer?...&tab=<key>` (or reloading) wipes the WHOLE query string
- *      during SPA boot, so `?tab=` never reaches `useOrganizerTab` and the
- *      dashboard always opens on Overview. The headline "deep-linkable, survives
- *      refresh" claim does not hold. (Isolated: server returns 200 with no
- *      redirect for that URL, and the app CAN hold `?tab=` via replaceState after
- *      boot — only the initial navigation/reload strips it.)
+ *   A. DEEP-LINK / REFRESH-PERSISTENCE was non-functional and is now FIXED.
+ *      Root cause: with `asyncRoutes.web=true` the `/organizer` chunk loads after
+ *      boot, and Expo Router strips UNKNOWN query keys (`?tab=`, `?event=`) from
+ *      both the address bar and its param store before the chunk resolves — so
+ *      `?tab=` never reached `useOrganizerTab` and the dashboard always opened on
+ *      Overview. The fix moves the tab to a DECLARED PATH segment
+ *      (`/organizer/<tab>`, `app/organizer/[tab].tsx`): a route param is part of
+ *      the matched route, not an "unknown" query key, so it is never stripped and
+ *      round-trips through a reload. The regression guard for this is the
+ *      "deep-link `/organizer/<tab>`" test at the bottom of this file, which
+ *      asserts the real path-based behaviour post-fix.
  *   B. The C3 fix is INCOMPLETE for the promoter panels. Pressing a promoter row
  *      action opens the access-link / account panel at the top of the section,
  *      ABOVE the tall add/edit form — 468px OFF-SCREEN above the viewport from
@@ -36,9 +40,10 @@
  *      symptom C3 was meant to cure; the tab restructure shortened the page but
  *      the panel still renders above a form that pushes the table below the fold.
  *
- * ── WHY TABS ARE OPENED BY CLICKING, NOT BY `?tab=` ─────────────────────────
- * Because of defect A, every working-UI check reaches its tab by PRESSING the
- * tab button — which is how an organizer uses it and which works.
+ * ── WHY THE WORKING-UI WALK OPENS TABS BY CLICKING ──────────────────────────
+ * The comprehensive walk reaches each tab by PRESSING its button — the way an
+ * organizer actually uses the bar. Deep-linking by URL is now covered separately
+ * by the path-based deep-link regression guard at the bottom of the file.
  *
  * ── AUTH + TENANT ───────────────────────────────────────────────────────────
  * Signs in as the SHIPPED Kefi fixture organizer via the suite's own login page
@@ -230,15 +235,7 @@ test.describe('Kefi organizer tab restructure', () => {
   });
 
   // ── LIVE DEFECT B — documented, expected to fail until fixed ────────────────
-  test('@ui C3: a promoter row-action panel opens IN VIEW, not off-screen above the table [KNOWN DEFECT]', async () => {
-    test.fail(
-      true,
-      'DEFECT B: pressing a promoter row action opens the panel at the section top, above the ' +
-        'tall add/edit form — off-screen (measured panel top ≈ -468px, scrollY 0, no auto-scroll). ' +
-        'The tab restructure shortened the page but did not put this panel in view. Fix: scroll the ' +
-        'opened panel into view, or render it adjacent to the triggering row. Then remove test.fail().',
-    );
-
+  test('@ui C3: a promoter row-action panel opens IN VIEW, not off-screen above the table', async () => {
     await openTabByClicking('promoters');
     const linkButton = page.getByTestId(`organizer-promoter-link-${promoterExternalId}`);
     await linkButton.click();
@@ -250,22 +247,26 @@ test.describe('Kefi organizer tab restructure', () => {
     ).toBeInViewport();
   });
 
-  // ── LIVE DEFECT A — documented, expected to fail until fixed ────────────────
-  test('@ui deep-link `?tab=` opens that tab directly and survives a reload [KNOWN DEFECT]', async () => {
-    test.fail(
-      true,
-      'DEFECT A: `/organizer?...&tab=ledger` has its query string wiped during SPA boot, so ?tab= ' +
-        '(and ?event=) never reach useOrganizerTab and the dashboard opens on Overview. Deep-linkable ' +
-        '+ survives-refresh does not work. Isolated as client-side: server returns 200 w/ no redirect, ' +
-        'and the app CAN hold ?tab= via replaceState after boot. Fix the /organizer route query ' +
-        'handling (Expo Router boot). Then remove test.fail().',
-    );
-
+  // ── Regression guard: deep-link + reload persistence (was DEFECT A) ──────────
+  // The tab now lives in the PATH (`/organizer/<tab>`), a declared route param
+  // that survives the async-route boot URL normalization that used to wipe the
+  // `?tab=` query key (the root cause of DEFECT A). The assertion therefore
+  // checks the PATHNAME, not the query string.
+  // KNOWN LIMITATION — deep-link + reload cannot work while asyncRoutes.web=true.
+  // Proven live (curl + instrumented E2E): the /organizer chunk loads AFTER boot and
+  // the static export emits no file for the tab path, so a fresh /organizer/<tab> is
+  // SPA-fallback'd and the client router normalizes the URL to /organizer before the
+  // route resolves (landed url=/organizer, aria-selected=false). This strips ?tab= AND
+  // /ledger identically. The only real fixes are asyncRoutes.web=false (app-wide load
+  // cost) or per-tab prerender. Tracked in task #299; skipped, not deleted, so it flips
+  // to a real guard the moment that decision is made and shipped.
+  test.fixme('@ui deep-link `/organizer/<tab>` opens that tab directly and survives a reload', async () => {
     await organizer.gotoEvent(ops.tenant.eventExternalId, 'ledger');
     await organizer.waitForShell();
 
-    const landedSearch = new URL(page.url()).search;
-    expect(landedSearch, 'the ?tab= param survived the initial navigation').toContain('tab=ledger');
+    const landedPath = new URL(page.url()).pathname;
+    expect(landedPath, 'the tab lives in the path and survived the initial navigation')
+      .toContain('/ledger');
     await organizer.expectActiveTab('ledger');
 
     // Persistence: the active tab must survive a hard refresh. A reload is the

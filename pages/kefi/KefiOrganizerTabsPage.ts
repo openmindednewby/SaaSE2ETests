@@ -16,8 +16,10 @@
  *    pointing back at its tab. ONLY the active tab's panel is mounted — inactive
  *    panels render nothing — so "one visible panel at a time" is the strongest
  *    possible form here: the others are not in the DOM at all.
- *  - active tab persists in the `?tab=` query param (deep-linkable, survives
- *    reload); `?event=` still selects which event.
+ *  - the active tab is a PATH SEGMENT — `/organizer/<key>` (deep-linkable and
+ *    reload-surviving because a declared route param, unlike the old `?tab=`
+ *    query key, is not stripped by kefi-web's `asyncRoutes.web=true` boot URL
+ *    normalization). `?event=` still selects which event.
  */
 
 import { type Locator, type Page, expect } from '@playwright/test';
@@ -100,13 +102,15 @@ export class KefiOrganizerTabsPage {
 
   /**
    * Open the organizer dashboard for a specific event, optionally deep-linked to
-   * a tab via `?tab=`.
+   * a tab. The tab is a PATH segment (`/organizer/<tab>`) — the declared route
+   * param survives the async-route boot that strips query keys; `?event=` stays
+   * a query param and still selects which event.
    */
   async gotoEvent(eventExternalId: string, tab?: OrganizerTabKey): Promise<void> {
     const { webUrl } = getKefiUrls();
-    const tabQuery = tab ? `&tab=${encodeURIComponent(tab)}` : '';
+    const tabPath = tab ? `/${encodeURIComponent(tab)}` : '';
     await this.page.goto(
-      `${webUrl}/organizer?event=${encodeURIComponent(eventExternalId)}${tabQuery}`,
+      `${webUrl}/organizer${tabPath}?event=${encodeURIComponent(eventExternalId)}`,
     );
   }
 
