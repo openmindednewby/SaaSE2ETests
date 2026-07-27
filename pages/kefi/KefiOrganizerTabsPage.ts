@@ -74,6 +74,14 @@ export class KefiOrganizerTabsPage {
   readonly selectedTabs: Locator;
   /** The app error boundary's reload button — must NEVER appear. */
   readonly errorBoundaryReload: Locator;
+  /**
+   * The one-at-a-time promoter row-action modal (Edit / Account / Access-link).
+   * Its card carries this testID; when no action is active the modal renders
+   * nothing at all, so this resolves to zero elements. Replaces the old
+   * scroll-to-top inline panels — a row action now opens centered in the
+   * viewport regardless of how far down the table the row sits.
+   */
+  readonly promoterActionModal: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -83,6 +91,27 @@ export class KefiOrganizerTabsPage {
     this.anyPanel = page.locator('[id^="organizer-panel-"]');
     this.selectedTabs = page.locator('[role="tab"][aria-selected="true"]');
     this.errorBoundaryReload = page.getByTestId('error-boundary-reload-button');
+    this.promoterActionModal = page.getByTestId('organizer-promoter-action-modal');
+  }
+
+  /**
+   * Dismiss the open promoter row-action modal via the active panel's own
+   * Close / Cancel control, then wait for the modal to leave the DOM.
+   *
+   * The modal is ONE-AT-A-TIME: while it is open its backdrop covers the whole
+   * table, so the next row action cannot be pressed until this returns. The
+   * close control differs per panel, so the caller passes the testID of the
+   * one the currently-open panel rendered:
+   *   - access-link panel → `organizer-promoter-link-close`
+   *   - account panel     → `organizer-promoter-account-close`
+   *   - edit form         → `organizer-promoter-cancel-edit`
+   */
+  async closePromoterActionModal(closeControlTestId: string): Promise<void> {
+    await this.page.getByTestId(closeControlTestId).click();
+    await expect(
+      this.promoterActionModal,
+      'the promoter row-action modal dismissed before the next row action',
+    ).toBeHidden();
   }
 
   /** The tab button for one section. */

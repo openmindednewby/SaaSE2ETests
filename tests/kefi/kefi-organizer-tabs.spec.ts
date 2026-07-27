@@ -15,30 +15,27 @@
  *   2. Ledger tab exists and carries both export actions (CSV + JSON);
  *   3. Door tab exists and renders its check-in list;
  *   4. Promoters tab: every row action (Edit/Account/Link/Retire) is present and
- *      OPENS its panel; Edit loads the row into the form.
+ *      OPENS its panel in the ONE-AT-A-TIME row-action modal
+ *      (`PromoterActionModal`); Edit loads the row into the modal edit form. The
+ *      walk closes each panel (via its own Close control) before opening the
+ *      next, because the modal's backdrop covers the table — the second action
+ *      cannot be pressed while the first modal is up.
  *
- * TWO LIVE DEFECTS this run isolated on the deployed build, each marked
- * `test.fail()` so it documents the broken behaviour loudly without hiding it —
- * when the fix lands, Playwright will report "expected to fail but passed" and
- * prompt converting it to a normal regression guard:
- *   A. DEEP-LINK / REFRESH-PERSISTENCE was non-functional and is now FIXED.
- *      Root cause: with `asyncRoutes.web=true` the `/organizer` chunk loads after
- *      boot, and Expo Router strips UNKNOWN query keys (`?tab=`, `?event=`) from
- *      both the address bar and its param store before the chunk resolves — so
- *      `?tab=` never reached `useOrganizerTab` and the dashboard always opened on
- *      Overview. The fix moves the tab to a DECLARED PATH segment
- *      (`/organizer/<tab>`, `app/organizer/[tab].tsx`): a route param is part of
- *      the matched route, not an "unknown" query key, so it is never stripped and
- *      round-trips through a reload. The regression guard for this is the
- *      "deep-link `/organizer/<tab>`" test at the bottom of this file, which
- *      asserts the real path-based behaviour post-fix.
- *   B. The C3 fix is INCOMPLETE for the promoter panels. Pressing a promoter row
- *      action opens the access-link / account panel at the top of the section,
- *      ABOVE the tall add/edit form — 468px OFF-SCREEN above the viewport from
- *      where the organizer is looking at the table (`scrollY:0`, panel top
- *      -468px, no auto-scroll into view). This is the same off-screen-above
- *      symptom C3 was meant to cure; the tab restructure shortened the page but
- *      the panel still renders above a form that pushes the table below the fold.
+ * DEFECT HISTORY — both defects this file once documented are now FIXED; the
+ * tests below assert the fixed behaviour and guard against regression:
+ *   A. DEEP-LINK / REFRESH-PERSISTENCE. Root cause: with `asyncRoutes.web=true`
+ *      the `/organizer` chunk loads after boot, and Expo Router strips UNKNOWN
+ *      query keys (`?tab=`, `?event=`) before the chunk resolves — so `?tab=`
+ *      never reached `useOrganizerTab`. The fix moved the tab to a DECLARED PATH
+ *      segment (`/organizer/<tab>`). The path-based deep-link test at the bottom
+ *      of this file remains `test.fixme` while the static export gap (task #299)
+ *      is decided — see its own note.
+ *   B. C3 — a promoter row-action panel opened ~468px OFF-SCREEN above the tall
+ *      add form (`scrollY:0`, no auto-scroll into view). The overhaul replaced
+ *      the inline panels with `PromoterActionModal`, a one-at-a-time modal
+ *      CENTERED in the viewport, so the panel now opens right where the organizer
+ *      is looking regardless of the row's position. The C3 test below now expects
+ *      `toBeInViewport()` to PASS and guards against a regression.
  *
  * ── WHY THE WORKING-UI WALK OPENS TABS BY CLICKING ──────────────────────────
  * The comprehensive walk reaches each tab by PRESSING its button — the way an
@@ -72,10 +69,7 @@ import {
   KefiOrganizerTabsPage,
   ORGANIZER_TAB_KEYS,
 } from '../../pages/kefi/KefiOrganizerTabsPage.js';
-import {
-  EVENT_OPS_PROMOTER_NAME,
-  KefiPromoterClient,
-} from '../../helpers/kefi/kefiPromoterClient.js';
+import { KefiPromoterClient } from '../../helpers/kefi/kefiPromoterClient.js';
 import {
   fixtureTenantAvailable,
   FIXTURE_TENANT_SKIP_REASON,
@@ -203,28 +197,43 @@ test.describe('Kefi organizer tab restructure', () => {
     await expect(linkButton, 'the Link row action is present').toHaveCount(1);
     await expect(retireButton, 'the Retire row action is present').toHaveCount(1);
 
-    // Link opens the access-link panel; Account opens the account panel (both in
-    // the DOM, with size). Whether they are IN THE VIEWPORT is defect B, asserted
-    // in its own test.
+    // Link opens the access-link panel; Account opens the account panel. Both now
+    // open in the ONE-AT-A-TIME row-action modal (`organizer-promoter-action-
+    // modal`, the modal that replaced the old scroll-to-top inline panels). Its
+    // backdrop covers the whole table, so the modal MUST be dismissed between
+    // opens — otherwise the second row button sits behind the backdrop and its
+    // click never lands. Each panel is closed via its own Close control (the
+    // unchanged panel testIDs) before the next action is pressed.
     await linkButton.click();
     await expect(
       page.getByTestId('organizer-promoter-link'),
-      'the promoter access-link panel opened',
+      'the promoter access-link panel opened in the row-action modal',
     ).toBeVisible();
+    await organizer.closePromoterActionModal('organizer-promoter-link-close');
+
     await accountButton.click();
     await expect(
       page.getByTestId('organizer-promoter-account'),
-      'the account-link panel opened',
+      'the account-link panel opened in the row-action modal',
     ).toBeVisible();
+    await organizer.closePromoterActionModal('organizer-promoter-account-close');
 
-    // Edit is client-side only (loads the row into the form) — pressing it proves
-    // the Actions column responds to touch without writing anything. Retire is
+    // Edit is client-side only (loads the row into the modal edit form) —
+    // pressing it proves the Actions column responds to touch without writing
+    // anything. The `cancel-edit` control renders ONLY when editing an existing
+    // row, so its presence in the modal proves the EDIT form loaded (not the
+    // inline add form), i.e. the row action is live, not painted. Retire is
     // NEVER pressed: it is a real PUT that would deactivate the act.
     await editButton.click();
     await expect(
-      page.getByTestId('organizer-promoters-manager'),
-      'pressing Edit loads the promoter into the manager form (row actions are live, not painted)',
-    ).toContainText(new RegExp(EVENT_OPS_PROMOTER_NAME.replace(/[()]/g, '\\$&'), 'i'));
+      organizer.promoterActionModal,
+      'pressing Edit opens the promoter row-action modal',
+    ).toBeVisible();
+    await expect(
+      organizer.promoterActionModal.getByTestId('organizer-promoter-cancel-edit'),
+      'the modal loaded the EDIT form for the row (cancel-edit renders only when editing)',
+    ).toBeVisible();
+    await organizer.closePromoterActionModal('organizer-promoter-cancel-edit');
     await expect(
       retireButton,
       'the Retire action is enabled (measured, never pressed — it deactivates a real act)',
@@ -234,16 +243,23 @@ test.describe('Kefi organizer tab restructure', () => {
     guard.expectClean('the organizer tab UI across all 8 tabs and the promoter row actions');
   });
 
-  // ── LIVE DEFECT B — documented, expected to fail until fixed ────────────────
-  test('@ui C3: a promoter row-action panel opens IN VIEW, not off-screen above the table', async () => {
+  // ── C3 regression guard — the fix landed, this now asserts the fixed state ──
+  // Was DEFECT B: a promoter row action opened its panel ABOVE the tall add form,
+  // ~468px off-screen above the viewport, so the organizer had to scroll to see
+  // it. The overhaul replaced those inline panels with `PromoterActionModal`, a
+  // one-at-a-time modal CENTERED in the viewport — the panel now appears right
+  // where the organizer is looking regardless of the row's position. This test
+  // therefore expects `toBeInViewport()` to PASS, and guards against a regression
+  // back to the off-screen-above behaviour.
+  test('@ui C3: a promoter row-action panel opens IN VIEW (centered modal), not off-screen above the table', async () => {
     await openTabByClicking('promoters');
     const linkButton = page.getByTestId(`organizer-promoter-link-${promoterExternalId}`);
     await linkButton.click();
     const linkPanel = page.getByTestId('organizer-promoter-link');
-    await expect(linkPanel, 'the promoter access-link panel opened').toBeVisible();
+    await expect(linkPanel, 'the promoter access-link panel opened in the modal').toBeVisible();
     await expect(
       linkPanel,
-      'the access-link panel is in the viewport, not off-screen above the table (C3)',
+      'the access-link panel is in the viewport (centered modal), not off-screen above the table (C3)',
     ).toBeInViewport();
   });
 

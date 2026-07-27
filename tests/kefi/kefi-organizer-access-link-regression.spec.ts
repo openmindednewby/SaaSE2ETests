@@ -30,6 +30,7 @@ import { test, expect } from '@playwright/test';
 
 import { KefiLoginPage } from '../../pages/kefi/KefiLoginPage.js';
 import { KefiOrganizerPage } from '../../pages/kefi/KefiOrganizerPage.js';
+import { KefiOrganizerTabsPage } from '../../pages/kefi/KefiOrganizerTabsPage.js';
 import { openEventOps } from '../../helpers/kefi/kefiEventOpsFixture.js';
 import {
   fixtureTenantAvailable,
@@ -106,15 +107,19 @@ test.describe('Kefi organizer surface survives an existing access link', () => {
 
       await organizer.expectRendered();
 
-      // The sections that used to disappear behind the boundary are all here.
+      // The organizer dashboard is now an 8-tab shell (kefi-web overhaul), and
+      // the access-links manager — the exact render path that used to crash on a
+      // null string field — lives on the SETTINGS tab. It is not mounted on the
+      // default Overview load, so the null-bearing row is only walked once that
+      // tab is selected. Navigate there to reproduce the original trigger.
+      const tabs = new KefiOrganizerTabsPage(page);
+      await tabs.selectTab('settings');
+
+      // The manager that used to disappear behind the boundary rendered.
       await expect(
         organizer.accessLinksSection,
         'the access-links manager itself rendered',
       ).toBeVisible({ timeout: 30_000 });
-      await expect(
-        organizer.attendeesSection,
-        'the attendees section rendered — the crash took the WHOLE dashboard, not just the links card',
-      ).toBeVisible();
       await expect(
         organizer.accessLinksLoadError,
         'the access-links list loaded without an error banner',
@@ -126,6 +131,19 @@ test.describe('Kefi organizer surface survives an existing access link', () => {
         organizer.accessLinkRevoke(doorLink.externalId),
         'our minted link is rendered as a row (the null-bearing row WAS traversed)',
       ).toBeVisible({ timeout: 30_000 });
+
+      // The crash used to take the WHOLE app (the null threw during React render,
+      // so the app-level error boundary replaced everything). Its equivalent
+      // today: the boundary must be absent AND the tab shell must still be
+      // standing after the access-links panel rendered its null-bearing row.
+      await expect(
+        organizer.errorBoundaryReload,
+        'the app error boundary did not take over after the access-links rendered',
+      ).toHaveCount(0);
+      await expect(
+        tabs.tabList,
+        'the tab shell survived rendering the access-links (the crash took the whole app, not one card)',
+      ).toBeVisible();
 
       // ── 4. Still nothing threw, after the whole surface settled ─────────
       expect(

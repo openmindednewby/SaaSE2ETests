@@ -46,6 +46,7 @@ import { attachConsoleGuard } from '../../helpers/consoleGuard.js';
 import { openEventOps } from '../../helpers/kefi/kefiEventOpsFixture.js';
 import { KefiLoginPage } from '../../pages/kefi/KefiLoginPage.js';
 import { KefiOrganizerPage } from '../../pages/kefi/KefiOrganizerPage.js';
+import { KefiOrganizerTabsPage } from '../../pages/kefi/KefiOrganizerTabsPage.js';
 import { KefiPromoterClient } from '../../helpers/kefi/kefiPromoterClient.js';
 import {
   expectNoHorizontalOverflow,
@@ -126,6 +127,16 @@ test.describe('Kefi UBB organizer promoter table on mobile', () => {
     // the promoters screen — precisely the defect this guard exists to catch.
     // Everything from here on is the surface under test.
     guard.reset();
+
+    // The organizer dashboard became an 8-tab shell (kefi-web overhaul): only
+    // the ACTIVE tab's panel is mounted, so the promoters manager is not on the
+    // default Overview load. Select the Promoters tab to mount it — this also
+    // exercises that the tab strip is reachable and tappable at this viewport,
+    // which is exactly the mobile concern this spec exists to guard. The strip
+    // scrolls horizontally on a phone; Playwright scrolls the tab into view
+    // before the click.
+    const tabs = new KefiOrganizerTabsPage(page);
+    await tabs.selectTab('promoters');
 
     const section = page.getByTestId(PROMOTERS_SECTION);
     await expect(
@@ -239,16 +250,23 @@ test.describe('Kefi UBB organizer promoter table on mobile', () => {
     ).toBeEnabled();
 
     // ── 4. Edit actually responds to a tap ───────────────────────────────────
-    // Client-side only: `onEdit` lifts the row into the form. Pressing it is
-    // what separates "the button is painted at the right size" from "the button
-    // works", and it writes nothing.
+    // Client-side only: `onEdit` opens the one-at-a-time row-action modal
+    // (kefi-web overhaul) with the edit form loaded — no request is made.
+    // Pressing it is what separates "the button is painted at the right size"
+    // from "the button works". The modal appearing (centered in the viewport) is
+    // the proof the Actions column responds to touch; the `cancel-edit` control
+    // inside it renders only when editing an existing row.
     await editButton.click();
+    const actionModal = page.getByTestId('organizer-promoter-action-modal');
     await expect(
-      section,
-      `pressing Edit on "${target.name}" loads that act into the form — the name field should ` +
-        'now hold the promoter being edited. If this fails the Actions column renders but does ' +
-        'not respond to touch.',
-    ).toContainText(target.name);
+      actionModal,
+      `pressing Edit on "${target.name}" opens the row-action modal. If this fails the Actions ` +
+        'column renders but does not respond to touch.',
+    ).toBeVisible();
+    await expect(
+      actionModal.getByTestId('organizer-promoter-cancel-edit'),
+      `the modal loaded the EDIT form for "${target.name}" (cancel-edit renders only when editing)`,
+    ).toBeVisible();
 
     guard.expectClean(`the organizer promoters manager at ${width}px`);
   });

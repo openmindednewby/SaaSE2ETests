@@ -23,6 +23,7 @@ import { test, expect } from '@playwright/test';
 
 import { KefiLoginPage } from '../../pages/kefi/KefiLoginPage.js';
 import { KefiOrganizerPage } from '../../pages/kefi/KefiOrganizerPage.js';
+import { KefiOrganizerTabsPage } from '../../pages/kefi/KefiOrganizerTabsPage.js';
 import {
   KefiAttendeeAdminClient,
   type OrganizerAttendee,
@@ -185,6 +186,13 @@ test.describe('Kefi mark-attendee-paid', () => {
       const organizer = new KefiOrganizerPage(page);
       await organizer.gotoEvent(ops.tenant.eventExternalId);
       await organizer.expectRendered();
+
+      // The organizer dashboard became an 8-tab shell (kefi-web overhaul): the
+      // attendee roster — with the Paid/Unpaid badge and toggle this test drives
+      // — lives behind the Attendees tab and is not mounted on the default
+      // Overview load. Select it before reaching for the attendee row controls.
+      const tabs = new KefiOrganizerTabsPage(page);
+      await tabs.selectTab('attendees');
 
       // The freshly registered visitor starts unpaid.
       await expect(
