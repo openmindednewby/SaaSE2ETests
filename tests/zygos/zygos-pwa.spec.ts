@@ -9,7 +9,7 @@
 // the service-worker registration, the canonical link, robots, and the Open Graph tags. The build
 // was green, the app loaded, and the PWA had NEVER registered on any user. Verified only by curl:
 //
-//     curl https://app.zygos.dloizides.com/service-worker.js   → 404 (before the fix)
+//     curl https://app.finreg.dloizides.com/service-worker.js   → 404 (before the fix)
 //     served /login HTML                                        → no serviceWorker.register(...)
 //
 // A green build is not evidence for this class of bug — only a fetch of the live host is. So the

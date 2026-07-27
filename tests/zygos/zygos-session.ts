@@ -179,7 +179,7 @@ type LoginOutcome =
   | { kind: 'unreachable' };
 
 async function attemptLogin(username: string, password: string): Promise<LoginOutcome> {
-  // ignoreHTTPSErrors is deliberately NOT set: app.zygos.dloizides.com is a real Let's Encrypt
+  // ignoreHTTPSErrors is deliberately NOT set: app.finreg.dloizides.com is a real Let's Encrypt
   // host, so a bad cert is a genuine failure worth seeing rather than papering over.
   const context = await playwrightRequest.newContext({ baseURL: ZYGOS_WEB_URL });
   try {

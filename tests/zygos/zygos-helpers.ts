@@ -9,7 +9,7 @@
 // RUNBOOK.md section B) and zygos-api is a staging-placed workload. The ONLY public path to
 // the API is through the BFF, same-origin with the console:
 //
-//     https://app.zygos.dloizides.com/bff/api/zygos/api/v1/...
+//     https://app.finreg.dloizides.com/bff/api/zygos/api/v1/...
 //
 // carrying the `__Host-bff-zygos` session cookie. `__Host-` cookies REQUIRE HTTPS by spec, so
 // there is no plain-HTTP in-cluster shortcut — the suite tests the real host or nothing.
@@ -20,7 +20,7 @@
 import type { APIResponse } from '@playwright/test';
 
 /** The deployed console origin — BFF and SPA are same-origin. */
-export const ZYGOS_WEB_URL = (process.env.ZYGOS_WEB_URL?.trim() || 'https://app.zygos.dloizides.com').replace(
+export const ZYGOS_WEB_URL = (process.env.ZYGOS_WEB_URL?.trim() || 'https://app.finreg.dloizides.com').replace(
   /\/+$/,
   '',
 );

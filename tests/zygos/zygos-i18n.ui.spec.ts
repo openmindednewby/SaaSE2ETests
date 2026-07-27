@@ -19,7 +19,7 @@
 //      surfaces — `quizTemplates.cancel` on the reject dialog's close button, and
 //      `pageSkeleton.loadingLabel` on the instructions list and detail screens — all of them in
 //      `aria-label`, none of them visible to a screenshot. Both keys EXIST in the repo's en.json,
-//      so this is deploy lag: app.zygos.dloizides.com serves a pre-UX-6a build. See the task
+//      so this is deploy lag: app.finreg.dloizides.com serves a pre-UX-6a build. See the task
 //      report. Expect these three to go green the moment the wave ships.
 //
 // See `zygos-i18n-scan.ts` for the detector and, importantly, for why ATTRIBUTES are scanned
@@ -142,7 +142,7 @@ test.describe('Zygos i18n — no raw translation keys @zygos-ui @ui', () => {
 
     // Legitimate strings this console can genuinely display.
     expect(isRawTranslationKey('statement.pdf')).toBe(false);
-    expect(isRawTranslationKey('app.zygos.dloizides.com')).toBe(false);
+    expect(isRawTranslationKey('app.finreg.dloizides.com')).toBe(false);
     expect(isRawTranslationKey('v1.2.3')).toBe(false);
     expect(isRawTranslationKey('1.5')).toBe(false);
     expect(isRawTranslationKey('Choose a currency.')).toBe(false);

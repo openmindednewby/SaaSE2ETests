@@ -145,7 +145,7 @@ test.describe('Zygos tampering is unrepresentable @zygos-api @api', () => {
     const res = await makerA!.context.post(
       `/bff/api/zygos/api/v1/payment-instructions/${created.externalId}/approve`,
       {
-        headers: { 'X-BFF-Csrf': '1', Origin: 'https://app.zygos.dloizides.com', 'Content-Type': 'application/json' },
+        headers: { 'X-BFF-Csrf': '1', Origin: 'https://app.finreg.dloizides.com', 'Content-Type': 'application/json' },
         data: { approverUserId: '00000000-0000-0000-0000-000000000001', userId: 'zygos-checker-c' },
       },
     );

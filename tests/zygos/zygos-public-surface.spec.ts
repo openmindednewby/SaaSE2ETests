@@ -18,7 +18,7 @@
 //
 // 🔴 ONE password, TWO sources of truth, and NOTHING connected them:
 //
-//     zygos/landing/src/data/site.ts   DEMO.password   → printed on zygos.dloizides.com
+//     zygos/landing/src/data/site.ts   DEMO.password   → printed on finreg.dloizides.com
 //     Bff__Demo__Password (k8s env)    → served by GET /bff/config → shown on the login page
 //
 // Rotate either one alone and the marketing site keeps confidently printing a password that no
@@ -34,7 +34,7 @@ import { retryWhileRateLimited } from '../../helpers/rate-limit.js';
 import { ZYGOS_TEST_PASSWORD, ZYGOS_WEB_URL, bodyText, bodyJson, jsonCsrfHeaders } from './zygos-helpers.js';
 
 /** The marketing site that PRINTS the demo credential to the public. */
-const ZYGOS_MARKETING_URL = (process.env.ZYGOS_MARKETING_URL?.trim() || 'https://zygos.dloizides.com').replace(
+const ZYGOS_MARKETING_URL = (process.env.ZYGOS_MARKETING_URL?.trim() || 'https://finreg.dloizides.com').replace(
   /\/+$/,
   '',
 );
@@ -102,7 +102,7 @@ test.describe('Zygos public surface @zygos-api @api', () => {
     // rewording the FAQ around it. A regex would go green on a reword and red on nothing.
     expect(
       html.includes(demo.publishedPassword),
-      `zygos.dloizides.com does not print the password the console actually accepts. One of the two was rotated without the other, and the public page is now lying to every visitor.`,
+      `finreg.dloizides.com does not print the password the console actually accepts. One of the two was rotated without the other, and the public page is now lying to every visitor.`,
     ).toBe(true);
 
     expect(

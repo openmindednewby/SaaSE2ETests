@@ -102,7 +102,7 @@ export function buildProjects(): ProjectConfig {
   // *_WEB_URL vars this has a real default rather than being left unset — the deployed host
   // is the only place the suite CAN run (see the zygos-api/zygos-ui projects below), so an
   // unset var would silently skip the whole suite instead of testing the one target it has.
-  const zygosWebUrl = process.env.ZYGOS_WEB_URL || 'https://app.zygos.dloizides.com';
+  const zygosWebUrl = process.env.ZYGOS_WEB_URL || 'https://app.finreg.dloizides.com';
   // NB: agora's browser DNS override is NOT read here. Its staging hosts live in
   // SAAS_STAGING_HOSTNAMES, so the GLOBAL E2E_HOST_OVERRIDE_IP mechanism in
   // playwright.config.ts maps them in a single `--host-resolver-rules` flag. A
@@ -263,7 +263,7 @@ export function buildProjects(): ProjectConfig {
     // ---- Zygos (payment ops back-office) — ZY-18, two-tier ----
     //
     // 🔴 BOTH tiers target the DEPLOYED console at ZYGOS_WEB_URL (default
-    // https://app.zygos.dloizides.com), and there is no local/in-cluster alternative:
+    // https://app.finreg.dloizides.com), and there is no local/in-cluster alternative:
     //
     //  - zygos-api.dloizides.com DNS is not live (owner-gated) and zygos-api is a
     //    staging-placed workload, so the API's ONLY public path is through the BFF at
@@ -279,7 +279,7 @@ export function buildProjects(): ProjectConfig {
     // had nothing to do with Agora. Every spec `test.skip`s gracefully when the console is
     // unreachable or the fixture users are unseeded.
     //
-    // ignoreHTTPSErrors is deliberately NOT set: app.zygos.dloizides.com is a real Let's
+    // ignoreHTTPSErrors is deliberately NOT set: app.finreg.dloizides.com is a real Let's
     // Encrypt host, so a bad cert there is a genuine failure worth seeing.
     { name: 'zygos-api', workers: 1, testMatch: /zygos\/zygos-.*(?<!\.ui)\.spec\.ts/ },
     {
