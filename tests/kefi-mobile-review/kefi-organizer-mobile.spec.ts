@@ -216,9 +216,42 @@ test.describe('Kefi organizer dashboard at phone width', () => {
     note('scheduled-price-rows', `passes showing a "scheduled price" line: ${scheduledCount}`);
     await page.screenshot({ path: `${SHOT_DIR}/05-passes-inline-pricing.png`, fullPage: true });
 
-    // ── 4. Door tab: door-code badges + Print / Export-CSV export bar ─────────────
+    // ── 4. Door tab: report-scope checkboxes + door-code badges + Print / Export-CSV ─
     await openSection('door');
     await expect(page.getByTestId('organizer-door'), 'the Door section rendered').toBeVisible();
+
+    // The export scope is now TWO checkboxes (was three icon buttons `organizer-door-mode-*`):
+    // the attendee door list and the crew / DJ & media roster. "Attendee list" is the default,
+    // ticked on load; the selector refuses to clear the LAST ticked box so Print / Export always
+    // has a section. Toggling is pure local UI state (no server write), so it stays read-only.
+    const includeAttendee = page.getByTestId('organizer-door-include-attendee');
+    const includeCrew = page.getByTestId('organizer-door-include-crew');
+    await expect(includeAttendee, 'the attendee-list scope checkbox is present').toBeVisible();
+    await expect(includeCrew, 'the crew scope checkbox is present').toBeVisible();
+    await expect(includeAttendee, 'the attendee-list scope is ticked by default').toBeChecked();
+    await expect(includeCrew, 'the crew scope starts unticked (attendee list is the default)').not.toBeChecked();
+
+    // Invariant: clicking the SOLE ticked box does NOT clear it — a report of nothing is never
+    // offered. Crew starts unticked, so attendee is the only ticked box here.
+    await includeAttendee.click();
+    await expect(includeAttendee, 'the last ticked scope box stays ticked — a section is always included').toBeChecked();
+
+    // Tick/untick both ways when the event has roster crew (else the crew box is disabled and the
+    // invariant above already proved the at-least-one rule).
+    const crewDisabled = (await includeCrew.getAttribute('aria-disabled')) === 'true';
+    note('door-crew-scope', crewDisabled ? 'crew box disabled (no roster crew)' : 'crew box enabled');
+    if (!crewDisabled) {
+      await includeCrew.click();
+      await expect(includeCrew, 'ticking crew adds the crew section to the report').toBeChecked();
+      await includeAttendee.click();
+      await expect(includeAttendee, 'attendee can be unticked now that crew keeps a section').not.toBeChecked();
+      await expect(includeCrew, 'crew stays ticked as the remaining section').toBeChecked();
+      await includeAttendee.click(); // restore the on-load scope (attendee-only)
+      await includeCrew.click();
+      await expect(includeAttendee, 'attendee scope restored to ticked').toBeChecked();
+      await expect(includeCrew, 'crew scope restored to unticked').not.toBeChecked();
+    }
+
     await expect(page.getByTestId('organizer-door-print'), 'the door Print action is present').toBeVisible();
     await expect(page.getByTestId('organizer-door-export-csv'), 'the door Export-CSV action is present').toBeVisible();
     const badgeCount = await page.locator('[data-testid^="organizer-door-code-"]').count();
