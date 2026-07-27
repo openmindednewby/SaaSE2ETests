@@ -68,6 +68,9 @@ const EVENT_OPS_MOBILE = { ...devices['Pixel 5'], navigationTimeout: 45_000, act
 const UBB_PHONE_SE = { ...devices['iPhone 8'], navigationTimeout: 45_000, actionTimeout: 15_000 };
 const UBB_PHONE_MODERN = { ...devices['iPhone 13'], navigationTimeout: 45_000, actionTimeout: 15_000 };
 const UBB_TABLET = { ...devices['iPad Mini'], navigationTimeout: 45_000, actionTimeout: 15_000 };
+// iPhone X == a 375×812 logical viewport with real mobile semantics — the exact
+// phone size the ticket data-rights-disclosure mobile review targets.
+const UBB_PHONE_375x812 = { ...devices['iPhone X'], navigationTimeout: 45_000, actionTimeout: 15_000 };
 
 const AUTH = 'playwright/.auth/user.json';
 
@@ -715,6 +718,17 @@ export function buildProjects(): ProjectConfig {
       timeout: 600_000,
       testMatch: /kefi\/kefi-ubb-mobile\.spec\.ts/,
       use: EVENT_OPS_MOBILE,
+    },
+    {
+      // The relocated "Privacy & your data" GDPR disclosure on the attendee
+      // ticket, at a real 375×812 phone. Registers ONE throwaway
+      // `@example.invalid` row on the dedicated `e2e` fixture tenant and hard-
+      // deletes it in a finally — never touches a customer tenant.
+      name: 'ubb-ticket-privacy-375',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi-mobile-review\/kefi-ubb-ticket-privacy-mobile\.spec\.ts/,
+      use: UBB_PHONE_375x812,
     },
     {
       // ---- Organizer registration-notifications card (desktop) ------------
