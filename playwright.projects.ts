@@ -1024,6 +1024,20 @@ export function buildProjects(): ProjectConfig {
       use: EVENT_OPS_BROWSER,
     },
     {
+      // Kefi CREW & COMMISSIONS + PRICING surfaces (kefi-web crew/index.tsx +
+      // passes re-label). Authenticated interactive walk of the merged crew
+      // surface (unified roster, commission policy, personal links) and the
+      // re-labelled Pricing tab, at desktop + phone width. READ-ONLY: opens the
+      // accordion + a per-person detail modal, never saves/PUTs/expires. Signs in
+      // once per context via POST /bff/login (KEFI_TEST_* UBS organizer). @ui,
+      // shared sign-in → 600s budget like its kefi-organizer-tabs sibling.
+      name: 'kefi-crew-commissions-pricing',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi-crew-commissions\/kefi-crew-commissions-pricing\.ui\.spec\.ts/,
+      use: EVENT_OPS_BROWSER,
+    },
+    {
       // Katalogos device-PIN + passkey via the SHARED auth-web 1.4.0 components
       // (unified-login Increment 3). Uses the seeded realm test user + the global
       // baseURL (katalogos-web per E2E_TARGET) — no canary signup/IMAP needed.
