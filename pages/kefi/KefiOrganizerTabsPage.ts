@@ -103,7 +103,6 @@ export class KefiOrganizerTabsPage {
    * close control differs per panel, so the caller passes the testID of the
    * one the currently-open panel rendered:
    *   - access-link panel → `organizer-promoter-link-close`
-   *   - account panel     → `organizer-promoter-account-close`
    *   - edit form         → `organizer-promoter-cancel-edit`
    */
   async closePromoterActionModal(closeControlTestId: string): Promise<void> {

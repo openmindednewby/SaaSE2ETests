@@ -182,7 +182,6 @@ test.describe('Kefi organizer tab restructure', () => {
     // ── 5. Promoters tab: every row action is present and OPENS its panel ─────
     await organizer.selectTab('promoters');
     const editButton = page.getByTestId(`organizer-promoter-edit-${promoterExternalId}`);
-    const accountButton = page.getByTestId(`organizer-promoter-account-${promoterExternalId}`);
     const linkButton = page.getByTestId(`organizer-promoter-link-${promoterExternalId}`);
     const retireButton = page.getByTestId(`organizer-promoter-toggle-active-${promoterExternalId}`);
 
@@ -190,33 +189,33 @@ test.describe('Kefi organizer tab restructure', () => {
     // DEPLOY gap, not a layout defect.
     await expect(
       editButton,
-      'the promoter row actions are deployed (Edit/Account/Link/Retire present). ' +
+      'the promoter row actions are deployed (Edit/Link/Retire present). ' +
         'Absence means kefi-web predates the promoters manager — ship it, then re-run.',
     ).toHaveCount(1);
-    await expect(accountButton, 'the Account row action is present').toHaveCount(1);
     await expect(linkButton, 'the Link row action is present').toHaveCount(1);
     await expect(retireButton, 'the Retire row action is present').toHaveCount(1);
 
-    // Link opens the access-link panel; Account opens the account panel. Both now
-    // open in the ONE-AT-A-TIME row-action modal (`organizer-promoter-action-
-    // modal`, the modal that replaced the old scroll-to-top inline panels). Its
-    // backdrop covers the whole table, so the modal MUST be dismissed between
-    // opens — otherwise the second row button sits behind the backdrop and its
-    // click never lands. Each panel is closed via its own Close control (the
-    // unchanged panel testIDs) before the next action is pressed.
+    // The per-row "Link account" action is intentionally retired from the UI:
+    // no promoter role needs a portal sign-in account (referral credit attributes
+    // by name; ambassadors self-view via an access-link token), so the action is
+    // offered to nobody and its button must NOT render.
+    await expect(
+      page.getByTestId(`organizer-promoter-account-${promoterExternalId}`),
+      'the Account row action is retired (no role needs a sign-in account)',
+    ).toHaveCount(0);
+
+    // Link opens the access-link panel in the ONE-AT-A-TIME row-action modal
+    // (`organizer-promoter-action-modal`, the modal that replaced the old
+    // scroll-to-top inline panels). Its backdrop covers the whole table, so the
+    // modal MUST be dismissed before the next action is pressed — otherwise the
+    // next row button sits behind the backdrop and its click never lands. The
+    // panel is closed via its own Close control (the unchanged panel testID).
     await linkButton.click();
     await expect(
       page.getByTestId('organizer-promoter-link'),
       'the promoter access-link panel opened in the row-action modal',
     ).toBeVisible();
     await organizer.closePromoterActionModal('organizer-promoter-link-close');
-
-    await accountButton.click();
-    await expect(
-      page.getByTestId('organizer-promoter-account'),
-      'the account-link panel opened in the row-action modal',
-    ).toBeVisible();
-    await organizer.closePromoterActionModal('organizer-promoter-account-close');
 
     // Edit is client-side only (loads the row into the modal edit form) —
     // pressing it proves the Actions column responds to touch without writing
