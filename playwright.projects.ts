@@ -720,6 +720,19 @@ export function buildProjects(): ProjectConfig {
       use: EVENT_OPS_MOBILE,
     },
     {
+      // Kefi ORGANIZER dashboard at PHONE width — the collapsed section-menu
+      // (shared ui-layout Tabs below 768dp → single caret trigger) + card-stacked
+      // DataTables (shared ui-tables below 640dp), inline passes pricing, the door
+      // export bar, and row-action-size consistency. READ-ONLY: navigates, opens the
+      // menu, switches sections, measures + screenshots — never writes. The file
+      // builds its own 390×844 iPhone-13 device context, so `use` here is nominal.
+      name: 'kefi-organizer-mobile',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi-mobile-review\/kefi-organizer-mobile\.spec\.ts/,
+      use: UBB_PHONE_MODERN,
+    },
+    {
       // The relocated "Privacy & your data" GDPR disclosure on the attendee
       // ticket, at a real 375×812 phone. Registers ONE throwaway
       // `@example.invalid` row on the dedicated `e2e` fixture tenant and hard-
