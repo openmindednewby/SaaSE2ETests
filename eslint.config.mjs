@@ -268,6 +268,38 @@ export default [
             'semantic-dark-mode-badges.spec.ts',
             'toast-duration.spec.ts',
           ],
+
+          // Zygos / FINREG payment-ops sub-batches (ZY-18 + P-04/06/07/08).
+          // Mirrors the REAL runtime split — `zygos-api` and `zygos-ui` are already
+          // separate Playwright projects (playwright.projects.ts), so counting the
+          // whole tests/zygos directory as one batch over-counts across a boundary
+          // that never runs together. Every zygos spec must live in one of these two
+          // lists; a new spec not listed falls back to the whole-directory count and
+          // re-trips this rule — which is the intended nudge to categorise it.
+          'zygos-api': [
+            'zygos-audit.spec.ts',
+            'zygos-auth.spec.ts',
+            'zygos-batch-maker-checker.spec.ts',
+            'zygos-batches.spec.ts',
+            'zygos-commission.spec.ts',
+            'zygos-imports.spec.ts',
+            'zygos-lifecycle.spec.ts',
+            'zygos-list-query.spec.ts',
+            'zygos-maker-checker.spec.ts',
+            'zygos-public-surface.spec.ts',
+            'zygos-pwa.spec.ts',
+            'zygos-schedules.spec.ts',
+            'zygos-tampering.spec.ts',
+            'zygos-tenant-isolation.spec.ts',
+            'zygos-ux6a-strings.spec.ts',
+          ],
+          'zygos-ui': [
+            'zygos-console.ui.spec.ts',
+            'zygos-form-fields.ui.spec.ts',
+            'zygos-form-wrap.ui.spec.ts',
+            'zygos-i18n.ui.spec.ts',
+            'zygos-pager.ui.spec.ts',
+          ],
         },
       }],
     },
