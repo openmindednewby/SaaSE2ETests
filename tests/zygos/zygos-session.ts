@@ -349,3 +349,34 @@ export async function parkedCookies(username: string): Promise<ParkedCookie[]> {
 export async function anonymousContext(): Promise<APIRequestContext> {
   return playwrightRequest.newContext({ baseURL: ZYGOS_WEB_URL });
 }
+
+/**
+ * Log in as the DEMO-tenant user — the identity the CRM (C-01) and accounting (A-01) modules are
+ * seeded under, and the one the public login page advertises.
+ *
+ * 🔴 The credential is FETCHED from `GET /bff/config`, not hardcoded. That config block is what the
+ * marketing site prints and what a visitor types (see `zygos-public-surface.spec.ts`), so reading it
+ * here means a rotated demo password can never silently turn this whole tier red against a healthy
+ * deployment — the tier always uses whatever the deployment currently publishes.
+ *
+ * Reuses the shared session cache via `loginAs`, so the entire CRM/accounting @api tier shares ONE
+ * demo login (the whole run comes from a single IP and a single user bucket — 5 logins/60s per IP,
+ * 100 calls/60s per user). Returns null when the console is unreachable or no demo block is
+ * published — both legitimate `test.skip` reasons; a genuine throttle still THROWS inside `loginAs`.
+ */
+export async function loginAsDemo(): Promise<ZygosSession | null> {
+  const anon = await anonymousContext();
+  try {
+    const res = await anon.get('/bff/config', { timeout: 20_000 });
+    if (!res.ok()) return null;
+    const config = (await res.json()) as {
+      demo: { publishedUsername: string; publishedPassword: string } | null;
+    };
+    if (!config.demo) return null;
+    return loginAs(config.demo.publishedUsername, config.demo.publishedPassword);
+  } catch {
+    return null;
+  } finally {
+    await anon.dispose();
+  }
+}

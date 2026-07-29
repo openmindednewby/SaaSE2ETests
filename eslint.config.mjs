@@ -277,7 +277,10 @@ export default [
           // lists; a new spec not listed falls back to the whole-directory count and
           // re-trips this rule — which is the intended nudge to categorise it.
           'zygos-api': [
+            'zygos-accounting.spec.ts',
+            'zygos-accounting-crossmodule.spec.ts',
             'zygos-audit.spec.ts',
+            'zygos-crm-contacts.spec.ts',
             'zygos-auth.spec.ts',
             'zygos-batch-maker-checker.spec.ts',
             'zygos-batches.spec.ts',
