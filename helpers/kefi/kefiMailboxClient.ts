@@ -65,6 +65,24 @@ export function loadKefiMailboxConfig(): MailboxConfig {
 }
 
 /**
+ * Config for the dedicated `automationTests@dloizides.com` mailbox — the account
+ * the email-DELIVERY E2E ({@link ../../tests/kefi/kefi-email-delivery.spec.ts})
+ * polls to prove a real transactional email actually lands in an inbox (the
+ * "how do we know emails are delivered?" check). Same IMAP client, distinct
+ * inbox so a delivery run never races the tenant-lifecycle canary's mailbox.
+ */
+export function loadAutomationMailboxConfig(): MailboxConfig {
+  const port = Number.parseInt(requireEnv('E2E_AUTOMATION_MAILBOX_PORT'), 10);
+  return {
+    host: requireEnv('E2E_AUTOMATION_MAILBOX_HOST'),
+    port,
+    user: requireEnv('E2E_AUTOMATION_MAILBOX_USER'),
+    password: requireEnv('E2E_AUTOMATION_MAILBOX_PASSWORD'),
+    secure: port === 993,
+  };
+}
+
+/**
  * Connect, poll INBOX until a message addressed to `to` arrives (or the
  * timeout elapses), return the first match. Caller is responsible for
  * calling `expungeMessages` if they want the inbox cleaned.

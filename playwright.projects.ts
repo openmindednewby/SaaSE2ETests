@@ -426,6 +426,17 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      // Kefi email-DELIVERY proof — "how do we know emails are delivered?".
+      // Provisions a canary tenant, registers, then polls the dedicated
+      // automationTests@dloizides.com inbox over IMAP to confirm the branded
+      // confirmation email actually LANDS. Same 600s canary+IMAP budget.
+      name: 'kefi-email-delivery',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-email-delivery\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       // Kefi crew-lifecycle (#267) — the full "from registration all the way"
       // chain: register → verify → onboard → invite crew → each crew member logs
       // in with the right role + tenantId. Three tests: @api (fast, no browser),
