@@ -382,6 +382,25 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
 
+    // ---- Kefi tenant-landing HEALTH smoke (@api) ----
+    // Standalone: no auth, no multi-tenant deps, no baseURL — the spec uses
+    // ABSOLUTE prod URLs because a tenant landing only exists in prod (there is
+    // no per-tenant staging landing). Guards the 2026-08-01 regression where a
+    // `deploy kefi-landings` WIPED the config-only UBB tenant's site → its root
+    // 403d while KUCY stayed 200 (a customer register page went down, uncaught).
+    // Probes each tenant's subdomain root AND its /t/<slug>/ path form for a real
+    // 200 landing, failing on 403/404. `request`-only → no browser is launched.
+    // The nightly CHUNKED runner enumerates every project via `--list`, so this
+    // runs nightly and a 403 pages via the canary summary. `use: CHROME` is
+    // nominal (never instantiated for request-only tests). See the spec header
+    // for why these hosts are NOT in the daily static-landings smoke.
+    {
+      name: 'kefi-landing-health',
+      workers: 1,
+      testMatch: /kefi\/kefi-tenant-landing-health\.spec\.ts/,
+      use: CHROME,
+    },
+
     // ---- Kefi tenant-lifecycle E2E (Phases B + C) ----
     // Standalone project — no auth dependency (the spec signs up a fresh
     // canary tenant) and no multi-tenant setup. Hits the Kefi marketing
