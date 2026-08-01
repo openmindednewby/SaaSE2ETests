@@ -94,14 +94,11 @@ test.describe('Kefi email delivery — a real confirmation email lands in the in
       expect(body, 'greets the attendee by name').toMatch(/Hi Delivery/i);
       expect(body, 'names the pass the attendee registered for').toMatch(/Pass:/i);
       expect(body, 'links to the ticket').toMatch(/View your ticket|\/ticket\//i);
-      // NOTE (#303): the register RESPONSE mints a payment reference
-      // (`data.paymentReference`, e.g. FULL-NAME-SURNAME-<pass#>) and the organizer
-      // tables show it, but the transactional CONFIRMATION email does NOT yet carry a
-      // "how to pay" section quoting it — that's the steps-in-email work tracked in
-      // task #303 (Kefi transactional-email overhaul). When #303 lands, re-add:
-      //   expect(body, 'quotes the payment reference').toContain(data.paymentReference);
-      // Kept as a data-flow check so the reference is at least minted on register:
+      // #303 (steps-in-email) is now deployed: the confirmation email's "how to pay"
+      // section quotes the exact payment reference the register response minted
+      // (FULL-NAME-SURNAME-<pass#>). This is the reference↔email regression guard.
       expect(data.paymentReference, 'register mints a payment reference').toMatch(/-\d{4}$/);
+      expect(body, 'quotes the payment reference').toContain(data.paymentReference);
 
       await mailbox().expungeMessages([confirmation.uid]).catch(() => undefined);
     } finally {
