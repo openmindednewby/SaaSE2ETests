@@ -269,13 +269,15 @@ export default [
             'toast-duration.spec.ts',
           ],
 
-          // Zygos / FINREG payment-ops sub-batches (ZY-18 + P-04/06/07/08).
+          // Zygos / FINREG payment-ops sub-batches (ZY-18 + P-04/06/07/08 + P-PAY-12).
           // Mirrors the REAL runtime split — `zygos-api` and `zygos-ui` are already
           // separate Playwright projects (playwright.projects.ts), so counting the
           // whole tests/zygos directory as one batch over-counts across a boundary
-          // that never runs together. Every zygos spec must live in one of these two
+          // that never runs together. Every zygos spec must live in one of these
           // lists; a new spec not listed falls back to the whole-directory count and
-          // re-trips this rule — which is the intended nudge to categorise it.
+          // re-trips this rule — which is the intended nudge to categorise it. The
+          // FINREG-payments (P-PAY-12) specs get their own api/ui sub-batches so the
+          // core `zygos-api` list stays under the 100-test ceiling.
           'zygos-api': [
             'zygos-accounting.spec.ts',
             'zygos-accounting-crossmodule.spec.ts',
@@ -296,12 +298,23 @@ export default [
             'zygos-tenant-isolation.spec.ts',
             'zygos-ux6a-strings.spec.ts',
           ],
+          'zygos-payments-api': [
+            'zygos-payments.spec.ts',
+          ],
+          // Standalone repro/regression specs that run in the zygos-api project but are
+          // their own concern — kept out of the core `zygos-api` list so neither pushes
+          // the other over the 100-test ceiling.
+          'zygos-repro': [
+            'zygos-mobile-drawer-nav.repro.spec.ts',
+          ],
           'zygos-ui': [
             'zygos-console.ui.spec.ts',
             'zygos-form-fields.ui.spec.ts',
             'zygos-form-wrap.ui.spec.ts',
             'zygos-i18n.ui.spec.ts',
             'zygos-pager.ui.spec.ts',
+            'zygos-payments-form.ui.spec.ts',
+            'zygos-payments-corridor.ui.spec.ts',
           ],
         },
       }],

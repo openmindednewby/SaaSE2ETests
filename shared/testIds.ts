@@ -557,6 +557,44 @@ export const TestIds = {
   AGORA_ONBOARDING_PUBLISH_COPY: 'onboarding-publish-copy',
   AGORA_ONBOARDING_PUBLISH_QR: 'onboarding-publish-qr',
   AGORA_ONBOARDING_PUBLISH_BLOCKED: 'onboarding-publish-blocked',
+
+  // ── FINREG / Zygos payments (P-PAY-1..11) — MIRROR of the `TestIds.*` payment block in
+  // zygos/finreg-web/src/shared/testIds.ts (whose header says "Keep this in sync with
+  // E2ETests/shared/testIds"). Zygos-prefixed here so they never collide with any other product's
+  // ids. Like the Agora block above, the zygos suite (tests/zygos/*) uses the raw string values
+  // directly (see tests/zygos/zygos-payments.ts, mirroring the CONSOLE_TEST_IDS convention), so
+  // these constants are the PARITY RECORD that stops the two files drifting on the magic strings.
+  //
+  // NOTE: only the ids that live in finreg-web's central `TestIds` registry are mirrored here. The
+  // per-field instruction-form ids (`instruction-form-creditor-iban`, `…-accountType`, the FX and
+  // rail-badge literals, …) are NOT in that registry — they are derived from `testIdPrefix` inside
+  // the form components — so they live with the specs in zygos-payments.ts, exactly as the existing
+  // CONSOLE_TEST_IDS literals do.
+  ZYGOS_INSTRUCTIONS_SCREEN: 'zygos-instructions-screen',
+  ZYGOS_INSTRUCTION_DETAIL_SCREEN: 'zygos-instruction-detail-screen',
+  ZYGOS_INSTRUCTION_FORM_SCREEN: 'zygos-instruction-form-screen',
+  ZYGOS_INSTRUCTION_FORM_SUBMIT: 'zygos-instruction-form-submit',
+  ZYGOS_INSTRUCTION_FORM_CANCEL: 'zygos-instruction-form-cancel',
+  ZYGOS_PARTY_PICKER_DEBTOR: 'zygos-party-picker-debtor',
+  ZYGOS_PARTY_PICKER_CREDITOR: 'zygos-party-picker-creditor',
+  ZYGOS_PARTY_PICKER_CREATE_DEBTOR: 'zygos-party-picker-create-debtor',
+  ZYGOS_PARTY_PICKER_CREATE_CREDITOR: 'zygos-party-picker-create-creditor',
+  // P-PAY-8 velocity usage indicator (list screen).
+  ZYGOS_INSTRUCTIONS_VELOCITY_USAGE: 'zygos-instructions-velocity-usage',
+  // P-PAY-7 beneficiary screening (Screening-Hold badge + 4-eyes override).
+  ZYGOS_SCREENING_BADGE: 'zygos-screening-badge',
+  ZYGOS_SCREENING_DETAIL: 'zygos-screening-detail',
+  ZYGOS_SCREENING_OVERRIDE_BUTTON: 'zygos-screening-override',
+  ZYGOS_SCREENING_OVERRIDE_REASON: 'zygos-screening-override-reason',
+  ZYGOS_SCREENING_OVERRIDE_SUBMIT: 'zygos-screening-override-submit',
+  ZYGOS_SCREENING_OVERRIDE_CANCEL: 'zygos-screening-override-cancel',
+  ZYGOS_SCREENING_HARD_BLOCK_NOTICE: 'zygos-screening-hard-block-notice',
+  ZYGOS_SCREENING_CONTRIBUTOR_NOTICE: 'zygos-screening-contributor-notice',
+  // P-PAY-9 duplicate-payment warning (create form) + the checker-surface ack badge (detail).
+  ZYGOS_DUPLICATE_WARNING_BANNER: 'zygos-duplicate-warning-banner',
+  ZYGOS_DUPLICATE_WARNING_CANDIDATE: 'zygos-duplicate-warning-candidate',
+  ZYGOS_DUPLICATE_WARNING_ACKNOWLEDGE: 'zygos-duplicate-warning-acknowledge',
+  ZYGOS_DUPLICATE_ACK_BADGE: 'zygos-duplicate-ack-badge',
 } as const;
 
 // Type for testID values

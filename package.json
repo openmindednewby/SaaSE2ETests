@@ -51,6 +51,8 @@
     "test:zygos:maker-checker": "cross-env SHELL=/bin/bash playwright test tests/zygos/zygos-maker-checker.spec.ts --project=zygos-api",
     "test:zygos:lifecycle": "cross-env SHELL=/bin/bash playwright test tests/zygos/zygos-lifecycle.spec.ts --project=zygos-api",
     "test:zygos:isolation": "cross-env SHELL=/bin/bash playwright test tests/zygos/zygos-tenant-isolation.spec.ts --project=zygos-api",
+    "test:zygos:payments": "cross-env SHELL=/bin/bash playwright test tests/zygos/zygos-payments.spec.ts --project=zygos-api",
+    "test:zygos:payments:ui": "cross-env SHELL=/bin/bash playwright test tests/zygos/zygos-payments-form.ui.spec.ts tests/zygos/zygos-payments-corridor.ui.spec.ts --project=zygos-ui",
     "test:ichnos:api": "cross-env SHELL=/bin/bash playwright test tests/ichnos/ichnos-api.spec.ts --project=ichnos-api",
     "test:ichnos:onboarding": "cross-env SHELL=/bin/bash playwright test tests/ichnos/ichnos-onboarding.spec.ts --project=ichnos-api",
     "test:ichnos:apikeys": "cross-env SHELL=/bin/bash playwright test tests/ichnos/ichnos-apikeys.spec.ts --project=ichnos-api",
