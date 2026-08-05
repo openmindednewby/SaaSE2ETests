@@ -52,14 +52,17 @@ test.describe('Zygos console — module rail order @zygos-ui @ui', () => {
     // The rail carries all three group headers; the CRM one leading confirms the rail rendered.
     await expect(page.locator(id(IDS.navGroupCrm)).first()).toBeVisible({ timeout: 15_000 });
 
-    // Read the group headers in DOM (document) order, deduped in case the persistent rail and a
-    // drawer both mounted — first-occurrence order is the visual top-to-bottom rail order.
+    // Read every element whose testID begins `nav-group-` in DOM (document) order, then keep ONLY
+    // the three real group headers — the rail also renders decorative `nav-group-*-tint` siblings,
+    // and (if a drawer co-mounted) each header can appear twice. Filtering to the known set +
+    // deduping still asserts the genuine top-to-bottom order of the three group headers.
+    const knownGroups = new Set<string>(EXPECTED_GROUP_ORDER);
     const domOrder = await page
       .locator('[data-testid^="nav-group-"]')
       .evaluateAll((els) => els.map((el) => el.getAttribute('data-testid')));
     const seen = new Set<string>();
     const orderedGroups = domOrder.filter((testId): testId is string => {
-      if (testId === null || seen.has(testId)) return false;
+      if (testId === null || !knownGroups.has(testId) || seen.has(testId)) return false;
       seen.add(testId);
       return true;
     });
