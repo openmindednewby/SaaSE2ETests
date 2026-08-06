@@ -74,7 +74,13 @@ test.describe('Zygos in-app Guide @zygos-ui @ui', () => {
     await expect(page.locator(id(T.guideArticle))).toBeVisible();
     await expect(page.getByText('Approve or reject a batch')).toBeVisible();
 
+    // Back preserves the query, so it returns to the RESULTS (not the browse view) — the
+    // search context is kept. Clearing the box is what returns to browse.
     await page.locator(id(T.guideArticleBack)).click();
+    await expect(page.locator(id(T.guideResults))).toBeVisible();
+    await expect(approveBatchRow).toBeVisible();
+
+    await page.locator(id(T.guideSearch)).fill('');
     await expect(page.locator(id(T.guideBrowse))).toBeVisible();
   });
 
