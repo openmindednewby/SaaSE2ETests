@@ -17,15 +17,20 @@ import {
   MASTER_ROUTES,
   MERCHANTS,
   ZYGOS_API_PREFIX,
+  approvalOpenId,
   enterConsoleAs,
   id,
   masterAccount,
+  openId,
   resolveDemoAccounts,
   sessionFor,
 } from './zygos-master.js';
 
-import type { DemoAccount } from './zygos-master.js';
+import type { DemoAccount, MasterApproval } from './zygos-master.js';
 import type { ZygosSession } from './zygos-session.js';
+
+/** The browser-form instruction-detail route (the `(protected)` group segment is stripped in the URL). */
+const instructionPath = (externalId: string): string => `/instructions/${externalId}`;
 
 const DESKTOP = { width: 1280, height: 900 };
 const SKIP_REASON = 'Zygos console unreachable or demo accounts not published';
@@ -57,6 +62,58 @@ test.describe('FINREG master pages @zygos-ui @ui', () => {
     await expect(table).toBeVisible();
     await expect(table).toContainText(MERCHANTS[0].name);
     await expect(table).toContainText(MERCHANTS[1].name);
+  });
+
+  test('an Approvals Open ▸ deep-links to the instruction detail, NOT /modules (#190)', async ({ page }) => {
+    test.skip(!master, SKIP_REASON);
+
+    // Read the queue on the wire first, so the test knows a REAL externalId to click and to assert in
+    // the destination URL (the row testID + the deep-link both key off it). No write here.
+    const res = await (master as ZygosSession).context.get(`${ZYGOS_API_PREFIX}/portfolio/approvals`);
+    expect(res.ok(), 'the approvals queue must be readable to drive this test').toBe(true);
+    const items = ((await res.json()) as { items: MasterApproval[] }).items;
+    expect(items.length, 'the seeded subtree must have a pending approval to open').toBeGreaterThan(0);
+    const first = items[0];
+
+    await enterConsoleAs(page, master as ZygosSession, MASTER_ROUTES.approvals);
+    await expect(page.locator(id(MASTER_IDS.approvalsTable))).toBeVisible({ timeout: REVEAL_TIMEOUT_MS });
+
+    // Click that row's Open ▸ — it must impersonate the owning merchant AND deep-link to the instruction.
+    await page.locator(id(approvalOpenId(first.externalId))).click();
+
+    // THE REGRESSION: the URL becomes the instruction detail route — never /modules, never stuck on the
+    // approvals queue. (The pre-#190/048c6d3 bug hung on /master/approvals or bounced to /modules.)
+    await expect(page).toHaveURL(new RegExp(`${instructionPath(first.externalId)}(?:$|[/?#])`), {
+      timeout: REVEAL_TIMEOUT_MS,
+    });
+    expect(page.url(), 'the Approvals Open ▸ must NOT land on the /modules catalogue').not.toContain('/modules');
+
+    // Operating mode is active — the banner names the merchant that owns the instruction (#187).
+    const banner = page.locator(id(MASTER_IDS.impersonationBanner));
+    await expect(banner).toBeVisible({ timeout: REVEAL_TIMEOUT_MS });
+    await expect(banner).toContainText(first.tenantName);
+
+    // Exit returns to the master console (the Portfolio home), leaving Operating mode.
+    await page.locator(id(MASTER_IDS.impersonationExit)).click();
+    await expect(page.locator(id(MASTER_IDS.portfolioScreen))).toBeVisible({ timeout: REVEAL_TIMEOUT_MS });
+    await expect(banner).toBeHidden();
+  });
+
+  test('a Portfolio Open ▸ lands on the merchant home /modules, not an item (#190 regression)', async ({ page }) => {
+    test.skip(!master, SKIP_REASON);
+    const acme = MERCHANTS[0];
+
+    await enterConsoleAs(page, master as ZygosSession, MASTER_ROUTES.portfolio);
+    await expect(page.locator(id(openId(acme.id)))).toBeVisible({ timeout: REVEAL_TIMEOUT_MS });
+
+    await page.locator(id(openId(acme.id))).click();
+
+    // A plain merchant open has no specific item, so it lands on the merchant HOME — the module
+    // catalogue — NOT a deep link. This is the case the Approvals deep-link must NOT regress.
+    await expect(page.locator(id(MASTER_IDS.moduleCatalog))).toBeVisible({ timeout: REVEAL_TIMEOUT_MS });
+    expect(page.url(), 'a Portfolio Open ▸ lands on /modules').toContain('/modules');
+    expect(page.url(), 'a Portfolio Open ▸ is NOT a deep link to an instruction').not.toContain('/instructions/');
+    await expect(page.locator(id(MASTER_IDS.impersonationBanner))).toBeVisible();
   });
 
   test('the Reporting page renders the currency + status charts and the per-merchant table', async ({ page }) => {

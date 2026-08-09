@@ -66,6 +66,7 @@ export const MASTER_IDS = {
   approvalsTable: 'zygos-master-approvals-table',
   approvalsEmpty: 'zygos-master-approvals-empty',
   approvalsTruncated: 'zygos-master-approvals-truncated',
+  approvalOpenPrefix: 'zygos-master-approval-open',
 
   // Reporting page — currency + status charts + per-merchant table.
   reportingScreen: 'zygos-master-reporting-screen',
@@ -98,6 +99,8 @@ export const MASTER_ROUTES = {
 
 /** A merchant "Details" action id derives from the prefix + the tenant id. */
 export const detailsId = (tenantId: string): string => `${MASTER_IDS.detailsPrefix}-${tenantId}`;
+/** An Approvals-row "Open ▸" id derives from the prefix + the row's externalId (mirrors source). */
+export const approvalOpenId = (externalId: string): string => `${MASTER_IDS.approvalOpenPrefix}-${externalId}`;
 
 /** Public-demo credential panel ids — mirror of `@dloizides/auth-web` `AuthTestIds`, `zygos-` prefixed. */
 export const DEMO_CRED_IDS = {
