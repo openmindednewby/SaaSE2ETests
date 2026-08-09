@@ -57,7 +57,7 @@ export const useId = (index: number): string => `${DEMO_CRED_IDS.use}-${String(i
  * merchants beneath it do. Ids drive the card/open selectors; names are the #187 assertion (a name here
  * rather than a raw GUID is the whole point of the fix).
  */
-export const MASTER_TENANT = { id: 'd0000004-0000-4000-a000-000000000004', name: 'FINREG Master EMI' } as const;
+export const MASTER_TENANT = { id: 'd0000004-0000-4000-a000-000000000004', name: 'FINREG Master' } as const;
 export const MERCHANTS = [
   { id: '7fa9403d-3478-4cbe-8b67-98dc28854a25', name: 'Acme Pay' },
   { id: 'd0000005-0000-4000-a000-000000000005', name: 'Nordic FX' },
