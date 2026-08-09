@@ -28,7 +28,13 @@ import {
   sessionFor,
 } from './zygos-master.js';
 
-import type { DemoAccount, ImpersonationGrant, PortfolioSummary } from './zygos-master.js';
+import type {
+  DemoAccount,
+  ImpersonationGrant,
+  MasterApproval,
+  MasterAuditRow,
+  PortfolioSummary,
+} from './zygos-master.js';
 import type { ZygosSession } from './zygos-session.js';
 
 const SKIP_REASON = 'Zygos console unreachable or demo accounts not published';
@@ -82,9 +88,12 @@ test.describe('FINREG master console @zygos-api @api', () => {
       );
     }
 
-    // The master's OWN tenant is present with its name (rendered as an empty card, never hidden).
+    // #190: the master's OWN tenant is STILL returned on the wire (the endpoint returns the whole
+    // subtree) — the exclusion is a FRONTEND concern (see the @ui "own tenant excluded" spec). Asserting
+    // it here documents that the subtree is intact and pins the seam: if it ever vanished from the wire,
+    // the frontend exclusion would be masking a data bug instead of doing presentation.
     const own = byId.get(MASTER_TENANT.id);
-    expect(own?.name, 'the master owns a named, un-hidden tenant card').toBe(MASTER_TENANT.name);
+    expect(own, 'the summary returns the whole subtree, master tenant included').toBeTruthy();
 
     // Per-currency: a busy merchant carries multiple DISTINCT currencies, each its own line (never summed).
     const busiest = byId.get(MERCHANTS[0].id);
@@ -134,5 +143,58 @@ test.describe('FINREG master console @zygos-api @api', () => {
     const summary = (await (await ctx.get(`${ZYGOS_API_PREFIX}/portfolio/summary`)).json()) as PortfolioSummary;
     const acmeSummary = summary.tenants.find((t) => t.tenantId === acme.id);
     expect(scopedPage.totalCount, 'the grant scopes reads to the merchant book').toBe(acmeSummary?.totalCount);
+  });
+
+  test('the master reads the cross-merchant approvals queue (#190); a merchant is 403', async () => {
+    test.skip(!master || !merchant, SKIP_REASON);
+
+    const res = await (master as ZygosSession).context.get(`${ZYGOS_API_PREFIX}/portfolio/approvals`);
+    expect(res.status(), 'a master reads the cross-merchant approvals queue').toBe(OK);
+
+    const body = (await res.json()) as { items: MasterApproval[] };
+    expect(Array.isArray(body.items), 'the queue is an `items` array').toBe(true);
+    expect(body.items.length, 'the seeded subtree has pending approvals to oversee').toBeGreaterThan(0);
+
+    // Every row carries the fields the oversight table renders — a name (not just the GUID), an amount
+    // and a currency. The queue spans MORE THAN ONE merchant (it is the whole subtree, not one book).
+    const merchantNames = new Set<string>();
+    for (const item of body.items) {
+      expect(item.tenantName?.length, 'each approval names its merchant (#187)').toBeGreaterThan(0);
+      expect(item.currency?.length, 'each approval carries a currency').toBeGreaterThan(0);
+      expect(item.amount, 'each approval carries a numeric amount').toBeGreaterThan(0);
+      merchantNames.add(item.tenantName);
+    }
+    expect(merchantNames.size, 'the queue is CROSS-merchant, not a single book').toBeGreaterThan(1);
+
+    // The queue is master-gated server-side — a plain merchant is 403 (same gate as the portfolio).
+    const denied = await (merchant as ZygosSession).context.get(`${ZYGOS_API_PREFIX}/portfolio/approvals`);
+    expect(denied.status(), 'the approvals queue is master-gated server-side').toBe(FORBIDDEN);
+  });
+
+  test('the master reads the impersonation audit log, newest-first (#190); a merchant is 403', async () => {
+    test.skip(!master || !merchant, SKIP_REASON);
+
+    const res = await (master as ZygosSession).context.get(`${ZYGOS_API_PREFIX}/platform/impersonation/audit`);
+    expect(res.status(), 'a master reads its own impersonation audit log').toBe(OK);
+
+    const body = (await res.json()) as { rows: MasterAuditRow[] };
+    expect(Array.isArray(body.rows), 'the audit log is a `rows` array').toBe(true);
+    // The @api impersonation-scoping test above mints at least one grant, so a row must exist.
+    expect(body.rows.length, 'a minted impersonation writes an audit row').toBeGreaterThan(0);
+
+    for (const row of body.rows) {
+      expect(row.targetTenantName?.length, 'each row names the merchant operated as (#187)').toBeGreaterThan(0);
+      expect(row.durationMinutes, 'each row carries the grant duration').toBeGreaterThan(0);
+    }
+
+    // Newest-first: `grantedAt` is non-increasing down the list (the order the audit table renders).
+    const grantedAt = body.rows.map((row) => Date.parse(row.grantedAt));
+    const sortedDesc = [...grantedAt].sort((a, b) => b - a);
+    expect(grantedAt, 'the audit log is ordered newest-first').toEqual(sortedDesc);
+
+    const denied = await (merchant as ZygosSession).context.get(
+      `${ZYGOS_API_PREFIX}/platform/impersonation/audit`,
+    );
+    expect(denied.status(), 'the audit log is master-gated server-side').toBe(FORBIDDEN);
   });
 });

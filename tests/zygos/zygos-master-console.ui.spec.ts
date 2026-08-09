@@ -1,23 +1,25 @@
-// FINREG master console @ui (#177/#189) — what the master↔merchant CONTRACT actually RENDERS.
+// FINREG master console @ui (#177/#189/#190) — what the master↔merchant model actually RENDERS.
 //
-// The @api tier proves the wire; this proves the screens. It is deliberately the visual mirror of each
-// @api assertion:
+// The @api tier proves the wire; this proves the screens. #190 turned the master's single overview into
+// a mode-based shell, so this file now proves:
 //
 //   * the public login page reveals BOTH one-tap demo rows (master + merchant);
-//   * the master overview shows each merchant by its human NAME (never the raw-GUID fallback) plus the
-//     master's own tenant, with per-currency figures;
-//   * "Open ▸" switches into a merchant and raises the "Operating as <name>" banner, and Exit returns
-//     to the overview;
-//   * the "Reset demo data" control is HIDDEN for the master and PRESENT for the merchant, and a
-//     merchant hand-typing /master is bounced back to the module catalogue (the overview is master-only).
+//   * the master sidebar is EXACTLY the five master pages + Guide — no operational module groups;
+//   * the Portfolio shows each merchant by its human NAME (never the raw-GUID fallback) and EXCLUDES the
+//     master's own tenant (the broken "0 / no matching payments" self-card #190 killed);
+//   * "Open ▸" switches into a merchant and raises the "Operating as <name>" banner, and Exit returns;
+//   * the master never sees the "Reset demo data" control; a merchant does, has NO master nav, and is
+//     route-guarded off /master.
 //
-// Sessions are REAL server-issued cookies (the same `/bff/login` the @api tier uses), injected into the
-// browser context — nothing about auth is faked. Nothing is saved, so no seed cleanup is needed.
+// The new master PAGES (Approvals, Reporting, Audit) + the operational-route guard live in the sibling
+// `zygos-master-pages.ui.spec.ts` (this file caps at the 300-line limit). Sessions are REAL
+// server-issued cookies injected into the browser context — nothing about auth is faked.
 import { expect, test } from '@playwright/test';
 
 import {
   DEMO_CRED_IDS,
   MASTER_IDS,
+  MASTER_ROUTES,
   MASTER_TENANT,
   MERCHANTS,
   accountLabelId,
@@ -83,10 +85,33 @@ test.describe('FINREG master console @zygos-ui @ui', () => {
     await expect(page.locator(id(useId(1)))).toBeVisible();
   });
 
-  test('the master overview lists each merchant BY NAME (not a GUID) + the own tenant', async ({ page }) => {
+  test('the master sidebar is the five master pages + Guide, with NO operational modules', async ({ page }) => {
     test.skip(!master, SKIP_REASON);
-    await enterConsoleAs(page, master as ZygosSession, '/master');
-    await expect(page.locator(id(MASTER_IDS.overviewScreen))).toBeVisible({ timeout: REVEAL_TIMEOUT_MS });
+    await enterConsoleAs(page, master as ZygosSession, MASTER_ROUTES.portfolio);
+    await expect(page.locator(id(MASTER_IDS.portfolioScreen))).toBeVisible({ timeout: REVEAL_TIMEOUT_MS });
+
+    // The five master nav leaves + the shared Guide leaf are all present.
+    for (const navId of [
+      MASTER_IDS.navPortfolio,
+      MASTER_IDS.navMerchants,
+      MASTER_IDS.navApprovals,
+      MASTER_IDS.navReporting,
+      MASTER_IDS.navAudit,
+      MASTER_IDS.navGuide,
+    ]) {
+      await expect(page.locator(id(navId))).toBeVisible();
+    }
+
+    // NONE of the operational module groups render — a master has no merchant to act on (#190).
+    for (const groupId of [MASTER_IDS.navGroupCrm, MASTER_IDS.navGroupAccounting, MASTER_IDS.navGroupPayments]) {
+      await expect(page.locator(id(groupId))).toHaveCount(0);
+    }
+  });
+
+  test('the Portfolio lists each merchant BY NAME and EXCLUDES the master own tenant (#190)', async ({ page }) => {
+    test.skip(!master, SKIP_REASON);
+    await enterConsoleAs(page, master as ZygosSession, MASTER_ROUTES.portfolio);
+    await expect(page.locator(id(MASTER_IDS.portfolioScreen))).toBeVisible({ timeout: REVEAL_TIMEOUT_MS });
 
     for (const merchantTenant of MERCHANTS) {
       const card = page.locator(id(cardId(merchantTenant.id)));
@@ -95,15 +120,31 @@ test.describe('FINREG master console @zygos-ui @ui', () => {
       await expect(card).not.toContainText(shortId(merchantTenant.id));
     }
 
-    // The busiest merchant shows per-currency figures; the master's own card renders its name, un-hidden.
+    // The busiest merchant shows per-currency figures.
     await expect(page.locator(id(cardId(MERCHANTS[0].id)))).toContainText(CURRENCY_GLYPH);
-    await expect(page.locator(id(cardId(MASTER_TENANT.id)))).toContainText(MASTER_TENANT.name);
+
+    // #190 correction #1: the master's OWN tenant is NOT a merchant — no self-card renders for it.
+    await expect(page.locator(id(cardId(MASTER_TENANT.id)))).toHaveCount(0);
   });
 
-  test('Open ▸ a merchant raises "Operating as <name>", and Exit returns to the overview', async ({ page }) => {
+  test('the Merchants page lists merchants BY NAME and EXCLUDES the master own tenant (#190)', async ({ page }) => {
+    test.skip(!master, SKIP_REASON);
+    await enterConsoleAs(page, master as ZygosSession, MASTER_ROUTES.merchants);
+    await expect(page.locator(id(MASTER_IDS.merchantsScreen))).toBeVisible({ timeout: REVEAL_TIMEOUT_MS });
+    await expect(page.locator(id(MASTER_IDS.merchantsTable))).toBeVisible();
+
+    const table = page.locator(id(MASTER_IDS.merchantsTable));
+    for (const merchantTenant of MERCHANTS) {
+      await expect(table).toContainText(merchantTenant.name);
+    }
+    // The own-tenant row is excluded (same correction as the Portfolio).
+    await expect(page.locator(id(openId(MASTER_TENANT.id)))).toHaveCount(0);
+  });
+
+  test('Open ▸ a merchant raises "Operating as <name>", and Exit returns to the Portfolio', async ({ page }) => {
     test.skip(!master, SKIP_REASON);
     const acme = MERCHANTS[0];
-    await enterConsoleAs(page, master as ZygosSession, '/master');
+    await enterConsoleAs(page, master as ZygosSession, MASTER_ROUTES.portfolio);
     await expect(page.locator(id(openId(acme.id)))).toBeVisible({ timeout: REVEAL_TIMEOUT_MS });
 
     await page.locator(id(openId(acme.id))).click();
@@ -111,29 +152,37 @@ test.describe('FINREG master console @zygos-ui @ui', () => {
     const banner = page.locator(id(MASTER_IDS.impersonationBanner));
     await expect(banner).toBeVisible({ timeout: REVEAL_TIMEOUT_MS });
     await expect(banner).toContainText(`Operating as ${acme.name}`);
+    // Mid-impersonation the master pages are hidden — the master nav leaf is gone.
+    await expect(page.locator(id(MASTER_IDS.navPortfolio))).toHaveCount(0);
 
     await page.locator(id(MASTER_IDS.impersonationExit)).click();
-    await expect(page.locator(id(MASTER_IDS.overviewScreen))).toBeVisible({ timeout: REVEAL_TIMEOUT_MS });
+    await expect(page.locator(id(MASTER_IDS.portfolioScreen))).toBeVisible({ timeout: REVEAL_TIMEOUT_MS });
     await expect(banner).toBeHidden();
+    await expect(page.locator(id(MASTER_IDS.navPortfolio))).toBeVisible();
   });
 
   test('the "Reset demo data" control is HIDDEN for the master', async ({ page }) => {
     test.skip(!master, SKIP_REASON);
-    await enterConsoleAs(page, master as ZygosSession, '/modules');
-    await expect(page.locator(id(MASTER_IDS.moduleCatalog))).toBeVisible({ timeout: REVEAL_TIMEOUT_MS });
+    // A master cannot reach the module catalogue at all (route-guarded), so the reset control — which
+    // lives there — is unreachable. Assert it never renders anywhere in the master shell.
+    await enterConsoleAs(page, master as ZygosSession, MASTER_ROUTES.portfolio);
+    await expect(page.locator(id(MASTER_IDS.portfolioScreen))).toBeVisible({ timeout: REVEAL_TIMEOUT_MS });
     await expect(page.locator(id(MASTER_IDS.resetDemoButton))).toHaveCount(0);
   });
 
-  test('a merchant sees the reset control, and /master bounces it to the module catalogue', async ({ page }) => {
+  test('a merchant has the reset control, NO master nav, and /master bounces to the catalogue', async ({ page }) => {
     test.skip(!merchant, SKIP_REASON);
-    await enterConsoleAs(page, merchant as ZygosSession, '/modules');
+    await enterConsoleAs(page, merchant as ZygosSession, MASTER_ROUTES.modules);
 
-    // The reset control IS present for the merchant (the contrast with the master case above).
+    // The reset control IS present for the merchant (the contrast with the master case above), and the
+    // merchant sidebar carries the operational modules but NONE of the master nav leaves.
     await expect(page.locator(id(MASTER_IDS.moduleCatalog))).toBeVisible({ timeout: REVEAL_TIMEOUT_MS });
     await expect(page.locator(id(MASTER_IDS.resetDemoButton))).toBeVisible();
+    await expect(page.locator(id(MASTER_IDS.navGroupPayments))).toBeVisible();
+    await expect(page.locator(id(MASTER_IDS.navPortfolio))).toHaveCount(0);
 
-    // A merchant hand-typing /master is redirected to the catalogue — the master overview never renders.
-    await gotoScreen(page, '/master', MASTER_IDS.moduleCatalog);
-    await expect(page.locator(id(MASTER_IDS.overviewScreen))).toHaveCount(0);
+    // A merchant hand-typing /master is redirected to the catalogue — the master surface never renders.
+    await gotoScreen(page, MASTER_ROUTES.portfolio, MASTER_IDS.moduleCatalog);
+    await expect(page.locator(id(MASTER_IDS.portfolioScreen))).toHaveCount(0);
   });
 });

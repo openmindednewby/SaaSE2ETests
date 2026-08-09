@@ -602,10 +602,41 @@ export const TestIds = {
   // PARITY RECORD; the master specs read the same literals co-located in tests/zygos/zygos-master.ts
   // (the `CONSOLE_TEST_IDS` convention). The card/open/account-row ids append the tenant id or a 0-based
   // account index at the call site, so only the PREFIXES live here.
-  ZYGOS_MASTER_OVERVIEW_SCREEN: 'zygos-master-overview-screen',
+  // #190 turned the single overview into a mode-based shell with five master pages. The old
+  // `zygos-master-overview-screen` id is GONE — the Portfolio home is now `-portfolio-screen`.
+  ZYGOS_MASTER_PORTFOLIO_SCREEN: 'zygos-master-portfolio-screen',
   ZYGOS_MASTER_OVERVIEW_EMPTY: 'zygos-master-overview-empty',
   ZYGOS_MASTER_MERCHANT_CARD_PREFIX: 'zygos-master-merchant-card',
   ZYGOS_MASTER_MERCHANT_OPEN_PREFIX: 'zygos-master-merchant-open',
+  ZYGOS_MASTER_MERCHANT_DETAILS_PREFIX: 'zygos-master-merchant-details',
+  // Master-mode nav leaves (the section keys ARE the testIDs); Guide reuses the shared `nav-guide`.
+  ZYGOS_MASTER_NAV_PORTFOLIO: 'zygos-master-nav-portfolio',
+  ZYGOS_MASTER_NAV_MERCHANTS: 'zygos-master-nav-merchants',
+  ZYGOS_MASTER_NAV_APPROVALS: 'zygos-master-nav-approvals',
+  ZYGOS_MASTER_NAV_REPORTING: 'zygos-master-nav-reporting',
+  ZYGOS_MASTER_NAV_AUDIT: 'zygos-master-nav-audit',
+  // Merchants page.
+  ZYGOS_MASTER_MERCHANTS_SCREEN: 'zygos-master-merchants-screen',
+  ZYGOS_MASTER_MERCHANTS_TABLE: 'zygos-master-merchants-table',
+  ZYGOS_MASTER_MERCHANTS_EMPTY: 'zygos-master-merchants-empty',
+  ZYGOS_MASTER_MERCHANT_DETAIL_MODAL: 'zygos-master-merchant-detail-modal',
+  ZYGOS_MASTER_MERCHANT_DETAIL_CLOSE: 'zygos-master-merchant-detail-close',
+  // Approvals page — cross-merchant pending queue (read-only). Row ids: `${table}-row-<externalId>`.
+  ZYGOS_MASTER_APPROVALS_SCREEN: 'zygos-master-approvals-screen',
+  ZYGOS_MASTER_APPROVALS_TABLE: 'zygos-master-approvals-table',
+  ZYGOS_MASTER_APPROVALS_EMPTY: 'zygos-master-approvals-empty',
+  ZYGOS_MASTER_APPROVALS_TRUNCATED: 'zygos-master-approvals-truncated',
+  ZYGOS_MASTER_APPROVAL_OPEN_PREFIX: 'zygos-master-approval-open',
+  // Reporting page — currency + status charts + per-merchant table.
+  ZYGOS_MASTER_REPORTING_SCREEN: 'zygos-master-reporting-screen',
+  ZYGOS_MASTER_REPORTING_EMPTY: 'zygos-master-reporting-empty',
+  ZYGOS_MASTER_REPORTING_CURRENCY_CHART: 'zygos-master-reporting-currency-chart',
+  ZYGOS_MASTER_REPORTING_STATUS_CHART: 'zygos-master-reporting-status-chart',
+  ZYGOS_MASTER_REPORTING_MERCHANTS_TABLE: 'zygos-master-reporting-merchants-table',
+  // Audit page — impersonation history, newest first. Row ids: `${table}-row-<index>`.
+  ZYGOS_MASTER_AUDIT_SCREEN: 'zygos-master-audit-screen',
+  ZYGOS_MASTER_AUDIT_TABLE: 'zygos-master-audit-table',
+  ZYGOS_MASTER_AUDIT_EMPTY: 'zygos-master-audit-empty',
   ZYGOS_IMPERSONATION_BANNER: 'zygos-impersonation-banner',
   ZYGOS_IMPERSONATION_EXIT: 'zygos-impersonation-exit',
   ZYGOS_MODULE_CATALOG_SCREEN: 'zygos-module-catalog-screen',

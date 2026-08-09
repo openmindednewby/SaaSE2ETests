@@ -21,18 +21,83 @@ import type { ZygosSession } from './zygos-session.js';
 /** `[data-testid="x"]` — the selector form the rest of the zygos @ui suite uses. */
 export const id = (testId: string): string => `[data-testid="${testId}"]`;
 
-/** Master console + impersonation ids (#177) — mirror of finreg-web `TestIds`. */
+/**
+ * Master console + impersonation ids (#177/#190) — mirror of finreg-web `TestIds`.
+ *
+ * #190 turned the single master "overview" into a mode-based shell with five master pages, so the old
+ * `zygos-master-overview-screen` id is gone (the Portfolio home is now `zygos-master-portfolio-screen`)
+ * and four more pages + their tables/charts joined it. These mirror finreg-web `src/shared/testIds.ts`
+ * (Master console block) and the shared ui-nav rail (nav-group-* headers, `nav-guide`).
+ */
 export const MASTER_IDS = {
   shell: 'zygos-app-shell',
-  overviewScreen: 'zygos-master-overview-screen',
+  moduleCatalog: 'zygos-module-catalog-screen',
+  resetDemoButton: 'zygos-reset-demo-button',
+
+  // Master-mode nav leaves (the section keys ARE the testIDs). Guide reuses the shared `nav-guide`.
+  navPortfolio: 'zygos-master-nav-portfolio',
+  navMerchants: 'zygos-master-nav-merchants',
+  navApprovals: 'zygos-master-nav-approvals',
+  navReporting: 'zygos-master-nav-reporting',
+  navAudit: 'zygos-master-nav-audit',
+  navGuide: 'nav-guide',
+
+  // Operational module GROUP headers — present for a merchant, ABSENT in master mode (asserted).
+  navGroupCrm: 'nav-group-crm',
+  navGroupAccounting: 'nav-group-accounting',
+  navGroupPayments: 'nav-group-payments',
+
+  // Portfolio (master home) — own tenant excluded.
+  portfolioScreen: 'zygos-master-portfolio-screen',
   overviewEmpty: 'zygos-master-overview-empty',
   cardPrefix: 'zygos-master-merchant-card',
   openPrefix: 'zygos-master-merchant-open',
+
+  // Merchants page.
+  merchantsScreen: 'zygos-master-merchants-screen',
+  merchantsTable: 'zygos-master-merchants-table',
+  merchantsEmpty: 'zygos-master-merchants-empty',
+  detailsPrefix: 'zygos-master-merchant-details',
+  detailModal: 'zygos-master-merchant-detail-modal',
+  detailClose: 'zygos-master-merchant-detail-close',
+
+  // Approvals page — cross-merchant pending queue (read-only).
+  approvalsScreen: 'zygos-master-approvals-screen',
+  approvalsTable: 'zygos-master-approvals-table',
+  approvalsEmpty: 'zygos-master-approvals-empty',
+  approvalsTruncated: 'zygos-master-approvals-truncated',
+
+  // Reporting page — currency + status charts + per-merchant table.
+  reportingScreen: 'zygos-master-reporting-screen',
+  reportingEmpty: 'zygos-master-reporting-empty',
+  reportingCurrencyChart: 'zygos-master-reporting-currency-chart',
+  reportingStatusChart: 'zygos-master-reporting-status-chart',
+  reportingMerchantsTable: 'zygos-master-reporting-merchants-table',
+
+  // Audit page — impersonation history, newest first.
+  auditScreen: 'zygos-master-audit-screen',
+  auditTable: 'zygos-master-audit-table',
+  auditEmpty: 'zygos-master-audit-empty',
+
+  // The persistent "Operating as <merchant>" banner + its Exit control.
   impersonationBanner: 'zygos-impersonation-banner',
   impersonationExit: 'zygos-impersonation-exit',
-  moduleCatalog: 'zygos-module-catalog-screen',
-  resetDemoButton: 'zygos-reset-demo-button',
 } as const;
+
+/** The master-mode routes (browser form). */
+export const MASTER_ROUTES = {
+  portfolio: '/master',
+  merchants: '/master/merchants',
+  approvals: '/master/approvals',
+  reporting: '/master/reporting',
+  audit: '/master/audit',
+  /** An operational route — a master hand-typing this is route-guarded back to the Portfolio (#190). */
+  instructions: '/instructions',
+  modules: '/modules',
+} as const;
+
+/** A merchant "Details" action id derives from the prefix + the tenant id. */
+export const detailsId = (tenantId: string): string => `${MASTER_IDS.detailsPrefix}-${tenantId}`;
 
 /** Public-demo credential panel ids — mirror of `@dloizides/auth-web` `AuthTestIds`, `zygos-` prefixed. */
 export const DEMO_CRED_IDS = {
@@ -53,11 +118,17 @@ export const usernameId = (index: number): string => `${DEMO_CRED_IDS.username}-
 export const useId = (index: number): string => `${DEMO_CRED_IDS.use}-${String(index)}`;
 
 /**
- * The materialised demo hierarchy (#177). The master's OWN tenant carries no payment book; the three
- * merchants beneath it do. Ids drive the card/open selectors; names are the #187 assertion (a name here
- * rather than a raw GUID is the whole point of the fix).
+ * The materialised demo hierarchy (#177/#190). The master's OWN tenant carries no payment book; the
+ * three merchants beneath it do. Ids drive the card/open selectors; the merchant `name`s are the #187
+ * assertion (a name rather than a raw GUID is the whole point of that fix).
+ *
+ * The master's own tenant is still returned by `/portfolio/summary` (the endpoint returns the whole
+ * subtree) but #190 EXCLUDES it from every rendered list — so its id is used here to assert ABSENCE of
+ * a self-card, and its name is deliberately NOT asserted. (Its wire name is still "FINREG Master EMI":
+ * `DemoTreeSeeder` is create-only, so the `bbc3b29` EMI→"FINREG Master" rename never touched the
+ * existing row — which is exactly why the own card MUST be excluded rather than relabelled.)
  */
-export const MASTER_TENANT = { id: 'd0000004-0000-4000-a000-000000000004', name: 'FINREG Master' } as const;
+export const MASTER_TENANT = { id: 'd0000004-0000-4000-a000-000000000004' } as const;
 export const MERCHANTS = [
   { id: '7fa9403d-3478-4cbe-8b67-98dc28854a25', name: 'Acme Pay' },
   { id: 'd0000005-0000-4000-a000-000000000005', name: 'Nordic FX' },
@@ -89,6 +160,31 @@ export interface PortfolioSummary {
   tenants: readonly PortfolioTenant[];
   tenantsResolved: number;
 }
+/** One row of the cross-merchant approvals queue (`GET /portfolio/approvals`, #190). */
+export interface MasterApproval {
+  externalId: string;
+  tenantId: string;
+  tenantName: string;
+  amount: number;
+  currency: string;
+  status: string;
+  createdAt: string;
+  makerUserId?: string;
+  beneficiaryName?: string;
+}
+
+/** One row of the impersonation audit log (`GET /platform/impersonation/audit`, #190). */
+export interface MasterAuditRow {
+  actorUserId: string;
+  actorTenantId: string;
+  targetTenantId: string;
+  targetTenantName: string;
+  reason: string;
+  grantedAt: string;
+  expiresAt: string;
+  durationMinutes: number;
+}
+
 /** The grant `POST /platform/impersonation` returns. */
 export interface ImpersonationGrant {
   grantId: string;
