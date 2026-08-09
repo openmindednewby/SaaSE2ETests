@@ -595,6 +595,28 @@ export const TestIds = {
   ZYGOS_DUPLICATE_WARNING_CANDIDATE: 'zygos-duplicate-warning-candidate',
   ZYGOS_DUPLICATE_WARNING_ACKNOWLEDGE: 'zygos-duplicate-warning-acknowledge',
   ZYGOS_DUPLICATE_ACK_BADGE: 'zygos-duplicate-ack-badge',
+
+  // ── FINREG / Zygos master console (#177) — MIRROR of the master/impersonation block in
+  // zygos/finreg-web/src/shared/testIds.ts, plus the `@dloizides/auth-web` public-demo credential
+  // ids (rendered `zygos-` prefixed on this product). Like the payment block above these are the
+  // PARITY RECORD; the master specs read the same literals co-located in tests/zygos/zygos-master.ts
+  // (the `CONSOLE_TEST_IDS` convention). The card/open/account-row ids append the tenant id or a 0-based
+  // account index at the call site, so only the PREFIXES live here.
+  ZYGOS_MASTER_OVERVIEW_SCREEN: 'zygos-master-overview-screen',
+  ZYGOS_MASTER_OVERVIEW_EMPTY: 'zygos-master-overview-empty',
+  ZYGOS_MASTER_MERCHANT_CARD_PREFIX: 'zygos-master-merchant-card',
+  ZYGOS_MASTER_MERCHANT_OPEN_PREFIX: 'zygos-master-merchant-open',
+  ZYGOS_IMPERSONATION_BANNER: 'zygos-impersonation-banner',
+  ZYGOS_IMPERSONATION_EXIT: 'zygos-impersonation-exit',
+  ZYGOS_MODULE_CATALOG_SCREEN: 'zygos-module-catalog-screen',
+  ZYGOS_RESET_DEMO_BUTTON: 'zygos-reset-demo-button',
+  // Public-demo credentials panel (multi-account: per-account ids get a `-<index>` suffix appended).
+  ZYGOS_DEMO_CREDENTIALS_HINT: 'zygos-auth-demo-credentials-hint',
+  ZYGOS_DEMO_CREDENTIALS_TOGGLE: 'zygos-auth-demo-credentials-toggle',
+  ZYGOS_DEMO_CREDENTIALS_ACCOUNT_LABEL_PREFIX: 'zygos-auth-demo-credentials-account-label',
+  ZYGOS_DEMO_CREDENTIALS_USERNAME_PREFIX: 'zygos-auth-demo-credentials-username',
+  ZYGOS_DEMO_CREDENTIALS_PASSWORD_PREFIX: 'zygos-auth-demo-credentials-password',
+  ZYGOS_DEMO_CREDENTIALS_USE_PREFIX: 'zygos-auth-demo-credentials-use',
 } as const;
 
 // Type for testID values
