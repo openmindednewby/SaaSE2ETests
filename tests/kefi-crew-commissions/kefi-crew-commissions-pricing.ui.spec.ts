@@ -166,7 +166,7 @@ test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
     ).toContainText('Crew & Commissions');
 
     await organizer.selectTab('promoters');
-    await organizer.expectActiveTab('promoters'); // signature: organizer-promoters-manager (reused)
+    await organizer.expectActiveTab('promoters'); // signature: organizer-crew-roster (RosterSection container)
 
     // The merged surface's unified roster.
     const roster = page.getByTestId('organizer-crew-roster');

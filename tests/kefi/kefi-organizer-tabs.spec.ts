@@ -14,12 +14,15 @@
  *      unmounts the others (one visible tabpanel at a time) — no console errors;
  *   2. Ledger tab exists and carries both export actions (CSV + JSON);
  *   3. Door tab exists and renders its check-in list;
- *   4. Promoters tab: every row action (Edit/Account/Link/Retire) is present and
- *      OPENS its panel in the ONE-AT-A-TIME row-action modal
- *      (`PromoterActionModal`); Edit loads the row into the modal edit form. The
- *      walk closes each panel (via its own Close control) before opening the
- *      next, because the modal's backdrop covers the table — the second action
- *      cannot be pressed while the first modal is up.
+ *   4. Promoters tab (now `CrewCommissionsSurface`): the standalone promoters
+ *      manager table is gone — a promoter lives only in the crew Roster. Its row
+ *      actions (Edit/Link/Retire) are reached by opening that act's DETAIL from
+ *      the roster card's View action (`organizer-crew-roster-view-promoter-<id>`),
+ *      which opens the crew detail modal (`organizer-crew-detail-modal`). Inside
+ *      that detail Edit/Link/Retire render with their unchanged testIDs; Edit
+ *      loads the row into the edit form and Link opens the access-link panel.
+ *      Each sub-panel is closed (returning to the detail) before the next action.
+ *      The per-row account-link action was deleted entirely (owner decision).
  *
  * DEFECT HISTORY — both defects this file once documented are now FIXED; the
  * tests below assert the fixed behaviour and guard against regression:
@@ -31,11 +34,12 @@
  *      of this file remains `test.fixme` while the static export gap (task #299)
  *      is decided — see its own note.
  *   B. C3 — a promoter row-action panel opened ~468px OFF-SCREEN above the tall
- *      add form (`scrollY:0`, no auto-scroll into view). The overhaul replaced
- *      the inline panels with `PromoterActionModal`, a one-at-a-time modal
- *      CENTERED in the viewport, so the panel now opens right where the organizer
- *      is looking regardless of the row's position. The C3 test below now expects
- *      `toBeInViewport()` to PASS and guards against a regression.
+ *      add form (`scrollY:0`, no auto-scroll into view). The overhaul moved the
+ *      promoter actions into the crew detail modal (`organizer-crew-detail-modal`),
+ *      CENTERED in the viewport, so a panel opened from the detail now appears
+ *      right where the organizer is looking regardless of the row's position. The
+ *      C3 test below now expects `toBeInViewport()` to PASS and guards against a
+ *      regression.
  *
  * ── WHY THE WORKING-UI WALK OPENS TABS BY CLICKING ──────────────────────────
  * The comprehensive walk reaches each tab by PRESSING its button — the way an
@@ -179,60 +183,53 @@ test.describe('Kefi organizer tab restructure', () => {
       'the Door tab shows the door check-in section',
     ).toBeVisible();
 
-    // ── 5. Promoters tab: every row action is present and OPENS its panel ─────
+    // ── 5. Promoters tab: a promoter's actions live in its ROSTER DETAIL ──────
+    // The standalone promoters manager table is gone. A promoter now lives only
+    // in the crew Roster; its row actions are reached by opening that act's
+    // detail from the roster card's View action, which opens the crew detail
+    // modal (`organizer-crew-detail-modal`). Edit/Link/Retire then render inside
+    // that modal with their unchanged testIDs.
     await organizer.selectTab('promoters');
-    const editButton = page.getByTestId(`organizer-promoter-edit-${promoterExternalId}`);
-    const linkButton = page.getByTestId(`organizer-promoter-link-${promoterExternalId}`);
-    const retireButton = page.getByTestId(`organizer-promoter-toggle-active-${promoterExternalId}`);
+    await organizer.openPromoterDetail(promoterExternalId);
 
-    // Absence would mean the deployed build predates the promoters manager — a
+    const modal = organizer.promoterActionModal;
+    const editButton = modal.getByTestId(`organizer-promoter-edit-${promoterExternalId}`);
+    const linkButton = modal.getByTestId(`organizer-promoter-link-${promoterExternalId}`);
+    const retireButton = modal.getByTestId(`organizer-promoter-toggle-active-${promoterExternalId}`);
+
+    // Absence would mean the deployed build predates the crew-roster merge — a
     // DEPLOY gap, not a layout defect.
     await expect(
       editButton,
-      'the promoter row actions are deployed (Edit/Link/Retire present). ' +
-        'Absence means kefi-web predates the promoters manager — ship it, then re-run.',
+      'the promoter actions are deployed in the crew detail (Edit/Link/Retire present). ' +
+        'Absence means kefi-web predates the crew-roster merge — ship it, then re-run.',
     ).toHaveCount(1);
-    await expect(linkButton, 'the Link row action is present').toHaveCount(1);
-    await expect(retireButton, 'the Retire row action is present').toHaveCount(1);
+    await expect(linkButton, 'the Link action is present in the detail').toHaveCount(1);
+    await expect(retireButton, 'the Retire action is present in the detail').toHaveCount(1);
 
-    // The per-row "Link account" action is intentionally retired from the UI:
-    // no promoter role needs a portal sign-in account (referral credit attributes
-    // by name; ambassadors self-view via an access-link token), so the action is
-    // offered to nobody and its button must NOT render.
-    await expect(
-      page.getByTestId(`organizer-promoter-account-${promoterExternalId}`),
-      'the Account row action is retired (no role needs a sign-in account)',
-    ).toHaveCount(0);
-
-    // Link opens the access-link panel in the ONE-AT-A-TIME row-action modal
-    // (`organizer-promoter-action-modal`, the modal that replaced the old
-    // scroll-to-top inline panels). Its backdrop covers the whole table, so the
-    // modal MUST be dismissed before the next action is pressed — otherwise the
-    // next row button sits behind the backdrop and its click never lands. The
-    // panel is closed via its own Close control (the unchanged panel testID).
+    // Link opens the access-link panel on top of the detail (still inside the
+    // crew detail modal). Closing the panel returns to the detail — it does NOT
+    // dismiss the whole modal — so the Edit action re-appears for the next step.
+    // The panel is closed via its own Close control (the unchanged panel testID).
     await linkButton.click();
     await expect(
       page.getByTestId('organizer-promoter-link'),
-      'the promoter access-link panel opened in the row-action modal',
+      'the promoter access-link panel opened on top of the crew detail',
     ).toBeVisible();
-    await organizer.closePromoterActionModal('organizer-promoter-link-close');
+    await organizer.dismissPromoterSubPanel('organizer-promoter-link-close');
 
-    // Edit is client-side only (loads the row into the modal edit form) —
-    // pressing it proves the Actions column responds to touch without writing
-    // anything. The `cancel-edit` control renders ONLY when editing an existing
-    // row, so its presence in the modal proves the EDIT form loaded (not the
-    // inline add form), i.e. the row action is live, not painted. Retire is
-    // NEVER pressed: it is a real PUT that would deactivate the act.
+    // Edit is client-side only (loads the row into the edit form) — pressing it
+    // proves the action responds to touch without writing anything. The
+    // `cancel-edit` control renders ONLY when editing an existing row, so its
+    // presence proves the EDIT form loaded (not the add form), i.e. the action is
+    // live, not painted. Retire is NEVER pressed: it is a real PUT that would
+    // deactivate the act.
     await editButton.click();
     await expect(
-      organizer.promoterActionModal,
-      'pressing Edit opens the promoter row-action modal',
+      modal.getByTestId('organizer-promoter-cancel-edit'),
+      'pressing Edit loaded the EDIT form in the detail (cancel-edit renders only when editing)',
     ).toBeVisible();
-    await expect(
-      organizer.promoterActionModal.getByTestId('organizer-promoter-cancel-edit'),
-      'the modal loaded the EDIT form for the row (cancel-edit renders only when editing)',
-    ).toBeVisible();
-    await organizer.closePromoterActionModal('organizer-promoter-cancel-edit');
+    await organizer.dismissPromoterSubPanel('organizer-promoter-cancel-edit');
     await expect(
       retireButton,
       'the Retire action is enabled (measured, never pressed — it deactivates a real act)',
@@ -245,14 +242,17 @@ test.describe('Kefi organizer tab restructure', () => {
   // ── C3 regression guard — the fix landed, this now asserts the fixed state ──
   // Was DEFECT B: a promoter row action opened its panel ABOVE the tall add form,
   // ~468px off-screen above the viewport, so the organizer had to scroll to see
-  // it. The overhaul replaced those inline panels with `PromoterActionModal`, a
-  // one-at-a-time modal CENTERED in the viewport — the panel now appears right
-  // where the organizer is looking regardless of the row's position. This test
-  // therefore expects `toBeInViewport()` to PASS, and guards against a regression
-  // back to the off-screen-above behaviour.
-  test('@ui C3: a promoter row-action panel opens IN VIEW (centered modal), not off-screen above the table', async () => {
+  // it. The overhaul moved the promoter actions into the crew detail modal
+  // (`organizer-crew-detail-modal`), CENTERED in the viewport — a panel opened
+  // from the detail now appears right where the organizer is looking regardless
+  // of the row's position. This test therefore expects `toBeInViewport()` to
+  // PASS, and guards against a regression back to the off-screen-above behaviour.
+  test('@ui C3: a promoter access-link panel opens IN VIEW (centered modal), not off-screen above the table', async () => {
     await openTabByClicking('promoters');
-    const linkButton = page.getByTestId(`organizer-promoter-link-${promoterExternalId}`);
+    await organizer.openPromoterDetail(promoterExternalId);
+    const linkButton = organizer.promoterActionModal.getByTestId(
+      `organizer-promoter-link-${promoterExternalId}`,
+    );
     await linkButton.click();
     const linkPanel = page.getByTestId('organizer-promoter-link');
     await expect(linkPanel, 'the promoter access-link panel opened in the modal').toBeVisible();

@@ -53,7 +53,11 @@ export const ORGANIZER_TAB_SIGNATURE: Record<OrganizerTabKey, string> = {
   overview: 'organizer-pnl',
   passes: 'organizer-passes',
   attendees: 'organizer-attendees',
-  promoters: 'organizer-promoters-manager',
+  // The Promoters tab now renders `CrewCommissionsSurface`; the standalone
+  // promoters manager (`organizer-promoters-manager`) was deleted and promoters
+  // live only in the crew Roster. `organizer-crew-roster` is the RosterSection
+  // container that proves the panel painted its section.
+  promoters: 'organizer-crew-roster',
   door: 'organizer-door',
   ledger: 'organizer-ledger',
   messaging: 'organizer-messaging',
@@ -75,13 +79,22 @@ export class KefiOrganizerTabsPage {
   /** The app error boundary's reload button — must NEVER appear. */
   readonly errorBoundaryReload: Locator;
   /**
-   * The one-at-a-time promoter row-action modal (Edit / Account / Access-link).
-   * Its card carries this testID; when no action is active the modal renders
-   * nothing at all, so this resolves to zero elements. Replaces the old
-   * scroll-to-top inline panels — a row action now opens centered in the
-   * viewport regardless of how far down the table the row sits.
+   * The crew per-person detail modal (`organizer-crew-detail-modal`, which
+   * REPLACED the deleted `organizer-promoter-action-modal`). A promoter's row
+   * actions (Edit / Access-link / Retire / Guests-brought) now live INSIDE this
+   * modal: it opens from a roster card's View action and shows that act's
+   * detail. When nothing is open the modal renders nothing, so this resolves to
+   * zero elements.
    */
   readonly promoterActionModal: Locator;
+  /**
+   * The per-person detail body inside {@link promoterActionModal}
+   * (`organizer-crew-detail`). It carries the promoter's Edit / Access-link /
+   * Retire actions. When a sub-panel (edit form / access-link panel) is open on
+   * top of the detail, the detail body is UNMOUNTED and this resolves to zero;
+   * closing the sub-panel re-mounts it.
+   */
+  readonly promoterDetail: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -91,26 +104,67 @@ export class KefiOrganizerTabsPage {
     this.anyPanel = page.locator('[id^="organizer-panel-"]');
     this.selectedTabs = page.locator('[role="tab"][aria-selected="true"]');
     this.errorBoundaryReload = page.getByTestId('error-boundary-reload-button');
-    this.promoterActionModal = page.getByTestId('organizer-promoter-action-modal');
+    this.promoterActionModal = page.getByTestId('organizer-crew-detail-modal');
+    this.promoterDetail = page.getByTestId('organizer-crew-detail');
+  }
+
+  /** The roster card's View action for one promoter-source act. */
+  promoterRosterViewButton(promoterExternalId: string): Locator {
+    return this.page.getByTestId(`organizer-crew-roster-view-promoter-${promoterExternalId}`);
   }
 
   /**
-   * Dismiss the open promoter row-action modal via the active panel's own
-   * Close / Cancel control, then wait for the modal to leave the DOM.
+   * Open a promoter's per-person detail from the crew roster.
    *
-   * The modal is ONE-AT-A-TIME: while it is open its backdrop covers the whole
-   * table, so the next row action cannot be pressed until this returns. The
-   * close control differs per panel, so the caller passes the testID of the
-   * one the currently-open panel rendered:
+   * The roster groups members into COLLAPSIBLE per-role cards; only the first
+   * starts expanded and a collapsed card UNMOUNTS its body, so the target's View
+   * action may not be in the DOM yet. This expands collapsed category cards until
+   * the View action mounts (a card that is already expanded but does not hold the
+   * target is harmlessly collapsed — its members are never the ones we are after,
+   * or the View action would already be present), then clicks View and waits for
+   * the crew detail modal to open.
+   */
+  async openPromoterDetail(promoterExternalId: string): Promise<void> {
+    const view = this.promoterRosterViewButton(promoterExternalId);
+    if ((await view.count()) === 0) {
+      const cardToggles = this.page.locator(
+        '[data-testid^="organizer-crew-roster-"][data-testid$="-toggle"]',
+      );
+      const toggleCount = await cardToggles.count();
+      for (let index = 0; index < toggleCount; index += 1) {
+        if ((await view.count()) > 0) break;
+        await cardToggles.nth(index).click();
+      }
+    }
+    await expect(
+      view,
+      'the promoter View action mounted in its (expanded) roster card',
+    ).toBeVisible();
+    await view.click();
+    await expect(
+      this.promoterActionModal,
+      'clicking View opened the crew per-person detail modal',
+    ).toBeVisible();
+  }
+
+  /**
+   * Dismiss the sub-panel open on top of the crew detail (the edit form or the
+   * access-link panel) via its own Close / Cancel control, returning to the
+   * per-person detail beneath it.
+   *
+   * Unlike the old one-at-a-time row-action modal, closing a sub-panel does NOT
+   * dismiss the whole modal — the detail is still selected, so control returns to
+   * it (its body re-mounts). The close control differs per sub-panel, so the
+   * caller passes the testID of the one the open sub-panel rendered:
    *   - access-link panel → `organizer-promoter-link-close`
    *   - edit form         → `organizer-promoter-cancel-edit`
    */
-  async closePromoterActionModal(closeControlTestId: string): Promise<void> {
+  async dismissPromoterSubPanel(closeControlTestId: string): Promise<void> {
     await this.page.getByTestId(closeControlTestId).click();
     await expect(
-      this.promoterActionModal,
-      'the promoter row-action modal dismissed before the next row action',
-    ).toBeHidden();
+      this.promoterDetail,
+      'closing the sub-panel returned to the promoter detail (the modal stays open)',
+    ).toBeVisible();
   }
 
   /** The tab button for one section. */
