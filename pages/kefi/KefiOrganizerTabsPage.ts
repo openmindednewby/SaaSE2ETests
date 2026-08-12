@@ -211,11 +211,24 @@ export class KefiOrganizerTabsPage {
 
   /** Click a tab and wait for it to become the selected one. */
   async selectTab(key: OrganizerTabKey): Promise<void> {
-    await this.tab(key).click();
+    const tab = this.tab(key);
+    // On a narrow viewport the strip collapses to a ☰ hamburger (`organizer-menu`
+    // — the shared `Tabs` `{idPrefix}-menu`), and the per-tab option only mounts
+    // once that menu is open. Open it first when the tab isn't directly clickable.
+    if (!(await tab.isVisible().catch(() => false))) {
+      const menu = this.page.getByTestId('organizer-menu');
+      if (await menu.isVisible().catch(() => false)) {
+        await menu.click();
+      }
+    }
+    await tab.click();
+    // The collapsed menu closes on select, unmounting the option — so assert the
+    // panel mounted (true in both the wide-strip and collapsed-menu layouts)
+    // rather than an aria-selected attribute on a tab that may no longer exist.
     await expect(
-      this.tab(key),
-      `the ${key} tab reports aria-selected=true after being pressed`,
-    ).toHaveAttribute('aria-selected', 'true');
+      this.panel(key),
+      `the ${key} panel is the mounted panel after selecting the tab`,
+    ).toHaveCount(1);
   }
 
   /**
