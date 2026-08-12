@@ -49,6 +49,7 @@ import { KefiOrganizerTabsPage } from '../../pages/kefi/KefiOrganizerTabsPage.js
 import { KefiPromoterClient } from '../../helpers/kefi/kefiPromoterClient.js';
 import {
   expectNoHorizontalOverflow,
+  expectTapTargetSize,
   expectWithinViewportWidth,
 } from '../../helpers/kefi/mobileLayout.js';
 import {
@@ -255,9 +256,8 @@ test.describe('Kefi UBB organizer crew roster promoter card on mobile', () => {
     await viewButton.scrollIntoViewIfNeeded();
     await expect(viewButton, `the View action for "${target.name}" is rendered`).toBeVisible();
     await expectWithinViewportWidth(page, viewButton, `the View button for "${target.name}"`);
-    // No strict 44px tap-target: the roster row actions are the owner's deliberate
-    // compact `sm` (36px) touch size (kefi-web `useRowActionSize`); a 44px web tap
-    // area is a shared `@dloizides/ui-buttons` follow-up. Pressed below to open it.
+    // Row actions meet the 44px AA tap area on a web coarse pointer (ui-buttons >=1.10.0).
+    await expectTapTargetSize(viewButton, `the View button for "${target.name}"`);
 
     // ── 4. The promoter's actions are reachable inside the detail modal ───────
     // The Edit / Retire actions now live in the detail (no longer in-table); the
@@ -271,8 +271,8 @@ test.describe('Kefi UBB organizer crew roster promoter card on mobile', () => {
     await expect(retireButton, `the Retire action for "${target.name}" is rendered`).toBeVisible();
     await expectWithinViewportWidth(page, editButton, `the Edit button for "${target.name}"`);
     await expectWithinViewportWidth(page, retireButton, `the Retire button for "${target.name}"`);
-    // Same compact `sm` sizing as View — no strict 44px assertion (section 3).
-    // Reachability is proven functionally: Edit is pressed below; Retire enabled.
+    await expectTapTargetSize(editButton, `the Edit button for "${target.name}"`);
+    await expectTapTargetSize(retireButton, `the Retire button for "${target.name}"`);
 
     // Retire is asserted enabled but NEVER pressed — see the prod-safety note in
     // the header. `toBeEnabled` is the strongest claim available without firing a
