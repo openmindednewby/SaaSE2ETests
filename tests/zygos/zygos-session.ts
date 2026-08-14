@@ -24,6 +24,8 @@ import path from 'path';
 import { expect, request as playwrightRequest } from '@playwright/test';
 
 import {
+  DEMO_MASTER_TENANT_ID,
+  MERCHANT_MATCHER,
   ZYGOS_API_PREFIX,
   ZYGOS_TEST_PASSWORD,
   ZYGOS_WEB_URL,
@@ -381,35 +383,108 @@ export async function anonymousContext(): Promise<APIRequestContext> {
  * published — both legitimate `test.skip` reasons; a genuine throttle still THROWS inside `loginAs`.
  */
 export async function loginAsDemo(): Promise<ZygosSession | null> {
+  const demo = await publishedDemo();
+  if (!demo) return null;
+
+  // 🔴 DELIBERATELY OUTSIDE any catch. `publishedDemo()` above owns the network failure — an
+  // unreachable console returns null and the caller skips, which is correct. What follows is a
+  // CONTRACT check, and a contract violation must never be able to present as "not deployed".
+  // The previous shape wrapped both in one `try { … } catch { return null }`, so any throw added
+  // here would have been laundered into a green skip: a guard that cannot fire.
+  const merchant = resolvePublishedMerchant(demo);
+  return loginAs(merchant.username, merchant.password);
+}
+
+/** The demo block `GET /bff/config` serves. `null` when unconfigured or the console is unreachable. */
+export interface PublishedDemo {
+  publishedUsername: string;
+  publishedPassword: string;
+  publishedAccounts?: DemoAccount[];
+}
+
+/**
+ * Read the published demo block anonymously — exactly as a visitor's browser does.
+ *
+ * Returns null for the two legitimate `test.skip` reasons ONLY: the console is unreachable, or it
+ * publishes no demo block. Never null for "the block is there but says something unexpected" —
+ * that is `resolvePublishedMerchant`'s job, and it throws.
+ */
+export async function publishedDemo(): Promise<PublishedDemo | null> {
   const anon = await anonymousContext();
   try {
     const res = await anon.get('/bff/config', { timeout: 20_000 });
     if (!res.ok()) return null;
-    const config = (await res.json()) as {
-      demo: {
-        publishedUsername: string;
-        publishedPassword: string;
-        publishedAccounts?: DemoAccount[];
-      } | null;
-    };
-    if (!config.demo) return null;
-
-    // 🔴 Ask for the MERCHANT by label. Never `publishedUsername`, never index 0.
-    //
-    // `publishedUsername` is the legacy singular field, and once `publishedAccounts` exists it
-    // carries whichever account is FIRST. #190 added "Master" at index 0, so this function
-    // silently stopped returning the seeded merchant book and started returning the MASTER
-    // tenant — which holds no payment instructions at all. Every spec that reads the demo seed
-    // went red claiming the seed was missing; the seed was intact and the LOGIN had moved.
-    // Twelve failures, none of them where the defect was.
-    const merchant = merchantAccount(config.demo.publishedAccounts ?? []);
-    if (merchant) return loginAs(merchant.username, merchant.password);
-
-    // No accounts list published (older deployment) — the singular pair IS the merchant there.
-    return loginAs(config.demo.publishedUsername, config.demo.publishedPassword);
+    const config = (await res.json()) as { demo: PublishedDemo | null };
+    return config.demo;
   } catch {
     return null;
   } finally {
     await anon.dispose();
   }
+}
+
+function describeAccounts(accounts: readonly DemoAccount[]): string {
+  if (accounts.length === 0) return '(empty)';
+  return accounts.map((a, i) => `  [${String(i)}] label=${JSON.stringify(a.label)} username=${JSON.stringify(a.username)}`).join('\n');
+}
+
+/**
+ * 🔴 THE GUARD. Resolve the account this suite means — the demo MERCHANT — or fail by NAME.
+ *
+ * ── Why a throw and not a fallback ────────────────────────────────────────────────────────────
+ *
+ * The obvious-looking safety net ("no label matched? fall back to `publishedUsername`") is not a
+ * safety net, it IS the #190 defect. `publishedUsername` is the legacy singular field and, once
+ * `publishedAccounts` exists, carries whichever account sits FIRST in that array. #190 put
+ * "Master" at index 0. Everything that read the legacy field silently stopped returning the
+ * seeded merchant book and started returning the MASTER tenant — which holds no payment
+ * instructions at all, by design. Twelve specs went red claiming the demo seed was missing. The
+ * seed was intact; the LOGIN had moved. The cost was hours, and every single one of those twelve
+ * messages pointed away from the cause.
+ *
+ * So array ORDER is a load-bearing functional dependency, and the owner has deliberately decided
+ * to keep BOTH accounts published — the array is not going away. The only thing that can be made
+ * safe is our READ of it: select by label, and if the label is not there, say so in the loudest
+ * possible terms rather than quietly landing in whichever tenant happens to be first.
+ *
+ * Falls back to the singular pair ONLY when NO list is published at all (a genuinely older
+ * deployment), where the singular pair really is the one and only merchant.
+ */
+export function resolvePublishedMerchant(demo: PublishedDemo): DemoAccount {
+  const accounts = demo.publishedAccounts ?? [];
+
+  // Pre-`publishedAccounts` deployment: the singular pair IS the merchant, unambiguously.
+  if (accounts.length === 0) {
+    return { label: 'Merchant', username: demo.publishedUsername, password: demo.publishedPassword };
+  }
+
+  const merchant = merchantAccount(accounts);
+  if (merchant) return merchant;
+
+  throw new Error(
+    [
+      '',
+      '🔴 ZYGOS DEMO ACCOUNT CONTRACT BROKEN — no MERCHANT account is published any more.',
+      '',
+      `GET /bff/config → demo.publishedAccounts lists ${String(accounts.length)} account(s):`,
+      describeAccounts(accounts),
+      '',
+      `None matches the merchant matcher ${String(MERCHANT_MATCHER)} on either label or username.`,
+      '',
+      'WHAT THIS IS NOT: it is not a missing demo seed, not a rotated password, not a broken',
+      'login and not a down console. Nothing about the DATA has changed. The published account',
+      'LIST changed — a label was renamed or an entry removed — so the suite can no longer name',
+      'the account it means.',
+      '',
+      `WHAT NOT TO DO: do not "fix" this by reading demo.publishedUsername (currently ${JSON.stringify(demo.publishedUsername)}).`,
+      'That field is positional — it carries whichever account is FIRST — and doing exactly that',
+      `is the #190 defect: it points the whole suite at the MASTER tenant (${DEMO_MASTER_TENANT_ID}),`,
+      'which holds no payment instructions, and makes a dozen specs claim the demo seed vanished.',
+      '',
+      'FIX ONE OF:',
+      '  * restore the merchant account label in the BFF config (Bff__Demo__Accounts__*), or',
+      '  * widen MERCHANT_MATCHER in E2ETests/tests/zygos/zygos-helpers.ts to match the new label.',
+      '',
+    ].join('\n'),
+  );
 }

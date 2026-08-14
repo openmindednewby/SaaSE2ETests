@@ -52,6 +52,25 @@ export const ZYGOS_TEST_PASSWORD = process.env.ZYGOS_TEST_PASSWORD?.trim() || 'S
  */
 export const ZYGOS_E2E_TENANT_ID = 'e2e00001-0000-4000-a000-000000000001';
 
+/**
+ * The PUBLIC demo MERCHANT tenant — "Acme Pay", the seeded showcase book that `loginAsDemo()`
+ * must land in, and the tenant every demo-reading spec is really asserting about.
+ *
+ * Named here rather than inferred, because "which tenant did I actually end up in?" is the ONE
+ * question that distinguishes the two failures that look identical from a spec:
+ *   * the seed is genuinely gone            → this tenant, zero rows
+ *   * the LOGIN moved to another tenant     → a different tenant, and its rows are irrelevant
+ * #190 was the second, and every spec reported the first. See `zygos-account-contract.spec.ts`.
+ */
+export const DEMO_MERCHANT_TENANT_ID = '7fa9403d-3478-4cbe-8b67-98dc28854a25';
+
+/**
+ * The master/reseller tenant. Carries NO payment book by design (the merchants beneath it do) —
+ * which is precisely why landing here by accident reads as "the demo seed is missing".
+ * Mirrors `MASTER_TENANT.id` in `zygos-master.ts`.
+ */
+export const DEMO_MASTER_TENANT_ID = 'd0000004-0000-4000-a000-000000000004';
+
 /** One published demo account as `GET /bff/config` advertises it. */
 export interface DemoAccount {
   label: string;
@@ -59,13 +78,17 @@ export interface DemoAccount {
   password: string;
 }
 
+/** The label/username shapes that identify each published role. Exported so failure messages can quote them. */
+export const MASTER_MATCHER = /master/i;
+export const MERCHANT_MATCHER = /merchant|^demo$/i;
+
 function pickAccount(accounts: readonly DemoAccount[], matcher: RegExp): DemoAccount | undefined {
   return accounts.find((a) => matcher.test(a.label) || matcher.test(a.username));
 }
 
 /** The master/reseller account (label or username mentions "master"). */
 export function masterAccount(accounts: readonly DemoAccount[]): DemoAccount | undefined {
-  return pickAccount(accounts, /master/i);
+  return pickAccount(accounts, MASTER_MATCHER);
 }
 
 /**
@@ -79,7 +102,7 @@ export function masterAccount(accounts: readonly DemoAccount[]): DemoAccount | u
  * seed was missing, when the seed was fine and the LOGIN had moved. Ask for the account you mean.
  */
 export function merchantAccount(accounts: readonly DemoAccount[]): DemoAccount | undefined {
-  return pickAccount(accounts, /merchant|^demo$/i);
+  return pickAccount(accounts, MERCHANT_MATCHER);
 }
 
 /**

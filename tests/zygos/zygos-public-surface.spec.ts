@@ -31,7 +31,16 @@
 import { expect, test } from '@playwright/test';
 
 import { retryWhileRateLimited } from '../../helpers/rate-limit.js';
-import { ZYGOS_TEST_PASSWORD, ZYGOS_WEB_URL, bodyText, bodyJson, jsonCsrfHeaders } from './zygos-helpers.js';
+import {
+  ZYGOS_TEST_PASSWORD,
+  ZYGOS_WEB_URL,
+  bodyText,
+  bodyJson,
+  jsonCsrfHeaders,
+  merchantAccount,
+} from './zygos-helpers.js';
+
+import type { DemoAccount } from './zygos-helpers.js';
 
 /** The marketing site that PRINTS the demo credential to the public. */
 const ZYGOS_MARKETING_URL = (process.env.ZYGOS_MARKETING_URL?.trim() || 'https://finreg.dloizides.com').replace(
@@ -39,10 +48,26 @@ const ZYGOS_MARKETING_URL = (process.env.ZYGOS_MARKETING_URL?.trim() || 'https:/
   '',
 );
 
-/** The shape `GET /bff/config` returns (Bff.AspNetCore 1.10.0). `demo` is null when unconfigured. */
+/**
+ * The shape `GET /bff/config` returns (Bff.AspNetCore 1.10.0). `demo` is null when unconfigured.
+ *
+ * 🔴 `publishedUsername`/`publishedPassword` are the LEGACY SINGULAR pair, and since #190 added
+ * `publishedAccounts` they carry whichever account is FIRST in that array — today "Master".
+ * Reading them as "the demo credential" is the #190 defect, and this file had it: the marketing
+ * comparison below was checking finreg.dloizides.com against the MASTER password, which the site
+ * has never printed and never should. It reported a customer-visible lie ("the public page is
+ * lying to every visitor") about a page that was entirely correct. See `zygos-account-contract.spec.ts`.
+ */
 interface BffConfig {
   registrationEnabled: boolean;
-  demo: { publishedUsername: string; publishedPassword: string } | null;
+  demo: { publishedUsername: string; publishedPassword: string; publishedAccounts?: DemoAccount[] } | null;
+}
+
+/** Every account the login page advertises — the singular pair is the only one on older deployments. */
+function advertisedAccounts(demo: NonNullable<BffConfig['demo']>): DemoAccount[] {
+  const accounts = demo.publishedAccounts ?? [];
+  if (accounts.length > 0) return accounts;
+  return [{ label: 'Demo', username: demo.publishedUsername, password: demo.publishedPassword }];
 }
 
 async function fetchConfig(request: import('@playwright/test').APIRequestContext): Promise<BffConfig> {
@@ -69,29 +94,53 @@ test.describe('Zygos public surface @zygos-api @api', () => {
     // 🔴 THE ASSERTION THAT MATTERS. Not "a demo user exists" — that would pass while the page
     // showed a stale password. This logs in with THE EXACT STRINGS the page hands the visitor.
     //
+    // 🔴 EVERY advertised account, not just the first. This used to probe only the singular
+    // `publishedUsername` pair — which since #190 is whichever account sits at index 0, i.e. the
+    // MASTER. So the one credential a visitor is overwhelmingly likely to type, the MERCHANT one
+    // printed on the marketing site, was the one credential nothing verified. The login page
+    // advertises N accounts; a published claim is a claim whether or not it is listed first.
+    //
     // Retried on 429 for the same reason as the shared-password probe below: `/bff/login` is rate
     // limited 5/60s per IP, and an un-retried 429 fails this with "the credentials advertised on
     // the login page DO NOT WORK" — an alarming, wrong conclusion drawn from an empty body. A
     // request still 429 after all retries surfaces as a real failure, so nothing is masked.
-    const res = await retryWhileRateLimited(
-      'zygos advertised demo credential /bff/login',
-      () =>
-        request.post(`${ZYGOS_WEB_URL}/bff/login`, {
-          headers: jsonCsrfHeaders(),
-          data: { username: demo.publishedUsername, password: demo.publishedPassword },
-        }),
-      (r) => r.status(),
-    );
-    expect(
-      res.status(),
-      `The credentials advertised on the login page DO NOT WORK — every visitor sent to the demo is bounced. body: ${await bodyText(res)}`,
-    ).toBe(200);
+    for (const account of advertisedAccounts(demo)) {
+      const res = await retryWhileRateLimited(
+        `zygos advertised demo credential (${account.label}) /bff/login`,
+        () =>
+          request.post(`${ZYGOS_WEB_URL}/bff/login`, {
+            headers: jsonCsrfHeaders(),
+            data: { username: account.username, password: account.password },
+          }),
+        (r) => r.status(),
+      );
+      expect(
+        res.status(),
+        `The ${account.label} credentials advertised on the login page DO NOT WORK (username ${JSON.stringify(account.username)}) — every visitor who picks that account is bounced. body: ${await bodyText(res)}`,
+      ).toBe(200);
+    }
   });
 
   test('🔴 the password PRINTED on the marketing site is the one the console serves', async ({ request }) => {
     const config = await fetchConfig(request);
     const demo = config.demo as NonNullable<BffConfig['demo']>;
     test.skip(demo === null, 'demo not configured');
+
+    // 🔴 COMPARE AGAINST THE MERCHANT, BY LABEL — never the singular pair.
+    //
+    // The marketing site invites the public to "sign in as demo". It deliberately does NOT print
+    // the MASTER credential, and never should: the master account sees every merchant's book.
+    // This test used to compare the page against `publishedUsername`/`publishedPassword`, which
+    // since #190 ARE the master pair — so it failed, on a healthy deployment, with the most
+    // alarming message in the file: "the public page is now lying to every visitor". It was not.
+    // The page was correct and the TEST was reading the wrong account. A guard that manufactures
+    // a customer-visible defect out of an internal field's ordering is worse than no guard.
+    const merchant = merchantAccount(advertisedAccounts(demo));
+    expect(
+      merchant,
+      'no MERCHANT-labelled account is published, so there is nothing to compare the marketing site against. This is the published-account contract breaking, NOT a marketing-site defect — see zygos-account-contract.spec.ts before touching anything public.',
+    ).toBeTruthy();
+    const advertised = merchant as DemoAccount;
 
     const page = await request.get(`${ZYGOS_MARKETING_URL}/`);
     expect(page.status(), `marketing site unreachable: ${await bodyText(page)}`).toBe(200);
@@ -101,13 +150,13 @@ test.describe('Zygos public surface @zygos-api @api', () => {
     // invariant is "the working password appears on the page", and that survives someone
     // rewording the FAQ around it. A regex would go green on a reword and red on nothing.
     expect(
-      html.includes(demo.publishedPassword),
-      `finreg.dloizides.com does not print the password the console actually accepts. One of the two was rotated without the other, and the public page is now lying to every visitor.`,
+      html.includes(advertised.password),
+      `finreg.dloizides.com does not print the ${advertised.label} password the console actually accepts (username ${JSON.stringify(advertised.username)}). One of the two was rotated without the other, and the public page is now lying to every visitor.`,
     ).toBe(true);
 
     expect(
-      html.includes(demo.publishedUsername),
-      'the marketing page does not print the demo username the console serves',
+      html.includes(advertised.username),
+      `the marketing page does not print the ${advertised.label} demo username the console serves`,
     ).toBe(true);
   });
 

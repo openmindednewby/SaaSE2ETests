@@ -67,9 +67,35 @@ const PORTALS: readonly Portal[] = [
   { label: 'poueni-web', baseUrl: process.env.POUENI_WEB_URL ?? '', realm: 'poueni' },
 ];
 
+interface PublishedAccount {
+  label: string;
+  username: string;
+  password: string;
+}
+
+/**
+ * 🔴 `publishedUsername`/`publishedPassword` are the LEGACY SINGULAR pair. Once a portal publishes
+ * `publishedAccounts` (FINREG does, since #190) they mirror whichever account is FIRST in that
+ * array — they are NOT "the demo credential", they are "account zero".
+ *
+ * This guard read only that pair, so on FINREG it was checking the MASTER account and leaving the
+ * MERCHANT account — the one whose password is printed on the public marketing site — completely
+ * unguarded. Every portal publishing more than one account had the same blind spot.
+ */
 interface BffConfig {
   registrationEnabled?: boolean;
-  demo: { publishedUsername: string; publishedPassword: string } | null;
+  demo: {
+    publishedUsername: string;
+    publishedPassword: string;
+    publishedAccounts?: PublishedAccount[];
+  } | null;
+}
+
+/** Every account the portal publishes. The singular pair is the only one on older deployments. */
+function publishedAccountsOf(demo: NonNullable<BffConfig['demo']>): PublishedAccount[] {
+  const accounts = demo.publishedAccounts ?? [];
+  if (accounts.length > 0) return accounts;
+  return [{ label: 'Demo', username: demo.publishedUsername, password: demo.publishedPassword }];
 }
 
 /**
@@ -131,16 +157,30 @@ test.describe('Fleet demo-credential publication guard @security @api', () => {
         `${portal.label}: no seeded password resolvable for realm '${portal.realm}' — this guard would pass vacuously. Set KEYCLOAK_TEST_USER_SECRET.`,
       ).toBeGreaterThan(0);
 
+      const accounts = publishedAccountsOf(demo);
+
       for (const candidate of candidates) {
-        // (1) The cheap, unambiguous check.
-        expect(
-          demo.publishedPassword,
-          `${portal.label} PUBLISHES ${candidate.label}. Any visitor to ${portal.baseUrl} now holds a privileged credential for realm '${portal.realm}'.`,
-        ).not.toBe(candidate.value);
+        // (1) The cheap, unambiguous check — now across EVERY published account, not just the
+        // first. This costs zero requests, so widening it carries no rate-limit risk and closes
+        // most of the index-0 blind spot outright.
+        for (const account of accounts) {
+          expect(
+            account.password,
+            `${portal.label} PUBLISHES ${candidate.label} as its "${account.label}" account (${account.username}). Any visitor to ${portal.baseUrl} now holds a privileged credential for realm '${portal.realm}'.`,
+          ).not.toBe(candidate.value);
+        }
 
         // (2) The check that survives someone changing the published string: the demo ACCOUNT
         // itself must reject the seeded password. If it accepts, the demo user was swept into
         // realms.config.json's testUsers[] and the seeder reset it.
+        //
+        // ⚠️ DELIBERATELY still only the FIRST account, unlike (1) above — this one costs a
+        // `/bff/login` per account per candidate, and `/bff/login` is rate limited 5/60s PER IP.
+        // Multiplying it by the account count would push this guard into 429 territory, and a 429
+        // satisfies `.not.toBe(200)` — it would PASS VACUOUSLY, i.e. widening the loop here would
+        // quietly make the guard weaker, not stronger. Closing that properly needs 429 to be
+        // distinguished from a genuine rejection (as `loginOutcome()` does in the zygos suite);
+        // until then (1) carries the multi-account coverage and this leg carries the deep one.
         const login = await request.post(`${portal.baseUrl.replace(/\/+$/, '')}/bff/login`, {
           headers: { 'Content-Type': 'application/json', 'X-BFF-Csrf': '1', Origin: portal.baseUrl },
           data: { username: demo.publishedUsername, password: candidate.value },
