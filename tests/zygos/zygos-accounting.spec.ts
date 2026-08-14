@@ -7,12 +7,20 @@
 //
 // Seed-independent like the rest of the suite: every account this test creates carries a run-unique
 // code, journals are posted into run-unique far-future months (so a prior run's closed period cannot
-// collide), and no assertion pins a global count or "the first row" in the shared demo tenant.
+// collide), and no assertion pins a global count or "the first row".
+//
+// 🔴 Runs as a FIXTURE user, not the demo user. Everything read here is created here — including the
+// chart-of-accounts heads — so the demo seed was never required; the demo login was just a
+// convenient real account. Keeping it would mean CI posting journals into the PUBLIC demo tenant's
+// ledger every night, in a module whose entire point is that the books are trustworthy.
+//
+// The demo ledger IS still asserted on, deliberately and separately, by
+// `zygos-accounting-crossmodule.spec.ts` — that spec's subject is the demo beat itself.
 import { expect, test } from '@playwright/test';
 
 import { ModulesApi } from './zygos-console-modules.js';
-import { bodyJson, bodyText, zygosTag } from './zygos-helpers.js';
-import { loginAsDemo } from './zygos-session.js';
+import { ZYGOS_USERS, bodyJson, bodyText, zygosTag } from './zygos-helpers.js';
+import { loginAs } from './zygos-session.js';
 
 import type {
   AccountDto,
@@ -24,7 +32,7 @@ import type {
 } from './zygos-console-modules.js';
 import type { ZygosSession } from './zygos-session.js';
 
-const SKIP_REASON = 'Zygos console unreachable or demo credentials not published';
+const SKIP_REASON = 'Zygos console unreachable or fixture user rejected';
 const DEFAULT_PAGE_SIZE = 50;
 const UNKNOWN_ID = '00000000-0000-0000-0000-000000000000';
 const CENTS = 100;
@@ -59,17 +67,17 @@ function balancedLines(debitCode: string, creditCode: string, amount = 100, curr
 }
 
 test.describe('Zygos accounting @zygos-api @api', () => {
-  let demo: ZygosSession | null;
+  let session: ZygosSession | null;
   let api: ModulesApi;
 
   test.beforeAll(async () => {
     test.setTimeout(180_000);
-    demo = await loginAsDemo();
-    if (demo) api = new ModulesApi(demo);
+    session = await loginAs(ZYGOS_USERS.MAKER_A);
+    if (session) api = new ModulesApi(session);
   });
 
   test.beforeEach(() => {
-    test.skip(!demo, SKIP_REASON);
+    test.skip(!session, SKIP_REASON);
   });
 
   /** Create a chart-of-accounts head with a run-unique code. Returns its DTO. */

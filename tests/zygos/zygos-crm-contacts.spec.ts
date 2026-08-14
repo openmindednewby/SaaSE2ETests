@@ -2,38 +2,43 @@
 // filter a contact, all through the BFF against the deployed console.
 //
 // A contact is tenant reference data, not a financial record — so unlike a PaymentInstruction it CAN
-// change state (Active⇄Inactive) and be edited. But the same seed-independence rule still applies: the
-// demo tenant is shared and accumulates rows, so no test asserts on a global count or "the first row".
-// Every test tags its own contacts with a run-unique token and filters by that exact tag, so
-// accumulated rows — ours, the demo seed's, or a human's — cannot move an assertion.
+// change state (Active⇄Inactive) and be edited. The seed-independence rule still applies: the tenant
+// accumulates rows, so no test asserts on a global count or "the first row". Every test tags its own
+// contacts with a run-unique token and filters by that exact tag, so accumulated rows cannot move an
+// assertion.
+//
+// 🔴 Runs as a FIXTURE user, not the demo user. Every test here creates the rows it reads, so it
+// never needed the demo seed — it used the demo login only because that was a convenient real
+// account. That convenience meant CI wrote contacts into the PUBLIC demo tenant every night, and put
+// the run at the mercy of anyone holding the published credentials. Same coverage, own tenant.
 import { expect, test } from '@playwright/test';
 
 import { ModulesApi } from './zygos-console-modules.js';
-import { bodyJson, bodyText, zygosTag } from './zygos-helpers.js';
-import { loginAsDemo } from './zygos-session.js';
+import { ZYGOS_USERS, bodyJson, bodyText, zygosTag } from './zygos-helpers.js';
+import { loginAs } from './zygos-session.js';
 
 import type { ContactDto, CreateContactBody, Paged } from './zygos-console-modules.js';
 import type { ZygosSession } from './zygos-session.js';
 
-const SKIP_REASON = 'Zygos console unreachable or demo credentials not published';
+const SKIP_REASON = 'Zygos console unreachable or fixture user rejected';
 const DEFAULT_PAGE_SIZE = 50;
 const UNKNOWN_ID = '00000000-0000-0000-0000-000000000000';
 
 test.describe('Zygos CRM contacts @zygos-api @api', () => {
-  let demo: ZygosSession | null;
+  let session: ZygosSession | null;
   let api: ModulesApi;
 
   test.beforeAll(async () => {
     test.setTimeout(180_000);
-    demo = await loginAsDemo();
-    if (demo) api = new ModulesApi(demo);
+    session = await loginAs(ZYGOS_USERS.MAKER_A);
+    if (session) api = new ModulesApi(session);
   });
 
   test.beforeEach(() => {
-    test.skip(!demo, SKIP_REASON);
+    test.skip(!session, SKIP_REASON);
   });
 
-  /** Create a contact as the demo user; assert it lands Active. Returns its DTO. */
+  /** Create a contact as the fixture user; assert it lands Active. Returns its DTO. */
   async function createContact(body: CreateContactBody): Promise<ContactDto> {
     const res = await api.createContact(body);
     expect(res.status(), `create contact failed: ${await bodyText(res)}`).toBe(201);

@@ -2,27 +2,26 @@
 // account-type field switching (P-PAY-3) and the FX cross-currency reveal (P-PAY-10).
 //
 // These are the most deterministic UI tests in the suite: they touch only the create form's own
-// client state, save NOTHING, and so cannot trip maker-checker, screening or the shared tenant's
-// append-only book. The form is entered as the DEMO user only because that is a real seeded login
-// the browser can carry — no seeded ROW is needed; a fresh form is enough.
+// client state, save NOTHING, and so cannot trip maker-checker, screening or the tenant's
+// append-only book. No seeded ROW is needed; a fresh form is enough.
+//
+// 🔴 Entered as a FIXTURE user, not the demo user. It used to enter as DEMO purely because that was
+// "a real seeded login the browser can carry" — but a login published unauthenticated at
+// /bff/config is one a stranger can also drive, and borrowing it for a test that needs nothing
+// from the demo puts the run at their mercy for no benefit at all. A fixture session is just as
+// real and nobody else holds it.
 //
 // The identifier fields render INLINE by default (a fresh form has no picked payee, so the
 // <PartyFieldset> fields are editable), and errors are the shared `Field`'s `role="alert"` node —
 // the same readiness signal `zygos-form-fields.ui.spec.ts` relies on. No sleeps.
 import { expect, test } from '@playwright/test';
 
-import {
-  PAYMENT_FORM_IDS,
-  accountTypeOption,
-  enterConsoleAsDemo,
-  gotoScreen,
-  id,
-} from './zygos-payments.js';
+import { enterConsole } from './zygos-console-ui.js';
+import { PAYMENT_FORM_IDS, accountTypeOption, gotoScreen, id } from './zygos-payments.js';
 
 import type { Locator, Page } from '@playwright/test';
 
 const DESKTOP = { width: 1280, height: 900 };
-const SKIP_REASON = 'Zygos console unreachable or demo credentials not published';
 
 /** A structurally-invalid IBAN (country IN, non-digit check chars) — a pure client-side reject. */
 const BAD_IBAN = 'INVALIDIBAN';
@@ -43,8 +42,7 @@ test.describe('FINREG payments form @zygos-ui @ui', () => {
   test.beforeEach(async ({ page }) => {
     test.setTimeout(120_000);
     await page.setViewportSize(DESKTOP);
-    const session = await enterConsoleAsDemo(page, '/');
-    test.skip(!session, SKIP_REASON);
+    await enterConsole(page, '/');
     await gotoScreen(page, '/instructions/new', PAYMENT_FORM_IDS.screen);
   });
 

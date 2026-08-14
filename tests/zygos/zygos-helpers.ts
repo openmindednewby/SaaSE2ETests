@@ -32,6 +32,57 @@ export const ZYGOS_API_PREFIX = '/bff/api/zygos/api/v1';
 export const ZYGOS_TEST_PASSWORD = process.env.ZYGOS_TEST_PASSWORD?.trim() || 'SuperUser123!';
 
 /**
+ * 🔴 THE E2E TENANT IS NOT THE DEMO TENANT — and keeping them apart is the point.
+ *
+ * The five fixture users below live in a tenant dedicated to this suite
+ * (`e2e00001-…`, provisioned by `personalServerNotes/scripts/provision-zygos-e2e-tenant.sh`).
+ * They used to live in `7fa9403d-…`, which is ALSO the public demo tenant whose working
+ * credentials `GET /bff/config` publishes deliberately and unauthenticated.
+ *
+ * That shared tenant had two costs, and neither was hypothetical: anyone on the internet holding
+ * the published credentials could fire `/demo/reset` or write rows in the middle of a nightly
+ * run, and every night's CI residue accumulated in the exact tenant a prospect clicks through
+ * during a demo. Measured before the split: the published `demo` user and `zygos-maker-a` both
+ * reported 345 instructions and 11 parties — the same rows.
+ *
+ * The consequence for anyone writing a test here: **a fixture-user session can no longer see any
+ * demo-seeded row.** If a spec needs the seeded corridor/ledger showcase it must say so by
+ * logging in as the demo MERCHANT (`loginAsDemo`), and it is then asserting on the demo product
+ * surface — which is a legitimate thing to test, but a different thing.
+ */
+export const ZYGOS_E2E_TENANT_ID = 'e2e00001-0000-4000-a000-000000000001';
+
+/** One published demo account as `GET /bff/config` advertises it. */
+export interface DemoAccount {
+  label: string;
+  username: string;
+  password: string;
+}
+
+function pickAccount(accounts: readonly DemoAccount[], matcher: RegExp): DemoAccount | undefined {
+  return accounts.find((a) => matcher.test(a.label) || matcher.test(a.username));
+}
+
+/** The master/reseller account (label or username mentions "master"). */
+export function masterAccount(accounts: readonly DemoAccount[]): DemoAccount | undefined {
+  return pickAccount(accounts, /master/i);
+}
+
+/**
+ * The merchant account (label "Merchant" or the seeded `demo` username).
+ *
+ * 🔴 Selected BY LABEL, never by position, and never via `publishedUsername`. That field is the
+ * legacy singular one and now carries whichever account happens to be FIRST in the published
+ * list. When #190 added the master account at index 0, `publishedUsername` silently flipped from
+ * `demo` to `master` — repointing every caller from the seeded merchant book to the master
+ * tenant, which has no payment instructions at all. Twelve specs went red asserting the demo
+ * seed was missing, when the seed was fine and the LOGIN had moved. Ask for the account you mean.
+ */
+export function merchantAccount(accounts: readonly DemoAccount[]): DemoAccount | undefined {
+  return pickAccount(accounts, /merchant|^demo$/i);
+}
+
+/**
  * The seeded zygos-realm fixture users (personalServerNotes/keycloak/realms.config.json →
  * scripts/seed-realm-users.ps1). PERMANENT fixtures — never created or swept per-run.
  *

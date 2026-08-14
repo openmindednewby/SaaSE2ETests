@@ -23,9 +23,16 @@ import path from 'path';
 
 import { expect, request as playwrightRequest } from '@playwright/test';
 
-import { ZYGOS_API_PREFIX, ZYGOS_TEST_PASSWORD, ZYGOS_WEB_URL, jsonCsrfHeaders } from './zygos-helpers.js';
+import {
+  ZYGOS_API_PREFIX,
+  ZYGOS_TEST_PASSWORD,
+  ZYGOS_WEB_URL,
+  jsonCsrfHeaders,
+  merchantAccount,
+} from './zygos-helpers.js';
 
 import type { APIRequestContext, APIResponse } from '@playwright/test';
+import type { DemoAccount } from './zygos-helpers.js';
 
 /** One authenticated console session: a cookie jar + the origin, exactly like the browser has. */
 export interface ZygosSession {
@@ -351,8 +358,17 @@ export async function anonymousContext(): Promise<APIRequestContext> {
 }
 
 /**
- * Log in as the DEMO-tenant user — the identity the CRM (C-01) and accounting (A-01) modules are
- * seeded under, and the one the public login page advertises.
+ * Log in as the public DEMO MERCHANT — the seeded showcase book, and the identity the public login
+ * page advertises.
+ *
+ * 🔴 USE THIS ONLY WHEN THE DEMO IS THE SUBJECT. It is no longer "a convenient real login": since
+ * the E2E fixture users moved to their own tenant (`ZYGOS_E2E_TENANT_ID`), calling this puts the
+ * test in the PUBLIC demo tenant, whose credentials are published unauthenticated at
+ * `GET /bff/config` — so a stranger can write rows into it, and `/demo/reset` can wipe it, while
+ * the test runs. That is an acceptable and unavoidable cost for a test whose subject IS the demo
+ * (the seeded corridor showcase, the auto-posted ledger, the published-credentials contract), and
+ * a self-inflicted flake for anything else. If the spec merely needs to be logged in, use a
+ * `ZYGOS_USERS` fixture and create its own rows.
  *
  * 🔴 The credential is FETCHED from `GET /bff/config`, not hardcoded. That config block is what the
  * marketing site prints and what a visitor types (see `zygos-public-surface.spec.ts`), so reading it
@@ -370,9 +386,26 @@ export async function loginAsDemo(): Promise<ZygosSession | null> {
     const res = await anon.get('/bff/config', { timeout: 20_000 });
     if (!res.ok()) return null;
     const config = (await res.json()) as {
-      demo: { publishedUsername: string; publishedPassword: string } | null;
+      demo: {
+        publishedUsername: string;
+        publishedPassword: string;
+        publishedAccounts?: DemoAccount[];
+      } | null;
     };
     if (!config.demo) return null;
+
+    // 🔴 Ask for the MERCHANT by label. Never `publishedUsername`, never index 0.
+    //
+    // `publishedUsername` is the legacy singular field, and once `publishedAccounts` exists it
+    // carries whichever account is FIRST. #190 added "Master" at index 0, so this function
+    // silently stopped returning the seeded merchant book and started returning the MASTER
+    // tenant — which holds no payment instructions at all. Every spec that reads the demo seed
+    // went red claiming the seed was missing; the seed was intact and the LOGIN had moved.
+    // Twelve failures, none of them where the defect was.
+    const merchant = merchantAccount(config.demo.publishedAccounts ?? []);
+    if (merchant) return loginAs(merchant.username, merchant.password);
+
+    // No accounts list published (older deployment) — the singular pair IS the merchant there.
     return loginAs(config.demo.publishedUsername, config.demo.publishedPassword);
   } catch {
     return null;

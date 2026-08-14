@@ -16,6 +16,7 @@ import { ZYGOS_API_PREFIX, ZYGOS_WEB_URL } from './zygos-helpers.js';
 import { anonymousContext, loginAs } from './zygos-session.js';
 
 import type { Page } from '@playwright/test';
+import type { DemoAccount } from './zygos-helpers.js';
 import type { ZygosSession } from './zygos-session.js';
 
 /** `[data-testid="x"]` — the selector form the rest of the zygos @ui suite uses. */
@@ -144,12 +145,12 @@ export function shortId(tenantId: string): string {
   return tenantId.slice(0, SHORT_ID_LENGTH).toUpperCase();
 }
 
-/** One published demo account, as `/bff/config` serves it. */
-export interface DemoAccount {
-  label: string;
-  username: string;
-  password: string;
-}
+// `DemoAccount` and the master/merchant pickers live in `zygos-helpers.ts` — the
+// dependency-free module — because `zygos-session.ts` needs them too and importing them from
+// here would close an import cycle (this file already imports `loginAs` from session).
+// Re-exported so the master specs keep their single import site.
+export type { DemoAccount } from './zygos-helpers.js';
+export { masterAccount, merchantAccount } from './zygos-helpers.js';
 
 /** One tenant's portfolio roll-up (subset of the wire the master overview renders). */
 export interface PortfolioTenant {
@@ -214,19 +215,6 @@ export async function resolveDemoAccounts(): Promise<DemoAccount[]> {
   } finally {
     await anon.dispose();
   }
-}
-
-function pick(accounts: readonly DemoAccount[], matcher: RegExp): DemoAccount | undefined {
-  return accounts.find((a) => matcher.test(a.label) || matcher.test(a.username));
-}
-
-/** The master/reseller account (label or username mentions "master"). */
-export function masterAccount(accounts: readonly DemoAccount[]): DemoAccount | undefined {
-  return pick(accounts, /master/i);
-}
-/** The merchant account (label "Merchant" or the seeded `demo` username). */
-export function merchantAccount(accounts: readonly DemoAccount[]): DemoAccount | undefined {
-  return pick(accounts, /merchant|^demo$/i);
 }
 
 /**
