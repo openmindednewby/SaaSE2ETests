@@ -171,6 +171,18 @@ export function buildProjects(): ProjectConfig {
     // looked like security findings. Both separators are matched because Playwright reports
     // Windows paths with backslashes.
     { name: 'security-fleet', workers: 1, testMatch: /tests[/\\]security[/\\].*\.spec\.ts/ },
+    // Metrics.Client 2.0.0 exposition contract — @api tier, no browser. Scrapes a deployed
+    // service's `/metrics` (AllowAnonymous) and asserts the bounded `http_route` label, the
+    // `app`/`http_route` rename off the Prometheus-colliding `service`/`endpoint`, the absence of
+    // prometheus-net's duplicate `UseHttpMetrics()` families, and that a 401 is counted at all
+    // (the metrics middleware used to sit BELOW auth). Which services are ENFORCED comes from
+    // `METRICS_CONTRACT_SERVICES` in the active `.env.<target>` — the package is still rolling out.
+    //
+    // NO `dependencies: ['setup']` on purpose: every assertion is anonymous, and depending on auth
+    // setup would make an observability guard skip whenever the shared login happens to be broken.
+    // The `tests[/\\]` anchor follows the security-fleet lesson above — an unanchored
+    // /metrics\/.*\.spec\.ts/ is one rename away from sweeping in unrelated *-metrics specs.
+    { name: 'metrics-contract', workers: 1, testMatch: /tests[/\\]metrics[/\\].*\.spec\.ts/ },
     // Ichnos (crypto AML) — @api tier: health/smoke (M0-9), screen-address/entity/combined + report (M1-1..3),
     // and the M1-10 sellable flows: onboarding (F1), API keys (F3), batch CSV (F4), billing (F7). No browser
     // needed; the authed assertions opportunistically use an ichnos-realm ROPC token. The negative-lookbehind

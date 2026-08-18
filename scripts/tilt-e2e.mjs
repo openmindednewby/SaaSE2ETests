@@ -28,6 +28,7 @@ const VALID_RESOURCES = [
   'playwright-e2e-online-menus-public',
   'playwright-e2e-content-all',
   'playwright-e2e-notification-all',
+  'playwright-e2e-metrics-contract',
   'theme-studio-e2e',
 ];
 
