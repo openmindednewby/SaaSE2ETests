@@ -188,6 +188,11 @@ export function buildProjects(): ProjectConfig {
     // needed; the authed assertions opportunistically use an ichnos-realm ROPC token. The negative-lookbehind
     // excludes `*.ui.spec.ts` (the @ui portal tier), which runs in the browser `ichnos-ui` project below.
     { name: 'ichnos-api', workers: 1, testMatch: /ichnos\/ichnos-.*(?<!\.ui)\.spec\.ts/, dependencies: ['setup'] },
+    // AML (PROOViD screening engine) — @api tier. Pure HTTP against AMLService (POST /v1/screenings/check),
+    // no browser. Auth is a tenant API key (X-Api-Key / Bearer) from AML_API_KEY; target via AML_API_URL
+    // (default: our staging aml-screening). NO `dependencies: ['setup']` — like agora, it mints nothing from
+    // the legacy BaseClient login; every spec `test.skip`s gracefully when the service/key is absent.
+    { name: 'aml-api', workers: 1, testMatch: /aml\/aml-.*(?<!\.ui)\.spec\.ts/ },
     // Agora (eShop) — @api tier. Health probes, the full merchant-admin CRUD surface
     // (products / categories / coupons / stock / shop settings), and the cross-tenant
     // isolation rig. Seed-based, no browser, seconds.
