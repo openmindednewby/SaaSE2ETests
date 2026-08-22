@@ -5,15 +5,14 @@
 //
 // Point it at an environment with AML_API_URL (default: our staging) + AML_API_KEY:
 //   AML_API_URL=https://aml-screening.dloizides.com AML_API_KEY=<key> npx playwright test --project=aml-api
+//
+// The generic building blocks (base-URL resolution, transport-safe request) live in the shared
+// @dloizides/e2e-helpers package; this file keeps only the AML-specific glue (dual-auth screen call,
+// the §5.5 taxonomy, result shapes).
 import type { APIRequestContext, APIResponse } from '@playwright/test';
+import { resolveBaseUrl, tryRequest } from '@dloizides/e2e-helpers';
 
-function resolveAmlApiUrl(): string {
-  const envUrl = process.env.AML_API_URL;
-  if (envUrl && envUrl.trim()) return envUrl.trim().replace(/\/+$/, '');
-  return 'https://aml-screening.dloizides.com';
-}
-
-export const AML_API_URL = resolveAmlApiUrl();
+export const AML_API_URL = resolveBaseUrl('AML_API_URL', 'https://aml-screening.dloizides.com');
 export const AML_API_KEY = process.env.AML_API_KEY?.trim() || null;
 
 /** The four §5.5 PEP-tier classes (#364). Any wire value outside this set (+ Unknown/None) is the defect. */
@@ -37,12 +36,8 @@ export interface ScreeningResult {
 
 /** Is the AML API reachable? Uses the public `/version` (no auth) so we can skip, not fail, when down. */
 export async function amlReachable(request: APIRequestContext): Promise<boolean> {
-  try {
-    const res = await request.fetch(`${AML_API_URL}/version`, { timeout: 8_000 });
-    return res.ok();
-  } catch {
-    return false;
-  }
+  const result = await tryRequest(request, AML_API_URL, '/version', { timeoutMs: 8_000 });
+  return result?.response.ok() ?? false;
 }
 
 /**
@@ -55,18 +50,15 @@ export async function screen(
   body: Record<string, unknown>,
 ): Promise<APIResponse | null> {
   if (!AML_API_KEY) return null;
-  try {
-    return await request.fetch(`${AML_API_URL}/v1/screenings/check`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Api-Key': AML_API_KEY,
-        Authorization: `Bearer ${AML_API_KEY}`,
-      },
-      data: body,
-      timeout: 25_000,
-    });
-  } catch {
-    return null;
-  }
+  const result = await tryRequest(request, AML_API_URL, '/v1/screenings/check', {
+    method: 'POST',
+    data: body,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Api-Key': AML_API_KEY,
+      Authorization: `Bearer ${AML_API_KEY}`,
+    },
+    timeoutMs: 25_000,
+  });
+  return result?.response ?? null;
 }
