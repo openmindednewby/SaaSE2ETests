@@ -1,5 +1,6 @@
 import { request as playwrightRequest } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
+import { resolveBaseUrl } from '@dloizides/e2e-helpers';
 
 /**
  * Anonymous (no-auth) client for the Questioner API's PUBLIC respondent
@@ -27,9 +28,7 @@ const API_TIMEOUT_MS = 30_000;
  * to the local Docker HTTPS host.
  */
 export function resolveQuestionerApiBase(): string {
-  const value = process.env.QUESTIONER_API_URL;
-  const base = value && value.trim().length > 0 ? value.trim() : DEFAULT_QUESTIONER_API_URL;
-  return base.replace(/\/+$/, '');
+  return resolveBaseUrl('QUESTIONER_API_URL', DEFAULT_QUESTIONER_API_URL);
 }
 
 /** A respondent-safe question option. */

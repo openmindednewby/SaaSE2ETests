@@ -17,13 +17,11 @@
 // That is a feature, not a compromise: it means the @api tier exercises the same hop the
 // browser does (BFF auth, CSRF, token forwarding, tenant claim), not a private back door the
 // product does not actually ship.
+import { resolveBaseUrl } from '@dloizides/e2e-helpers';
 import type { APIResponse } from '@playwright/test';
 
 /** The deployed console origin — BFF and SPA are same-origin. */
-export const ZYGOS_WEB_URL = (process.env.ZYGOS_WEB_URL?.trim() || 'https://app.finreg.dloizides.com').replace(
-  /\/+$/,
-  '',
-);
+export const ZYGOS_WEB_URL = resolveBaseUrl('ZYGOS_WEB_URL', 'https://app.finreg.dloizides.com');
 
 /** The BFF's proxy prefix onto zygos-api's `/api/v1`. */
 export const ZYGOS_API_PREFIX = '/bff/api/zygos/api/v1';
