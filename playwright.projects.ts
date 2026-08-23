@@ -183,6 +183,22 @@ export function buildProjects(): ProjectConfig {
     // The `tests[/\\]` anchor follows the security-fleet lesson above — an unanchored
     // /metrics\/.*\.spec\.ts/ is one rename away from sweeping in unrelated *-metrics specs.
     { name: 'metrics-contract', workers: 1, testMatch: /tests[/\\]metrics[/\\].*\.spec\.ts/ },
+    // Auth-code front/back channel agreement — @api tier, no browser, anonymous. Asks each portal's
+    // BFF where it redeems authorization codes (`GET /bff/config` -> issuer/issuerStatus, published
+    // for exactly this purpose in Bff.AspNetCore 1.16.0) and where it sends the BROWSER
+    // (`GET /bff/passkey/login` -> 302 to the authorize endpoint), then reads the issuer the front
+    // channel reports about ITSELF and requires the two to name one provider. This is the class that
+    // ROPC/demo logins mask completely: the SPA POSTs a password to /bff/login and the browser never
+    // leaves the app origin, so the front channel can point at a Keycloak with no public DNS and every
+    // other suite stays green (`bff-agora`, 22 days, public URL 200 throughout).
+    //
+    // Same file carries the negative control: in-process fixtures drive the SAME probe through a
+    // deliberate mismatch, so every run re-proves the guard can still say no.
+    //
+    // NO `dependencies: ['setup']` on purpose — every assertion is anonymous, and depending on auth
+    // setup would make this guard skip precisely when login is broken, which is when it matters most.
+    // The `tests[/\]` anchor follows the security-fleet lesson above.
+    { name: 'authcode-agreement', workers: 1, testMatch: /tests[/\\]authcode[/\\].*\.spec\.ts/ },
     // Ichnos (crypto AML) — @api tier: health/smoke (M0-9), screen-address/entity/combined + report (M1-1..3),
     // and the M1-10 sellable flows: onboarding (F1), API keys (F3), batch CSV (F4), billing (F7). No browser
     // needed; the authed assertions opportunistically use an ichnos-realm ROPC token. The negative-lookbehind
