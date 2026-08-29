@@ -248,7 +248,7 @@ test.describe('Kefi UBB mobile attendee surfaces', () => {
         'the registration returns the ticket URL the attendee is told to keep',
       ).toBeTruthy();
 
-      await page.goto(created.ticketUrl!, { waitUntil: 'networkidle' });
+      await page.goto(created.ticketUrl!, { waitUntil: 'domcontentloaded' });
 
       // ── Does the ticket RENDER AT ALL? ───────────────────────────────────
       // Asserted before any layout measurement, because measuring the geometry

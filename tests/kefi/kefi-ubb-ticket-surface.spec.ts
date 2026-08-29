@@ -337,7 +337,7 @@ test.describe('Kefi UBB ticket surface', () => {
         'the API serves this ticket token, so the token itself is valid',
       ).toBe(HTTP_OK);
 
-      await page.goto(created.ticketUrl, { waitUntil: 'networkidle' });
+      await page.goto(created.ticketUrl, { waitUntil: 'domcontentloaded' });
 
       const body = page.locator('body');
       await expect(

@@ -39,8 +39,25 @@ const IDS = {
   navDashboard: 'nav-dashboard',
 } as const;
 
-/** How long to let the tap settle before reading URL / drawer state (evidence window, not a race fix). */
-const SETTLE_MS = 2_000;
+/**
+ * Budget for the leaf tap to produce a navigation. This replaced a flat `waitForTimeout`
+ * evidence window: `waitForURL` returns the INSTANT the route lands (so a healthy run no
+ * longer pays a fixed 2 s), and when the bug reproduces the URL never changes, the wait
+ * times out, and the evidence block below still runs - which is the whole point of this spec.
+ */
+const LEAF_NAV_TIMEOUT_MS = 5_000;
+
+/** The route a CRM > People activation must reach, on both the drawer and the desktop rail. */
+const PEOPLE_PATHNAME = '/crm/people';
+
+/**
+ * Evidence sink. `console.log` is banned in specs (no-console-in-tests) and is invisible in
+ * the HTML report anyway; an annotation rides along with the test result, so a CI reader sees
+ * the same evidence attached to the case that produced it.
+ */
+const note = (description: string): void => {
+  test.info().annotations.push({ type: 'repro', description });
+};
 
 /**
  * A console session cookie jar, minted ONCE and reused. Prefers the DEMO tenant (seeded CRM data);
@@ -103,14 +120,14 @@ test.describe('🔴 REPRO: mobile nav drawer leaf tap (ui-nav MobileDrawer)', ()
     });
 
     const urlAfterLanding = page.url();
-    console.log(`[REPRO] landed at: ${urlAfterLanding}`);
+    note(`[REPRO] landed at: ${urlAfterLanding}`);
 
     // 1) Open the drawer.
     await page.locator(id(IDS.menuToggle)).tap();
     await expect(page.locator(id(IDS.drawer)), 'drawer should open after tapping the hamburger').toBeVisible({
       timeout: 10_000,
     });
-    console.log('[REPRO] drawer opened via hamburger tap');
+    note('[REPRO] drawer opened via hamburger tap');
 
     // 2) Expand the CRM group (A1 fix — group-header tap must NOT close the drawer). Confirm it holds.
     await page.locator(id(IDS.navGroupCrm)).tap();
@@ -119,12 +136,12 @@ test.describe('🔴 REPRO: mobile nav drawer leaf tap (ui-nav MobileDrawer)', ()
       'CRM group should expand and reveal the People leaf (drawer stays open — the A1 behaviour)',
     ).toBeVisible({ timeout: 10_000 });
     const drawerStillOpenAfterGroupTap = await page.locator(id(IDS.drawer)).isVisible();
-    console.log(`[REPRO] after CRM group tap → People leaf visible; drawer still open: ${drawerStillOpenAfterGroupTap}`);
+    note(`[REPRO] after CRM group tap → People leaf visible; drawer still open: ${drawerStillOpenAfterGroupTap}`);
 
     // 3) THE FAILURE POINT — tap the People leaf with a REAL pointer event.
     const urlBeforeLeafTap = page.url();
     const navCountBeforeLeafTap = navPathnames.length;
-    console.log(`[REPRO] URL before leaf tap: ${urlBeforeLeafTap}`);
+    note(`[REPRO] URL before leaf tap: ${urlBeforeLeafTap}`);
 
     await page.locator(id(IDS.navPeople)).screenshot().catch(() => undefined); // best-effort, ignore
     await page.screenshot({ path: 'test-results/zygos-mobile-drawer-open.png' }).catch(() => undefined);
@@ -132,7 +149,11 @@ test.describe('🔴 REPRO: mobile nav drawer leaf tap (ui-nav MobileDrawer)', ()
     await page.locator(id(IDS.navPeople)).tap();
 
     // Evidence window — let any navigation / close animation settle.
-    await page.waitForTimeout(SETTLE_MS);
+    await page
+      .waitForURL((candidate) => new URL(candidate).pathname === PEOPLE_PATHNAME, {
+        timeout: LEAF_NAV_TIMEOUT_MS,
+      })
+      .catch(() => undefined);
 
     const urlAfterLeafTap = page.url();
     const drawerVisibleAfterLeafTap = await page.locator(id(IDS.drawer)).isVisible();
@@ -140,18 +161,16 @@ test.describe('🔴 REPRO: mobile nav drawer leaf tap (ui-nav MobileDrawer)', ()
 
     await page.screenshot({ path: 'test-results/zygos-mobile-drawer-after-leaf-tap.png' }).catch(() => undefined);
 
-    console.log('───────────────────────────────────────────────────────────────');
-    console.log('[REPRO] MOBILE LEAF-TAP EVIDENCE');
-    console.log(`  URL before leaf tap : ${urlBeforeLeafTap}`);
-    console.log(`  URL after  leaf tap : ${urlAfterLeafTap}`);
-    console.log(`  URL changed         : ${urlBeforeLeafTap !== urlAfterLeafTap}`);
-    console.log(`  pathname is /crm/people: ${new URL(urlAfterLeafTap).pathname === '/crm/people'}`);
-    console.log(`  drawer visible after : ${drawerVisibleAfterLeafTap}`);
-    console.log(`  framenavigated during tap (pathnames): ${JSON.stringify(navsDuringLeafTap)}`);
-    console.log(`  ALL framenavigated pathnames so far  : ${JSON.stringify(navPathnames)}`);
-    console.log(`  console errors during flow: ${JSON.stringify(consoleErrors.slice(0, 10))}`);
-    console.log(`  page errors during flow   : ${JSON.stringify(pageErrors.slice(0, 10))}`);
-    console.log('───────────────────────────────────────────────────────────────');
+    note('[REPRO] MOBILE LEAF-TAP EVIDENCE');
+    note(`  URL before leaf tap : ${urlBeforeLeafTap}`);
+    note(`  URL after  leaf tap : ${urlAfterLeafTap}`);
+    note(`  URL changed         : ${urlBeforeLeafTap !== urlAfterLeafTap}`);
+    note(`  pathname is /crm/people: ${new URL(urlAfterLeafTap).pathname === '/crm/people'}`);
+    note(`  drawer visible after : ${drawerVisibleAfterLeafTap}`);
+    note(`  framenavigated during tap (pathnames): ${JSON.stringify(navsDuringLeafTap)}`);
+    note(`  ALL framenavigated pathnames so far  : ${JSON.stringify(navPathnames)}`);
+    note(`  console errors during flow: ${JSON.stringify(consoleErrors.slice(0, 10))}`);
+    note(`  page errors during flow   : ${JSON.stringify(pageErrors.slice(0, 10))}`);
 
     // Permanent regression guard (HARD assertion): a mobile-drawer leaf tap MUST navigate.
     // This is the real end-to-end guard for the ui-nav 1.13.1 deferred-close fix — jsdom
@@ -184,17 +203,19 @@ test.describe('🔴 REPRO: mobile nav drawer leaf tap (ui-nav MobileDrawer)', ()
     await page.locator(id(IDS.navGroupCrm)).click();
     await expect(page.locator(id(IDS.navPeople))).toBeVisible({ timeout: 10_000 });
     await page.locator(id(IDS.navPeople)).click();
-    await page.waitForTimeout(SETTLE_MS);
+    await page
+      .waitForURL((candidate) => new URL(candidate).pathname === PEOPLE_PATHNAME, {
+        timeout: LEAF_NAV_TIMEOUT_MS,
+      })
+      .catch(() => undefined);
 
     const urlAfter = page.url();
-    console.log('───────────────────────────────────────────────────────────────');
-    console.log('[REPRO] DESKTOP CONTROL EVIDENCE');
-    console.log(`  URL before rail click: ${urlBefore}`);
-    console.log(`  URL after  rail click: ${urlAfter}`);
-    console.log(`  pathname is /crm/people: ${new URL(urlAfter).pathname === '/crm/people'}`);
-    console.log(`  console errors: ${JSON.stringify(consoleErrors.slice(0, 10))}`);
-    console.log(`  page errors   : ${JSON.stringify(pageErrors.slice(0, 10))}`);
-    console.log('───────────────────────────────────────────────────────────────');
+    note('[REPRO] DESKTOP CONTROL EVIDENCE');
+    note(`  URL before rail click: ${urlBefore}`);
+    note(`  URL after  rail click: ${urlAfter}`);
+    note(`  pathname is /crm/people: ${new URL(urlAfter).pathname === '/crm/people'}`);
+    note(`  console errors: ${JSON.stringify(consoleErrors.slice(0, 10))}`);
+    note(`  page errors   : ${JSON.stringify(pageErrors.slice(0, 10))}`);
 
     expect
       .soft(new URL(urlAfter).pathname, 'clicking People on the desktop rail should navigate to /crm/people')

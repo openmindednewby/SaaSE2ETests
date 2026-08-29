@@ -43,7 +43,12 @@ import { test, expect, type Page, type BrowserContext } from '@playwright/test';
 
 const HTTP_OK = 200;
 const HTTP_UNAUTHORIZED = 401;
-const SETTLE_MS = 3000;
+/** Longest we will wait for an OIDC redirect chain to come to rest. */
+const SETTLE_TIMEOUT_MS = 15000;
+/** The URL must hold still this long before the chain counts as finished. */
+const URL_QUIET_MS = 750;
+/** How often to re-check that the URL has stopped moving. */
+const SETTLE_POLL_MS = 100;
 
 interface AppUnderTest {
   readonly name: string;
@@ -100,9 +105,33 @@ const APPS: readonly AppUnderTest[] = [
   },
 ];
 
+/**
+ * Wait for the OIDC redirect chain to come to REST.
+ *
+ * Was `waitForLoadState('networkidle') + waitForTimeout(3000)`. Both are banned, and both
+ * deserved to be: `networkidle` never fires on a page that polls, and a fixed 3 s sleep is
+ * simultaneously too slow against a fast IdP and too short against a slow one. This waits
+ * until the URL has stopped moving instead - it returns as soon as the chain is at rest and
+ * only spends the full budget when something really is still redirecting.
+ */
 async function settle(page: Page): Promise<void> {
-  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => undefined);
-  await page.waitForTimeout(SETTLE_MS);
+  await page.waitForLoadState('load', { timeout: SETTLE_TIMEOUT_MS }).catch(() => undefined);
+  await page
+    .waitForFunction(
+      (quietMs: number) => {
+        const marker = window as unknown as { __settleHref?: string; __settleAt?: number };
+        const now = Date.now();
+        if (marker.__settleHref !== window.location.href) {
+          marker.__settleHref = window.location.href;
+          marker.__settleAt = now;
+          return false;
+        }
+        return now - (marker.__settleAt ?? now) >= quietMs;
+      },
+      URL_QUIET_MS,
+      { timeout: SETTLE_TIMEOUT_MS, polling: SETTLE_POLL_MS },
+    )
+    .catch(() => undefined);
 }
 
 /** Sign in through the IdP's OWN hosted page, so the session is EstablishedByFrontChannel. */
