@@ -11,36 +11,47 @@
  *   2. RENDER / VERIFY — the public ticket endpoint validates a genuine token:
  *      GET /ticket/{token} → 200 + own-row projection (holder + event + status);
  *      the /mediaTicket alias → 200. This is the server contract the kefi-web
- *      ticket page (`app/ticket/[token].tsx` → TicketScreen/TicketSurface) renders
- *      from. The "QR" here is the signed-token link itself — there is no literal
- *      QR-image component; the page IS the rendered ticket.
+ *      ticket page (`app/ticket/[token].tsx` → TicketScreen → TicketQrPanel)
+ *      renders from.
  *
- *      API-only on purpose: the kefi-web ticket page is reached in-app via an
- *      in-SPA `router.push(ticketPath)` after registration — a FRESH deep-link of
- *      `/ticket/{token}` is not served as a static route by the staging SPA host
- *      (it returns the host's nginx 404, an SPA-fallback/deploy concern, not the
- *      ticket logic). So the render/verify is asserted at the authoritative API
- *      contract; the TicketScreen/TicketSurface components are covered by
- *      kefi-web unit tests.
+ *      ⚠️ CORRECTED 2026-09-05 (task R11/R12). The header used to state that
+ *      "there is no literal QR-image component; the page IS the rendered
+ *      ticket", and that a fresh deep-link of `/ticket/{token}` was not served.
+ *      BOTH are now false. `TicketQrPanel` draws a real scannable symbol
+ *      (`ticket-qr-symbol`) or, when the gate withholds it, a locked placeholder
+ *      (`ticket-qr-withheld`) — and the deep-link is served, which is why the UI
+ *      legs below drive the real page instead of stopping at the API.
  *   3. NEGATIVE token — a tampered token and a structurally-bogus token are
  *      rejected: API 404 (HMAC tamper-evident, constant-time compare).
- *   4. CONFIRMED → CHECKED-IN lifecycle — the attendee is confirmed (Paid) then
- *      checked in at the door (CheckedIn); the ticket reflects each transition
- *      and the door-side snapshot marks the attendee attended.
- *   5. DOUBLE check-in — re-checking the same ticket is an idempotent no-op
- *      (still CheckedIn, still a single row — no second admission).
- *   6. DOOR dashboard role gate — GET /door/events/{id} is not anonymously
+ *   4. THE SYMBOL ENCODES `/admit/`, NOT `/ticket/` — asserted explicitly. See
+ *      the long note on step 7: a silent fallback in the renderer re-introduces
+ *      the "scanning does nothing" bug, and no unit suite can catch it.
+ *   5. CONFIRMED → SCANNED — the attendee is confirmed (Paid), the phone-camera
+ *      admission pair is driven for real (`GET /admit/{t}` is proven read-only,
+ *      then `POST /admit/{t}/check-in` → 200 `CheckedIn`), and the ticket + the
+ *      door-side snapshot both reflect it.
+ *   6. REPEAT SCAN — a second scan is **HTTP 409** with `outcome`
+ *      `AlreadyCheckedIn` and the earlier stamp on `previousCheckIn`. That is a
+ *      normal product outcome, NOT an error, and the admit screen renders it as
+ *      the amber state with no retry affordance.
+ *   7. ANTI-PASS-BACK — once `CheckedIn` the ticket page draws NO symbol at all:
+ *      `ticket-qr-symbol` is absent from the DOM, not merely hidden or dimmed.
+ *   8. UNKNOWN / TAMPERED admit token — 404 on both verbs, and the screen fails
+ *      cleanly rather than offering admission.
+ *   9. DOOR dashboard role gate — GET /door/events/{id} is not anonymously
  *      readable: no bearer / a wrong-role bearer are rejected (401 / 403).
  *
  * API-only vs UI (traced from KefiService/Kefi/src):
  *   - Ticket issue: API. Render/verify: API + UI. Door dashboard read: role-gated
  *     (door-staff PIN tokens come from the Keycloak pin-authenticator JAR, not an
  *     E2E ROPC flow — so the read is asserted via its negative auth gate).
- *   - The door check-in WRITE has NO product "scan → mark attended" HTTP endpoint
- *     yet: `Attendee.CheckIn()`/`AttendeeStatus.CheckedIn` exist, but the only
- *     write path to CheckedIn today is the domain transition, reachable in E2E
- *     via the canary admin seed. This spec exercises that transition and notes
- *     the missing door-staff scan endpoint.
+ *   - ⚠️ CORRECTED 2026-09-05 (task R12). The header used to state that "the door
+ *     check-in WRITE has NO product scan → mark-attended HTTP endpoint yet", and
+ *     the check-in below was therefore faked with a canary admin seed. That is
+ *     now false: `GET /api/v1/admit/{token}` +
+ *     `POST /api/v1/admit/{token}/check-in` are the real product pair a phone
+ *     camera reaches, and this spec drives THEM. The canary seed is kept only
+ *     for the Paid transition, which still has no anonymous write path.
  *
  * Rides the #185 platform-admin canary endpoints. Runs on staging + prod via
  * E2E_TARGET; local is skipped (the canary rig isn't wired into the dev loop).
@@ -56,7 +67,7 @@ import {
   KefiLifecycleClient,
   type CanaryAttendeesResult,
 } from '../../helpers/kefi/kefiLifecycleClient.js';
-import { KefiTicketClient } from '../../helpers/kefi/kefiTicketClient.js';
+import { KefiTicketClient, admitTokenFromUrl } from '../../helpers/kefi/kefiTicketClient.js';
 import { forceOnboardingPlan } from '../../helpers/kefi/kefiOnboardingApi.js';
 import { getKefiUrls } from '../../helpers/kefi/kefiUrls.js';
 import { cleanupKefiCanary } from '../../helpers/kefi/kefiTeardown.js';
@@ -77,6 +88,7 @@ const PASS = { code: 'FULL', label: 'Full Pass', priceEur: 0 } as const;
 const HTTP_CREATED = 201;
 const HTTP_OK = 200;
 const HTTP_NOT_FOUND = 404;
+const HTTP_CONFLICT = 409;
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_FORBIDDEN = 403;
 const DOOR_GATE_STATUSES = [HTTP_UNAUTHORIZED, HTTP_FORBIDDEN];
@@ -86,6 +98,10 @@ const STATUS_PAID = 'Paid';
 const STATUS_CHECKED_IN = 'CheckedIn';
 
 const BOGUS_TOKEN = 'this-is-not-a-valid-ticket-token';
+const OUTCOME_CHECKED_IN = 'CheckedIn';
+const OUTCOME_ALREADY = 'AlreadyCheckedIn';
+const DEVICE_LABEL = 'E2E Door A';
+const UI_TIMEOUT_MS = 45_000;
 
 function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -220,39 +236,178 @@ test.describe('Kefi QR ticket render + door check-in (KEFI-1)', () => {
         'ticket now shows Paid (confirmed reservation)',
       ).toBe(STATUS_PAID);
 
-      // ── 7. DOOR check-in — mark the attendee attended at the door ─────────
-      // NOTE: there is no product door-staff "scan → mark attended" HTTP
-      // endpoint yet; the only write path to CheckedIn is the domain transition,
-      // exercised here via the canary admin seed.
-      const checkInSeed = await lifecycle.seedCanaryAttendee({
-        canaryId: ctx.canaryId, email: attendeeEmail,
-        passCode: PASS.code, status: STATUS_CHECKED_IN, consentGiven: true,
-      });
-      expect(checkInSeed.attendeeExternalId, 'check-in hits the SAME row').toBe(attendeeId);
+      // -- 7. THE SYMBOL MUST ENCODE /admit/, NOT /ticket/ -----------------
+      //
+      // WHY THIS ASSERTION EXISTS, AND WHY IT IS MADE HERE. The renderer
+      // (`ticketAdmissionHelpers.ts` -> `resolveTicketQrUrl`) falls back to the
+      // OLD read-only `/ticket/{token}` URL whenever `admitUrl` is absent from
+      // the response, and the fallback is SILENT. A kefi-web unit test asserts
+      // that fallback as expected behaviour, so if the server field is ever
+      // dropped, renamed, or simply not deployed, the original "scanning the QR
+      // does nothing" bug returns with every unit suite still green.
+      //
+      // WHAT THIS ASSERTS ON, AND WHY NOT THE DOM. The symbol is drawn as a
+      // single SVG <Path>; the encoded string appears NOWHERE in the DOM (the
+      // element's accessibilityLabel is static copy, not the URL), and this spec
+      // may not add a data attribute to kefi-web to expose it. So the encoded
+      // VALUE is asserted at `admitUrl` -- the exact field whose absence triggers
+      // the silent fallback -- and is then proven to be a working admission
+      // credential by driving it end-to-end in steps 9-11. Asserting merely that
+      // "a QR element exists" would be a check that cannot fail, which is worse
+      // than no check at all.
+      const paidTicket = await tickets.getTicket(token!);
+      expect(paidTicket.admitUrl, 'the ticket carries an admitUrl to encode').toBeTruthy();
+      expect(
+        paidTicket.admitUrl!,
+        'the QR encodes the ADMIT url. A /ticket/ url here means the renderer fell back and a ' +
+          'phone-camera scan would silently do nothing - the exact bug R12 exists to fix.',
+      ).toContain('/admit/');
+      const admitToken = admitTokenFromUrl(paidTicket.admitUrl!);
+      expect(admitToken, 'an admit token is extractable from admitUrl').toBeTruthy();
+      expect(
+        admitToken,
+        'the admit token is a SEPARATE capability from the read token - an equal value would mean ' +
+          'a forwarded ticket link doubles as a check-in button',
+      ).not.toBe(token);
+
+      // -- 8. TICKET UI while Paid - the symbol IS drawn --------------------
+      const { webUrl } = getKefiUrls();
+      await page.goto(`${webUrl}/ticket/${token!}`);
+      await expect(
+        page.getByTestId('ticket-qr-panel'),
+        'the paid ticket renders its QR panel',
+      ).toBeVisible({ timeout: UI_TIMEOUT_MS });
+      await expect(
+        page.getByTestId('ticket-qr-symbol'),
+        'a PAID, un-scanned ticket draws a scannable symbol',
+      ).toBeVisible({ timeout: UI_TIMEOUT_MS });
+      await expect(
+        page.getByTestId('ticket-qr-withheld'),
+        'and shows no withheld placeholder while the code is live',
+      ).toHaveCount(0);
+
+      // -- 9. GET /admit/{token} MUTATES NOTHING ---------------------------
+      // Load-bearing: WhatsApp/iMessage/Slack fetch URLs to build link
+      // previews. A GET that admitted would check in every ticket forwarded
+      // into a group chat, before anyone left home.
+      const admitRead = await tickets.getAdmit(admitToken);
+      expect(admitRead.status, 'GET /admit/{token} resolves the holder').toBe(HTTP_OK);
+      expect(admitRead.attendeeExternalId, 'admit resolves the SAME holder').toBe(attendeeId);
+      expect(admitRead.admissible, 'a paid, unused pass is admissible').toBe(true);
+      expect(admitRead.existingCheckIn, 'nothing is stamped yet').toBeNull();
+      expect(
+        statusInSnapshot(await lifecycle.getCanaryAttendees(ctx.canaryId), attendeeId!),
+        'the READ did not mark attendance - a link-preview fetch must not admit anybody',
+      ).toBe(STATUS_PAID);
+
+      // -- 10. THE SCAN - the phone-camera write marks attendance ----------
+      const scanned = await tickets.admitCheckIn(admitToken, DEVICE_LABEL);
+      expect(scanned.status, 'a fresh scan admits the holder').toBe(HTTP_OK);
+      expect(scanned.outcome, 'and reports it as CheckedIn').toBe(OUTCOME_CHECKED_IN);
+      expect(scanned.checkIn, 'the scan wrote a stamp').not.toBeNull();
+      expect(scanned.checkIn!.atUtc, 'the stamp carries an instant').toBeTruthy();
       expect(
         (await tickets.getTicket(token!)).statusLabel,
-        'ticket reflects the door check-in (CheckedIn)',
+        'the ticket reflects the scan (CheckedIn)',
       ).toBe(STATUS_CHECKED_IN);
-      const afterCheckIn = await lifecycle.getCanaryAttendees(ctx.canaryId);
       expect(
-        statusInSnapshot(afterCheckIn, attendeeId!),
-        'door-side snapshot marks the attendee CheckedIn',
+        statusInSnapshot(await lifecycle.getCanaryAttendees(ctx.canaryId), attendeeId!),
+        'the door-side snapshot marks the attendee CheckedIn',
       ).toBe(STATUS_CHECKED_IN);
 
-      // ── 8. DOUBLE check-in — re-scanning the ticket is an idempotent no-op ─
-      await lifecycle.seedCanaryAttendee({
-        canaryId: ctx.canaryId, email: attendeeEmail,
-        passCode: PASS.code, status: STATUS_CHECKED_IN, consentGiven: true,
-      });
-      const afterDouble = await lifecycle.getCanaryAttendees(ctx.canaryId);
+      // -- 11. REPEAT SCAN - 409, with the earlier stamp. NOT an error. ----
+      const repeat = await tickets.admitCheckIn(admitToken, DEVICE_LABEL);
       expect(
-        statusInSnapshot(afterDouble, attendeeId!),
-        'double check-in leaves the attendee CheckedIn (no corruption)',
+        repeat.status,
+        'a repeat scan is 409 - a duplicate that reached the client looking like a success would ' +
+          'ship the exact bug this feature exists to fix',
+      ).toBe(HTTP_CONFLICT);
+      expect(repeat.outcome, 'and names itself AlreadyCheckedIn').toBe(OUTCOME_ALREADY);
+      expect(repeat.previousCheckIn, 'the 409 body carries the EARLIER stamp').not.toBeNull();
+      expect(
+        repeat.previousCheckIn!.atUtc,
+        'the earlier stamp quotes when they came in, so the door can settle the argument',
+      ).toBeTruthy();
+      const snapshotAfterRepeat = await lifecycle.getCanaryAttendees(ctx.canaryId);
+      expect(
+        statusInSnapshot(snapshotAfterRepeat, attendeeId!),
+        'a repeat scan leaves the attendee CheckedIn (no corruption)',
       ).toBe(STATUS_CHECKED_IN);
       expect(
-        countByEmail(afterDouble, attendeeEmail),
-        'double check-in does not create a second admission row',
+        countByEmail(snapshotAfterRepeat, attendeeEmail),
+        'a repeat scan does not create a second admission row',
       ).toBe(1);
+
+      // -- 12. ANTI-PASS-BACK - a spent ticket draws NO symbol at all ------
+      // A ticket URL is a BEARER credential: the holder can forward the link
+      // from inside the venue. So the geometry must be GONE, not greyed -
+      // styling is the least durable layer we have (print stylesheet, reader
+      // mode, screenshot with contrast pushed up).
+      await page.goto(`${webUrl}/ticket/${token!}`);
+      await expect(
+        page.getByTestId('ticket-qr-withheld'),
+        'a scanned ticket shows the locked placeholder that names the reason',
+      ).toBeVisible({ timeout: UI_TIMEOUT_MS });
+      await expect(
+        page.getByTestId('ticket-qr-symbol'),
+        'and the scannable symbol is ABSENT FROM THE DOM - not hidden, not dimmed. Anything with ' +
+          'path data still on the page can be handed back by a stylesheet or a screenshot.',
+      ).toHaveCount(0);
+      await expect(
+        page.getByTestId('ticket-pass-number'),
+        'the pass number stays - once the symbol is gone it is all the door has to work with',
+      ).toBeVisible();
+
+      // -- 13. ADMIT SCREEN, second scan - amber, stamped, no retry --------
+      await page.goto(`${webUrl}/admit/${admitToken}`);
+      await expect(
+        page.getByTestId('admit-screen'),
+        'the admit route mounts for a genuine token',
+      ).toBeVisible({ timeout: UI_TIMEOUT_MS });
+      await expect(
+        page.getByTestId('admit-pass-number'),
+        'the screen names who is at the door by pass number',
+      ).toBeVisible({ timeout: UI_TIMEOUT_MS });
+      await expect(
+        page.getByTestId('admit-confirm-button'),
+        'an ALREADY-admitted pass offers no second confirm',
+      ).toHaveCount(0);
+      await expect(
+        page.getByTestId('admit-retry-button'),
+        'and offers no retry - a repeat scan is a verdict, not a failure to retry',
+      ).toHaveCount(0);
+      await expect(
+        page.getByTestId('admit-body'),
+        'the amber state quotes the stamp rather than reading as a generic error',
+      ).not.toBeEmpty();
+
+      // -- 14. UNKNOWN / TAMPERED admit token fails cleanly ----------------
+      expect(
+        (await tickets.getAdmit(BOGUS_TOKEN)).status,
+        'an unknown admit token reads as not-found',
+      ).toBe(HTTP_NOT_FOUND);
+      expect(
+        (await tickets.getAdmit(tamperToken(admitToken))).status,
+        'a tampered admit token is rejected (HMAC is purpose-bound + tamper-evident)',
+      ).toBe(HTTP_NOT_FOUND);
+      expect(
+        (await tickets.admitCheckIn(BOGUS_TOKEN)).status,
+        'and it cannot be used to admit anybody',
+      ).toBe(HTTP_NOT_FOUND);
+      expect(
+        (await tickets.getAdmit(token!)).status,
+        'the READ ticket token cannot be replayed as an admit token - purpose separation',
+      ).toBe(HTTP_NOT_FOUND);
+
+      await page.goto(`${webUrl}/admit/${BOGUS_TOKEN}`);
+      await expect(
+        page.getByTestId('admit-screen'),
+        'the admit route still MOUNTS for a dud token - a white page reads as "app broken"',
+      ).toBeVisible({ timeout: UI_TIMEOUT_MS });
+      await expect(
+        page.getByTestId('admit-confirm-button'),
+        'and never offers admission on a pass the server did not vouch for',
+      ).toHaveCount(0);
 
       // ── 9. DOOR dashboard is role-gated (not anonymously readable) ────────
       const noBearer = await tickets.getDoorListStatus(eventExternalId);
