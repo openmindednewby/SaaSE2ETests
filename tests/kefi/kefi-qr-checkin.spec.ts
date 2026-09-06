@@ -103,6 +103,17 @@ const OUTCOME_ALREADY = 'AlreadyCheckedIn';
 const DEVICE_LABEL = 'E2E Door A';
 const UI_TIMEOUT_MS = 45_000;
 
+/**
+ * Budget for the FIRST navigation of the run, which is a COLD SPA load: an
+ * uncached ~2.8 MB Expo bundle from a variable prod origin (measured anonymously:
+ * shell ttfb 0.50s, but a 2 KB /sw-register.js at 2.69s). The goto uses
+ * waitUntil 'commit' because all three kefi-web script tags are deferred, which
+ * blocks DOMContentLoaded and the load event alike — so this readiness assertion
+ * owns the entire cold-load budget. The POM default of 30s is sized for warm
+ * in-app navigations and is intermittently too tight here.
+ */
+const COLD_SPA_LOAD_TIMEOUT_MS = 90_000;
+
 function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
@@ -165,7 +176,7 @@ test.describe('Kefi QR ticket render + door check-in (KEFI-1)', () => {
       await page.goto(verifyUrl!, { waitUntil: 'commit' });
 
       const wizard = new KefiOnboardingWizardPage(page);
-      await wizard.expectLoaded();
+      await wizard.expectLoaded(COLD_SPA_LOAD_TIMEOUT_MS);
       await wizard.fillFastPath({
         canaryPrefix: ctx.slugPrefix,
         eventDateIso: toIsoDate(new Date(Date.now() + CANARY_EVENT_DAYS_AHEAD * MS_PER_DAY)),

@@ -25,6 +25,13 @@ import { setTimeout as delay } from 'node:timers/promises';
  */
 const AUTOSAVE_SETTLE_MS = 1200;
 
+/**
+ * Default budget for the wizard shell to appear. Sized for a WARM navigation —
+ * the SPA bundle is already cached by the time most specs reach the wizard.
+ * Cold first-load callers pass their own, larger budget.
+ */
+const WIZARD_LOAD_TIMEOUT_MS = 30_000;
+
 export class KefiOnboardingWizardPage {
   readonly page: Page;
 
@@ -69,8 +76,8 @@ export class KefiOnboardingWizardPage {
   }
 
   /** Wait for the wizard shell to render. */
-  async expectLoaded(): Promise<void> {
-    await expect(this.page.getByTestId('onboarding-wizard')).toBeVisible({ timeout: 30_000 });
+  async expectLoaded(timeoutMs: number = WIZARD_LOAD_TIMEOUT_MS): Promise<void> {
+    await expect(this.page.getByTestId('onboarding-wizard')).toBeVisible({ timeout: timeoutMs });
   }
 
   /**
