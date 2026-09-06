@@ -162,7 +162,7 @@ test.describe('Kefi QR ticket render + door check-in (KEFI-1)', () => {
       const verifyCaptured = await mailbox().waitForMessageTo(ctx.email);
       const verifyUrl = extractVerifyUrl(verifyCaptured);
       expect(verifyUrl, 'verify URL').not.toBeNull();
-      await page.goto(verifyUrl!);
+      await page.goto(verifyUrl!, { waitUntil: 'commit' });
 
       const wizard = new KefiOnboardingWizardPage(page);
       await wizard.expectLoaded();
@@ -272,7 +272,7 @@ test.describe('Kefi QR ticket render + door check-in (KEFI-1)', () => {
 
       // -- 8. TICKET UI while Paid - the symbol IS drawn --------------------
       const { webUrl } = getKefiUrls();
-      await page.goto(`${webUrl}/ticket/${token!}`);
+      await page.goto(`${webUrl}/ticket/${token!}`, { waitUntil: 'domcontentloaded' });
       await expect(
         page.getByTestId('ticket-qr-panel'),
         'the paid ticket renders its QR panel',
@@ -343,7 +343,7 @@ test.describe('Kefi QR ticket render + door check-in (KEFI-1)', () => {
       // from inside the venue. So the geometry must be GONE, not greyed -
       // styling is the least durable layer we have (print stylesheet, reader
       // mode, screenshot with contrast pushed up).
-      await page.goto(`${webUrl}/ticket/${token!}`);
+      await page.goto(`${webUrl}/ticket/${token!}`, { waitUntil: 'domcontentloaded' });
       await expect(
         page.getByTestId('ticket-qr-withheld'),
         'a scanned ticket shows the locked placeholder that names the reason',
@@ -359,7 +359,7 @@ test.describe('Kefi QR ticket render + door check-in (KEFI-1)', () => {
       ).toBeVisible();
 
       // -- 13. ADMIT SCREEN, second scan - amber, stamped, no retry --------
-      await page.goto(`${webUrl}/admit/${admitToken}`);
+      await page.goto(`${webUrl}/admit/${admitToken}`, { waitUntil: 'domcontentloaded' });
       await expect(
         page.getByTestId('admit-screen'),
         'the admit route mounts for a genuine token',
@@ -399,7 +399,7 @@ test.describe('Kefi QR ticket render + door check-in (KEFI-1)', () => {
         'the READ ticket token cannot be replayed as an admit token - purpose separation',
       ).toBe(HTTP_NOT_FOUND);
 
-      await page.goto(`${webUrl}/admit/${BOGUS_TOKEN}`);
+      await page.goto(`${webUrl}/admit/${BOGUS_TOKEN}`, { waitUntil: 'domcontentloaded' });
       await expect(
         page.getByTestId('admit-screen'),
         'the admit route still MOUNTS for a dud token - a white page reads as "app broken"',
