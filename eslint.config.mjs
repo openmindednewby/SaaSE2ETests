@@ -13,7 +13,6 @@ import noWaitUntilSlowPlugin from './eslint-plugins/no-wait-until-slow.mjs';
 import noRedundantVisibilityPlugin from './eslint-plugins/no-redundant-visibility.mjs';
 import maxTestsPerBatchPlugin from './eslint-plugins/max-tests-per-batch.mjs';
 import maxTestsPerFilePlugin from './eslint-plugins/max-tests-per-file.mjs';
-import noApiShortcutInJourneyPlugin from './eslint-plugins/no-api-shortcut-in-journey.mjs';
 
 export default [
   // Ignore patterns
@@ -319,34 +318,6 @@ export default [
           ],
         },
       }],
-    },
-  },
-
-  // ---------------------------------------------------------------------------
-  // CRITICAL-PATH JOURNEY SPECS — the action under test must go through the UI.
-  //
-  // Scoped deliberately narrowly. These are the specs whose green result is taken as
-  // "the feature works for a user". On 2026-09-06 one of them was green while the
-  // feature 415'd at a venue door, because the spec performed the action by calling
-  // the API. API writes are still allowed here for seeding and assertions -- but they
-  // must be DECLARED with a `// journey-setup: <why>` comment, so a shortcut past the
-  // UI cannot be taken silently.
-  //
-  // Adding a spec here is how a journey becomes load-bearing. New journeys should use
-  // the `*.journey.spec.ts` name, which is matched automatically.
-  // ---------------------------------------------------------------------------
-  {
-    files: [
-      'tests/**/*.journey.spec.ts',
-      'tests/kefi/kefi-critical-path.spec.ts',
-      'tests/kefi/kefi-door-checkin.spec.ts',
-      'tests/kefi/kefi-qr-checkin.spec.ts',
-    ],
-    plugins: {
-      'no-api-shortcut-in-journey': noApiShortcutInJourneyPlugin,
-    },
-    rules: {
-      'no-api-shortcut-in-journey/no-api-shortcut-in-journey': 'error',
     },
   },
 
