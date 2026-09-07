@@ -88,6 +88,13 @@ test.describe('AML adverse media @aml-api', () => {
     ).toBeTruthy();
     if (cap.available) {
       expect(cap.source).not.toBe('None');
+      // A stale reason left on an AVAILABLE stage tells the console the screen was never checked when it
+      // was — the same misreporting as a silent unavailable stage, pointed the other way. Without this,
+      // the available branch is one assertion thinner than the unavailable one it will replace.
+      expect(
+        cap.unavailableReason?.trim() ?? '',
+        `adverse media is AVAILABLE (source=${cap.source}) yet still carries an unavailableReason`,
+      ).toBe('');
     } else {
       expect(cap.source).toBe('None');
       expect(
@@ -171,16 +178,24 @@ test.describe('AML adverse media @aml-api', () => {
       description: `${amMatches.length} adverse-media match(es); status=${body.adverseMediaStatus}`,
     });
     if (amMatches.length === 0) {
-      // Honest, not vacuous: with collection OFF there is no AM row to match, and asserting over an empty
-      // set would be a green that observes nothing. Say so and stop.
+      // 🔴 THIS SKIP IS KEYED TO AN EMPTY RESULT SET, NOT TO THE FLAG. It cannot separate "collection is
+      // off" from "collection is on and the payload dropped the matches" — the second is the regression
+      // this control exists to catch, and it would report SKIPPED rather than FAILED, behind the same
+      // green tally. The backstop is AM-E2E-5 in aml-adverse-media-hit.spec.ts, which keys its skip on
+      // the CAPABILITY and therefore FAILS when the stage is available and the corpus yields nothing.
       test.skip(
         true,
         `no adverse-media match available (status=${body.adverseMediaStatus}) — collection is off, so ` +
-          'the AM-hit branch cannot be observed here. Covered structurally by AM-E2E-2.',
+          'the AM-hit branch cannot be observed here. Covered structurally by AM-E2E-2, and by AM-E2E-5 ' +
+          '(aml-adverse-media-hit.spec.ts) once the stage reports itself available.',
       );
       return;
     }
     expect(body.decision, 'an adverse-media match must never sit alongside a Pass').not.toBe('Pass');
+    expect(
+      ['Review', 'Fail'],
+      `an adverse-media-driven decision must be a real adjudication (got '${body.decision}')`,
+    ).toContain(body.decision);
     const codes = [...(body.reasonCodes ?? []), body.reason?.code ?? ''].join(' ');
     expect(
       codes.includes('ADVERSE_MEDIA') || body.reason?.category === ADVERSE_MEDIA_CATEGORY,
@@ -202,6 +217,16 @@ test.describe('AML adverse media @aml-api', () => {
 
     const a = (await first!.json()) as AmScreeningResult;
     const b = (await second!.json()) as AmScreeningResult;
+    // 🔴 With collection OFF this compares two EMPTY results, so today it is a weak green: two agreeing
+    // nothings. The annotation records what was actually observed, so a report reader can tell an
+    // agreeing pair of HITS from an agreeing pair of zeroes. The assertion strengthens on its own once
+    // data flows; nothing here changes meaning when it does.
+    test.info().annotations.push({
+      type: 'am-reproducibility',
+      description:
+        `matches=${a.matchedEntities.length}/${b.matchedEntities.length} ` +
+        `status=${a.adverseMediaStatus} decision=${a.decision}`,
+    });
     expect(b.decision, 'two identical screens reached different decisions').toBe(a.decision);
     expect(b.adverseMediaStatus, 'the adverse-media status is not reproducible').toBe(a.adverseMediaStatus);
     expect(b.isMatch).toBe(a.isMatch);

@@ -117,3 +117,36 @@ export const EVIDENCE_TIERS = [
 ];
 /** The three capability sources (Application/Screening/ScreeningCapabilitiesResponse.cs:36-40). */
 export const CAPABILITY_SOURCES = new Set(['None', 'Gdelt', 'TenantEndpoint']);
+
+/**
+ * POST an arbitrary AML API path with the same dual-auth headers as {@link screen}. Used by the
+ * adverse-media case/disposition specs. Same hand-assembled LIMIT as {@link amlGet}.
+ */
+export async function amlPost(
+  request: APIRequestContext,
+  path: string,
+  body: Record<string, unknown>,
+): Promise<APIResponse | null> {
+  if (!AML_API_KEY) return null;
+  const result = await tryRequest(request, AML_API_URL, path, {
+    method: 'POST',
+    data: body,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Api-Key': AML_API_KEY,
+      Authorization: `Bearer ${AML_API_KEY}`,
+    },
+    timeoutMs: 25_000,
+  });
+  return result?.response ?? null;
+}
+
+/** Read the tenant's adverse-media capability, or null when it cannot be read. */
+export async function adverseMediaCapability(
+  request: APIRequestContext,
+): Promise<AdverseMediaCapability | null> {
+  const res = await amlGet(request, '/v1/tenants/me/screening-capabilities');
+  if (!res || !res.ok()) return null;
+  const body = (await res.json()) as { adverseMedia?: AdverseMediaCapability };
+  return body.adverseMedia ?? null;
+}
