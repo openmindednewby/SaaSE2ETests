@@ -124,3 +124,33 @@ grep -rn "@known-bug-" tests/
 - `E2ETests/docs/playwright-best-practices.md` — coding style for tests
 - `personalServerNotes/STATE.md` — current pass/fail snapshot + cron schedule
 - `.claude/skills/e2e/SKILL.md` — `/e2e` skill (unified ops reference for running E2E)
+
+## AML adverse media (`tests/aml/aml-adverse-media.spec.ts`, project `aml-api`)
+
+Run: `npm run test:aml:adverse-media` (Tilt: `playwright-e2e-aml-adverse-media`). Targets the LIVE
+deployed AMLService (`AML_BASE_URL`, default our staging). `scripts/run-aml-e2e.mjs` loads
+`PROOViD/AMLService/.env` and REFUSES to run without `AML_API_KEY` — an all-skip run is a green that
+observed nothing.
+
+**Covers** — adverse media as a compliance CONTROL, decision first:
+- AM-E2E-1 `/v1/tenants/me/screening-capabilities` reports the AM source honestly; an unavailable
+  stage must state a reason, so a never-checked screen can never read as a clean one.
+- AM-E2E-2 (the control) all 10 `adverse_media` cells of the EFFECTIVE decision matrix exist and none
+  resolves to `Pass`; the SYSTEM DEFAULT `exact_name_exact_dob/single` cell is `Review`
+  (Andreas 2026-08-23 Q7 — an article is an allegation, not an adjudication).
+- AM-E2E-3 a screen that asked for adverse media must report `adverseMediaStatus`; any surfaced AM
+  match must drive a non-`Pass` decision carrying an adverse-media reason code.
+- AM-E2E-4 two identical screens reach the same decision + AM status (auditability).
+
+**CANNOT cover** — state this before quoting a green:
+- **No AM hit is exercised.** `AdverseMedia:SliceTail:Enabled` is unset everywhere and the wave-3
+  migration is unapplied, so no adverse-media rows exist and **no API can seed one** (audited
+  2026-09-07: `IngestController` = GET history only, `DemoController` = GET config only; the only
+  writable AM surfaces are erasure). AM-E2E-3 therefore SKIPS at its AM-match branch by design rather
+  than passing vacuously. The decision behaviour is covered structurally by AM-E2E-2 (policy), not
+  end-to-end from a real article.
+- **No UI.** E2E here is API-driven by owner decision, so nothing in this file can observe a
+  client-side render failure, a ReferenceError, or a wrong request shape emitted by `aml-v2`. The
+  helpers hand-assemble their requests: they test the SERVER contract only.
+- **Not covered here:** the PDF report section, the regulator pack, the webhook payload, GDELT
+  binding/tone, retention/erasure, or the AM backfill jobs.

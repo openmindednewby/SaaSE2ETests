@@ -62,3 +62,58 @@ export async function screen(
   });
   return result?.response ?? null;
 }
+
+/**
+ * GET an AML API path with the same dual-auth headers as {@link screen}. Returns the raw response, or
+ * null when the service is unreachable (network) so a spec can `test.skip` rather than false-fail.
+ *
+ * 🔴 LIMIT: this helper HAND-ASSEMBLES its request. It therefore exercises the SERVER contract only —
+ * it can never observe a defect in the aml-v2 client's own request shape (a stripped Content-Type, a
+ * wrong header, a client-side ReferenceError). Pin the app client separately.
+ */
+export async function amlGet(
+  request: APIRequestContext,
+  path: string,
+): Promise<APIResponse | null> {
+  if (!AML_API_KEY) return null;
+  const result = await tryRequest(request, AML_API_URL, path, {
+    headers: {
+      'X-Api-Key': AML_API_KEY,
+      Authorization: `Bearer ${AML_API_KEY}`,
+    },
+    timeoutMs: 20_000,
+  });
+  return result?.response ?? null;
+}
+
+/** One cell of the decision matrix: category × evidence tier × multiplicity → Pass/Review/Fail. */
+export interface DecisionMatrixCell {
+  category: string;
+  tier: string;
+  multiplicity: string;
+  decision: string;
+}
+export interface DecisionMatrixView {
+  unconfirmedPosture: string;
+  effective: { cells: DecisionMatrixCell[] };
+  systemDefault: { cells: DecisionMatrixCell[] };
+}
+
+export interface AdverseMediaCapability {
+  available: boolean;
+  source: string;
+  unavailableReason?: string | null;
+}
+
+/** The wire token for the adverse-media risk category (Domain/Risk/RiskCategories.cs:20). */
+export const ADVERSE_MEDIA_CATEGORY = 'adverse_media';
+/** The five evidence tiers (Domain/Risk/DecisionMatrixTokens.cs:12-16). */
+export const EVIDENCE_TIERS = [
+  'exact_name_exact_dob',
+  'exact_name_no_dob',
+  'exact_name_dob_mismatch',
+  'exact_name_dob_near_match',
+  'weak_or_partial_name',
+];
+/** The three capability sources (Application/Screening/ScreeningCapabilitiesResponse.cs:36-40). */
+export const CAPABILITY_SOURCES = new Set(['None', 'Gdelt', 'TenantEndpoint']);
