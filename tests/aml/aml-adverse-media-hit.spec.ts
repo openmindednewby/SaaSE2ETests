@@ -10,14 +10,23 @@
 //   (c) collection is on, rows exist, and the API DROPS them from the screening payload — the exact
 //       regression the adverse-media control exists to catch.
 // In world (c) AM-E2E-3 reports SKIPPED, the tally stays "3 passed / 1 skipped / 0 failed", and the
-// defect ships behind the same green line as today. AM-E2E-5 below is the control that turns (c) RED:
-// it skips on the CAPABILITY being unavailable, never on an empty result, so once the stage reports
-// itself available a corpus-wide zero is a FAILURE and not a skip.
+// defect ships behind the same green line as today. AM-E2E-5 below is the control that turns (c) RED.
+//
+// 🔴 2026-09-08 — AM-E2E-5's ORIGINAL PREMISE WAS WRONG, and its first-ever red was a false
+// attribution. It skipped on the CAPABILITY alone and then read `available && total === 0` as "the
+// leg is broken". Measured: the stage IS available and the pipeline IS collecting (8 slices
+// processed, 1,796 GKG records scanned), but the tailer only scans names in its WATCH BOOK, and the
+// golden corpus was never in that book — so there was never anything to find. Two different failures
+// wore one red. The probe in ./am-name-book-probe.ts splits them on an observable the match count
+// cannot supply, and the skip it produces is keyed to the ROSTER, never to an empty result set.
 //
 // 🔴 WHAT THIS STILL CANNOT SEE. API-driven by owner decision: it drives the AML API, never the aml-v2
 // UI, so a portal that renders an adverse-media hit blank still passes here. It also cannot adjudicate
-// PRECISION — whether the article is genuinely about this subject.
+// PRECISION — whether the article is genuinely about this subject. And the roster it probes is a
+// TENANT-SCOPED SUBSET of the tailer's cross-tenant book, so "not on the roster" is not observable
+// absence from the book — see the header of am-name-book-probe.ts.
 import { expect, test } from '@playwright/test';
+import { probeAmNameBook, ruleOnAmCorpus } from './am-name-book-probe.js';
 import {
   ADVERSE_MEDIA_CATEGORY,
   AML_API_KEY,
@@ -44,9 +53,26 @@ const ADVERSE_MEDIA_CATEGORIES = new Set([
   'GeneralCrime',
 ]);
 
-// The golden-corpus `positives` bucket — the same subjects aml-adverse-media-category.spec.ts screens.
-// When the stage is AVAILABLE and returns nothing for ALL of these, the collection leg is broken.
-const POSITIVE_CORPUS = ['Jho Low', 'Gulnara Karimova', 'Bashar al-Assad'];
+// The subjects these controls screen. 🔴 CORRECTED 2026-09-08 from the original golden-corpus
+// `positives` bucket (`Jho Low`, `Gulnara Karimova`, `Bashar al-Assad`) after the index carried real
+// rows for the first time. MEASURED against the live API on that date: those three return ZERO
+// adverse-media matches, because the slice-tailer only scans names in its watch book and none of the
+// three is in it. Screening a name the tailer never watched can only ever produce a zero, so the old
+// corpus made AM-E2E-5/6/7 structurally unable to observe a hit — three controls that had never run a
+// single assertion between them.
+//
+// What IS in the book, and why each name is here:
+//   Benjamin Netanyahu — a MonitoredSubject (tenant 7e57a001-…-0001, enrolled 2026-09-08). FIRST on
+//     purpose: it is the only corpus name the tenant-scoped roster probe can SEE, so it is what turns
+//     ruleOnAmCorpus into `mustAssert`, and AM-E2E-7 dispositions POSITIVE_CORPUS[0]. 5 bound articles.
+//   Vladimir Putin — NOT a MonitoredSubject; he entered the book via the IncludeScreenedNames branch
+//     off MediaLookups (AdverseMediaSliceTailService.cs:721-728). 137 bound articles, the densest
+//     input available, so AM-E2E-6 has evidence to assert on even if the enrolled subject is unbound.
+//   Jho Low — kept as the original-corpus canary. It is expected to contribute zero today; if it ever
+//     starts contributing, the book widened and that is worth noticing.
+// When the stage is AVAILABLE, a corpus subject is provably in the book, and this whole list still
+// returns nothing, the collection leg is broken — that is what AM-E2E-5 turns red on.
+const POSITIVE_CORPUS = ['Benjamin Netanyahu', 'Vladimir Putin', 'Jho Low'];
 
 interface AmMatch {
   externalId?: string | null;
@@ -136,12 +162,30 @@ test.describe('AML adverse media — switched on @aml-api', () => {
     }
     test.info().annotations.push({ type: 'am-corpus', description: perSubject.join(' ') });
 
-    expect(
-      total,
-      'the adverse-media stage reports itself AVAILABLE, yet not one of the golden-corpus positives ' +
-        `(${POSITIVE_CORPUS.join(', ')}) carried an adverse-media match. Collection is on and nothing ` +
-        'reaches the screening payload — the leg is broken, or matches are stripped before the wire.',
-    ).toBeGreaterThan(0);
+    // The discriminator. `available == true` does NOT imply the corpus is findable: the tailer only
+    // scans names in its watch book, and the golden corpus was never in it (measured 2026-09-08 — 8
+    // slices processed, 1,796 records scanned, 0 hits, book built from 3 MonitoredSubjects + 2
+    // MediaLookups rows, none of them corpus). Keyed on the ROSTER + the slice history, never on the
+    // match count — keying on the empty result set is the vacuity AM-E2E-3 already has.
+    const probe = await probeAmNameBook(request, POSITIVE_CORPUS);
+    const ruling = ruleOnAmCorpus(probe);
+    test.info().annotations.push({
+      type: 'am-name-book',
+      description:
+        `roster=${probe.rosterSize} corpusOnRoster=[${probe.observedCorpusNames.join('|')}] ` +
+        `enrolledAt=${probe.earliestCorpusEnrolledAt ?? 'n/a'} ` +
+        `newestProcessedSlice=${probe.newestProcessedSliceAt ?? 'none'} ` +
+        `probeError=${probe.probeError ?? 'none'} mustAssert=${ruling.mustAssert}`,
+    });
+
+    // A non-zero total passes in either world. Only what a ZERO MEANS is in dispute.
+    if (total === 0 && !ruling.mustAssert) {
+      test.info().annotations.push({ type: 'am-e2e-5-did-not-test', description: ruling.reason });
+      test.skip(true, ruling.reason);
+      return;
+    }
+
+    expect(total, ruling.reason).toBeGreaterThan(0);
   });
 
   // 6 — the decision + reason + presentable-evidence contract ON A REAL HIT. AM-E2E-3 asserts only
@@ -170,10 +214,19 @@ test.describe('AML adverse media — switched on @aml-api', () => {
       }
     }
     if (!hit || !body) {
+      test.info().annotations.push({
+        type: 'am-e2e-6-never-executed',
+        description:
+          'ZERO assertions have ever run in AM-E2E-6. Its Review-decision, reason-code, taxonomy and ' +
+          'headline/publisher expectations below are INFERRED from the TS interface and have never ' +
+          'been observed on a live payload. Three skips are three unverified contracts, not passes.',
+      });
       test.skip(
         true,
-        'the stage is available but no corpus subject carried an adverse-media match — AM-E2E-5 is the ' +
-          'control that FAILS on this, so it is not being swallowed here.',
+        'the stage is available but no corpus subject carried an adverse-media match. AM-E2E-5 is the ' +
+          'control for this: it FAILS when a corpus subject is provably in the indexed name book and ' +
+          'slices were scanned against it, and reports its own no-input outcome otherwise — read its ' +
+          'am-name-book annotation to see which of the two happened on this run.',
       );
       return;
     }
@@ -197,11 +250,38 @@ test.describe('AML adverse media — switched on @aml-api', () => {
           'the tenant warning-type policy has no key for silently drops the warning',
       ).toBeTruthy();
     }
+    // 🔴 REWRITTEN 2026-09-08 against a REAL payload — the first one this assertion has ever seen.
+    // The old form was `headline + publisher` truthy, and both names were INFERRED from the TS
+    // interface. Measured on the live wire: both fields exist verbatim (the API maps DB `title` →
+    // `headline` and `domain` → `publisher`), `publisher` is populated, and `headline` is NULL on
+    // every row — the `gkg:v1minimal:themegated:v1` parse profile captures no article title. The old
+    // form would therefore have gone GREEN on `publisher` alone while the headline half was never
+    // once satisfied: a passing assertion that silently covered nothing.
+    //
+    // So assert the fields that ARE meaningful, each on its own so a regression names itself, and
+    // record the headline gap as a KNOWN PRODUCT LIMITATION instead of dropping it. Do NOT convert
+    // this into `expect(hit.headline).toBeNull()` — that would PIN the defect and turn fixing the
+    // parse profile into a test failure.
     expect(
-      `${hit.headline ?? ''}${hit.publisher ?? ''}`.trim(),
-      'an adverse-media match with neither headline nor publisher is not reviewable evidence — the ' +
-        'analyst is asked to judge an article they cannot see',
+      (hit.publisher ?? '').trim(),
+      'an adverse-media match with no publisher is not reviewable evidence — the analyst is asked to ' +
+        'judge an article they cannot attribute to any outlet',
     ).toBeTruthy();
+    expect(
+      (hit.externalId ?? '').trim(),
+      'for an adverse-media hit externalId IS the article URL (AdverseMediaArticle.cs:14). With the ' +
+        'headline empty it is the only way an analyst can reach the article at all',
+    ).toMatch(/^https?:\/\//);
+    if (!(hit.headline ?? '').trim()) {
+      test.info().annotations.push({
+        type: 'am-headline-gap',
+        description:
+          'KNOWN PRODUCT LIMITATION (measured 2026-09-08, not a test defect): `headline` is on the ' +
+          'wire but NULL on every adverse-media row, because the shipped parse profile ' +
+          '`gkg:v1minimal:themegated:v1` extracts no article title. A customer-facing surface can ' +
+          `show only the publisher domain (${hit.publisher}) and the URL. Track 8 renders this field.`,
+      });
+    }
   });
 
   // 7 — the per-match disposition control on an ADVERSE-MEDIA match. GAP-5 has only ever been proven
@@ -242,11 +322,19 @@ test.describe('AML adverse media — switched on @aml-api', () => {
     const caseLevelBefore = detail.reviewStatus;
     const amMatch = detail.matches.find(isAm);
     if (!amMatch) {
+      test.info().annotations.push({
+        type: 'am-e2e-7-never-executed',
+        description:
+          'ZERO assertions have ever run in AM-E2E-7. The disposition round-trip, its persistence and ' +
+          'its reversibility on an ADVERSE-MEDIA match are unexercised; only the WIKIDATA path is ' +
+          'covered (AMLService.IntegrationTests/CaseMatchDispositionEndpointTests.cs).',
+      });
       test.skip(
         true,
-        'the case carries no adverse-media match — AM-E2E-5 is the control that FAILS when the stage is ' +
-          'available and nothing surfaces. Note the case read model exposes rejectionTag but NOT ' +
-          'adverseMediaCategory (Application/Cases/CaseDtos.cs:102).',
+        'the case carries no adverse-media match. AM-E2E-5 is the control for this: it FAILS when a ' +
+          'corpus subject is provably in the indexed name book and slices were scanned against it, and ' +
+          'reports its own no-input outcome otherwise. Note the case read model exposes rejectionTag ' +
+          'but NOT adverseMediaCategory (Application/Cases/CaseDtos.cs:102).',
       );
       return;
     }
