@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Resolves the SHIPPED Kefi fixture tenant the event-ops E2E suite drives.
  *
  * Why a fixture tenant instead of the usual `provisionApiTenantWithEvent`
@@ -95,6 +95,7 @@ export const FIXTURE_TENANT_SKIP_REASON =
  */
 export const PROTECTED_TENANT_SLUGS: readonly string[] = [
   'ubb',
+  'csdf',
   'ubs',
   'kucy',
   'kizomba-union-cy',

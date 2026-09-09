@@ -36,6 +36,7 @@ import type { FullConfig } from '@playwright/test';
 
 import { AuthHelper } from '../helpers/auth-helper.js';
 import { acquireCanaryLock } from '../helpers/canary-lock.js';
+import { openCanaryRegistry } from '../helpers/kefi/kefiCanaryRegistry.js';
 import { loadE2EEnv } from './env-loader.js';
 import { installHostOverride } from './host-override.js';
 import legacyGlobalSetup from './global-setup.js';
@@ -71,6 +72,12 @@ async function canaryGlobalSetup(config: FullConfig): Promise<void> {
 
   process.env.E2E_CANARY_RUN_ID = runId;
   process.env.E2E_CANARY_PREFIX = prefix;
+
+  // Write the leak-registry run-start sentinel NOW, while the run scope exists
+  // and before any spec can create anything. If this write fails the registry
+  // file never appears, and the teardown reports "registry-missing" instead of
+  // a confident "0 pending" — a lost declaration must not read as a clean run.
+  openCanaryRegistry();
 
   const target = process.env.E2E_TARGET ?? 'local';
 

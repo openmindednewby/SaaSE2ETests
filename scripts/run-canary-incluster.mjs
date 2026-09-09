@@ -100,17 +100,22 @@ function runSetup() {
  *  chunk processes' tokens died with their processes) and its globalTeardown
  *  performs the real cleanup sweep across all 6 services + releases the lock.
  *  Reuses the existing TS plumbing (token mint, env load, realm handling) with
- *  no new projects. Best-effort: failure is logged, never changes exit code. */
+ *  NOT best-effort any more. Its globalTeardown carries the Kefi leak gate, and
+ *  discarding this exit status is exactly how a detected leak stayed green on
+ *  the chunked path - the path that accumulated the orphan rows. The status is
+ *  returned and folded into the Job's exit code by main(). */
 function runFinalCanaryCleanup() {
   const args = ['playwright', 'test', '--project=setup'];
   log(`[final-cleanup] npx ${args.join(' ')}`);
   const env = { ...process.env };
   delete env.E2E_CANARY_SKIP_TEARDOWN;
   const r = spawnSync('npx', args, { cwd: E2E_ROOT, stdio: 'inherit', env });
-  if (r.status !== 0) {
-    log(`WARN: final canary cleanup exited ${r.status === null ? 'null' : r.status} — ` +
-      'orphan-cleanup CronJob will sweep any leaked e2ec-* records.');
+  const status = r.status === null ? 1 : r.status;
+  if (status !== 0) {
+    log(`FAIL: final canary cleanup exited ${status} — a canary/fixture-row leak was ` +
+      'detected or the sweep could not run. This FAILS the job.');
   }
+  return status;
 }
 
 /** Enumerate chunk-project names from `playwright test --list`, in definition
@@ -362,6 +367,11 @@ async function main() {
   const target = process.env.E2E_TARGET ?? 'staging';
   const suite = (process.env.E2E_SUITE ?? 'tests').trim();
   const runId = ensureRunId();
+  // ONE leak registry across every process this runner spawns (setup, each
+  // chunk, the final cleanup). Each of those runs its own globalSetup and would
+  // otherwise scope the registry to its own canary runId, so the final sweep
+  // would read only its own file and see nothing the chunks declared.
+  process.env.E2E_CANARY_REGISTRY_KEY = runId.slice(0, 8);
   const chunked = suite === 'tests' || suite === '';
 
   log(`target=${target} runId=${runId} mode=${chunked ? 'chunked' : 'single'} suite=${suite}`);
@@ -396,10 +406,12 @@ async function main() {
     // intermediate processes ran with E2E_CANARY_SKIP_TEARDOWN set so the
     // shared tenant users survived for the whole run; this is where they get
     // cleaned up. Best-effort — never affects the pass/fail exit code.
-    runFinalCanaryCleanup();
+    const cleanupExit = runFinalCanaryCleanup();
 
     summary = summarizeChunked(chunks);
-    failed = Object.values(exits).some((c) => c !== 0);
+    // The cleanup process is where the leak gate lives, so its exit status is
+    // part of pass/fail — not a log line.
+    failed = Object.values(exits).some((c) => c !== 0) || cleanupExit !== 0;
     log(`AGGREGATE: ${summary.passed} passed, ${summary.failed} failed, ` +
       `${summary.skipped} skipped, ${summary.flaky} flaky across ${chunks.length} chunks`);
   } else {

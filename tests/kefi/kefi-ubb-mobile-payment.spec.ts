@@ -1,30 +1,12 @@
 /**
- * Kefi UBB MOBILE E2E — the attendee-facing surfaces at phone width.
+ * Kefi UBB MOBILE E2E — the payment sheet and ticket at phone width.
  *
- * The owner called this out directly, and the suite had no answer: before this
- * file, NOT ONE spec in the entire E2ETests tree opened a Kefi surface at a phone
- * viewport. Every `@ui` test ran at 1280×720 desktop, which is the one resolution
- * almost no UBB attendee will use.
+ * Split out of `kefi-ubb-mobile.spec.ts` (max-file-lines) — see that file's
+ * sibling `kefi-ubb-mobile-register.spec.ts` for the register-page half.
  *
- * That gap matters because the defect class it hides is invisible to every other
- * kind of test. A pay button rendered 40px past the right edge of a 393px screen:
- *
- *   - is in the DOM, so the unit test passes;
- *   - returns the right data, so the `@api` test passes;
- *   - satisfies `toBeVisible()`, and Playwright will happily `click()` it because
- *     actionability checks SCROLL IT INTO VIEW first — so even the desktop `@ui`
- *     test passes;
- *   - and is completely unreachable for a human holding a phone, who is given no
- *     cue that the page scrolls sideways at all.
- *
- * So the assertions here deliberately measure GEOMETRY rather than driving
- * interactions: `expectWithinViewportWidth` reads the bounding box WITHOUT
- * scrolling, because scrolling is precisely what conceals the bug.
- *
- * Covered, in the order a buyer meets them:
- *   1. the register page  — the form, the pass tiles, the Register button
- *   2. the payment sheet  — the modal shown on a 201, and its pay/ticket controls
- *   3. the ticket         — what the attendee shows at the door
+ * Covered here, in the order a buyer meets them:
+ *   1. the payment sheet — the modal shown on a 201, and its pay/ticket controls
+ *   2. the ticket        — what the attendee shows at the door
  *
  * PROD-SAFE: the browser-driven registration creates a REAL row on the live UBB
  * tenant. Its `attendeeExternalId` is captured from the register response and
@@ -50,63 +32,16 @@ import { isRemoteTarget } from '../../helpers/target.js';
 
 // NOT serial: `workers: 1` already serializes these, while serial mode would
 // CASCADE-SKIP every test after the first failure — and on a layout suite the
-// later surfaces (the pay sheet, the ticket) are the ones most likely to be
-// broken independently of the first.
+// later surfaces (the ticket) are the ones most likely to be broken independently
+// of the payment sheet.
 
 const HTTP_OK = 200;
 const HTTP_CREATED = 201;
 const PHONE = '+35799000000';
 
-test.describe('Kefi UBB mobile attendee surfaces', () => {
+test.describe('Kefi UBB mobile attendee surfaces — payment sheet and ticket', () => {
   test.skip(!isRemoteTarget(), 'Kefi event-ops E2E targets a deployed environment');
   test.skip(!fixtureTenantAvailable(), FIXTURE_TENANT_SKIP_REASON);
-
-  test('@ui the register page fits a phone and the Register button is reachable without scrolling sideways', async ({
-    page,
-  }) => {
-    const ops = await openEventOps();
-    const register = new KefiPublicRegisterPage(page);
-
-    await register.goto(ops.tenant.siteUrl);
-
-    // The page as a whole must not scroll sideways. Checked first because a
-    // document-level overflow makes every per-element result below ambiguous.
-    await expectNoHorizontalOverflow(page, 'the UBB register page');
-
-    // The controls a buyer must actually reach, measured individually — an
-    // `overflow:hidden` ancestor can clip a button while the page itself stays
-    // put, which is the worst case: unreachable AND undetectable by scroll width.
-    await expectWithinViewportWidth(page, register.form, 'the registration form');
-    await expectWithinViewportWidth(page, register.nameInput, 'the name field');
-    await expectWithinViewportWidth(page, register.emailInput, 'the email field');
-    await expectWithinViewportWidth(page, register.consentCheckbox, 'the consent checkbox');
-    await expectWithinViewportWidth(page, register.submitButton, 'the Register button');
-  });
-
-  test('@ui every pass tile and its price stay inside a phone screen', async ({ page }) => {
-    // The pass tiles carry the PRICE. A tile clipped at the right edge can hide
-    // the amount entirely, which is the same class of harm as quoting the wrong
-    // number — the buyer commits without having seen what they will pay.
-    const ops = await openEventOps();
-    const register = new KefiPublicRegisterPage(page);
-
-    await register.goto(ops.tenant.siteUrl);
-
-    const tiles = page.locator('label.reg-pass-option');
-    const tileCount = await tiles.count();
-    expect(tileCount, 'the register form offers at least one pass to buy').toBeGreaterThan(0);
-
-    for (let index = 0; index < tileCount; index++) {
-      const tile = tiles.nth(index);
-      const code = await tile.locator('input[name="passCode"]').getAttribute('value');
-      await expectWithinViewportWidth(page, tile, `the ${code} pass tile`);
-      await expectWithinViewportWidth(
-        page,
-        tile.locator('.reg-pass-price'),
-        `the ${code} pass PRICE`,
-      );
-    }
-  });
 
   test('@ui the payment sheet opens on a phone with its controls reachable', async ({ page }) => {
     // ⭐ The surface the owner named. This drives a REAL registration through the

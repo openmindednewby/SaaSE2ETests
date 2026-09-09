@@ -256,7 +256,6 @@
     "tilt:smoke": "node scripts/tilt-e2e.mjs playwright-e2e-smoke",
     "tilt:diagnostics": "node scripts/tilt-e2e.mjs playwright-e2e-diagnostics",
     "tilt:logging:stress": "node scripts/tilt-e2e.mjs playwright-e2e-logging-stress",
-    "tilt:theme-studio": "node scripts/tilt-e2e.mjs theme-studio-e2e --port 10351",
     "tilt:logging": "node scripts/tilt-e2e.mjs playwright-e2e-logging",
     "tilt:monitoring": "node scripts/tilt-e2e.mjs playwright-e2e-monitoring",
     "tilt:cross-product-isolation": "node scripts/tilt-e2e.mjs playwright-e2e-cross-product-isolation",
@@ -269,7 +268,10 @@
     "yagni": "ts-prune --ignore \"\\\\node_modules\\\\|\\\\dist\\\\|.config.|__mocks__|.test.|.spec.\"",
     "yagni:ci": "ts-prune --error --ignore \"\\\\node_modules\\\\|\\\\dist\\\\|.config.|__mocks__|.test.|.spec.\"",
     "test:aml:api": "node scripts/run-aml-e2e.mjs",
-    "test:aml:adverse-media": "node scripts/run-aml-e2e.mjs tests/aml/aml-adverse-media.spec.ts tests/aml/aml-adverse-media-hit.spec.ts"
+    "test:aml:adverse-media": "node scripts/run-aml-e2e.mjs tests/aml/aml-adverse-media.spec.ts tests/aml/aml-adverse-media-hit.spec.ts",
+    "test:logging:stress": "cross-env SHELL=/bin/bash playwright test --project=logging-stress",
+    "test:notifications:stress": "cross-env SHELL=/bin/bash playwright test --project=notifications-stress",
+    "check:project-selection": "node scripts/check-project-selection.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.11.3",

@@ -105,7 +105,6 @@ test.describe('InterviewPrep practice pages render @interview-prep-practice', ()
       expect(res!.status(), `${url} must be 200`).toBe(200);
 
       const question = page.locator('#cardQuestion');
-      const t0 = Date.now();
 
       // THE gate. A wedged page keeps the placeholder forever and times out here.
       await expect(
@@ -113,9 +112,6 @@ test.describe('InterviewPrep practice pages render @interview-prep-practice', ()
         `#cardQuestion still shows "${PLACEHOLDER}" — the practice bundle never rendered a card. ` +
           'A frozen renderer returns 200 with correct headers, so only this assertion sees it.',
       ).not.toHaveText(PLACEHOLDER, { timeout: RENDER_TIMEOUT_MS });
-
-      // eslint-disable-next-line no-console
-      console.log(`[render-time] ${track}/${moduleSlug} ${Date.now() - t0}ms`);
 
       await expect(
         question,

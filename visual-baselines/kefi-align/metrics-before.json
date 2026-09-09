@@ -1,0 +1,1734 @@
+[
+ {
+  "tenant": "csdf",
+  "width": 390,
+  "template": "csdf",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "start",
+    "cols": "358px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 24,
+    "rows": [
+     {
+      "count": 1,
+      "minH": 651,
+      "maxH": 651,
+      "spread": 0,
+      "bottomMax": 2738.2
+     },
+     {
+      "count": 1,
+      "minH": 651,
+      "maxH": 651,
+      "spread": 0,
+      "bottomMax": 3409.2,
+      "gapFromPrev": 21.8
+     },
+     {
+      "count": 1,
+      "minH": 579.4,
+      "maxH": 579.4,
+      "spread": 0,
+      "bottomMax": 4008.6,
+      "gapFromPrev": 20.8
+     },
+     {
+      "count": 1,
+      "minH": 651,
+      "maxH": 651,
+      "spread": 0,
+      "bottomMax": 4679.6,
+      "gapFromPrev": 21.4
+     },
+     {
+      "count": 1,
+      "minH": 651,
+      "maxH": 651,
+      "spread": 0,
+      "bottomMax": 5350.6,
+      "gapFromPrev": 20.4
+     },
+     {
+      "count": 1,
+      "minH": 651,
+      "maxH": 651,
+      "spread": 0,
+      "bottomMax": 6021.6,
+      "gapFromPrev": 19.4
+     },
+     {
+      "count": 1,
+      "minH": 651,
+      "maxH": 651,
+      "spread": 0,
+      "bottomMax": 6692.6,
+      "gapFromPrev": 18.4
+     },
+     {
+      "count": 1,
+      "minH": 651,
+      "maxH": 651,
+      "spread": 0,
+      "bottomMax": 7363.6,
+      "gapFromPrev": 22.4
+     },
+     {
+      "count": 1,
+      "minH": 579.4,
+      "maxH": 579.4,
+      "spread": 0,
+      "bottomMax": 7963,
+      "gapFromPrev": 21.4
+     },
+     {
+      "count": 1,
+      "minH": 579.4,
+      "maxH": 579.4,
+      "spread": 0,
+      "bottomMax": 8562.5,
+      "gapFromPrev": 22
+     },
+     {
+      "count": 1,
+      "minH": 627.4,
+      "maxH": 627.4,
+      "spread": 0,
+      "bottomMax": 9209.9,
+      "gapFromPrev": 22.5
+     },
+     {
+      "count": 1,
+      "minH": 651,
+      "maxH": 651,
+      "spread": 0,
+      "bottomMax": 9880.9,
+      "gapFromPrev": 20.1
+     },
+     {
+      "count": 1,
+      "minH": 627.4,
+      "maxH": 627.4,
+      "spread": 0,
+      "bottomMax": 10528.3,
+      "gapFromPrev": 19.1
+     },
+     {
+      "count": 1,
+      "minH": 579.4,
+      "maxH": 579.4,
+      "spread": 0,
+      "bottomMax": 11127.699999999999,
+      "gapFromPrev": 21.7
+     },
+     {
+      "count": 1,
+      "minH": 651,
+      "maxH": 651,
+      "spread": 0,
+      "bottomMax": 11798.8,
+      "gapFromPrev": 22.3
+     },
+     {
+      "count": 1,
+      "minH": 579.4,
+      "maxH": 579.4,
+      "spread": 0,
+      "bottomMax": 12398.199999999999,
+      "gapFromPrev": 21.2
+     },
+     {
+      "count": 1,
+      "minH": 651,
+      "maxH": 651,
+      "spread": 0,
+      "bottomMax": 13069.2,
+      "gapFromPrev": 21.8
+     },
+     {
+      "count": 1,
+      "minH": 651,
+      "maxH": 651,
+      "spread": 0,
+      "bottomMax": 13740.2,
+      "gapFromPrev": 20.8
+     },
+     {
+      "count": 1,
+      "minH": 627.4,
+      "maxH": 627.4,
+      "spread": 0,
+      "bottomMax": 14387.6,
+      "gapFromPrev": 19.8
+     },
+     {
+      "count": 1,
+      "minH": 579.4,
+      "maxH": 579.4,
+      "spread": 0,
+      "bottomMax": 14987,
+      "gapFromPrev": 22.4
+     },
+     {
+      "count": 1,
+      "minH": 579.4,
+      "maxH": 579.4,
+      "spread": 0,
+      "bottomMax": 15586.4,
+      "gapFromPrev": 18
+     },
+     {
+      "count": 1,
+      "minH": 579.4,
+      "maxH": 579.4,
+      "spread": 0,
+      "bottomMax": 16185.9,
+      "gapFromPrev": 18.6
+     },
+     {
+      "count": 1,
+      "minH": 579.4,
+      "maxH": 579.4,
+      "spread": 0,
+      "bottomMax": 16785.3,
+      "gapFromPrev": 19.1
+     },
+     {
+      "count": 1,
+      "minH": 579.4,
+      "maxH": 579.4,
+      "spread": 0,
+      "bottomMax": 17384.7,
+      "gapFromPrev": 19.7
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/csdf-390-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "csdf",
+  "width": 768,
+  "template": "csdf",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "start",
+    "cols": "221.328px 221.328px 221.328px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 24,
+    "rows": [
+     {
+      "count": 3,
+      "minH": 397.2,
+      "maxH": 507.2,
+      "spread": 110,
+      "bottomMax": 2585.7999999999997
+     },
+     {
+      "count": 3,
+      "minH": 468.8,
+      "maxH": 488,
+      "spread": 19.2,
+      "bottomMax": 3093.7,
+      "gapFromPrev": 19.2
+     },
+     {
+      "count": 3,
+      "minH": 397.2,
+      "maxH": 507.2,
+      "spread": 110,
+      "bottomMax": 3620.8999999999996,
+      "gapFromPrev": 21.3
+     },
+     {
+      "count": 3,
+      "minH": 397.2,
+      "maxH": 488,
+      "spread": 90.8,
+      "bottomMax": 4128.9,
+      "gapFromPrev": 19.1
+     },
+     {
+      "count": 3,
+      "minH": 397.2,
+      "maxH": 488,
+      "spread": 90.8,
+      "bottomMax": 4636.8,
+      "gapFromPrev": 21.1
+     },
+     {
+      "count": 3,
+      "minH": 397.2,
+      "maxH": 507.2,
+      "spread": 110,
+      "bottomMax": 5164,
+      "gapFromPrev": 18.2
+     },
+     {
+      "count": 3,
+      "minH": 397.2,
+      "maxH": 483.6,
+      "spread": 86.4,
+      "bottomMax": 5667.6,
+      "gapFromPrev": 21
+     },
+     {
+      "count": 3,
+      "minH": 397.2,
+      "maxH": 397.2,
+      "spread": 0,
+      "bottomMax": 6084.7,
+      "gapFromPrev": 22.4
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/csdf-768-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "csdf",
+  "width": 1024,
+  "template": "csdf",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "start",
+    "cols": "225px 225px 225px 225px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 24,
+    "rows": [
+     {
+      "count": 4,
+      "minH": 402.1,
+      "maxH": 512,
+      "spread": 109.9,
+      "bottomMax": 2608.5
+     },
+     {
+      "count": 4,
+      "minH": 473.7,
+      "maxH": 512,
+      "spread": 38.3,
+      "bottomMax": 3140.6,
+      "gapFromPrev": 21.5
+     },
+     {
+      "count": 4,
+      "minH": 402.1,
+      "maxH": 473.7,
+      "spread": 71.6,
+      "bottomMax": 3634.2999999999997,
+      "gapFromPrev": 19.4
+     },
+     {
+      "count": 4,
+      "minH": 402.1,
+      "maxH": 492.9,
+      "spread": 90.8,
+      "bottomMax": 4147.2,
+      "gapFromPrev": 20.7
+     },
+     {
+      "count": 4,
+      "minH": 402.1,
+      "maxH": 512,
+      "spread": 109.9,
+      "bottomMax": 4679.1,
+      "gapFromPrev": 17.8
+     },
+     {
+      "count": 4,
+      "minH": 402.1,
+      "maxH": 402.1,
+      "spread": 0,
+      "bottomMax": 5101.3,
+      "gapFromPrev": 20.9
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/csdf-1024-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "csdf",
+  "width": 1440,
+  "template": "csdf",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "start",
+    "cols": "224px 224px 224px 224px 224px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 24,
+    "rows": [
+     {
+      "count": 5,
+      "minH": 400.8,
+      "maxH": 510.7,
+      "spread": 109.9,
+      "bottomMax": 2618.1
+     },
+     {
+      "count": 5,
+      "minH": 400.8,
+      "maxH": 510.7,
+      "spread": 109.9,
+      "bottomMax": 3148.7999999999997,
+      "gapFromPrev": 21.9
+     },
+     {
+      "count": 5,
+      "minH": 400.8,
+      "maxH": 491.5,
+      "spread": 90.7,
+      "bottomMax": 3660.3,
+      "gapFromPrev": 21.2
+     },
+     {
+      "count": 5,
+      "minH": 400.8,
+      "maxH": 510.7,
+      "spread": 109.9,
+      "bottomMax": 4191.1,
+      "gapFromPrev": 19.7
+     },
+     {
+      "count": 4,
+      "minH": 400.8,
+      "maxH": 400.8,
+      "spread": 0,
+      "bottomMax": 4611.900000000001,
+      "gapFromPrev": 18.9
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/csdf-1440-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "ubb",
+  "width": 390,
+  "template": "ubs",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "358px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 14,
+    "rows": [
+     {
+      "count": 1,
+      "minH": 621.8,
+      "maxH": 621.8,
+      "spread": 0,
+      "bottomMax": 2773.5
+     },
+     {
+      "count": 1,
+      "minH": 621.8,
+      "maxH": 621.8,
+      "spread": 0,
+      "bottomMax": 3415.3,
+      "gapFromPrev": 21.5
+     },
+     {
+      "count": 1,
+      "minH": 621.8,
+      "maxH": 621.8,
+      "spread": 0,
+      "bottomMax": 4057.1000000000004,
+      "gapFromPrev": 19.7
+     },
+     {
+      "count": 1,
+      "minH": 598.2,
+      "maxH": 598.2,
+      "spread": 0,
+      "bottomMax": 4675.3,
+      "gapFromPrev": 17.9
+     },
+     {
+      "count": 1,
+      "minH": 621.8,
+      "maxH": 621.8,
+      "spread": 0,
+      "bottomMax": 5317.1,
+      "gapFromPrev": 19.7
+     },
+     {
+      "count": 1,
+      "minH": 621.8,
+      "maxH": 621.8,
+      "spread": 0,
+      "bottomMax": 5958.900000000001,
+      "gapFromPrev": 17.9
+     },
+     {
+      "count": 1,
+      "minH": 621.8,
+      "maxH": 621.8,
+      "spread": 0,
+      "bottomMax": 6600.8,
+      "gapFromPrev": 21.1
+     },
+     {
+      "count": 1,
+      "minH": 623.2,
+      "maxH": 623.2,
+      "spread": 0,
+      "bottomMax": 7244,
+      "gapFromPrev": 19.2
+     },
+     {
+      "count": 1,
+      "minH": 598.2,
+      "maxH": 598.2,
+      "spread": 0,
+      "bottomMax": 7862.2,
+      "gapFromPrev": 21
+     },
+     {
+      "count": 1,
+      "minH": 621.8,
+      "maxH": 621.8,
+      "spread": 0,
+      "bottomMax": 8504,
+      "gapFromPrev": 17.8
+     },
+     {
+      "count": 1,
+      "minH": 621.8,
+      "maxH": 621.8,
+      "spread": 0,
+      "bottomMax": 9145.8,
+      "gapFromPrev": 21
+     },
+     {
+      "count": 1,
+      "minH": 598.2,
+      "maxH": 598.2,
+      "spread": 0,
+      "bottomMax": 9764,
+      "gapFromPrev": 19.2
+     },
+     {
+      "count": 1,
+      "minH": 647,
+      "maxH": 647,
+      "spread": 0,
+      "bottomMax": 10431,
+      "gapFromPrev": 21
+     },
+     {
+      "count": 1,
+      "minH": 621.8,
+      "maxH": 621.8,
+      "spread": 0,
+      "bottomMax": 11072.8,
+      "gapFromPrev": 19
+     }
+    ],
+    "overflowingImgs": 5,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/ubb-390-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "ubb",
+  "width": 768,
+  "template": "ubs",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "221.328px 221.328px 221.328px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 14,
+    "rows": [
+     {
+      "count": 3,
+      "minH": 464.8,
+      "maxH": 464.8,
+      "spread": 0,
+      "bottomMax": 1666
+     },
+     {
+      "count": 3,
+      "minH": 495.8,
+      "maxH": 495.8,
+      "spread": 0,
+      "bottomMax": 2181.8,
+      "gapFromPrev": 19
+     },
+     {
+      "count": 3,
+      "minH": 458.2,
+      "maxH": 458.2,
+      "spread": 0,
+      "bottomMax": 2659.8999999999996,
+      "gapFromPrev": 18.2
+     },
+     {
+      "count": 3,
+      "minH": 489.8,
+      "maxH": 489.8,
+      "spread": 0,
+      "bottomMax": 3169.7000000000003,
+      "gapFromPrev": 20.1
+     },
+     {
+      "count": 2,
+      "minH": 520.8,
+      "maxH": 520.8,
+      "spread": 0,
+      "bottomMax": 3710.5,
+      "gapFromPrev": 20.3
+     }
+    ],
+    "overflowingImgs": 5,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/ubb-768-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "ubb",
+  "width": 1024,
+  "template": "ubs",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "225px 225px 225px 225px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 14,
+    "rows": [
+     {
+      "count": 4,
+      "minH": 469.7,
+      "maxH": 469.7,
+      "spread": 0,
+      "bottomMax": 2422.5
+     },
+     {
+      "count": 4,
+      "minH": 500.7,
+      "maxH": 500.7,
+      "spread": 0,
+      "bottomMax": 2943.1,
+      "gapFromPrev": 17.5
+     },
+     {
+      "count": 4,
+      "minH": 494.7,
+      "maxH": 494.7,
+      "spread": 0,
+      "bottomMax": 3457.7999999999997,
+      "gapFromPrev": 21.9
+     },
+     {
+      "count": 2,
+      "minH": 525.7,
+      "maxH": 525.7,
+      "spread": 0,
+      "bottomMax": 4003.3999999999996,
+      "gapFromPrev": 22.2
+     }
+    ],
+    "overflowingImgs": 5,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/ubb-1024-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "ubb",
+  "width": 1440,
+  "template": "ubs",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "224px 224px 224px 224px 224px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 14,
+    "rows": [
+     {
+      "count": 5,
+      "minH": 499.3,
+      "maxH": 499.3,
+      "spread": 0,
+      "bottomMax": 2432.9
+     },
+     {
+      "count": 5,
+      "minH": 493.3,
+      "maxH": 493.3,
+      "spread": 0,
+      "bottomMax": 2946.3,
+      "gapFromPrev": 22.1
+     },
+     {
+      "count": 4,
+      "minH": 524.3,
+      "maxH": 524.3,
+      "spread": 0,
+      "bottomMax": 3490.6000000000004,
+      "gapFromPrev": 18.7
+     }
+    ],
+    "overflowingImgs": 5,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/ubb-1440-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "ubs",
+  "width": 390,
+  "template": "ubs",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "358px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 12,
+    "rows": [
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 1292.2
+     },
+     {
+      "count": 1,
+      "minH": 649.5,
+      "maxH": 649.5,
+      "spread": 0,
+      "bottomMax": 1961.7,
+      "gapFromPrev": 17.8
+     },
+     {
+      "count": 1,
+      "minH": 625.9,
+      "maxH": 625.9,
+      "spread": 0,
+      "bottomMax": 2607.5,
+      "gapFromPrev": 18.3
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 3251,
+      "gapFromPrev": 22.5
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 3894.5,
+      "gapFromPrev": 19
+     },
+     {
+      "count": 1,
+      "minH": 599.9,
+      "maxH": 599.9,
+      "spread": 0,
+      "bottomMax": 4514.4,
+      "gapFromPrev": 20.5
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 5157.9,
+      "gapFromPrev": 20.6
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 5801.4,
+      "gapFromPrev": 22.1
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 6444.9,
+      "gapFromPrev": 18.6
+     },
+     {
+      "count": 1,
+      "minH": 599.9,
+      "maxH": 599.9,
+      "spread": 0,
+      "bottomMax": 7064.7,
+      "gapFromPrev": 20.1
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 7708.2,
+      "gapFromPrev": 20.3
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 8351.7,
+      "gapFromPrev": 21.8
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/ubs-390-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "ubs",
+  "width": 768,
+  "template": "ubs",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "221.328px 221.328px 221.328px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 12,
+    "rows": [
+     {
+      "count": 3,
+      "minH": 520.8,
+      "maxH": 520.8,
+      "spread": 0,
+      "bottomMax": 1289.3
+     },
+     {
+      "count": 3,
+      "minH": 492.4,
+      "maxH": 492.4,
+      "spread": 0,
+      "bottomMax": 1801.6999999999998,
+      "gapFromPrev": 20.7
+     },
+     {
+      "count": 3,
+      "minH": 492.4,
+      "maxH": 492.4,
+      "spread": 0,
+      "bottomMax": 2314.1,
+      "gapFromPrev": 18.3
+     },
+     {
+      "count": 3,
+      "minH": 492.4,
+      "maxH": 492.4,
+      "spread": 0,
+      "bottomMax": 2826.6,
+      "gapFromPrev": 20.9
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/ubs-768-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "ubs",
+  "width": 1024,
+  "template": "ubs",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "225px 225px 225px 225px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 12,
+    "rows": [
+     {
+      "count": 4,
+      "minH": 525.7,
+      "maxH": 525.7,
+      "spread": 0,
+      "bottomMax": 1835.5
+     },
+     {
+      "count": 4,
+      "minH": 497.3,
+      "maxH": 497.3,
+      "spread": 0,
+      "bottomMax": 2352.8,
+      "gapFromPrev": 19.5
+     },
+     {
+      "count": 4,
+      "minH": 497.3,
+      "maxH": 497.3,
+      "spread": 0,
+      "bottomMax": 2870.1000000000004,
+      "gapFromPrev": 22.2
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/ubs-1024-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "ubs",
+  "width": 1440,
+  "template": "ubs",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "224px 224px 224px 224px 224px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 12,
+    "rows": [
+     {
+      "count": 5,
+      "minH": 524.4,
+      "maxH": 524.4,
+      "spread": 0,
+      "bottomMax": 2019
+     },
+     {
+      "count": 5,
+      "minH": 496,
+      "maxH": 496,
+      "spread": 0,
+      "bottomMax": 2535,
+      "gapFromPrev": 21
+     },
+     {
+      "count": 2,
+      "minH": 496,
+      "maxH": 496,
+      "spread": 0,
+      "bottomMax": 3051,
+      "gapFromPrev": 20
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/ubs-1440-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "kucy",
+  "width": 390,
+  "template": "kucy",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "358px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 7,
+    "rows": [
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 2739.8
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 3383.3,
+      "gapFromPrev": 20.2
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 4026.7,
+      "gapFromPrev": 21.7
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 4670.2,
+      "gapFromPrev": 18.3
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 5313.7,
+      "gapFromPrev": 19.8
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 5957.2,
+      "gapFromPrev": 21.3
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 6600.7,
+      "gapFromPrev": 17.8
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/kucy-390-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "kucy",
+  "width": 768,
+  "template": "kucy",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "221.328px 221.328px 221.328px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 7,
+    "rows": [
+     {
+      "count": 3,
+      "minH": 466.4,
+      "maxH": 466.4,
+      "spread": 0,
+      "bottomMax": 1428.9
+     },
+     {
+      "count": 3,
+      "minH": 466.4,
+      "maxH": 466.4,
+      "spread": 0,
+      "bottomMax": 1915.3000000000002,
+      "gapFromPrev": 21.1
+     },
+     {
+      "count": 1,
+      "minH": 466.4,
+      "maxH": 466.4,
+      "spread": 0,
+      "bottomMax": 2401.7,
+      "gapFromPrev": 19.7
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/kucy-768-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "kucy",
+  "width": 1024,
+  "template": "kucy",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "225px 225px 225px 225px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 7,
+    "rows": [
+     {
+      "count": 4,
+      "minH": 471.3,
+      "maxH": 471.3,
+      "spread": 0,
+      "bottomMax": 2342
+     },
+     {
+      "count": 3,
+      "minH": 471.3,
+      "maxH": 471.3,
+      "spread": 0,
+      "bottomMax": 2833.3,
+      "gapFromPrev": 18
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/kucy-1024-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "kucy",
+  "width": 1440,
+  "template": "kucy",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "224px 224px 224px 224px 224px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 7,
+    "rows": [
+     {
+      "count": 5,
+      "minH": 470,
+      "maxH": 470,
+      "spread": 0,
+      "bottomMax": 1704.3
+     },
+     {
+      "count": 2,
+      "minH": 470,
+      "maxH": 470,
+      "spread": 0,
+      "bottomMax": 2194.3,
+      "gapFromPrev": 20.7
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/kucy-1440-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "kizomba-union-cy",
+  "width": 390,
+  "template": "template-1",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "358px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 7,
+    "rows": [
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 1948.8
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 2592.3,
+      "gapFromPrev": 21.2
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 3235.7,
+      "gapFromPrev": 17.7
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 3879.2,
+      "gapFromPrev": 19.3
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 4522.7,
+      "gapFromPrev": 20.8
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 5166.2,
+      "gapFromPrev": 22.3
+     },
+     {
+      "count": 1,
+      "minH": 623.5,
+      "maxH": 623.5,
+      "spread": 0,
+      "bottomMax": 5809.7,
+      "gapFromPrev": 18.8
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/kizomba-union-cy-390-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "kizomba-union-cy",
+  "width": 768,
+  "template": "template-1",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "221.328px 221.328px 221.328px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 7,
+    "rows": [
+     {
+      "count": 3,
+      "minH": 496.4,
+      "maxH": 496.4,
+      "spread": 0,
+      "bottomMax": 1442.9
+     },
+     {
+      "count": 3,
+      "minH": 466.4,
+      "maxH": 466.4,
+      "spread": 0,
+      "bottomMax": 1929.3000000000002,
+      "gapFromPrev": 22.1
+     },
+     {
+      "count": 1,
+      "minH": 466.4,
+      "maxH": 466.4,
+      "spread": 0,
+      "bottomMax": 2415.7,
+      "gapFromPrev": 20.7
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/kizomba-union-cy-768-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "kizomba-union-cy",
+  "width": 1024,
+  "template": "template-1",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "225px 225px 225px 225px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 7,
+    "rows": [
+     {
+      "count": 4,
+      "minH": 501.3,
+      "maxH": 501.3,
+      "spread": 0,
+      "bottomMax": 1618
+     },
+     {
+      "count": 3,
+      "minH": 471.3,
+      "maxH": 471.3,
+      "spread": 0,
+      "bottomMax": 2109.3,
+      "gapFromPrev": 22
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/kizomba-union-cy-1024-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "kizomba-union-cy",
+  "width": 1440,
+  "template": "template-1",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "224px 224px 224px 224px 224px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 7,
+    "rows": [
+     {
+      "count": 5,
+      "minH": 500,
+      "maxH": 500,
+      "spread": 0,
+      "bottomMax": 1904.3
+     },
+     {
+      "count": 2,
+      "minH": 470,
+      "maxH": 470,
+      "spread": 0,
+      "bottomMax": 2394.3,
+      "gapFromPrev": 20.7
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/kizomba-union-cy-1440-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "united-by-salsa",
+  "width": 390,
+  "template": "template-1",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "358px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 12,
+    "rows": [
+     {
+      "count": 1,
+      "minH": 640.7,
+      "maxH": 640.7,
+      "spread": 0,
+      "bottomMax": 999.4000000000001
+     },
+     {
+      "count": 1,
+      "minH": 640.7,
+      "maxH": 640.7,
+      "spread": 0,
+      "bottomMax": 1660.1,
+      "gapFromPrev": 20.6
+     },
+     {
+      "count": 1,
+      "minH": 640.7,
+      "maxH": 640.7,
+      "spread": 0,
+      "bottomMax": 2320.8,
+      "gapFromPrev": 19.9
+     },
+     {
+      "count": 1,
+      "minH": 640.7,
+      "maxH": 640.7,
+      "spread": 0,
+      "bottomMax": 2981.5,
+      "gapFromPrev": 19.2
+     },
+     {
+      "count": 1,
+      "minH": 640.7,
+      "maxH": 640.7,
+      "spread": 0,
+      "bottomMax": 3642.2,
+      "gapFromPrev": 18.5
+     },
+     {
+      "count": 1,
+      "minH": 621.8,
+      "maxH": 621.8,
+      "spread": 0,
+      "bottomMax": 4284.1,
+      "gapFromPrev": 17.8
+     },
+     {
+      "count": 1,
+      "minH": 621.8,
+      "maxH": 621.8,
+      "spread": 0,
+      "bottomMax": 4925.900000000001,
+      "gapFromPrev": 20.9
+     },
+     {
+      "count": 1,
+      "minH": 640.7,
+      "maxH": 640.7,
+      "spread": 0,
+      "bottomMax": 5586.599999999999,
+      "gapFromPrev": 19.1
+     },
+     {
+      "count": 1,
+      "minH": 621.8,
+      "maxH": 621.8,
+      "spread": 0,
+      "bottomMax": 6228.400000000001,
+      "gapFromPrev": 18.4
+     },
+     {
+      "count": 1,
+      "minH": 621.8,
+      "maxH": 621.8,
+      "spread": 0,
+      "bottomMax": 6870.2,
+      "gapFromPrev": 21.6
+     },
+     {
+      "count": 1,
+      "minH": 640.7,
+      "maxH": 640.7,
+      "spread": 0,
+      "bottomMax": 7530.9,
+      "gapFromPrev": 19.8
+     },
+     {
+      "count": 1,
+      "minH": 640.7,
+      "maxH": 640.7,
+      "spread": 0,
+      "bottomMax": 8191.7,
+      "gapFromPrev": 19.1
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   },
+   {
+    "cls": "teachers-grid djs-grid",
+    "alignItems": "normal",
+    "cols": "230px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 3,
+    "rows": [
+     {
+      "count": 1,
+      "minH": 427.6,
+      "maxH": 427.6,
+      "spread": 0,
+      "bottomMax": 8907.300000000001
+     },
+     {
+      "count": 1,
+      "minH": 427.6,
+      "maxH": 427.6,
+      "spread": 0,
+      "bottomMax": 9354.800000000001,
+      "gapFromPrev": 17.7
+     },
+     {
+      "count": 1,
+      "minH": 427.6,
+      "maxH": 427.6,
+      "spread": 0,
+      "bottomMax": 9802.4,
+      "gapFromPrev": 20.2
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/united-by-salsa-390-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "united-by-salsa",
+  "width": 768,
+  "template": "template-1",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "221.328px 221.328px 221.328px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 12,
+    "rows": [
+     {
+      "count": 3,
+      "minH": 513.7,
+      "maxH": 513.7,
+      "spread": 0,
+      "bottomMax": 1661.2
+     },
+     {
+      "count": 3,
+      "minH": 483.7,
+      "maxH": 483.7,
+      "spread": 0,
+      "bottomMax": 2164.7999999999997,
+      "gapFromPrev": 18.8
+     },
+     {
+      "count": 3,
+      "minH": 483.7,
+      "maxH": 483.7,
+      "spread": 0,
+      "bottomMax": 2668.5,
+      "gapFromPrev": 20.2
+     },
+     {
+      "count": 3,
+      "minH": 483.7,
+      "maxH": 483.7,
+      "spread": 0,
+      "bottomMax": 3172.2,
+      "gapFromPrev": 21.5
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   },
+   {
+    "cls": "teachers-grid djs-grid",
+    "alignItems": "normal",
+    "cols": "230px 230px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 3,
+    "rows": [
+     {
+      "count": 2,
+      "minH": 427.6,
+      "maxH": 427.6,
+      "spread": 0,
+      "bottomMax": 3925.7999999999997
+     },
+     {
+      "count": 1,
+      "minH": 427.6,
+      "maxH": 427.6,
+      "spread": 0,
+      "bottomMax": 4373.3,
+      "gapFromPrev": 19.2
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/united-by-salsa-768-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "united-by-salsa",
+  "width": 1024,
+  "template": "template-1",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "225px 225px 225px 225px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 12,
+    "rows": [
+     {
+      "count": 4,
+      "minH": 518.5,
+      "maxH": 518.5,
+      "spread": 0,
+      "bottomMax": 1989.3
+     },
+     {
+      "count": 4,
+      "minH": 488.6,
+      "maxH": 488.6,
+      "spread": 0,
+      "bottomMax": 2497.9,
+      "gapFromPrev": 20.7
+     },
+     {
+      "count": 4,
+      "minH": 488.6,
+      "maxH": 488.6,
+      "spread": 0,
+      "bottomMax": 3006.5,
+      "gapFromPrev": 22.1
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   },
+   {
+    "cls": "teachers-grid djs-grid",
+    "alignItems": "normal",
+    "cols": "230px 230px 230px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 3,
+    "rows": [
+     {
+      "count": 3,
+      "minH": 427.6,
+      "maxH": 427.6,
+      "spread": 0,
+      "bottomMax": 3779
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/united-by-salsa-1024-before.png",
+  "consoleErrors": []
+ },
+ {
+  "tenant": "united-by-salsa",
+  "width": 1440,
+  "template": "template-1",
+  "grids": [
+   {
+    "cls": "teachers-grid",
+    "alignItems": "normal",
+    "cols": "224px 224px 224px 224px 224px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 12,
+    "rows": [
+     {
+      "count": 5,
+      "minH": 517.2,
+      "maxH": 517.2,
+      "spread": 0,
+      "bottomMax": 2361.8
+     },
+     {
+      "count": 5,
+      "minH": 487.2,
+      "maxH": 487.2,
+      "spread": 0,
+      "bottomMax": 2869,
+      "gapFromPrev": 18.2
+     },
+     {
+      "count": 2,
+      "minH": 487.2,
+      "maxH": 487.2,
+      "spread": 0,
+      "bottomMax": 3376.2999999999997,
+      "gapFromPrev": 21
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   },
+   {
+    "cls": "teachers-grid djs-grid",
+    "alignItems": "normal",
+    "cols": "230px 230px 230px 0px",
+    "display": "grid",
+    "rowGap": "20px",
+    "n": 3,
+    "rows": [
+     {
+      "count": 3,
+      "minH": 427.6,
+      "maxH": 427.6,
+      "spread": 0,
+      "bottomMax": 4148.900000000001
+     }
+    ],
+    "overflowingImgs": 0,
+    "overflowingCards": 0
+   }
+  ],
+  "cssHasTeachersGrid": 1,
+  "screenshot": "C:/desktopContents/projects/SaaS/E2ETests/visual-baselines/kefi-align/united-by-salsa-1440-before.png",
+  "consoleErrors": []
+ }
+]

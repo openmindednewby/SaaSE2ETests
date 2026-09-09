@@ -149,6 +149,10 @@ export function buildProjects(): ProjectConfig {
     { name: 'health', workers: 1, testMatch: /health\/.*\.spec\.ts/, dependencies: ['setup'] },
     chunk('diagnostics', 'diagnostics', [], { multiTenant: true, app: 'katalogos' }),
     { name: 'logging', workers: 1, testMatch: /logging\/(?!stress).*\.spec\.ts/, dependencies: ['setup'] },
+    // The four `logging/stress-*.spec.ts` files are EXCLUDED from the `logging`
+    // project above by its `(?!stress)` guard. Until now no other project picked
+    // them up, so they were matched by NO runner at all - not green, absent.
+    { name: 'logging-stress', workers: 1, testMatch: /logging\/stress-.*\.spec\.ts/, dependencies: ['setup'] },
     { name: 'monitoring', workers: 1, testMatch: /monitoring\/.*\.spec\.ts/, dependencies: ['setup'] },
     { name: 'cross-product-isolation', workers: 1, testMatch: /cross-product-isolation\/.*\.spec\.ts/, dependencies: ['setup'] },
     // Fleet-wide i18n raw-key guard. Portal-agnostic: it drives agora/erevna/katalogos through
@@ -350,6 +354,9 @@ export function buildProjects(): ProjectConfig {
     chunk('notifications-nav', 'notifications', ['notification-screen-navigation', 'health'], KAT),
     chunk('notifications-alerts', 'notifications', ['notification-toast', 'notification-badge', 'cross-tab'], KAT),
     chunk('notifications-infra', 'notifications', ['realtime', 'connection'], KAT),
+    // `notifications/stress-*.spec.ts` were in none of the four chunks above and
+    // therefore in no project at all. Own chunk so they are selectable.
+    chunk('notifications-stress', 'notifications', ['stress-resilience', 'stress-volume'], KAT),
 
     // ---- Theme (2 chunks) → katalogos-web ----
     chunk('theme-settings', 'theme', ['theme-settings', 'theme-persistence-auth', 'theme-persistence-refresh'], KAT),
@@ -751,7 +758,7 @@ export function buildProjects(): ProjectConfig {
       name: specName,
       workers: 1,
       timeout: 600_000,
-      testMatch: new RegExp(`kefi/${specName}\\.spec\\.ts`),
+      testMatch: new RegExp(`kefi/${specName}(-api|-ui)?\\.spec\\.ts`),
       use: EVENT_OPS_BROWSER,
     })),
     {
@@ -763,7 +770,7 @@ export function buildProjects(): ProjectConfig {
       name: 'kefi-ubb-mobile',
       workers: 1,
       timeout: 600_000,
-      testMatch: /kefi\/kefi-ubb-mobile\.spec\.ts/,
+      testMatch: /kefi\/kefi-ubb-mobile-(register|payment)\.spec\.ts/,
       use: EVENT_OPS_MOBILE,
     },
     {

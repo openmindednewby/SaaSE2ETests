@@ -13,6 +13,7 @@
  */
 
 import { KefiAdminClient, type CanaryCleanupResult } from './kefiAdminClient.js';
+import { recordCanarySwept } from './kefiCanaryRegistry.js';
 
 export interface TeardownOptions {
   /** Re-use an existing admin client to avoid a second token mint. */
@@ -31,6 +32,10 @@ export async function cleanupKefiCanary(
   const adminClient = options.adminClient ?? new KefiAdminClient();
   try {
     const result = await adminClient.canaryCleanup(canaryId);
+    // Mark swept ONLY on success. The catch below deliberately swallows —
+    // teardown must not mask a test failure — so leaving the id PENDING is what
+    // makes a swallowed failure observable to the shared global teardown.
+    recordCanarySwept(canaryId);
     process.stdout.write(
       `[kefi-teardown] canaryId=${canaryId} tenants=${result.tenantsDeleted} users=${result.usersDeleted} ingresses=${result.ingressesDeleted} certs=${result.certificatesDeleted} secrets=${result.secretsDeleted}\n`,
     );

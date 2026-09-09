@@ -20,23 +20,8 @@
 import axios, { type AxiosInstance } from 'axios';
 import { setTimeout as delay } from 'timers/promises';
 import { sharedHttpsAgent } from './http-agent.js';
-
-/** Shape of a single log stream returned by Loki */
-export interface LokiStream {
-  stream: Record<string, string>;
-  values: Array<[string, string]>; // [nanosecond-timestamp, log-line]
-}
-
-/** Shape of a Loki query result */
-export interface LokiQueryResult {
-  status: string;
-  data: {
-    resultType: 'streams' | 'matrix' | 'vector' | 'scalar';
-    result: LokiStream[];
-    stats?: Record<string, unknown>;
-  };
-}
-
+import type { LokiStream, LokiQueryResult } from './loki-types.js';
+export type { LokiStream, LokiQueryResult };
 /** Timeout for individual Loki API requests */
 const API_TIMEOUT_MS = 15000;
 

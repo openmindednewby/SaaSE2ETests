@@ -30,14 +30,16 @@
  *   }
  */
 
+import { HTTP_CREATED, HTTP_NOT_FOUND, HTTP_NO_CONTENT, HTTP_OK } from './kefiHttpStatus.js';
 import { KefiAdminClient } from './kefiAdminClient.js';
+import { recordCleaned, recordCreated } from './kefiCanaryRegistry.js';
+import { assertAttendeesAbsent, resolveAttendeeIdByEmail } from './kefiEventOpsLeaks.js';
 import {
   KefiAccessLinkClient,
   type CreateAccessLinkInput,
   type CreatedAccessLink,
 } from './kefiAccessLinkClient.js';
 import { KefiAttendeeDeleteClient } from './kefiAttendeeDeleteClient.js';
-import { KefiDoorLedgerClient } from './kefiDoorLedgerClient.js';
 import { KefiImportClient, type ImportAttendeeRow } from './kefiImportClient.js';
 import {
   KefiMessageTemplateClient,
@@ -52,8 +54,6 @@ import {
   type KefiFixtureTenant,
 } from './kefiFixtureTenant.js';
 
-const HTTP_OK = 200;
-const HTTP_CREATED = 201;
 
 /** One attendee this suite created, and everything a spec needs about it. */
 export interface CreatedAttendee {
@@ -125,9 +125,19 @@ export async function openEventOps(): Promise<EventOpsSession> {
   const deletes = new KefiAttendeeDeleteClient();
   const marker = newEventOpsMarker();
 
+  // Every id is declared to the run-scoped leak registry the moment it exists.
+  // `cleanup()` returning a failures array was never enough: a spec can discard
+  // the array (kefi-email-delivery.spec.ts:114) or never call cleanup at all,
+  // and nothing turned red. The registry is read by the shared global teardown,
+  // which sweeps what is left and FAILS the run - see kefiCanaryRegistry.ts.
   const createdAttendees: string[] = [];
   const createdLinks: string[] = [];
   const createdTemplates: string[] = [];
+
+  function declare(kind: 'attendee' | 'link' | 'template', bucket: string[], id: string): void {
+    bucket.push(id);
+    recordCreated(kind, id);
+  }
 
   async function registerAttendee(
     discriminator: string,
@@ -155,7 +165,7 @@ export async function openEventOps(): Promise<EventOpsSession> {
     }
 
     const data = resp.data as { attendeeExternalId: string; passCode: string; priceEur: number };
-    createdAttendees.push(data.attendeeExternalId);
+    declare('attendee', createdAttendees, data.attendeeExternalId);
     return {
       externalId: data.attendeeExternalId,
       name: 'E2E',
@@ -181,8 +191,8 @@ export async function openEventOps(): Promise<EventOpsSession> {
 
     // The import summary carries counts, not ids — resolve the new row's id from
     // the organizer ledger by the unique email we just imported.
-    const externalId = await resolveAttendeeIdByEmail(row.email ?? '');
-    createdAttendees.push(externalId);
+    const externalId = await resolveAttendeeIdByEmail(bearer, tenant, row.email ?? '');
+    declare('attendee', createdAttendees, externalId);
     return {
       externalId,
       name: row.name,
@@ -193,40 +203,15 @@ export async function openEventOps(): Promise<EventOpsSession> {
     };
   }
 
-  /** Look up an attendee id by its (unique, suite-generated) email. */
-  async function resolveAttendeeIdByEmail(email: string): Promise<string> {
-    const ledger = new KefiDoorLedgerClient();
-    const resp = await ledger.getLedgerByBearer(
-      tenant.slug,
-      bearer,
-      tenant.eventExternalId,
-    );
-    if (resp.status !== HTTP_OK) {
-      throw new Error(
-        `[kefiEventOpsFixture] could not read the ledger to resolve the imported ` +
-          `attendee id (status ${resp.status})`,
-      );
-    }
-    const view = resp.data as { attendees: { email: string | null; attendeeExternalId: string }[] };
-    const match = view.attendees.find((a) => a.email === email);
-    if (match === undefined) {
-      throw new Error(
-        `[kefiEventOpsFixture] imported attendee ${email} is not in the ledger — the ` +
-          'import reported success but created no row.',
-      );
-    }
-    return match.attendeeExternalId;
-  }
-
   async function mintLink(input: CreateAccessLinkInput): Promise<MintedLink> {
     const minted = await links.mintAndCaptureToken(bearer, tenant.eventExternalId, input);
-    createdLinks.push(minted.externalId);
+    declare('link', createdLinks, minted.externalId);
     return { ...minted, scope: input.scope };
   }
 
   async function createTemplate(input: CreateMessageTemplateInput): Promise<MessageTemplate> {
     const created = await templates.createOrThrow(bearer, tenant.eventExternalId, input);
-    createdTemplates.push(created.externalId);
+    declare('template', createdTemplates, created.externalId);
     return created;
   }
 
@@ -237,8 +222,10 @@ export async function openEventOps(): Promise<EventOpsSession> {
       try {
         const resp = await templates.remove(bearer, tenant.eventExternalId, templateId);
         // 204 = deleted, 404 = the spec already deleted it. Anything else is real.
-        if (resp.status !== 204 && resp.status !== 404) {
+        if (resp.status !== HTTP_NO_CONTENT && resp.status !== HTTP_NOT_FOUND) {
           failures.push(`delete message-template ${templateId} → ${resp.status}`);
+        } else {
+          recordCleaned('template', templateId);
         }
       } catch (error) {
         failures.push(`delete message-template ${templateId} threw: ${String(error)}`);
@@ -249,14 +236,17 @@ export async function openEventOps(): Promise<EventOpsSession> {
       try {
         const resp = await links.revoke(bearer, tenant.eventExternalId, linkId);
         // 204 = revoked, 404 = already gone. Anything else is a real failure.
-        if (resp.status !== 204 && resp.status !== 404) {
+        if (resp.status !== HTTP_NO_CONTENT && resp.status !== HTTP_NOT_FOUND) {
           failures.push(`revoke access-link ${linkId} → ${resp.status}`);
+        } else {
+          recordCleaned('link', linkId);
         }
       } catch (error) {
         failures.push(`revoke access-link ${linkId} threw: ${String(error)}`);
       }
     }
 
+    const deleteAccepted: string[] = [];
     for (const attendeeId of createdAttendees) {
       try {
         const resp = await deletes.deleteAttendee({
@@ -264,13 +254,20 @@ export async function openEventOps(): Promise<EventOpsSession> {
           eventExternalId: tenant.eventExternalId,
           attendeeExternalId: attendeeId,
         });
-        if (resp.status !== 204 && resp.status !== 404) {
+        if (resp.status !== HTTP_NO_CONTENT && resp.status !== HTTP_NOT_FOUND) {
           failures.push(`delete attendee ${attendeeId} → ${resp.status}`);
+        } else {
+          deleteAccepted.push(attendeeId);
         }
       } catch (error) {
         failures.push(`delete attendee ${attendeeId} threw: ${String(error)}`);
       }
     }
+
+    // VERIFY ABSENCE, do not trust the 204. One extra ledger read proves the
+    // row is gone from the live roster; only then is the id marked cleaned. A
+    // 204 over a row that is still there would read as a clean teardown.
+    failures.push(...(await assertAttendeesAbsent(bearer, tenant, deleteAccepted)).messages);
 
     createdTemplates.length = 0;
     createdLinks.length = 0;

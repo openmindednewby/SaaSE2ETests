@@ -21,6 +21,8 @@
 
 import * as crypto from 'node:crypto';
 
+import { recordCanaryMinted } from './kefiCanaryRegistry.js';
+
 const CANARY_ID_BYTES = 4;
 const CANARY_SLUG_PREFIX_TEMPLATE = 'e2c-{0}-';
 
@@ -50,6 +52,11 @@ export function newCanaryContext(opts?: { mailbox?: string }): KefiCanaryContext
   if (!localPart || !domain) {
     throw new Error(`[kefiCanaryIds] Malformed mailbox address: ${mailbox}`);
   }
+  // Register at the MINT point, not at the call site: this is the single place
+  // a Kefi canary id is born, so no spec can forget to declare one. The shared
+  // global teardown sweeps whatever is still pending and FAILS the run if it
+  // cannot — see helpers/kefi/kefiCanaryRegistry.ts.
+  recordCanaryMinted(canaryId);
   return {
     canaryId,
     slugPrefix,

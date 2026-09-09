@@ -37,6 +37,8 @@ import type { FullConfig } from '@playwright/test';
 import axios, { type AxiosInstance } from 'axios';
 
 import { releaseCanaryLock } from '../helpers/canary-lock.js';
+import { clearCanaryRegistry } from '../helpers/kefi/kefiCanaryRegistry.js';
+import { sweepPendingKefiCanaries, sweepPendingEventOpsRows } from './canary-kefi-sweeps.js';
 import { sharedHttpsAgent } from '../helpers/http-agent.js';
 
 interface CleanupServiceConfig {
@@ -141,7 +143,11 @@ async function cleanupOneService(
  * intermediate processes (skipping the sweep but still releasing the lock) and
  * calls this once at the end.
  */
-export async function runCanaryCleanup(runId: string, accessToken: string, target: string): Promise<void> {
+export async function runCanaryCleanup(
+  runId: string,
+  accessToken: string | null,
+  target: string,
+): Promise<void> {
   process.stdout.write(
     [
       '',
@@ -156,8 +162,21 @@ export async function runCanaryCleanup(runId: string, accessToken: string, targe
   // ordered log output. The volume is 6 calls; latency is not a concern here.
   let successCount = 0;
   let failCount = 0;
-  for (const service of SERVICES) {
-    const result = await cleanupOneService(service, runId, accessToken);
+  // A missing superUser JWT disables the six legacy slices ONLY. The Kefi
+  // sweeps below authenticate through KefiAdminClient / the fixture-tenant
+  // credentials, so leak detection must NOT be skipped with them — that early
+  // return was a second way for a leak to pass unobserved.
+  // Pair each slice with the (non-null) token so the compiler carries the
+  // narrowing into the loop, instead of a non-null assertion.
+  const legacySlices: ReadonlyArray<[CleanupServiceConfig, string]> =
+    accessToken === null ? [] : SERVICES.map((service) => [service, accessToken]);
+  if (accessToken === null) {
+    process.stdout.write(
+      '  [warn] legacy slices        skipped - E2E_CANARY_ACCESS_TOKEN unset. Kefi leak detection still runs.\n',
+    );
+  }
+  for (const [service, token] of legacySlices) {
+    const result = await cleanupOneService(service, runId, token);
     if (result.ok) {
       successCount += 1;
       process.stdout.write(`  [ok]   ${service.name.padEnd(20)} ${result.detail}\n`);
@@ -167,10 +186,14 @@ export async function runCanaryCleanup(runId: string, accessToken: string, targe
     }
   }
 
+  const leakedKefiCanaries = await sweepPendingKefiCanaries();
+  const leakedEventOps = await sweepPendingEventOpsRows();
+  if (leakedKefiCanaries.length === 0 && leakedEventOps.length === 0) clearCanaryRegistry();
+
   process.stdout.write(
     [
       '',
-      `  summary: ${successCount} ok, ${failCount} failed`,
+      `  summary: ${successCount} ok, ${failCount} failed (+ Kefi: ${leakedKefiCanaries.length} canaries, ${leakedEventOps.length} fixture rows leaked)`,
       failCount > 0
         ? '  orphan-cleanup CronJob will sweep any leaked e2ec-* records on the next weekly run.'
         : '  all services cleaned successfully.',
@@ -178,6 +201,27 @@ export async function runCanaryCleanup(runId: string, accessToken: string, targe
       '',
     ].join('\n'),
   );
+
+  // THE GATE. Everything above only PRINTS, and a printed warning has never
+  // turned a suite red - which is how orphan attendees and canary tenants
+  // accumulated behind a green `6 ok, 0 failed`. A canary id minted against a
+  // real environment that could not be swept is unrecovered production data,
+  // so it FAILS the run: Playwright surfaces a globalTeardown throw as a run
+  // failure and exits non-zero.
+  const reasons: string[] = [];
+  if (leakedKefiCanaries.length > 0) {
+    reasons.push(
+      `${leakedKefiCanaries.length} Kefi canary id(s) could not be swept: ${leakedKefiCanaries.join(', ')} ` +
+        '(sweep via DELETE {KEFI_API_URL}/api/v1/internal/canary-cleanup?canaryId={id})',
+    );
+  }
+  if (leakedEventOps.length > 0) {
+    reasons.push(
+      `${leakedEventOps.length} row(s) on the LIVE Kefi fixture tenant could not be removed: ` +
+        leakedEventOps.map((r) => `${r.kind} ${r.id}`).join(', '),
+    );
+  }
+  if (reasons.length > 0) throw new Error(`[canary-teardown] ${reasons.join(' | ')}`);
 }
 
 async function canaryGlobalTeardown(_config: FullConfig): Promise<void> {
@@ -219,13 +263,13 @@ async function canaryGlobalTeardown(_config: FullConfig): Promise<void> {
     if (!accessToken) {
       process.stderr.write(
         `[canary-teardown] WARN: E2E_CANARY_ACCESS_TOKEN unset for runId=${runId}.\n` +
-          '  Cleanup endpoints will not be called.\n' +
-          `  Orphan-cleanup CronJob will sweep e2ec-${runId.slice(0, 8)}-* on next run.\n`,
+          '  The six legacy cleanup endpoints will not be called.\n' +
+          `  Orphan-cleanup CronJob will sweep e2ec-${runId.slice(0, 8)}-* on next run.\n` +
+          '  Kefi leak detection STILL RUNS below.\n',
       );
-      return;
     }
 
-    await runCanaryCleanup(runId, accessToken, target);
+    await runCanaryCleanup(runId, accessToken ?? null, target);
   } finally {
     releaseCanaryLock(runId);
   }
