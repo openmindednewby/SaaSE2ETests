@@ -150,3 +150,36 @@ export async function adverseMediaCapability(
   const body = (await res.json()) as { adverseMedia?: AdverseMediaCapability };
   return body.adverseMedia ?? null;
 }
+
+/**
+ * POST a multipart body to an AML API path with the same dual-auth headers as {@link screen}.
+ *
+ * 🔴 SAME HAND-ASSEMBLED LIMIT as {@link amlGet}, and it matters more here than anywhere else in this
+ * file. `apps/aml-v2/src/api/client.ts:345-352` builds its OWN `FormData` (`file` + a String()'d
+ * `adverseMedia` form field). This helper builds a DIFFERENT one. So it covers the SERVER's multipart
+ * contract — that the endpoint accepts a file plus a string form field and applies the flag — and it
+ * is structurally incapable of observing a defect in the app client's shape. Pinning client.ts:345-352
+ * is a unit-level job in apps/aml-v2 (AM-READY-5 §6), not something this tier can fake.
+ *
+ * `tryRequest` has no multipart option, so this calls Playwright directly and catches the transport
+ * error itself to keep the same null-on-unreachable contract.
+ */
+export async function amlUpload(
+  request: APIRequestContext,
+  path: string,
+  multipart: Record<string, string | { name: string; mimeType: string; buffer: Buffer }>,
+): Promise<APIResponse | null> {
+  if (!AML_API_KEY) return null;
+  try {
+    return await request.post(`${AML_API_URL}${path}`, {
+      multipart,
+      headers: {
+        'X-Api-Key': AML_API_KEY,
+        Authorization: `Bearer ${AML_API_KEY}`,
+      },
+      timeout: 60_000,
+    });
+  } catch {
+    return null; // transport failure — the caller test.skips rather than false-failing
+  }
+}

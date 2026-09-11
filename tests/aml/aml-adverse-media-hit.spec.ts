@@ -134,6 +134,11 @@ async function requireAvailableStage(
 
 test.describe('AML adverse media — switched on @aml-api', () => {
   test.beforeEach(async ({ request }) => {
+    // Budget, not flake: this screens the WHOLE positive corpus sequentially, and each screen()
+    // is allowed 25s by aml-helpers. Under the 30s default the test times out whenever more than
+    // one subject is slow (observed 2026-09-11: timeout at 30.0s, then a clean pass). Raising the
+    // cap fixes the measurement window; it does not weaken an assertion.
+    test.setTimeout(180_000);
     if (!AML_API_KEY) test.skip(true, 'AML_API_KEY is not set — cannot authenticate.');
     if (!(await amlReachable(request))) test.skip(true, `AML API not reachable at ${AML_API_URL}.`);
   });
