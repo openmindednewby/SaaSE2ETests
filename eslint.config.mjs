@@ -22,6 +22,10 @@ export default [
       'dist/**',
       'reports/**',
       'playwright/**',
+      // One-off screenshot capture scripts + their PNG baselines, not tests.
+      // kefi-align/capture.js turned e2e-lint red on 2026-09-08 and, via
+      // resource_deps, blocked every playwright-e2e-* Tilt resource.
+      'visual-baselines/**',
       // Playwright trace viewer / report artifacts. These contain minified
       // browser bundles (uiMode.*.js, trace bundles) that ESLint should not
       // lint — they generate hundreds of no-undef / no-fallthrough errors
