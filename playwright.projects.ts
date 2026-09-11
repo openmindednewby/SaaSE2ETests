@@ -197,6 +197,17 @@ export function buildProjects(): ProjectConfig {
     // (default: our staging aml-screening). NO `dependencies: ['setup']` — like agora, it mints nothing from
     // the legacy BaseClient login; every spec `test.skip`s gracefully when the service/key is absent.
     { name: 'aml-api', workers: 1, testMatch: /aml\/aml-.*(?<!\.ui)\.spec\.ts/ },
+    // AML @ui tier — AM-READY-5 §3.6. The console-error smoke over the DEPLOYED aml-v2 console, which
+    // bff-aml serves per-path at <host>/app (personalServerNotes/k8s/aml/bff-aml.yml:63), so the
+    // baseURL carries the /app prefix. It exists because the @api tier above hand-assembles every
+    // request and is therefore structurally blind to a client-side ReferenceError. NO
+    // `dependencies: ['setup']`: it drives the aml-identity OpenIddict login itself.
+    {
+      name: 'aml-ui',
+      workers: 1,
+      testMatch: /aml\/.*\.ui\.spec\.ts/,
+      use: { ...CHROME, ignoreHTTPSErrors: true },
+    },
     // Agora (eShop) — @api tier. Health probes, the full merchant-admin CRUD surface
     // (products / categories / coupons / stock / shop settings), and the cross-tenant
     // isolation rig. Seed-based, no browser, seconds.
