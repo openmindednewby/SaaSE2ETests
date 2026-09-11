@@ -74,19 +74,35 @@ test.describe('AM-READY-5 §3.6 — console-error smoke over the REAL aml-v2 con
       page,
     }) => {
       test.setTimeout(180_000);
-      await signIn(page, screen.path); // BEFORE the listeners: the login page's own console is not this spec's subject
       const consoleErrors: string[] = [];
       const pageErrors: string[] = [];
       const failedRequests: string[] = [];
       const apiRequests: string[] = [];
 
+      // Listeners go on BEFORE signIn, gated to the first main-frame commit on the console host AFTER
+      // the IdP. MEASURED 2026-09-11: signIn's returnUrl already lands on the screen, and a second
+      // `goto` to the same URL aborted that page's own in-flight boot fetches (`/bff/me`,
+      // `mentions?pageSize=50`, `index-state`, a font) — 4/4 reds that were the harness, not the
+      // product. The login page's own console is still not this spec's subject, hence the gate.
+      const amlHost = new URL(AML_WEB_URL).host;
+      let seenIdp = false;
+      let observing = false;
+      page.on('framenavigated', frame => {
+        if (frame !== page.mainFrame()) return;
+        const host = new URL(frame.url()).host;
+        if (host === IDP_HOST) seenIdp = true;
+        else if (seenIdp && host === amlHost) observing = true;
+      });
       page.on('console', message => {
-        if (message.type() === 'error') consoleErrors.push(`${message.text()} @ ${message.location().url}`);
+        if (observing && message.type() === 'error')
+          consoleErrors.push(`${message.text()} @ ${message.location().url}`);
       });
       // A `ReferenceError` at module scope surfaces as pageerror, NOT as a console message.
-      page.on('pageerror', error => pageErrors.push(`${error.name}: ${error.message}`));
+      page.on('pageerror', error => {
+        if (observing) pageErrors.push(`${error.name}: ${error.message}`);
+      });
       page.on('requestfailed', request => {
-        if (request.url().startsWith(new URL(AML_WEB_URL).origin))
+        if (observing && request.url().startsWith(new URL(AML_WEB_URL).origin))
           failedRequests.push(`${request.method()} ${request.url()} — ${request.failure()?.errorText}`);
       });
       // 4xx/5xx BODIES are captured, not just statuses. A bare "403" reads as an authz decision; the
@@ -95,7 +111,7 @@ test.describe('AM-READY-5 §3.6 — console-error smoke over the REAL aml-v2 con
       const rejectionBodies: Promise<string>[] = [];
       page.on('response', response => {
         const url = response.url();
-        if (!url.startsWith(new URL(AML_WEB_URL).origin)) return;
+        if (!observing || !url.startsWith(new URL(AML_WEB_URL).origin)) return;
         if (url.includes('/v1/') || url.includes('/bff/')) apiRequests.push(`${response.status()} ${url}`);
         if (response.status() >= 500) failedRequests.push(`${response.status()} ${url}`);
         if (response.status() >= 400 && response.status() < 500)
@@ -107,7 +123,9 @@ test.describe('AM-READY-5 §3.6 — console-error smoke over the REAL aml-v2 con
           );
       });
 
-      await page.goto(`${AML_WEB_URL}${screen.path}`, { waitUntil: 'domcontentloaded', timeout: LOAD_TIMEOUT_MS });
+      // signIn's returnUrl IS the screen, and its waitForURL waits for `load` there. No second goto.
+      await signIn(page, screen.path);
+      expect(observing, `never observed a main-frame commit on ${amlHost} after the IdP`).toBe(true);
       await page.waitForTimeout(SETTLE_MS); // settle window for lazy client fetches; no assertion waits on it
 
       // The landing URL and the page's own H1 go into EVERY failure message below. Without them a red
