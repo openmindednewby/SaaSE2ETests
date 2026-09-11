@@ -1195,6 +1195,22 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
 
+    // ---- Selida ("drop an HTML file, get a link") — @api tier, no browser ----
+    // Anonymous end to end, so NO `setup` dependency (same reasoning as agora / digital-kin).
+    // Targets SELIDA_API_BASE / SELIDA_PAGES_BASE / SELIDA_SITE_BASE, defaulting to PRODUCTION.
+    // Every page it publishes is deleted with its claim token before the run ends.
+    //
+    // `retries: 0` and `workers: 1` are load-bearing, not taste: CreatePage is throttled at
+    // 10 uploads/min per IP (rejected uploads count), and the suite spends 9. A retry is a 10th+
+    // upload and turns the next assertion into a 429. See tests/selida/selida-helpers.ts.
+    {
+      name: 'selida-api',
+      workers: 1,
+      retries: 0,
+      fullyParallel: false,
+      testMatch: /tests[/\\]selida[/\\].*\.spec\.ts/,
+    },
+
     // ---- Gate B — post-deploy real-UI login probe (P0-02) + golden paths ----
     // Drives each product's ACTUAL rendered login UI (real pointer/keyboard) on
     // the live public URL and asserts it lands on an authed route that renders
