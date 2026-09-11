@@ -361,21 +361,7 @@ test.describe('AML adverse media @aml-api', () => {
   });
 
   // A5-5 / A5-6 — the adverse-media MENTIONS index, by name and by date range.
-  //
-  // 🔴 EXPECTED RED UNTIL DEPLOYED. Measured 2026-09-11: GET /v1/adverse-media/mentions returns 404
-  // on the live staging image. The endpoint exists in source but is NOT in the deployed build
-  // (AM-READY-8 owns shipping). These carry test.fail() so the suite TALLY stays honest while the
-  // endpoint is missing, AND so they flip to a reported failure the moment it deploys and starts
-  // passing — which is precisely the signal that this marker should be removed.
-  //
-  // 🔴 A5-23: test.fail() prints a ✘ glyph while the test PASSES. Do not read that ✘ as a failure;
-  // only the pass/fail TALLY and the exit code count.
   test.describe('adverse-media mentions index', () => {
-    test.fail(
-      true,
-      'GET /v1/adverse-media/mentions is 404 on the deployed image (measured 2026-09-11)',
-    );
-
     test('AM-E2E-10 mentions search by name returns rows for a known name and empty for an unknown one', async ({
       request,
     }) => {
