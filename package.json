@@ -271,6 +271,7 @@
     "test:aml:adverse-media": "node scripts/run-aml-e2e.mjs tests/aml/aml-adverse-media.spec.ts tests/aml/aml-adverse-media-hit.spec.ts",
     "test:aml:fuzzy": "node scripts/run-aml-e2e.mjs tests/aml/aml-fuzzy-matching.spec.ts --reporter=line",
     "test:aml:latency": "node scripts/run-aml-e2e.mjs tests/aml/aml-screening-latency.spec.ts --reporter=line",
+    "test:aml:screening-100": "node scripts/run-aml-e2e.mjs tests/aml/aml-screening-100-cases.spec.ts --reporter=line",
     "test:aml:ui-smoke": "cross-env AML_E2E_PROJECT=aml-ui node scripts/run-aml-e2e.mjs tests/aml/aml-adverse-media.ui.spec.ts",
     "test:logging:stress": "cross-env SHELL=/bin/bash playwright test --project=logging-stress",
     "test:notifications:stress": "cross-env SHELL=/bin/bash playwright test --project=notifications-stress",
