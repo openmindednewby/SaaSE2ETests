@@ -14,6 +14,8 @@
 // including backoff, so a 409 INSUFFICIENT_DATA retry (FR-3 #381 -- ScreeningController.cs:182-183,
 // NOT a duplicate subject) adds seconds of SLEEP to a row the server
 // answered quickly. Those rows are counted and named, never silently folded into a p95.
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { test, expect, request as playwrightRequest, type APIRequestContext } from '@playwright/test';
 import { AML_API_KEY, AML_API_URL, amlReachable } from './aml-helpers.js';
 import { CORPUS_NAMES, VARIANT_CASES, NEGATIVE_CONTROLS, COMMON_NAME_CONTROLS } from './fuzzy-corpus.js';
@@ -86,8 +88,54 @@ async function runWindow(ctx: APIRequestContext): Promise<void> {
   }
 }
 
+// ONE WINDOW PER RUN, SURVIVING A WORKER RESTART. A failed test tears the worker down and the next
+// test's worker re-runs beforeAll. Measured 2026-09-11: re-screening there made LAT-0/1/2 grade three
+// DIFFERENT samples (n=21/22/24), so a pass on one and a fail on another were not about the same
+// window. The first window is persisted and every later worker of the SAME run grades it. Keyed by
+// the runner pid (a worker's parent, stable across worker restarts) inside the project outputDir,
+// which Playwright empties at the start of every run - so a stale window is never graded.
+// `serial` mode was rejected: it SKIPS the remaining tests after the first red, grading nothing.
+interface PersistedWindow {
+  readonly clean: Screened[];
+  readonly retried: string[];
+  readonly amSkipped: Screened[];
+  readonly amStatuses: [string, number][];
+}
+
+function windowFile(): string {
+  return join(test.info().project.outputDir, `aml-latency-window.runner-${process.ppid}.json`);
+}
+
+function persistWindow(file: string): void {
+  const saved: PersistedWindow = {
+    clean: state.clean,
+    retried: state.retried,
+    amSkipped: state.amSkipped,
+    amStatuses: [...state.amStatuses],
+  };
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, JSON.stringify(saved));
+}
+
+function loadWindow(file: string): boolean {
+  if (!existsSync(file)) return false;
+  const saved = JSON.parse(readFileSync(file, 'utf8')) as PersistedWindow;
+  state.clean.push(...saved.clean);
+  state.retried.push(...saved.retried);
+  state.amSkipped.push(...saved.amSkipped);
+  for (const [status, count] of saved.amStatuses) state.amStatuses.set(status, count);
+  return true;
+}
+
 function latencies(): number[] {
   return state.clean.map(row => row.latencyMs).sort((a, b) => a - b);
+}
+
+/** Every test states the n it graded, so "all three graded ONE sample" is observable in the log. */
+function graded(testId: string): number[] {
+  const sorted = latencies();
+  console.log(`[latency] ${testId} grades n=${sorted.length} clean rows of the persisted window`);
+  return sorted;
 }
 
 function amSummary(): string {
@@ -118,6 +166,12 @@ test.describe.configure({ timeout: ASSERT_TIMEOUT_MS, retries: 0 });
 test.describe('AML screening latency, adverse media ON @aml-api', () => {
   test.beforeAll(async () => {
     test.setTimeout(RUN_TIMEOUT_MS);
+    const file = windowFile();
+    if (loadWindow(file)) {
+      console.log(`[latency] worker restarted - REUSING this run's window from ${file}, not re-screening`);
+      printWindow(latencies());
+      return;
+    }
     const ctx = await playwrightRequest.newContext();
     const reachable = await amlReachable(ctx);
     if (!AML_API_KEY || !reachable) {
@@ -125,6 +179,7 @@ test.describe('AML screening latency, adverse media ON @aml-api', () => {
       return;
     }
     await runWindow(ctx);
+    persistWindow(file);
     reportTransport(state.clean, 'adverse media ON');
     printWindow(latencies());
     await ctx.dispose();
@@ -138,6 +193,7 @@ test.describe('AML screening latency, adverse media ON @aml-api', () => {
   // The denominator gate. A quantile over six rows is not a p95, and a latency number for an
   // adverse-media stage that never ran measures the wrong code path.
   test('AM-E2E-LAT-0 the window actually screened with adverse media ON', () => {
+    graded('AM-E2E-LAT-0');
     expect(
       state.clean.length,
       `only ${state.clean.length} clean single-attempt rows (retried: ${state.retried.length}) - ` +
@@ -152,14 +208,14 @@ test.describe('AML screening latency, adverse media ON @aml-api', () => {
   });
 
   test('AM-E2E-LAT-1 p50 screening latency stays inside the stated ceiling', () => {
-    const p50 = quantile(latencies(), P50) / MS_PER_S;
+    const p50 = quantile(graded('AM-E2E-LAT-1'), P50) / MS_PER_S;
     expect(p50, `p50 ${p50.toFixed(2)}s exceeds the ${P50_CEILING_S}s ceiling`).toBeLessThanOrEqual(
       P50_CEILING_S,
     );
   });
 
   test('AM-E2E-LAT-2 p95 screening latency stays inside the stated ceiling', () => {
-    const p95 = quantile(latencies(), P95) / MS_PER_S;
+    const p95 = quantile(graded('AM-E2E-LAT-2'), P95) / MS_PER_S;
     expect(p95, `p95 ${p95.toFixed(2)}s exceeds the ${P95_CEILING_S}s ceiling`).toBeLessThanOrEqual(
       P95_CEILING_S,
     );
