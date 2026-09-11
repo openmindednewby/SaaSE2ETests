@@ -26,6 +26,9 @@ export default [
       // kefi-align/capture.js turned e2e-lint red on 2026-09-08 and, via
       // resource_deps, blocked every playwright-e2e-* Tilt resource.
       'visual-baselines/**',
+      // AML fuzzy-match measurement scripts, not specs: their console output
+      // IS the result. They turned e2e-lint red on 2026-09-11 (23 errors).
+      'tests/aml/fuzzy-*.ts',
       // Playwright trace viewer / report artifacts. These contain minified
       // browser bundles (uiMode.*.js, trace bundles) that ESLint should not
       // lint — they generate hundreds of no-undef / no-fallthrough errors
