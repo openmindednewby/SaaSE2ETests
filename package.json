@@ -15,6 +15,7 @@
     "test:prod-gate:staging": "cross-env SHELL=/bin/bash E2E_TARGET=staging playwright test --project=prod-gate --reporter=line",
     "test:smoke:api": "cross-env SHELL=/bin/bash playwright test tests/cross-product-isolation --workers=1 --reporter=line",
     "test:health": "cross-env SHELL=/bin/bash playwright test tests/health --project=health",
+    "test:nextgame": "cross-env SHELL=/bin/bash PLAYWRIGHT_HTML_OPEN=never PW_TEST_HTML_REPORT_OPEN=never playwright test tests/nextgame --project=nextgame",
     "test:diagnostics": "cross-env SHELL=/bin/bash playwright test tests/diagnostics",
     "test:identity": "cross-env SHELL=/bin/bash playwright test tests/identity",
     "test:identity:headed": "cross-env SHELL=/bin/bash playwright test --headed tests/identity",

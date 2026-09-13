@@ -147,6 +147,9 @@ export function buildProjects(): ProjectConfig {
 
     // ---- API / observability chunks (no UI → no app/baseURL) ----
     { name: 'health', workers: 1, testMatch: /health\/.*\.spec\.ts/, dependencies: ['setup'] },
+    // NextGame has no Keycloak realm and no shared auth state (decision D1: the only identity
+    // is an HMAC-signed session cookie), so this project does NOT depend on `setup`.
+    { name: 'nextgame', workers: 1, testMatch: /nextgame\/.*\.spec\.ts/ },
     chunk('diagnostics', 'diagnostics', [], { multiTenant: true, app: 'katalogos' }),
     { name: 'logging', workers: 1, testMatch: /logging\/(?!stress).*\.spec\.ts/, dependencies: ['setup'] },
     // The four `logging/stress-*.spec.ts` files are EXCLUDED from the `logging`
