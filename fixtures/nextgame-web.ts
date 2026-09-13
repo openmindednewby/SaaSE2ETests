@@ -12,7 +12,8 @@ import { ANALYTICS_HOST, POLICY_VERSION } from '../../nextgame-web/src/shared/pr
  * expectation with it instead of leaving a hardcoded string to go stale.
  */
 // Default is the Tilt `nextgame-web` resource: the prod expo export behind the real nginx.conf.
-export const SPA_URL = process.env.NEXTGAME_WEB_URL ?? 'http://localhost:8091';
+// NEXTGAME_BASE_URL (e.g. https://nextgame.dloizides.com) targets a deployed host for the whole suite.
+export const SPA_URL = process.env.NEXTGAME_WEB_URL ?? process.env.NEXTGAME_BASE_URL ?? 'http://localhost:8091';
 
 /** The Umami website id baked into app/+html.tsx for nextgame. */
 export const UMAMI_WEBSITE_ID = 'b3560325-b595-41d7-989a-1db789edfb50';

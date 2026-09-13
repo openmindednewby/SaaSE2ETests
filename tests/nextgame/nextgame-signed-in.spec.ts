@@ -8,6 +8,8 @@ import {
   consentRowsFor,
   createSignedInUser,
   deleteUser,
+  IS_REMOTE_NEXTGAME,
+  REMOTE_SEEDING_SKIP_REASON,
   type NextGameUser,
 } from '../../fixtures/nextgame-session';
 import {
@@ -29,6 +31,8 @@ const INSIGHTS_PURPOSE = 1;
  * API's own session cookie, through the served SPA behind nginx, into Postgres and back.
  */
 test.describe('nextgame signed-in age and consent gate', () => {
+  test.skip(IS_REMOTE_NEXTGAME, REMOTE_SEEDING_SKIP_REASON);
+
   let user: NextGameUser;
 
   test.beforeEach(async ({ page }) => {

@@ -14,7 +14,9 @@ import {
   cookieFetch,
   createSignedInUser,
   deleteUser,
+  IS_REMOTE_NEXTGAME,
   mintCookie,
+  REMOTE_SEEDING_SKIP_REASON,
   seedLibrarySnapshot,
   consentRowsFor,
   type NextGameUser,
@@ -36,6 +38,8 @@ function apiFor(user: NextGameUser | null) {
 }
 
 test.describe('nextgame api contract (driven through the SPA client)', () => {
+  test.skip(IS_REMOTE_NEXTGAME, REMOTE_SEEDING_SKIP_REASON);
+
   let user: NextGameUser;
 
   test.beforeEach(() => {
@@ -67,12 +71,6 @@ test.describe('nextgame api contract (driven through the SPA client)', () => {
     const error = await api.postConsent(ConsentPurpose.Recommendations, true).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(NextGameApiError);
     expect((error as NextGameApiError).status).not.toBe(200);
-  });
-
-  test('unauthenticated consent is refused', async () => {
-    const error = await apiFor(null).postConsent(ConsentPurpose.Recommendations, true).catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(NextGameApiError);
-    expect((error as NextGameApiError).status).toBe(HTTP_UNAUTHORIZED);
   });
 
   test('starts an import, polls it to a known status, and hides another user jobId', async () => {
@@ -134,6 +132,15 @@ test.describe('nextgame api contract (driven through the SPA client)', () => {
     expect(typeof library.totalPlayed).toBe('number');
     expect(Number.isNaN(Date.parse(String(library.takenAt)))).toBe(false);
   });
+});
+
+/** Signed-out pins: no seeded row, no minted cookie, so they run against a deployed host too. */
+test.describe('nextgame api contract, signed out (driven through the SPA client)', () => {
+  test('unauthenticated consent is refused', async () => {
+    const error = await apiFor(null).postConsent(ConsentPurpose.Recommendations, true).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(NextGameApiError);
+    expect((error as NextGameApiError).status).toBe(HTTP_UNAUTHORIZED);
+  });
 
   test('library is 401 unauthenticated and the bare (unprefixed) route does not exist', async () => {
     const error = await apiFor(null).getLibrary().catch((e: unknown) => e);
@@ -141,8 +148,10 @@ test.describe('nextgame api contract (driven through the SPA client)', () => {
     expect((error as NextGameApiError).status).toBe(HTTP_UNAUTHORIZED);
 
     // Route-prefix pin. Deliberately NOT through the client: the client can only ever emit
-    // /api/v1, and the thing being pinned is that the UNPREFIXED path is absent.
-    const bare = await globalThis.fetch(`${NEXTGAME_API_URL}/me/library`, { headers: { Cookie: user.cookie } });
+    // /api/v1, and the thing being pinned is that the UNPREFIXED path is absent. No cookie is
+    // needed: an existing auth-guarded route would answer 401, an absent one 404. Against a
+    // deployed host this path is answered by nginx, not the API (only /api/ is proxied).
+    const bare = await globalThis.fetch(`${NEXTGAME_API_URL}/me/library`);
     expect(bare.status).toBe(HTTP_NOT_FOUND);
   });
 });

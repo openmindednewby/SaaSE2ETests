@@ -18,7 +18,22 @@ const CONTAINER = 'SharedDB';
 const DB = 'nextgame';
 const NEWLINE = String.fromCharCode(10);
 
-export const NEXTGAME_API_URL = process.env.NEXTGAME_API_URL ?? 'http://localhost:5105';
+// NEXTGAME_BASE_URL points the whole suite at one deployed host, whose nginx proxies /api/ to the
+// API (nextgame-web/nginx.conf `location /api/`). Unset, the suite targets the local Tilt resources.
+export const NEXTGAME_API_URL = process.env.NEXTGAME_API_URL ?? process.env.NEXTGAME_BASE_URL ?? 'http://localhost:5105';
+
+const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+
+/**
+ * True when the API is NOT on this machine. Seeding (`docker exec SharedDB psql`) and cookie
+ * minting (the LOCAL signing key) only reach a local stack; against a remote host they would
+ * either fail or require the production DB and signing key on this PC — both refused by policy.
+ */
+export const IS_REMOTE_NEXTGAME = !LOCAL_HOSTNAMES.has(new URL(NEXTGAME_API_URL).hostname);
+
+export const REMOTE_SEEDING_SKIP_REASON =
+  `NEXTGAME_API_URL=${NEXTGAME_API_URL} is remote: this spec seeds Postgres via docker exec and mints a ` +
+  'session cookie from the local signing key; neither may target a deployed environment from the dev PC.';
 
 function signingKey(): string {
   const envKey = process.env.NEXTGAME_SESSION_SIGNING_KEY;
