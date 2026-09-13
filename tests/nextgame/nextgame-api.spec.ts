@@ -7,6 +7,7 @@ import { expect, test } from '@playwright/test';
 import { createNextGameApi, NextGameApiError, HTTP_CONFLICT } from '../../../nextgame-web/src/api/nextgameApi';
 // The version the SPA stamps on every consent row. Imported, never hardcoded: a policy bump
 // (DEC-3 took it to '2') must move this expectation with it, not break it silently.
+import ConsentPurpose from '../../../nextgame-web/src/shared/enums/ConsentPurpose';
 import { POLICY_VERSION } from '../../../nextgame-web/src/shared/privacyFacts';
 import {
   NEXTGAME_API_URL,
@@ -24,7 +25,8 @@ const POLL_INTERVAL_MS = 750;
 const IMPORT_START_ATTEMPTS = 5;
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_NOT_FOUND = 404;
-const IMPORT_STATUSES = ['queued', 'running', 'succeeded', 'failed'];
+const TERMINAL_STATUSES = ['succeeded', 'failed'];
+const IMPORT_STATUSES = ['queued', 'running', ...TERMINAL_STATUSES];
 
 function apiFor(user: NextGameUser | null) {
   return createNextGameApi({
@@ -48,8 +50,8 @@ test.describe('nextgame api contract (driven through the SPA client)', () => {
     const api = apiFor(user);
     // Playwright's expect has no `.resolves`; a rejection here fails the test on its own,
     // which is precisely the assertion — a consent POST that the server refuses must throw.
-    await api.postConsent('recommendations', true);
-    await api.postConsent('anonymisedInsights', false);
+    await api.postConsent(ConsentPurpose.Recommendations, true);
+    await api.postConsent(ConsentPurpose.AnonymisedInsights, false);
 
     const rows = consentRowsFor(user.userId);
     expect(rows).toContain(`0|true|${POLICY_VERSION}`);
@@ -62,13 +64,13 @@ test.describe('nextgame api contract (driven through the SPA client)', () => {
     // resolving — AgeAndConsent blocks on this rejection.
     const ghost = { userId: '00000000-0000-4000-8000-00000000dead', steamId64: '', cookie: mintCookie('00000000-0000-4000-8000-00000000dead') };
     const api = apiFor(ghost);
-    const error = await api.postConsent('recommendations', true).catch((e: unknown) => e);
+    const error = await api.postConsent(ConsentPurpose.Recommendations, true).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(NextGameApiError);
     expect((error as NextGameApiError).status).not.toBe(200);
   });
 
   test('unauthenticated consent is refused', async () => {
-    const error = await apiFor(null).postConsent('recommendations', true).catch((e: unknown) => e);
+    const error = await apiFor(null).postConsent(ConsentPurpose.Recommendations, true).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(NextGameApiError);
     expect((error as NextGameApiError).status).toBe(HTTP_UNAUTHORIZED);
   });
@@ -80,22 +82,28 @@ test.describe('nextgame api contract (driven through the SPA client)', () => {
     // means another user's import holds the slot. The SPA treats 409 as busy and retries;
     // this reproduces that exact loop through the same client.
     let started: { jobId: string } | undefined;
-    for (let attempt = 0; attempt < IMPORT_START_ATTEMPTS && !started; attempt += 1) {
+    await expect(async () => {
       started = await api.startImport().catch((e: unknown) => {
         if (e instanceof NextGameApiError && e.status === HTTP_CONFLICT) return undefined;
         throw e;
       });
-      if (!started) await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-    }
+      expect(started, 'POST /me/import answered 409 busy').toBeTruthy();
+    })
+      .toPass({ intervals: [POLL_INTERVAL_MS], timeout: POLL_INTERVAL_MS * IMPORT_START_ATTEMPTS })
+      .catch(() => undefined);
     expect(started, 'POST /me/import never returned a jobId (409 busy for every attempt)').toBeTruthy();
     const jobId = started!.jobId;
     expect(jobId).toMatch(/^[0-9a-f-]{36}$/i);
 
     let status = await api.getImportStatus(jobId);
-    for (let attempt = 0; attempt < POLL_ATTEMPTS && (status.status === 'queued' || status.status === 'running'); attempt += 1) {
-      await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+    // Poll toward a terminal state; still queued/running after the window is acceptable (no Steam
+    // here) and is judged by the known-status assertion below, not by this wait.
+    await expect(async () => {
       status = await api.getImportStatus(jobId);
-    }
+      expect(TERMINAL_STATUSES).toContain(status.status);
+    })
+      .toPass({ intervals: [POLL_INTERVAL_MS], timeout: POLL_INTERVAL_MS * POLL_ATTEMPTS })
+      .catch(() => undefined);
     expect(IMPORT_STATUSES).toContain(status.status);
     expect(status.jobId).toBe(jobId);
 

@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { expect, type Page, type Request } from '@playwright/test';
+
 import { TestIds } from '../../nextgame-web/src/shared/testIds';
 import { ANALYTICS_HOST, POLICY_VERSION } from '../../nextgame-web/src/shared/privacyFacts';
 
@@ -23,6 +25,7 @@ export const MOBILE_VIEWPORT = { width: 400, height: 860 };
 interface EnLocale {
   seo: { titles: Record<string, string> };
   privacy: { updated: string; analyticsHeading: string };
+  age: { consentFailed: string };
 }
 
 const en = JSON.parse(
@@ -58,5 +61,51 @@ export const NOT_FOUND_ROUTE: SpaRoute = {
 
 export const POLICY_VERSION_TEXT = en.privacy.updated.replace('{{p1}}', POLICY_VERSION);
 export const ANALYTICS_HEADING = en.privacy.analyticsHeading;
+export const AGE_CONSENT_FAILED_TEXT = en.age.consentFailed;
+
+/**
+ * Fulfils every analytics POST in the browser, so a test run never records a localhost pageview
+ * on the real Umami site. Routed on the CONTEXT, not the page: Chromium sends service-worker
+ * traffic through context routes only. Non-POSTs (the tracker script itself) pass through.
+ * Returns the live list of intercepted requests — a beacon that is NOT in it reached the server.
+ */
+export async function interceptAnalytics(page: Page): Promise<Request[]> {
+  const intercepted: Request[] = [];
+  await page.context().route(`https://${ANALYTICS_HOST}/**`, async (route) => {
+    const request = route.request();
+    if (request.method() !== 'POST') {
+      await route.continue();
+      return;
+    }
+    intercepted.push(request);
+    await route.fulfill({ status: HTTP_OK, contentType: 'application/json', body: '{}' });
+  });
+  return intercepted;
+}
+
+/**
+ * The page-view beacon is the last thing the booted app does, so it is the readiness signal that
+ * replaces networkidle: boot-time errors have landed and the loader is gone by the time it fires.
+ */
+export async function expectPageViewBeacon(intercepted: Request[]): Promise<void> {
+  await expect.poll(() => intercepted.length, 'the app never sent its page-view beacon').toBeGreaterThan(0);
+}
+
+/**
+ * Collects console errors and uncaught page errors. The ONE excused error: Chrome logs the
+ * not-found document's own 404 as a failed resource — excused only when its location IS the
+ * not-found URL, never for any other resource.
+ */
+export function collectConsoleErrors(page: Page): string[] {
+  const errors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() !== 'error') return;
+    const isNotFoundDocument =
+      message.location().url === `${SPA_URL}${NOT_FOUND_ROUTE.path}` && message.text().includes(String(HTTP_NOT_FOUND));
+    if (!isNotFoundDocument) errors.push(message.text());
+  });
+  page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
+  return errors;
+}
 
 export { ANALYTICS_HOST, TestIds };

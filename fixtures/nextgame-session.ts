@@ -102,3 +102,25 @@ export function consentRowsFor(userId: string): string[] {
     .map((l) => l.trim())
     .filter((l) => l.length > 0);
 }
+
+/** The birth year stored on the users row, as text ('' when the row is gone). */
+export function birthYearFor(userId: string): string {
+  return psql(`SELECT "BirthYear" FROM users WHERE "Id" = '${userId}';`).trim();
+}
+
+/** Splits a minted `name=value` cookie into the shape `BrowserContext.addCookies` takes. */
+export function browserCookie(cookie: string, spaUrl: string) {
+  const separator = cookie.indexOf('=');
+  // Mirrors SessionCookie.Issue: HttpOnly, Secure, SameSite=Lax, Path=/. A bare `localhost` domain
+  // stays host-only, as __Host- requires. Passing `url` instead is refused by CDP for an http://
+  // Secure cookie, although Chromium does SEND Secure cookies to http://localhost.
+  return {
+    name: cookie.slice(0, separator),
+    value: cookie.slice(separator + 1),
+    domain: new URL(spaUrl).hostname,
+    path: '/',
+    httpOnly: true,
+    secure: true,
+    sameSite: 'Lax' as const,
+  };
+}
