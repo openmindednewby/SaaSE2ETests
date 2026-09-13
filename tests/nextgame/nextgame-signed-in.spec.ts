@@ -29,10 +29,6 @@ const INSIGHTS_PURPOSE = 1;
  * API's own session cookie, through the served SPA behind nginx, into Postgres and back.
  */
 test.describe('nextgame signed-in age and consent gate', () => {
-  // The SW claims the page and reloads it twice within ~1s of a first visit, which can wipe a
-  // half-typed form mid-test. SW behaviour has its own test; this one is about the gate.
-  test.use({ serviceWorkers: 'block' });
-
   let user: NextGameUser;
 
   test.beforeEach(async ({ page }) => {
@@ -51,10 +47,16 @@ test.describe('nextgame signed-in age and consent gate', () => {
     await expect(page.getByTestId(TestIds.AGE_SCREEN)).toBeVisible();
 
     await page.getByTestId(TestIds.AGE_BIRTH_YEAR).fill(BIRTH_YEAR);
-    // Required and locked on. RN-web does not render accessibilityState.checked as aria-checked,
-    // so the toggle's effect is proven by the stored rows below, not by the DOM.
-    await expect(page.getByTestId(TestIds.AGE_CONSENT_RECOMMENDATIONS)).toHaveAttribute('aria-disabled', 'true');
-    await page.getByTestId(TestIds.AGE_CONSENT_INSIGHTS).click();
+    // A screen reader must hear the consent state: required + locked on, optional off until toggled.
+    const recommendations = page.getByTestId(TestIds.AGE_CONSENT_RECOMMENDATIONS);
+    await expect(recommendations).toHaveAttribute('role', 'checkbox');
+    await expect(recommendations).toHaveAttribute('aria-checked', 'true');
+    await expect(recommendations).toHaveAttribute('aria-disabled', 'true');
+    const insights = page.getByTestId(TestIds.AGE_CONSENT_INSIGHTS);
+    await expect(insights).toHaveAttribute('role', 'checkbox');
+    await expect(insights).toHaveAttribute('aria-checked', 'false');
+    await insights.click();
+    await expect(insights).toHaveAttribute('aria-checked', 'true');
     await page.getByTestId(TestIds.AGE_CONTINUE).click();
 
     // Wait for EITHER outcome so a blocked gate fails fast and names itself.

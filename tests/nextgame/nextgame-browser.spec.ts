@@ -100,8 +100,7 @@ test.describe('nextgame SPA in a real browser', () => {
   });
 
   test.describe('at 400px wide', () => {
-    // Measure a settled page: the first-visit SW reloads it twice, which empties the DOM mid-read.
-    test.use({ viewport: MOBILE_VIEWPORT, serviceWorkers: 'block' });
+    test.use({ viewport: MOBILE_VIEWPORT });
 
     for (const route of [...REAL_ROUTES, NOT_FOUND_ROUTE]) {
       test(`${route.path} has no horizontal scroll and 44px targets`, async ({ page }) => {
