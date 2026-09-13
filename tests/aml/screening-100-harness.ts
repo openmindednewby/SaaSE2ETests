@@ -11,11 +11,14 @@
 // 🔴 ONE SIGN-IN PER RUN. A failed test tears the worker down and the next one re-runs beforeAll.
 // With dozens of expected reds that would be dozens of logins against an IP-partitioned login rate
 // limit, and the suite would report its own 429 as a product failure. The storage state is saved
-// under the project outputDir keyed by the runner pid and reused while /bff/me still answers 200.
+// under ROUND_STATE_DIR keyed by the runner pid and reused while /bff/me still answers 200.
+//
+// 🔴 NOT UNDER test-results/: any other Playwright run empties it (a nextgame run wiped Round 1a).
+// 🔴 A SLOW /bff/me IS NOT A DEAD SESSION: a throwing 10 s probe re-run per worker restart aborted Round 1b.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { expect, type APIRequestContext, type Browser, type BrowserContext } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Browser, type BrowserContext } from '@playwright/test';
 import type { ScreeningSubject } from './screening-100-corpus.js';
 
 export const AML_WEB_ORIGIN = new URL(process.env.AML_WEB_URL ?? 'https://aml-screening.dloizides.com/app')
@@ -33,6 +36,19 @@ const HTTP_CREATED = 201;
 const HTTP_TOO_MANY = 429;
 const LOGIN_TIMEOUT_MS = 45_000;
 const REQUEST_TIMEOUT_MS = 30_000;
+/** Explicit, not the 10 s request default: Round 1b measured an 11.2 s /bff/me TTFB on a live session. */
+const ME_PROBE_TIMEOUT_MS = 30_000;
+/** One retry, on a timeout only — a wrong password must not be hammered against the login rate limit. */
+const LOGIN_ATTEMPTS = 2;
+const TIMEOUT_PATTERN = /timeout|timed out/i;
+
+/** Rows JSONL + storage state: gitignored, OUTSIDE test-results/. run-aml-e2e.mjs pins cwd to E2ETests. */
+export const ROUND_STATE_DIR = join(process.cwd(), '.aml-screening-100');
+
+/** A per-run file: the worker's ppid is the Playwright runner, so worker restarts share it. */
+export function runnerStateFile(name: string): string {
+  return join(ROUND_STATE_DIR, `runner-${process.ppid}.${name}`);
+}
 const MAX_429_ATTEMPTS = 3;
 const BACKOFF_MS = 2_000;
 const MS_PER_S = 1000;
@@ -87,37 +103,85 @@ export interface CaseRow {
   readonly correlationId: string | null;
 }
 
+const firstLine = (error: unknown): string => String((error as Error)?.message ?? error).split('\n')[0];
+const isTimeout = (error: unknown): boolean =>
+  (error as Error)?.name === 'TimeoutError' || TIMEOUT_PATTERN.test(firstLine(error));
+
 async function signIn(browser: Browser): Promise<BrowserContext> {
   const context = await browser.newContext();
-  const page = await context.newPage();
-  const returnUrl = encodeURIComponent('/app/screening');
-  await page.goto(`${AML_WEB_ORIGIN}/bff/passkey/login?returnUrl=${returnUrl}`, {
-    waitUntil: 'domcontentloaded',
-    timeout: LOGIN_TIMEOUT_MS,
-  });
-  await expect(page, `login did not reach the IdP (${IDP_HOST})`).toHaveURL(new RegExp(IDP_HOST));
-  await page.locator('input#email, input[type="email"]').first().fill(TESTER_EMAIL ?? '');
-  await page.locator('input#password, input[type="password"]').first().fill(TESTER_PASSWORD ?? '');
-  await page.locator('button[type="submit"]').first().click();
-  await page.waitForURL(url => url.origin === AML_WEB_ORIGIN, { timeout: LOGIN_TIMEOUT_MS });
-  await page.close();
-  return context;
+  try {
+    const page = await context.newPage();
+    const returnUrl = encodeURIComponent('/app/screening');
+    await page.goto(`${AML_WEB_ORIGIN}/bff/passkey/login?returnUrl=${returnUrl}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: LOGIN_TIMEOUT_MS,
+    });
+    await expect(page, `login did not reach the IdP (${IDP_HOST})`).toHaveURL(new RegExp(IDP_HOST));
+    await page.locator('input#email, input[type="email"]').first().fill(TESTER_EMAIL ?? '');
+    await page.locator('input#password, input[type="password"]').first().fill(TESTER_PASSWORD ?? '');
+    await page.locator('button[type="submit"]').first().click();
+    await page.waitForURL(url => url.origin === AML_WEB_ORIGIN, { timeout: LOGIN_TIMEOUT_MS });
+    await page.close();
+    return context;
+  } catch (error) {
+    await context.close();
+    throw error;
+  }
 }
 
-async function sessionAlive(context: BrowserContext): Promise<boolean> {
-  const me = await context.request.get(`${AML_WEB_ORIGIN}${ME_PATH}`, { headers: CSRF });
-  return me.status() === HTTP_OK;
+const enum SessionProbe { Alive, Rejected, Unreachable }
+
+/** Session-lifecycle evidence goes to the report as an annotation (hooks included), not the console. */
+function sessionNote(message: string): void {
+  test.info().annotations.push({ type: 's100-session', description: message });
+}
+
+/** GET /bff/me. NEVER throws: a timeout / network error is "not alive" (logged), not a test crash. */
+async function probeSession(context: BrowserContext): Promise<SessionProbe> {
+  try {
+    const me = await context.request.get(`${AML_WEB_ORIGIN}${ME_PATH}`, { headers: CSRF, timeout: ME_PROBE_TIMEOUT_MS });
+    if (me.status() === HTTP_OK) return SessionProbe.Alive;
+    sessionNote(`${ME_PATH} answered HTTP ${me.status()} — session not alive`);
+    return SessionProbe.Rejected;
+  } catch (error) {
+    sessionNote(`${ME_PATH} probe failed (${firstLine(error)}) — session treated as not alive`);
+    return SessionProbe.Unreachable;
+  }
+}
+
+/** Sign in and prove it with /bff/me, retrying ONCE when either step times out. */
+async function signInWithRetry(browser: Browser): Promise<BrowserContext> {
+  for (let attempt = 1; ; attempt += 1) {
+    const last = attempt >= LOGIN_ATTEMPTS;
+    let context: BrowserContext;
+    try {
+      context = await signIn(browser);
+    } catch (error) {
+      if (last || !isTimeout(error)) throw error;
+      sessionNote(`sign-in attempt ${attempt} timed out (${firstLine(error)}) — retrying once`);
+      continue;
+    }
+    const probe = await probeSession(context);
+    if (probe === SessionProbe.Unreachable && !last) {
+      await context.close();
+      sessionNote(`post-sign-in ${ME_PATH} probe failed on attempt ${attempt} — retrying once`);
+      continue;
+    }
+    // The hard precondition, unchanged: a fresh sign-in that /bff/me does not answer 200 is a red.
+    expect(probe, 'signed-in precondition failed: /bff/me did not return 200').toBe(SessionProbe.Alive);
+    return context;
+  }
 }
 
 /** A signed-in tester1 context, reusing this run's saved session when it is still valid. */
 export async function openSession(browser: Browser, stateFile: string): Promise<BrowserContext> {
   if (existsSync(stateFile)) {
     const reused = await browser.newContext({ storageState: stateFile });
-    if (await sessionAlive(reused)) return reused;
+    if ((await probeSession(reused)) === SessionProbe.Alive) return reused;
     await reused.close();
+    sessionNote('saved session not reusable — signing in fresh');
   }
-  const context = await signIn(browser);
-  expect(await sessionAlive(context), 'signed-in precondition failed: /bff/me did not return 200').toBe(true);
+  const context = await signInWithRetry(browser);
   mkdirSync(dirname(stateFile), { recursive: true });
   await context.storageState({ path: stateFile });
   return context;

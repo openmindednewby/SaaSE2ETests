@@ -70,7 +70,9 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: [
-    ['html', { outputFolder: 'reports/html' }],
+    // open:'never' — the default ('on-failure' outside CI) serves the report and blocks the process
+    // forever after a red run, so a failing suite looks like a hung one and its timeout masks the finding.
+    ['html', { outputFolder: 'reports/html', open: 'never' }],
     ['json', { outputFile: 'reports/results.json' }],
     ['list']
   ],

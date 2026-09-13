@@ -15,7 +15,6 @@
 // across worker restarts.
 //
 // Run: npm run test:aml:screening-100   (Tilt: playwright-e2e-aml-screening-100)
-import { join } from 'node:path';
 import { test, expect, type BrowserContext } from '@playwright/test';
 import { quantile } from './fuzzy-measure.js';
 import { Expectation, STRESS_SUBJECTS, SUBJECTS, type ScreeningSubject } from './screening-100-corpus.js';
@@ -27,6 +26,7 @@ import {
   appendRow,
   openSession,
   readRows,
+  runnerStateFile,
   screenCase,
   seconds,
   writeRound,
@@ -61,9 +61,8 @@ function note(message: string): void {
   test.info().annotations.push({ type: 's100', description: message });
 }
 
-function runnerFile(name: string): string {
-  return join(test.info().project.outputDir, `aml-screening-100.runner-${process.ppid}.${name}`);
-}
+/** Durable per-run state lives OUTSIDE test-results/ (screening-100-harness.ts ROUND_STATE_DIR). */
+const runnerFile = runnerStateFile;
 
 const succeeded = (row: CaseRow): boolean => row.error === null && SUCCESS.has(row.status ?? 0);
 const is5xx = (row: CaseRow): boolean => (row.status ?? 0) >= HTTP_5XX_FLOOR;

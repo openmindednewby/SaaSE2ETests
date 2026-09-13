@@ -12,6 +12,9 @@ dist/
 
 # Test artifacts
 reports/
+# AML screening-100 durable round state (rows JSONL + tester storage state with session cookies).
+# Kept OUT of test-results/, which any other Playwright run empties.
+.aml-screening-100/
 playwright/.auth/
 test-results/
 playwright-report/
