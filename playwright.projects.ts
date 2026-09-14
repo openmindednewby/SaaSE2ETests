@@ -199,7 +199,8 @@ export function buildProjects(): ProjectConfig {
     // no browser. Auth is a tenant API key (X-Api-Key / Bearer) from AML_API_KEY; target via AML_API_URL
     // (default: our staging aml-screening). NO `dependencies: ['setup']` — like agora, it mints nothing from
     // the legacy BaseClient login; every spec `test.skip`s gracefully when the service/key is absent.
-    { name: 'aml-api', workers: 1, testMatch: /aml\/aml-.*(?<!\.ui)\.spec\.ts/ },
+    // aml-gdelt-page-qa drives a browser, so it is routed to aml-ui below despite its aml- prefix.
+    { name: 'aml-api', workers: 1, testMatch: /aml\/aml-(?!gdelt-page-qa).*(?<!\.ui)\.spec\.ts/ },
     // AML @ui tier — AM-READY-5 §3.6. The console-error smoke over the DEPLOYED aml-v2 console, which
     // bff-aml serves per-path at <host>/app (personalServerNotes/k8s/aml/bff-aml.yml:63), so the
     // baseURL carries the /app prefix. It exists because the @api tier above hand-assembles every
@@ -208,7 +209,7 @@ export function buildProjects(): ProjectConfig {
     {
       name: 'aml-ui',
       workers: 1,
-      testMatch: /aml\/.*\.ui\.spec\.ts/,
+      testMatch: /aml\/(.*\.ui|aml-gdelt-page-qa)\.spec\.ts/,
       use: { ...CHROME, ignoreHTTPSErrors: true },
     },
     // Agora (eShop) — @api tier. Health probes, the full merchant-admin CRUD surface
