@@ -85,7 +85,7 @@ function identityApiBase(): string | undefined {
   return `${raw}/api/v1/`;
 }
 
-function adminClient(base: string, token: string): AxiosInstance {
+function adminClient(base: string, token: string, realm: string = REALM): AxiosInstance {
   return axios.create({
     baseURL: base,
     timeout: 30_000,
@@ -94,7 +94,7 @@ function adminClient(base: string, token: string): AxiosInstance {
       // X-Realm scopes the Keycloak user operations to the onlinemenu realm.
       // DeleteTenant is realm-agnostic (one IdentityDb row) but the header is
       // harmless there.
-      'X-Realm': REALM,
+      'X-Realm': realm,
     },
     httpsAgent: sharedHttpsAgent,
     // Handle every status inline — a teardown must never throw.
@@ -201,7 +201,7 @@ async function deleteTenant(
  */
 export async function deleteSelfServeSignup(
   target: SignupTeardownTarget,
-  options: { token?: string } = {},
+  options: { token?: string; realm?: string } = {},
 ): Promise<SignupTeardownResult> {
   const notes: string[] = [];
   const result: SignupTeardownResult = {
@@ -223,7 +223,7 @@ export async function deleteSelfServeSignup(
   }
 
   result.attempted = true;
-  const client = adminClient(base, token);
+  const client = adminClient(base, token, options.realm);
 
   try {
     const tenantId = await resolveTenantId(client, target, notes);

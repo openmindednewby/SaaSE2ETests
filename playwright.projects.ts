@@ -1222,7 +1222,19 @@ export function buildProjects(): ProjectConfig {
       workers: 1,
       retries: 0,
       fullyParallel: false,
-      testMatch: /tests[/\\]selida[/\\].*\.spec\.ts/,
+      testMatch: /tests[/\\]selida[/\\]selida-.*\.spec\.ts/,
+    },
+
+    // Signed-in Selida specs (claim + billing through the BFF). A SEPARATE project because each
+    // spends one anonymous upload and selida-api already spends 9 of the 10/min per-IP budget:
+    // run the two projects in separate invocations, 60 s apart. Needs E2E_TARGET=prod (canary
+    // superUser token deletes the KC users + tenant rows) and STRIPE_SECRET_KEY (sk_test_).
+    {
+      name: 'selida-account',
+      workers: 1,
+      retries: 0,
+      fullyParallel: false,
+      testMatch: /tests[/\\]selida[/\\](claim|billing)\.spec\.ts/,
     },
 
     // ---- Gate B — post-deploy real-UI login probe (P0-02) + golden paths ----
