@@ -13,13 +13,15 @@ import {
   MOBILE_VIEWPORT,
   NOT_FOUND_ROUTE,
   POLICY_VERSION_TEXT,
-  REAL_ROUTES,
+  UNGATED_ROUTES,
   SPA_URL,
   TestIds,
   UMAMI_WEBSITE_ID,
 } from '../../fixtures/nextgame-web';
 
-const [LANDING, PRIVACY, AGE] = REAL_ROUTES;
+// These three tests assert an EXACT title/screen on a hard load, which only holds for routes known
+// not to be session/flow-gated — UNGATED_ROUTES, not the full REAL_ROUTES table (see its comment).
+const [LANDING, PRIVACY, AGE] = UNGATED_ROUTES;
 const SCREENSHOT_DIR = 'test-reports/nextgame';
 
 test.describe('nextgame SPA in a real browser', () => {
@@ -44,7 +46,7 @@ test.describe('nextgame SPA in a real browser', () => {
     await expect(page).toHaveTitle(AGE.title);
   });
 
-  for (const route of REAL_ROUTES) {
+  for (const route of UNGATED_ROUTES) {
     test(`a hard load of ${route.path} sets its own title`, async ({ page }) => {
       await page.goto(`${SPA_URL}${route.path}`);
       await expect(page).toHaveTitle(route.title);
@@ -102,7 +104,7 @@ test.describe('nextgame SPA in a real browser', () => {
   test.describe('at 400px wide', () => {
     test.use({ viewport: MOBILE_VIEWPORT });
 
-    for (const route of [...REAL_ROUTES, NOT_FOUND_ROUTE]) {
+    for (const route of [...UNGATED_ROUTES, NOT_FOUND_ROUTE]) {
       test(`${route.path} has no horizontal scroll and 44px targets`, async ({ page }) => {
         await page.goto(`${SPA_URL}${route.path}`);
         await expect(page.getByTestId(route.screenTestId)).toBeVisible();

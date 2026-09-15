@@ -46,12 +46,32 @@ export interface SpaRoute {
   screenTestId: string;
 }
 
-/** Real routes a signed-out visitor can open directly. */
+/**
+ * Every current route, in the D1 flow order:
+ * / -> /welcome -> /age -> /consent -> /importing -> /profile -> /quiz -> /platforms -> /results,
+ * plus /empty-library, /privacy and /error. A signed-out visitor can open any of these directly —
+ * the session/flow-gated ones (all but landing/privacy) may client-side redirect away, which is
+ * NOT a failure (see nextgame-console.spec.ts); only landing/privacy/age are asserted to render
+ * their OWN screen and title on a hard load (nextgame-browser.spec.ts), because those three are
+ * the only ones known not to be gated.
+ */
 export const REAL_ROUTES: SpaRoute[] = [
   { name: 'landing', path: '/', title: title('landing'), screenTestId: TestIds.LANDING_SCREEN },
-  { name: 'privacy', path: '/privacy', title: title('privacy'), screenTestId: TestIds.PRIVACY_SCREEN },
+  { name: 'welcome', path: '/welcome', title: title('welcome'), screenTestId: TestIds.WELCOME_SCREEN },
   { name: 'age', path: '/age', title: title('age'), screenTestId: TestIds.AGE_SCREEN },
+  { name: 'consent', path: '/consent', title: title('consent'), screenTestId: TestIds.CONSENT_SCREEN },
+  { name: 'importing', path: '/importing', title: title('importing'), screenTestId: TestIds.IMPORTING_SCREEN },
+  { name: 'profile', path: '/profile', title: title('profile'), screenTestId: TestIds.PROFILE_SCREEN },
+  { name: 'quiz', path: '/quiz', title: title('quiz'), screenTestId: TestIds.QUIZ_SCREEN },
+  { name: 'platforms', path: '/platforms', title: title('platforms'), screenTestId: TestIds.PLATFORMS_SCREEN },
+  { name: 'results', path: '/results', title: title('results'), screenTestId: TestIds.RESULTS_SCREEN },
+  { name: 'empty-library', path: '/empty-library', title: title('emptyLibrary'), screenTestId: TestIds.EMPTY_LIBRARY_SCREEN },
+  { name: 'privacy', path: '/privacy', title: title('privacy'), screenTestId: TestIds.PRIVACY_SCREEN },
+  { name: 'error', path: '/error', title: title('error'), screenTestId: TestIds.ERROR_SCREEN },
 ];
+
+/** The subset known NOT to be session/flow-gated: a hard load renders that route's OWN screen. */
+export const UNGATED_ROUTES: SpaRoute[] = REAL_ROUTES.filter((route) => ['landing', 'privacy', 'age'].includes(route.name));
 
 export const NOT_FOUND_ROUTE: SpaRoute = {
   name: 'not-found',
