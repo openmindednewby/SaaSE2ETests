@@ -69,7 +69,9 @@ export function mintCookie(userId: string, lifetimeSeconds = DAY_SECONDS): strin
 /** Inserts a users row and returns a signed cookie for it. */
 export function createSignedInUser(): NextGameUser {
   const userId = randomUUID();
-  const steamId64 = `7656119${String(Date.now()).slice(-10)}${String(Math.floor(Math.random() * 100)).padStart(2, '0')}`;
+  // Valid 17-digit SteamID64: the fixed "7656119" prefix (7 digits) plus a 10-digit unique
+  // suffix (7 digits of Date.now() + 3 random digits) — SteamWebApiClient rejects anything else.
+  const steamId64 = `7656119${String(Date.now()).slice(-7)}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
   psql(
     `INSERT INTO users ("Id","SteamId64","BirthYear","CreatedAt","LastSeenAt") ` +
       `VALUES ('${userId}','${steamId64}',1990,now(),now());`,

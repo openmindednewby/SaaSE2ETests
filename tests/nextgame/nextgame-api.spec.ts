@@ -149,11 +149,15 @@ test.describe('nextgame api contract (driven through the SPA client)', () => {
     });
   });
 
-  // NEGATIVE CONTROL for the next test: flip to true, run, confirm it fails on a lingering 403,
-  // then flip back to false and restore. Not yet observed in this dispatch — see task-E1-report.md.
+  // NEGATIVE CONTROL for the next test: flip to true, run, confirm the test goes red as an
+  // EXPECTED failure (test.fail() below), then flip back to false and restore. The consent POST
+  // is skipped but the REAL assertions below are kept unchanged — nothing swaps in a different
+  // assertion — so a lingering 403 (or any other bug that makes the control not fail) reddens the
+  // run via an unexpected pass. Not yet observed in this dispatch — see task-E1-report.md.
   const SKIP_CONSENT_NEGATIVE_CONTROL = false;
 
   test('GET /me/player is 403 before consent, and 403 is gone once Recommendations is granted', async () => {
+    test.fail(SKIP_CONSENT_NEGATIVE_CONTROL, 'negative control: consent POST skipped, 403 must persist');
     // The SPA client's getPlayer() collapses BOTH 403 and 404 to null (nextgameApi.ts HTTP_FORBIDDEN,
     // HTTP_NOT_FOUND allow-list), so it cannot itself prove "the 403 specifically is gone" — that
     // needs the raw wire status, not the client's narrowed shape.
@@ -168,12 +172,8 @@ test.describe('nextgame api contract (driven through the SPA client)', () => {
     }
 
     const after = await fetchImpl(playerUrl);
-    if (SKIP_CONSENT_NEGATIVE_CONTROL) {
-      expect(after.status, 'negative control: 403 must persist without the consent POST').toBe(HTTP_FORBIDDEN);
-      return;
-    }
     expect(after.status, '403 must be gone once Recommendations consent is granted').not.toBe(HTTP_FORBIDDEN);
-    // Staging may carry no Steam key: 503 (quota/unavailable) is an accepted outcome alongside 200.
+    // 503 (missing Steam key, or Steam itself unavailable) is an accepted outcome alongside 200.
     expect(PLAYER_STATUSES_AFTER_CONSENT, `unexpected /me/player status ${String(after.status)} after consent`).toContain(
       after.status,
     );
