@@ -17,11 +17,21 @@ import {
   SPA_URL,
   TestIds,
   UMAMI_WEBSITE_ID,
+  type SpaRoute,
 } from '../../fixtures/nextgame-web';
 
 // These three tests assert an EXACT title/screen on a hard load, which only holds for routes known
 // not to be session/flow-gated — UNGATED_ROUTES, not the full REAL_ROUTES table (see its comment).
-const [LANDING, PRIVACY, AGE] = UNGATED_ROUTES;
+// Looked up by PATH, never by array position: REAL_ROUTES orders `age` before `privacy`, so a
+// positional destructure silently swaps them the moment the route table is reordered again.
+function ungatedRoute(path: string): SpaRoute {
+  const route = UNGATED_ROUTES.find((candidate) => candidate.path === path);
+  if (!route) throw new Error(`nextgame-web.ts UNGATED_ROUTES has no entry for ${path}`);
+  return route;
+}
+const LANDING = ungatedRoute('/');
+const PRIVACY = ungatedRoute('/privacy');
+const AGE = ungatedRoute('/age');
 const SCREENSHOT_DIR = 'test-reports/nextgame';
 
 test.describe('nextgame SPA in a real browser', () => {
