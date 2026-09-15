@@ -50,30 +50,30 @@ test.describe('nextgame SPA console smoke', () => {
   /**
    * RESPONSIVE-SSR-1 (ruled, controller 2026-09-16): the static export hydrates against a
    * narrow-rendered DOM at desktop width and React throws #418 — a JS fix was reverted because it
-   * regressed CLS to 0.41. This PINS the known defect instead of silencing it: any console error
-   * other than #418 still fails the test normally, so the gate stays live for a new regression on
-   * this route. The #418-presence assertion flips red the day the defect is fixed — that is the
-   * cue to delete this test and fold '/' back into the loop above.
+   * regressed CLS to 0.41. #418 reproduces on staging INTERMITTENTLY (observed 5/6 runs, not 6/6),
+   * so this filters #418 out rather than asserting its presence — an assert-present flipped red on
+   * the 1-in-6 run where the defect just didn't fire that time, which is a worse signal than the
+   * filter it replaces. Any console error other than #418 still fails the test normally, so the
+   * gate stays live for a new regression on this route. DELETE this filter (and fold '/' back into
+   * the loop above) once RESPONSIVE-SSR-1 lands.
    */
-  test(`${ROOT_ROUTE.path} settles with zero console errors, whatever route it ends on (desktop; RESPONSIVE-SSR-1 pinned)`, async ({
+  test(`${ROOT_ROUTE.path} settles with zero console errors, whatever route it ends on (desktop; RESPONSIVE-SSR-1 filtered)`, async ({
     page,
   }) => {
-    test.info().annotations.push({ type: 'known-defect', description: 'RESPONSIVE-SSR-1' });
     const errors = collectConsoleErrors(page);
     const response = await page.goto(`${SPA_URL}${ROOT_ROUTE.path}`);
 
     expect(response?.status(), `${ROOT_ROUTE.path} did not serve 200`).toBe(HTTP_OK);
     await expectPageViewBeacon(analytics);
 
+    const react418Seen = errors.some((error) => error.includes(REACT_418_MARKER));
+    test.info().annotations.push({ type: 'known-defect', description: `RESPONSIVE-SSR-1 (#418 seen: ${react418Seen})` });
+
     const unrelatedErrors = errors.filter((error) => !error.includes(REACT_418_MARKER));
     expect(
       unrelatedErrors,
       `unrelated console errors on ${ROOT_ROUTE.path} (ended at ${page.url()}):\n${unrelatedErrors.join('\n')}`,
     ).toEqual([]);
-    expect(
-      errors.some((error) => error.includes(REACT_418_MARKER)),
-      'RESPONSIVE-SSR-1 no longer reproduces on / — remove this pin and fold / back into the REAL_ROUTES loop',
-    ).toBe(true);
   });
 
   test(`${ROOT_ROUTE.path} at 412x823 settles with zero console errors (RESPONSIVE-SSR-1 is desktop-only)`, async ({ page }) => {
