@@ -26,7 +26,13 @@ const POLL_ATTEMPTS = 12;
 const POLL_INTERVAL_MS = 750;
 const IMPORT_START_ATTEMPTS = 5;
 const HTTP_UNAUTHORIZED = 401;
+const HTTP_FORBIDDEN = 403;
 const HTTP_NOT_FOUND = 404;
+const HTTP_OK = 200;
+const HTTP_NO_CONTENT = 204;
+const HTTP_SERVICE_UNAVAILABLE = 503;
+// /me/player answers 200 or 503 once consent is granted (staging may carry no Steam key) — never 403.
+const PLAYER_STATUSES_AFTER_CONSENT = [HTTP_OK, HTTP_SERVICE_UNAVAILABLE];
 const TERMINAL_STATUSES = ['succeeded', 'failed'];
 const IMPORT_STATUSES = ['queued', 'running', ...TERMINAL_STATUSES];
 
@@ -132,10 +138,70 @@ test.describe('nextgame api contract (driven through the SPA client)', () => {
     expect(typeof library.totalPlayed).toBe('number');
     expect(Number.isNaN(Date.parse(String(library.takenAt)))).toBe(false);
   });
+
+  test('GET /me/session returns the probe shape for a signed-in user', async () => {
+    const session = await apiFor(user).getSession();
+    expect(session).not.toBeNull();
+    expect(session).toMatchObject({
+      steamIdTail: expect.any(String) as unknown,
+      birthYearSet: expect.any(Boolean) as unknown,
+      recommendationsConsent: expect.any(Boolean) as unknown,
+    });
+  });
+
+  // NEGATIVE CONTROL for the next test: flip to true, run, confirm it fails on a lingering 403,
+  // then flip back to false and restore. Not yet observed in this dispatch — see task-E1-report.md.
+  const SKIP_CONSENT_NEGATIVE_CONTROL = false;
+
+  test('GET /me/player is 403 before consent, and 403 is gone once Recommendations is granted', async () => {
+    // The SPA client's getPlayer() collapses BOTH 403 and 404 to null (nextgameApi.ts HTTP_FORBIDDEN,
+    // HTTP_NOT_FOUND allow-list), so it cannot itself prove "the 403 specifically is gone" — that
+    // needs the raw wire status, not the client's narrowed shape.
+    const playerUrl = `${NEXTGAME_API_URL}/api/v1/me/player`;
+    const fetchImpl = cookieFetch(user.cookie);
+
+    const before = await fetchImpl(playerUrl);
+    expect(before.status, 'expected 403 before any consent is granted').toBe(HTTP_FORBIDDEN);
+
+    if (!SKIP_CONSENT_NEGATIVE_CONTROL) {
+      await apiFor(user).postConsent(ConsentPurpose.Recommendations, true);
+    }
+
+    const after = await fetchImpl(playerUrl);
+    if (SKIP_CONSENT_NEGATIVE_CONTROL) {
+      expect(after.status, 'negative control: 403 must persist without the consent POST').toBe(HTTP_FORBIDDEN);
+      return;
+    }
+    expect(after.status, '403 must be gone once Recommendations consent is granted').not.toBe(HTTP_FORBIDDEN);
+    // Staging may carry no Steam key: 503 (quota/unavailable) is an accepted outcome alongside 200.
+    expect(PLAYER_STATUSES_AFTER_CONSENT, `unexpected /me/player status ${String(after.status)} after consent`).toContain(
+      after.status,
+    );
+  });
+
+  test('POST /auth/logout answers 204 and clears the session cookie', async () => {
+    // Raw fetch, not the SPA client: logout() throws away the response after checking .ok, and the
+    // thing under test here — the Set-Cookie that actually clears the browser's cookie — lives only
+    // on that response. The session cookie is a stateless signed token (SessionCookie.cs): the SERVER
+    // never revokes it, so resending the SAME minted cookie after logout would still authenticate —
+    // that is NOT a regression, it is how this design works, and asserting a plain "401 next" would
+    // silently pass or fail for the wrong reason. Proving logout means proving the cookie gets cleared.
+    const response = await globalThis.fetch(`${NEXTGAME_API_URL}/api/v1/auth/logout`, {
+      method: 'POST',
+      headers: { Cookie: user.cookie, 'Content-Type': 'application/json' },
+    });
+    expect(response.status).toBe(HTTP_NO_CONTENT);
+    const setCookie = response.headers.get('set-cookie') ?? '';
+    expect(setCookie, 'logout response did not clear the session cookie').toMatch(/__Host-nextgame-session=;/);
+  });
 });
 
 /** Signed-out pins: no seeded row, no minted cookie, so they run against a deployed host too. */
 test.describe('nextgame api contract, signed out (driven through the SPA client)', () => {
+  test('GET /me/session resolves null (401) with no session cookie', async () => {
+    await expect(apiFor(null).getSession()).resolves.toBeNull();
+  });
+
   test('unauthenticated consent is refused', async () => {
     const error = await apiFor(null).postConsent(ConsentPurpose.Recommendations, true).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(NextGameApiError);
