@@ -31,8 +31,10 @@ const HTTP_NOT_FOUND = 404;
 const HTTP_OK = 200;
 const HTTP_NO_CONTENT = 204;
 const HTTP_SERVICE_UNAVAILABLE = 503;
-// /me/player answers 200 or 503 once consent is granted (staging may carry no Steam key) — never 403.
-const PLAYER_STATUSES_AFTER_CONSENT = [HTTP_OK, HTTP_SERVICE_UNAVAILABLE];
+// /me/player answers 200 (persona found), 404 (no such Steam player) or 503 (Steam unavailable, or
+// no key) once consent is granted — never 403. This proves the consent gate lifted, not that a
+// Steam persona exists for the seeded id.
+const PLAYER_STATUSES_AFTER_CONSENT = [HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVICE_UNAVAILABLE];
 const TERMINAL_STATUSES = ['succeeded', 'failed'];
 const IMPORT_STATUSES = ['queued', 'running', ...TERMINAL_STATUSES];
 
@@ -173,7 +175,8 @@ test.describe('nextgame api contract (driven through the SPA client)', () => {
 
     const after = await fetchImpl(playerUrl);
     expect(after.status, '403 must be gone once Recommendations consent is granted').not.toBe(HTTP_FORBIDDEN);
-    // 503 (missing Steam key, or Steam itself unavailable) is an accepted outcome alongside 200.
+    // 404 (no such Steam player) or 503 (missing Steam key, or Steam itself unavailable) are
+    // accepted outcomes alongside 200 — this only proves the consent gate lifted.
     expect(PLAYER_STATUSES_AFTER_CONSENT, `unexpected /me/player status ${String(after.status)} after consent`).toContain(
       after.status,
     );

@@ -18,6 +18,10 @@ const CONTAINER = 'SharedDB';
 const DB = 'nextgame';
 const NEWLINE = String.fromCharCode(10);
 
+// The real SteamID64 base (SteamWebApiClient rejects anything below it, since a deployed backend
+// with a live key calls Steam and gets an empty player list for a fabricated low id).
+const STEAM_ID64_BASE = 76561197960265728n;
+
 // NEXTGAME_BASE_URL points the whole suite at one deployed host, whose nginx proxies /api/ to the
 // API (nextgame-web/nginx.conf `location /api/`). Unset, the suite targets the local Tilt resources.
 export const NEXTGAME_API_URL = process.env.NEXTGAME_API_URL ?? process.env.NEXTGAME_BASE_URL ?? 'http://localhost:5105';
@@ -69,9 +73,11 @@ export function mintCookie(userId: string, lifetimeSeconds = DAY_SECONDS): strin
 /** Inserts a users row and returns a signed cookie for it. */
 export function createSignedInUser(): NextGameUser {
   const userId = randomUUID();
-  // Valid 17-digit SteamID64: the fixed "7656119" prefix (7 digits) plus a 10-digit unique
-  // suffix (7 digits of Date.now() + 3 random digits) — SteamWebApiClient rejects anything else.
-  const steamId64 = `7656119${String(Date.now()).slice(-7)}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+  // Real SteamID64s are the base plus an account offset, so a per-test id must be derived from the
+  // base, not a fabricated prefix — otherwise it sits below every real SteamID64 and a deployed
+  // backend's Steam lookup returns an empty player list (404). Offset stays unique per test.
+  const steamId64Offset = BigInt(Date.now()) * 1000n + BigInt(Math.floor(Math.random() * 1000));
+  const steamId64 = (STEAM_ID64_BASE + steamId64Offset).toString();
   psql(
     `INSERT INTO users ("Id","SteamId64","BirthYear","CreatedAt","LastSeenAt") ` +
       `VALUES ('${userId}','${steamId64}',1990,now(),now());`,
