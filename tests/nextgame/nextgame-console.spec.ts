@@ -28,7 +28,7 @@ test.describe('nextgame SPA console smoke', () => {
   const NON_ROOT_ROUTES = REAL_ROUTES.filter((route) => route.path !== '/');
   const ROOT_ROUTE = REAL_ROUTES.find((route) => route.path === '/')!;
   const MOBILE_412_VIEWPORT = { width: 412, height: 823 };
-  const REACT_418_MARKER = 'React error #418';
+  const REACT_418_MARKER = /React error #418(?!\d)/;
 
   for (const route of NON_ROOT_ROUTES) {
     // Most of these are session/flow-gated (see fixtures/nextgame-web.ts): loaded anonymously they
@@ -66,10 +66,10 @@ test.describe('nextgame SPA console smoke', () => {
     expect(response?.status(), `${ROOT_ROUTE.path} did not serve 200`).toBe(HTTP_OK);
     await expectPageViewBeacon(analytics);
 
-    const react418Seen = errors.some((error) => error.includes(REACT_418_MARKER));
+    const react418Seen = errors.some((error) => REACT_418_MARKER.test(error));
     test.info().annotations.push({ type: 'known-defect', description: `RESPONSIVE-SSR-1 (#418 seen: ${react418Seen})` });
 
-    const unrelatedErrors = errors.filter((error) => !error.includes(REACT_418_MARKER));
+    const unrelatedErrors = errors.filter((error) => !REACT_418_MARKER.test(error));
     expect(
       unrelatedErrors,
       `unrelated console errors on ${ROOT_ROUTE.path} (ended at ${page.url()}):\n${unrelatedErrors.join('\n')}`,
