@@ -25,9 +25,22 @@ async function firstVisitUntilClaimed(page: Page): Promise<void> {
   await interceptAnalytics(page);
   await page.goto(`${SPA_URL}/age`);
   await expect(page.getByTestId(TestIds.AGE_SCREEN)).toBeVisible();
-  // clients.claim() fires controllerchange here — the event a broken guard reloads on.
+  // clients.claim() fires controllerchange here — the event a broken guard reloads on. The
+  // negative control below deliberately strips that guard, so on that path the reload can land
+  // mid-evaluate and destroy the execution context; treat that as "not yet claimed" and keep
+  // polling instead of letting a low-level Playwright error crash the test outright.
   await expect
-    .poll(async () => page.evaluate(() => navigator.serviceWorker.controller !== null), { timeout: CLAIM_TIMEOUT_MS })
+    .poll(
+      async () => {
+        try {
+          return await page.evaluate(() => navigator.serviceWorker.controller !== null);
+        } catch (error) {
+          if (error instanceof Error && /Execution context was destroyed/.test(error.message)) return false;
+          throw error;
+        }
+      },
+      { timeout: CLAIM_TIMEOUT_MS },
+    )
     .toBe(true);
 }
 
