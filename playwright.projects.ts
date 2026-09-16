@@ -201,6 +201,10 @@ export function buildProjects(): ProjectConfig {
     // the legacy BaseClient login; every spec `test.skip`s gracefully when the service/key is absent.
     // aml-gdelt-page-qa drives a browser, so it is routed to aml-ui below despite its aml- prefix.
     { name: 'aml-api', workers: 1, testMatch: /aml\/aml-(?!gdelt-page-qa).*(?<!\.ui)\.spec\.ts/ },
+    // MODB-2 task 6b — Module B gateway <-> check mocks <-> AML, pure HTTP against the wl-api-gateway
+    // (MODB_GATEWAY_URL, default the staging NodePort http://10.0.0.2:30610 over WireGuard). No setup
+    // dependency and no graceful skip: an unreachable gateway FAILS, because an all-skip run observes nothing.
+    { name: 'modb-api', workers: 1, testMatch: /modb\/modb-.*(?<!\.ui)\.spec\.ts/ },
     // AML @ui tier — AM-READY-5 §3.6. The console-error smoke over the DEPLOYED aml-v2 console, which
     // bff-aml serves per-path at <host>/app (personalServerNotes/k8s/aml/bff-aml.yml:63), so the
     // baseURL carries the /app prefix. It exists because the @api tier above hand-assembles every

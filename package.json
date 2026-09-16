@@ -274,6 +274,7 @@
     "test:aml:latency": "node scripts/run-aml-e2e.mjs tests/aml/aml-screening-latency.spec.ts --reporter=line",
     "test:aml:screening-100": "node scripts/run-aml-e2e.mjs tests/aml/aml-screening-100-cases.spec.ts --reporter=line",
     "test:aml:ui-smoke": "cross-env AML_E2E_PROJECT=aml-ui node scripts/run-aml-e2e.mjs tests/aml/aml-adverse-media.ui.spec.ts",
+    "test:modb:integration": "playwright test --project=modb-api --timeout=240000",
     "test:logging:stress": "cross-env SHELL=/bin/bash playwright test --project=logging-stress",
     "test:notifications:stress": "cross-env SHELL=/bin/bash playwright test --project=notifications-stress",
     "check:project-selection": "node scripts/check-project-selection.mjs"
