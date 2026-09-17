@@ -11,8 +11,8 @@ import { deflateSync } from 'node:zlib';
 import { expect, type APIRequestContext, type APIResponse } from '@playwright/test';
 
 export const MODB_GATEWAY_URL = (process.env.MODB_GATEWAY_URL ?? 'http://10.0.0.2:30610').replace(/\/$/, '');
-/** sync | async | queue — the gateway's AML_INTEGRATION_MODE this run is gating (tasks 9 and 10 rerun per mode). */
-export const MODB_AML_MODE = process.env.MODB_AML_MODE ?? 'sync';
+/** sync | async | queue — the gateway's AML_INTEGRATION_MODE this run gates. Queue is the standing mode (D-INT-13). */
+export const MODB_AML_MODE = process.env.MODB_AML_MODE ?? 'queue';
 const API = `${MODB_GATEWAY_URL}/api/v1`;
 
 export const AML_CHECK = 'aml_screening';
@@ -28,10 +28,20 @@ const POLL_INTERVALS_MS = [1_000, 2_000, 3_000];
 const HTTP_ACCEPTED = 202;
 // The WireGuard hop to staging is ~300ms RTT and spikes; the config's 10s request default flaked a cold GET.
 const REQUEST_TIMEOUT_MS = 30_000;
-// The MRZ capture-quality gate rejects anything under 1200x800 before the mock is called.
-const IMAGE_WIDTH = 1200;
-const IMAGE_HEIGHT = 800;
+// Capture-quality gates reject a document under 1200x800 and a utility bill under 1600x1200 before any mock runs.
+const DOC_SIZE = [1200, 800] as const;
+const BILL_SIZE = [1600, 1200] as const;
 const IMAGE_RGB = [180, 190, 200];
+/** CHECK_PROVIDER_SOURCES on staging (MODB-2-INT-checklist Q4 evidence): every dispatched check is a mock, AML is live. */
+export const SOURCE_BY_CHECK: Record<string, 'mock' | 'live'> = {
+  liveness: 'mock',
+  face_match: 'mock',
+  mrz_match: 'mock',
+  utility_extraction: 'mock',
+  utility_bill_authenticity: 'mock',
+  utility_authenticity: 'mock',
+  aml_screening: 'live',
+};
 
 export type MockOutcome = 'passed' | 'review' | 'failed' | 'check_failed' | 'no_callback';
 
@@ -42,6 +52,8 @@ export interface CheckRow {
   outcome: string | null;
   result: Record<string, unknown> | null;
   error: { code: string; message: string } | null;
+  attempt_count: number;
+  source?: string;
 }
 
 const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
@@ -65,24 +77,28 @@ function pngChunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([len, typed, crc]);
 }
 
-/** A synthetic solid-colour PNG at the capture-quality minimum. Built once per worker. */
-export const SYNTHETIC_PNG: Buffer = (() => {
+/** A synthetic solid-colour PNG at a capture-quality minimum. */
+function syntheticPng([width, height]: readonly [number, number]): Buffer {
   const header = Buffer.alloc(13);
-  header.writeUInt32BE(IMAGE_WIDTH, 0);
-  header.writeUInt32BE(IMAGE_HEIGHT, 4);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
   header.set([8, 2, 0, 0, 0], 8); // 8-bit depth, RGB, deflate, no filter, no interlace
-  const row = Buffer.concat([Buffer.from([0]), Buffer.from(Array(IMAGE_WIDTH).fill(IMAGE_RGB).flat())]);
-  const raw = Buffer.concat(Array(IMAGE_HEIGHT).fill(row));
+  const row = Buffer.concat([Buffer.from([0]), Buffer.from(Array(width).fill(IMAGE_RGB).flat())]);
+  const raw = Buffer.concat(Array(height).fill(row));
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     pngChunk('IHDR', header),
     pngChunk('IDAT', deflateSync(raw)),
     pngChunk('IEND', Buffer.alloc(0)),
   ]);
-})();
+}
 
-function image(name: string) {
-  return { name, mimeType: 'image/png', buffer: SYNTHETIC_PNG };
+/** Built once per worker. */
+const DOC_PNG = syntheticPng(DOC_SIZE);
+const BILL_PNG = syntheticPng(BILL_SIZE);
+
+function image(name: string, buffer: Buffer = DOC_PNG) {
+  return { name, mimeType: 'image/png', buffer };
 }
 
 /** Hard reachability probe. The suite FAILS when the gateway is down: an all-skip run observes nothing. */
@@ -93,28 +109,63 @@ export async function assertGatewayReachable(request: APIRequestContext): Promis
   expect((await probe.json()).error?.code).toBe('NOT_FOUND');
 }
 
-/** POST /api/v1/verifications with an MRZ check and a per-request mock outcome map. Returns the request id. */
+/**
+ * POST /api/v1/verifications with the given checks (default: MRZ only) and a per-request mock outcome map.
+ * A utility bill is attached only when a utility check is requested. Returns the request id.
+ */
 export async function submitVerification(
   request: APIRequestContext,
   mockOutcomes: Partial<Record<string, MockOutcome>>,
+  checkTypes: readonly string[] = [MRZ_CHECK],
 ): Promise<string> {
   const requestId = randomUUID();
+  const needsBill = checkTypes.some((checkType) => checkType.startsWith('utility_'));
   const response = await request.post(`${API}/verifications`, {
     headers: { 'x-request-id': requestId },
     timeout: REQUEST_TIMEOUT_MS,
     multipart: {
-      check_types: MRZ_CHECK,
+      check_types: checkTypes.join(','),
       document_type: 'identity_card',
       model: 'sface',
       mock_outcomes: JSON.stringify(mockOutcomes),
       document_front: image('front.png'),
       document_back: image('back.png'),
       selfie: image('selfie.png'),
+      ...(needsBill ? { utility_bill: image('bill.png', BILL_PNG) } : {}),
     },
   });
   expect(response.status(), await response.text()).toBe(HTTP_ACCEPTED);
   expect((await response.json()).meta.request_id).toBe(requestId);
   return requestId;
+}
+
+/**
+ * Bounded poll (no sleeps) until the AML row exists and every row is terminal, except the checks named in
+ * `stillPending` (no_callback checks, which stay non-terminal for ~3 h). Returns every check row.
+ */
+export async function waitForSettled(
+  request: APIRequestContext,
+  requestId: string,
+  stillPending: readonly string[] = [],
+): Promise<CheckRow[]> {
+  let rows: CheckRow[] = [];
+  await expect
+    .poll(
+      async () => {
+        const response = await request
+          .get(`${API}/checks/${requestId}`, { timeout: REQUEST_TIMEOUT_MS })
+          .catch((error: Error) => error);
+        if (response instanceof Error) return `transport-error: ${response.message.split(/\r?\n/)[0]}`;
+        expect(response.status()).toBe(200);
+        rows = (await response.json()).data as CheckRow[];
+        if (!rows.some((row) => row.check_type === AML_CHECK)) return 'aml row absent';
+        const open = rows.filter((row) => !TERMINAL_STATUSES.includes(row.status) && !stillPending.includes(row.check_type));
+        return open.length === 0 ? 'settled' : open.map((row) => `${row.check_type}:${row.status}`).join(',');
+      },
+      { timeout: SETTLE_TIMEOUT_MS, intervals: POLL_INTERVALS_MS, message: `checks of ${requestId} never settled` },
+    )
+    .toBe('settled');
+  return rows;
 }
 
 /** Bounded poll (no sleeps) until the AML row exists and is terminal. Returns every check row. */

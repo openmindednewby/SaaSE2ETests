@@ -1,24 +1,34 @@
-// @modb-api tier — MODB-2 task 6b. Module B gateway -> check mocks -> AMLService, driven over HTTP only.
-// House rule: E2E drives the API, not the UI. This suite is the regression gate for MODB-2 tasks 9
-// (async HTTP) and 10 (queue): rerun it per mode with MODB_AML_MODE set to what the gateway runs.
+// @modb-api tier — MODB-2 task 6b + Q5. Module B gateway -> check mocks -> AMLService, driven over HTTP only.
+// House rule: E2E drives the API, not the UI. Queue is the standing AML mode (D-INT-13); set MODB_AML_MODE to
+// what the gateway runs when gating sync or async.
 //
 // Structurally blind to: client-side JS errors in wl-mvp-frontend, camera capture, and the browser ->
 // Next.js server-action path of the public host. Those need a browser tier (MODB-2 task 8).
 import { expect, test } from '@playwright/test';
+import { expectCancelledAml, expectScreenedAml, expectSources } from './modb-assertions.js';
 import {
-  ADVERSE_MEDIA_STATUSES,
   AML_CHECK,
-  AML_DECISIONS,
-  MODB_AML_MODE,
   MRZ_CHECK,
+  TERMINAL_STATUSES,
   assertGatewayReachable,
   getAmlCase,
   rowOf,
   submitVerification,
   waitForAmlTerminal,
+  waitForSettled,
 } from './modb-helpers.js';
+import { MOCK_CHECK_TYPES, MODB_SCENARIOS, expectedCheck, pendingChecks } from './modb-scenarios.js';
 
-const OUTCOME_BY_DECISION: Record<string, string> = { Pass: 'passed', Review: 'review', Fail: 'failed' };
+const SUBMITTED_CHECKS = [...MOCK_CHECK_TYPES];
+const MAX_DEPENDENCY_ATTEMPTS = 3;
+/**
+ * no_callback scenarios are OPT-IN. Each check type has worker concurrency 1 (wl-api-gateway
+ * verification.processors.ts:17) and a silent callback holds that slot for CHECK_CALLBACK_TIMEOUT_MS x 3
+ * (verification.processor.base.ts:108, ~3 h on staging), so one run starves every later liveness (or MRZ, and so
+ * every AML screening) on staging for ~3 h. Measured 2026-09-17: after one liveness no_callback, later requests
+ * sat liveness=queued attempt_count=0 (c4aee973, d5d54f31, 63bdd891).
+ */
+const RUN_NO_CALLBACK = process.env.MODB_E2E_NO_CALLBACK === '1';
 
 test.describe('MODB gateway <-> mocks <-> AML @modb-api', () => {
   test.beforeEach(async ({ request }) => {
@@ -33,15 +43,8 @@ test.describe('MODB gateway <-> mocks <-> AML @modb-api', () => {
     const mrz = rowOf(rows, MRZ_CHECK);
     expect(mrz.status).toBe('completed');
     expect(mrz.outcome).toBe('passed');
-
-    const aml = rowOf(rows, AML_CHECK);
-    expect(aml.status, JSON.stringify(aml.error)).toBe('completed');
-    expect(aml.error).toBeNull();
-    const result = aml.result ?? {};
-    expect(result.screening_id).toEqual(expect.stringMatching(/^[0-9a-f-]{36}$/i));
-    expect(AML_DECISIONS).toContain(result.decision);
-    // outcome is derived from the AML decision alone (gateway decisionToOutcome), never from AM status.
-    expect(aml.outcome).toBe(OUTCOME_BY_DECISION[result.decision as string]);
+    expectSources(rows);
+    await expectScreenedAml(request, requestId, rowOf(rows, AML_CHECK));
   });
 
   test('(b) a required check forced to fail -> AML is cancelled with a stated reason', async ({ request }) => {
@@ -52,43 +55,15 @@ test.describe('MODB gateway <-> mocks <-> AML @modb-api', () => {
     const mrz = rowOf(rows, MRZ_CHECK);
     expect(mrz.status).toBe('completed');
     expect(mrz.outcome).toBe('failed');
-
-    const aml = rowOf(rows, AML_CHECK);
-    expect(aml.status).toBe('cancelled');
-    expect(aml.outcome).toBeNull();
-    expect(aml.result).toBeNull();
+    expectSources(rows);
     // The reason as the API exposes it today: the AML row's `error`, not a separate field.
-    expect(aml.error?.code).toBe('AML_REQUIRED_CHECK_NOT_PASSED');
-    expect(aml.error?.message).toContain('mrz_match completed with outcome failed');
+    await expectCancelledAml(request, requestId, rowOf(rows, AML_CHECK), {
+      code: 'AML_REQUIRED_CHECK_NOT_PASSED',
+      message: 'mrz_match completed with outcome failed',
+    });
   });
 
   // (c) WATCHLIST_UNAVAILABLE forcing is out of scope by owner decision D-INT-6 (MODB-2-INT-checklist.md); retry is unit-tested in the gateway.
-
-  test('(d) adverse_media_status is explicit, in the enum, and independent of the decision', async ({
-    request,
-  }) => {
-    const requestId = await submitVerification(request, { mrz_match: 'passed' });
-    test.info().annotations.push({ type: 'request_id', description: requestId });
-
-    const aml = rowOf(await waitForAmlTerminal(request, requestId), AML_CHECK);
-    expect(aml.status, JSON.stringify(aml.error)).toBe('completed');
-    const result = aml.result ?? {};
-    // Present as its own key, so a Pass with AM Unavailable/NotReported can never read as clean.
-    expect(result).toHaveProperty('adverse_media_status');
-    const status = result.adverse_media_status as string;
-    expect(ADVERSE_MEDIA_STATUSES).toContain(status);
-    test.info().annotations.push({ type: 'adverse_media_status', description: `${result.decision}/${status}` });
-    // NotReported means "the transport carried no AM status". Sync and async HTTP carry it; only queue
-    // mode is allowed to report it until VerificationScreeningCompleted gains the field (task 5 note).
-    if (MODB_AML_MODE !== 'queue') expect(status).not.toBe('NotReported');
-
-    // The case-detail proxy reads the same screening and must agree on the AM status.
-    const amlCase = await getAmlCase(request, requestId);
-    expect(amlCase.status()).toBe(200);
-    const caseData = (await amlCase.json()).data;
-    expect(caseData.screening_id).toBe(result.screening_id);
-    expect(caseData.adverse_media_status).toBe(status);
-  });
 
   test('(e) aml-case returns the screening with matches; a request never screened is 404', async ({ request }) => {
     const screened = await submitVerification(request, { mrz_match: 'passed' });
@@ -102,9 +77,6 @@ test.describe('MODB gateway <-> mocks <-> AML @modb-api', () => {
     const body = await ok.json();
     expect(body.meta.request_id).toBe(screened);
     expect(body.data.screening_id).toBe(screenedAml.result?.screening_id);
-    expect(AML_DECISIONS).toContain(body.data.decision);
-    expect(Array.isArray(body.data.matches)).toBe(true);
-    expect(body.data.matches.length).toBeGreaterThan(0);
     for (const match of body.data.matches) expect(match).toHaveProperty('source_list');
 
     await waitForAmlTerminal(request, refused);
@@ -112,4 +84,48 @@ test.describe('MODB gateway <-> mocks <-> AML @modb-api', () => {
     expect(missing.status()).toBe(404);
     expect((await missing.json()).error?.code).toBe('AML_SCREENING_NOT_FOUND');
   });
+});
+
+// One test per D-INT-12 scenario, all five mock checks submitted with the scenario's outcomes.
+test.describe('MODB D-INT-12 demo scenarios @modb-api', () => {
+  test.describe.configure({ mode: 'parallel' });
+
+  test.beforeEach(async ({ request }) => {
+    await assertGatewayReachable(request);
+  });
+
+  for (const scenario of MODB_SCENARIOS) {
+    const pending = pendingChecks(scenario);
+    const optIn = pending.length > 0 && !RUN_NO_CALLBACK;
+    (optIn ? test.skip : test)(`${scenario.id}: ${scenario.expected}`, async ({ request }) => {
+      const requestId = await submitVerification(request, scenario.outcomes, SUBMITTED_CHECKS);
+      test.info().annotations.push({ type: 'request_id', description: requestId });
+
+      // no_callback checks stay open ~3 h, so they are asserted non-terminal after dispatch, never awaited.
+      const rows = await waitForSettled(request, requestId, pending);
+      expectSources(rows);
+      for (const checkType of MOCK_CHECK_TYPES) {
+        const row = rowOf(rows, checkType);
+        if (pending.includes(checkType)) {
+          expect(TERMINAL_STATUSES, `${checkType} must still be open`).not.toContain(row.status);
+          expect(row.attempt_count, `${checkType} was dispatched`).toBeGreaterThanOrEqual(1);
+          continue;
+        }
+        const expected = expectedCheck(scenario, checkType);
+        expect({ status: row.status, outcome: row.outcome }, `${checkType} ${JSON.stringify(row.error)}`).toEqual(expected);
+        if (expected.status === 'failed') expect(row.error?.code, `${checkType} error code`).toBeTruthy();
+        if (scenario.dependencyFailed?.includes(checkType)) expect(row.attempt_count).toBe(MAX_DEPENDENCY_ATTEMPTS);
+      }
+
+      const aml = rowOf(rows, AML_CHECK);
+      if (scenario.aml === 'screened') {
+        await expectScreenedAml(request, requestId, aml);
+        if (scenario.amlDecision) expect(aml.result?.decision).toBe(scenario.amlDecision);
+      } else if (scenario.aml === 'cancelled') {
+        await expectCancelledAml(request, requestId, aml, scenario.cancel as { code: string; message: string });
+      } else {
+        expect(TERMINAL_STATUSES, 'AML waits on the silent required check').not.toContain(aml.status);
+      }
+    });
+  }
 });
