@@ -2,10 +2,20 @@
 // House rule: E2E drives the API, not the UI. Queue is the standing AML mode (D-INT-13); set MODB_AML_MODE to
 // what the gateway runs when gating sync or async.
 //
+// Environment (parsed in modb-guards.ts; a malformed value FAILS the run, never skips):
+//   MODB_GATEWAY_URL                 wl-api-gateway base URL. .env.local / .env.staging carry the staging NodePort;
+//                                    an in-cluster or CI runner must set it, and unset fails with a clear message.
+//   MODB_E2E_NO_CALLBACK=<id>        enables exactly ONE no_callback scenario (`mrz-no-callback` or
+//                                    `liveness-no-callback`). Blocks a shared staging check worker for ~3 h: see
+//                                    NO_CALLBACK_BLAST_RADIUS below.
+//   MODB_E2E_ALLOW_AM_UNAVAILABLE=1  a run that screened but never observed adverse media `Ok` with score > 0 warns
+//                                    instead of failing. Set it only when GDELT is known degraded on staging.
+//
 // Structurally blind to: client-side JS errors in wl-mvp-frontend, camera capture, and the browser ->
 // Next.js server-action path of the public host. Those need a browser tier (MODB-2 task 8).
 import { expect, test } from '@playwright/test';
-import { expectCancelledAml, expectScreenedAml, expectSources } from './modb-assertions.js';
+import { expectCancelledAml, expectScreenedAml, expectSources, recordAdverseMedia, screenLedger } from './modb-assertions.js';
+import { positiveScreenVerdict, scenarioEnabled, selectNoCallbackScenario } from './modb-guards.js';
 import {
   AML_CHECK,
   MRZ_CHECK,
@@ -28,13 +38,25 @@ import {
 const SUBMITTED_CHECKS = [...MOCK_CHECK_TYPES];
 const MAX_DEPENDENCY_ATTEMPTS = 3;
 /**
- * no_callback scenarios are OPT-IN. Each check type has worker concurrency 1 (wl-api-gateway
- * verification.processors.ts:17) and a silent callback holds that slot for CHECK_CALLBACK_TIMEOUT_MS x 3
- * (verification.processor.base.ts:108, ~3 h on staging), so one run starves every later liveness (or MRZ, and so
- * every AML screening) on staging for ~3 h. Measured 2026-09-17: after one liveness no_callback, later requests
- * sat liveness=queued attempt_count=0 (c4aee973, d5d54f31, 63bdd891).
+ * NO_CALLBACK_BLAST_RADIUS. no_callback scenarios are OPT-IN, ONE per run (MODB_E2E_NO_CALLBACK=<scenario id>).
+ * Each check type has worker concurrency 1 (wl-api-gateway verification.processors.ts:17) and a silent callback
+ * holds that slot for CHECK_CALLBACK_TIMEOUT_MS x 3 (verification.processor.base.ts:108, ~3 h on staging). One
+ * opted-in scenario therefore starves every later check of that type on SHARED staging for ~3 h:
+ * `mrz-no-callback` blocks MRZ and with it every AML screening; `liveness-no-callback` blocks liveness. Two in one
+ * run fail deterministically, because the second waits on the slot the first holds. Measured 2026-09-17: after one
+ * liveness no_callback, later requests sat liveness=queued attempt_count=0 (c4aee973, d5d54f31, 63bdd891).
  */
-const RUN_NO_CALLBACK = process.env.MODB_E2E_NO_CALLBACK === '1';
+const SELECTED_NO_CALLBACK = selectNoCallbackScenario(
+  process.env,
+  MODB_NO_CALLBACK_SCENARIOS.map((scenario) => scenario.id),
+);
+
+// A green run must prove a positive screen happened: fail when this worker screened and never saw AM Ok, score > 0.
+test.afterAll(() => {
+  const verdict = positiveScreenVerdict(screenLedger, process.env);
+  if (verdict.warn) test.info().annotations.push({ type: 'aml-not-observed', description: verdict.warn });
+  if (verdict.fail) throw new Error(verdict.fail);
+});
 
 test.describe('MODB gateway <-> mocks <-> AML @modb-api', () => {
   test.beforeEach(async ({ request }) => {
@@ -83,6 +105,12 @@ test.describe('MODB gateway <-> mocks <-> AML @modb-api', () => {
     const body = await ok.json();
     expect(body.meta.request_id).toBe(screened);
     expect(body.data.screening_id).toBe(screenedAml.result?.screening_id);
+    const amStatus = body.data.adverse_media_status;
+    const score = screenedAml.result?.score;
+    const note = `(e) ${screened} score=${score} am=${amStatus} matches=${body.data.matches.length}`;
+    recordAdverseMedia(note, amStatus, score);
+    // ERIKSSON's matches all come from adverse media, so only AM Ok promises a non-empty list to check.
+    if (amStatus === 'Ok') expect(body.data.matches.length, `AM Ok but ${note}`).toBeGreaterThan(0);
     for (const match of body.data.matches) expect(match).toHaveProperty('source_list');
 
     await waitForAmlTerminal(request, refused);
@@ -102,8 +130,8 @@ test.describe('MODB D-INT-12 demo scenarios @modb-api', () => {
 
   for (const scenario of [...MODB_SCENARIOS, ...MODB_NO_CALLBACK_SCENARIOS]) {
     const pending = pendingChecks(scenario);
-    const optIn = pending.length > 0 && !RUN_NO_CALLBACK;
-    (optIn ? test.skip : test)(`${scenario.id}: ${scenario.expected}`, async ({ request }) => {
+    const enabled = scenarioEnabled(scenario.id, pending.length, SELECTED_NO_CALLBACK);
+    (enabled ? test : test.skip)(`${scenario.id}: ${scenario.expected}`, async ({ request }) => {
       const requestId = await submitVerification(request, scenario.outcomes, SUBMITTED_CHECKS);
       test.info().annotations.push({ type: 'request_id', description: requestId });
 

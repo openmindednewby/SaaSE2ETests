@@ -1,6 +1,7 @@
 // MODB-2 task 6b — helpers for the API-driven Module B gateway <-> mocks <-> AML suite.
 //
-// Target: the wl-api-gateway directly (staging NodePort over WireGuard). The public
+// Target: the wl-api-gateway directly, at MODB_GATEWAY_URL (.env.local / .env.staging: the staging NodePort over
+// WireGuard; unset fails with a clear message, see modb-guards.ts). The public
 // https://modb-staging.dloizides.com routes /api/v1 to the Next.js frontend, so it is NOT an API
 // target. Every request carries a per-request `mock_outcomes` map (gateway flag
 // VERIFICATION_MOCK_OUTCOMES_ENABLED, mock `Scenarios/RequestOutcomes.cs`), so outcomes are
@@ -9,11 +10,14 @@
 import { randomUUID } from 'node:crypto';
 import { deflateSync } from 'node:zlib';
 import { expect, type APIRequestContext, type APIResponse } from '@playwright/test';
+import { resolveGatewayUrl } from './modb-guards.js';
 
-export const MODB_GATEWAY_URL = (process.env.MODB_GATEWAY_URL ?? 'http://10.0.0.2:30610').replace(/\/$/, '');
 /** sync | async | queue — the gateway's AML_INTEGRATION_MODE this run gates. Queue is the standing mode (D-INT-13). */
 export const MODB_AML_MODE = process.env.MODB_AML_MODE ?? 'queue';
-const API = `${MODB_GATEWAY_URL}/api/v1`;
+/** Resolved per call, so collecting this file never throws; the first request of a test fails with the message. */
+function api(): string {
+  return `${resolveGatewayUrl(process.env)}/api/v1`;
+}
 
 export const AML_CHECK = 'aml_screening';
 export const MRZ_CHECK = 'mrz_match';
@@ -22,7 +26,7 @@ export const AML_DECISIONS = ['Pass', 'Review', 'Fail'];
 /** `adverse_media_status` contract (gateway `aml-case-response.dto.ts`): only `Ok` means adverse media was checked. */
 export const ADVERSE_MEDIA_STATUSES = ['Skipped', 'Ok', 'Stale', 'Unavailable', 'NotReported'];
 
-// Bounded by the npm script --timeout=240000 (config default is 30s; (e) settles two requests).
+// Bounded by the modb-api project timeout (240 s, playwright.projects.ts); (e) settles two requests.
 const SETTLE_TIMEOUT_MS = 90_000;
 const POLL_INTERVALS_MS = [1_000, 2_000, 3_000];
 const HTTP_ACCEPTED = 202;
@@ -103,8 +107,8 @@ function image(name: string, buffer: Buffer = DOC_PNG) {
 
 /** Hard reachability probe. The suite FAILS when the gateway is down: an all-skip run observes nothing. */
 export async function assertGatewayReachable(request: APIRequestContext): Promise<void> {
-  const probe = await request.get(`${API}/checks/${randomUUID()}`, { failOnStatusCode: false, timeout: REQUEST_TIMEOUT_MS });
-  expect(probe.status(), `gateway at ${MODB_GATEWAY_URL} must answer an unknown request id with 404`).toBe(404);
+  const probe = await request.get(`${api()}/checks/${randomUUID()}`, { failOnStatusCode: false, timeout: REQUEST_TIMEOUT_MS });
+  expect(probe.status(), `gateway at ${api()} must answer an unknown request id with 404`).toBe(404);
   // GET /checks/:id answers NOT_FOUND (the aml-case route answers VERIFICATION_NOT_FOUND); either proves the API.
   expect((await probe.json()).error?.code).toBe('NOT_FOUND');
 }
@@ -120,7 +124,7 @@ export async function submitVerification(
 ): Promise<string> {
   const requestId = randomUUID();
   const needsBill = checkTypes.some((checkType) => checkType.startsWith('utility_'));
-  const response = await request.post(`${API}/verifications`, {
+  const response = await request.post(`${api()}/verifications`, {
     headers: { 'x-request-id': requestId },
     timeout: REQUEST_TIMEOUT_MS,
     multipart: {
@@ -149,22 +153,20 @@ export async function waitForSettled(
   stillPending: readonly string[] = [],
 ): Promise<CheckRow[]> {
   let rows: CheckRow[] = [];
-  let last = 'never polled';
   await expect
     .poll(
       async () => {
         const response = await request
-          .get(`${API}/checks/${requestId}`, { timeout: REQUEST_TIMEOUT_MS })
+          .get(`${api()}/checks/${requestId}`, { timeout: REQUEST_TIMEOUT_MS })
           .catch((error: Error) => error);
         if (response instanceof Error) return `transport-error: ${response.message.split(/\r?\n/)[0]}`;
         expect(response.status()).toBe(200);
         rows = (await response.json()).data as CheckRow[];
-        last = rows.map((row) => `${row.check_type}:${row.status}/${row.attempt_count}`).join(',');
         if (!rows.some((row) => row.check_type === AML_CHECK)) return 'aml row absent';
         const open = rows.filter((row) => !TERMINAL_STATUSES.includes(row.status) && !stillPending.includes(row.check_type));
-        return open.length === 0 ? 'settled' : open.map((row) => `${row.check_type}:${row.status}`).join(',');
+        return open.length === 0 ? 'settled' : open.map((row) => `${row.check_type}:${row.status}/${row.attempt_count}`).join(',');
       },
-      { timeout: SETTLE_TIMEOUT_MS, intervals: POLL_INTERVALS_MS, message: `checks of ${requestId} never settled (last: ${last})` },
+      { timeout: SETTLE_TIMEOUT_MS, intervals: POLL_INTERVALS_MS, message: `checks of ${requestId} never settled` },
     )
     .toBe('settled');
   return rows;
@@ -179,7 +181,7 @@ export async function waitForAmlTerminal(request: APIRequestContext, requestId: 
         // A dropped socket on the WireGuard hop (ECONNRESET, seen 2 of 4 runs on the first poll) is retried
         // inside the bound; a wrong status code still fails immediately via the expect below.
         const response = await request
-          .get(`${API}/checks/${requestId}`, { timeout: REQUEST_TIMEOUT_MS })
+          .get(`${api()}/checks/${requestId}`, { timeout: REQUEST_TIMEOUT_MS })
           .catch((error: Error) => error);
         if (response instanceof Error) return `transport-error: ${response.message.split(/\r?\n/)[0]}`;
         expect(response.status()).toBe(200);
@@ -199,5 +201,5 @@ export function rowOf(rows: CheckRow[], checkType: string): CheckRow {
 }
 
 export function getAmlCase(request: APIRequestContext, requestId: string): Promise<APIResponse> {
-  return request.get(`${API}/checks/${requestId}/aml-case`, { failOnStatusCode: false, timeout: REQUEST_TIMEOUT_MS });
+  return request.get(`${api()}/checks/${requestId}/aml-case`, { failOnStatusCode: false, timeout: REQUEST_TIMEOUT_MS });
 }

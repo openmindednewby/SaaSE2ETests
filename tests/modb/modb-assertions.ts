@@ -10,11 +10,21 @@ import {
   getAmlCase,
   type CheckRow,
 } from './modb-helpers.js';
+import { newScreenLedger, recordScreen } from './modb-guards.js';
 
 const OUTCOME_BY_DECISION: Record<string, string> = { Pass: 'passed', Review: 'review', Fail: 'failed' };
 /** Ordered steps of `result.integration_trace`. aml_received_at and reply_received_at exist only on the queue path. */
 const QUEUE_TRACE_STEPS = ['queued_at', 'dispatched_at', 'aml_received_at', 'reply_received_at', 'completed_at'];
 const HTTP_TRACE_STEPS = ['queued_at', 'dispatched_at', 'completed_at'];
+
+/** This worker's screened results; the spec's afterAll fails the run when none observed a positive screen. */
+export const screenLedger = newScreenLedger();
+
+/** Records a screened result. One that did not observe AM Ok with score > 0 is also listed by the afterAll verdict. */
+export function recordAdverseMedia(note: string, amStatus: unknown, score: unknown): void {
+  test.info().annotations.push({ type: 'aml', description: note });
+  if (!recordScreen(screenLedger, note, amStatus, score)) test.info().annotations.push({ type: 'aml-not-observed', description: note });
+}
 
 interface IntegrationTrace {
   mode: string;
@@ -26,6 +36,7 @@ interface IntegrationTrace {
 export function expectSources(rows: CheckRow[]): void {
   expect(rows.length).toBeGreaterThan(0);
   for (const row of rows) {
+    expect(SOURCE_BY_CHECK, `${row.check_type} has no expected source label`).toHaveProperty(row.check_type);
     expect(row.source, `${row.check_type} source`).toBe(SOURCE_BY_CHECK[row.check_type]);
   }
 }
@@ -55,7 +66,7 @@ export function expectIntegrationTrace(aml: CheckRow): void {
 /**
  * A screened AML row and its case detail. The mock identity is always the ERIKSSON specimen
  * (ModuleBMock IdentityResultFactory.cs:79), whose matches all come from adverse media, so AM `Ok` must yield a
- * positive score and matches; AM not `Ok` is recorded as an annotation, never passed off as clean.
+ * positive score and matches. AM not `Ok` is recorded in screenLedger, never passed off as clean.
  */
 export async function expectScreenedAml(request: APIRequestContext, requestId: string, aml: CheckRow): Promise<void> {
   expect(aml.status, JSON.stringify(aml.error)).toBe('completed');
@@ -83,7 +94,7 @@ export async function expectScreenedAml(request: APIRequestContext, requestId: s
   expect(Array.isArray(caseData.matches)).toBe(true);
 
   const note = `${requestId} decision=${result.decision} score=${result.score} am=${amStatus} matches=${caseData.matches.length}`;
-  test.info().annotations.push({ type: 'aml', description: note });
+  recordAdverseMedia(note, amStatus, result.score);
   if (amStatus !== 'Ok') return;
   expect(result.score as number, `AM Ok but ${note}`).toBeGreaterThan(0);
   expect(caseData.matches.length, `AM Ok but ${note}`).toBeGreaterThan(0);
