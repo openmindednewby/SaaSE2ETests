@@ -62,12 +62,7 @@ test.describe('MODB gateway <-> mocks <-> AML @modb-api', () => {
     expect(aml.error?.message).toContain('mrz_match completed with outcome failed');
   });
 
-  // test.fixme(title, body) so neither the body nor the reachability hook runs: it is reported as fixme, never green.
-  // MODB-2 task 11 (MODB-GW-AML-RETRY) has not landed a retry policy, and staging has no deterministic way to force
-  // WATCHLIST_UNAVAILABLE: AMLService raises it only from a failing sanctions source
-  // (AMLService.IntegrationTests/ScreeningWatchlistUnavailableTests.cs uses FakeOpenSanctions(fail: true)), and
-  // mock_outcomes cannot key aml_screening. Write this when task 11 lands the policy and a forcing seam.
-  test.fixme('(c) AML WATCHLIST_UNAVAILABLE -> retry policy (MODB-2 task 11)', async () => {});
+  // (c) WATCHLIST_UNAVAILABLE forcing is out of scope by owner decision D-INT-6 (MODB-2-INT-checklist.md); retry is unit-tested in the gateway.
 
   test('(d) adverse_media_status is explicit, in the enum, and independent of the decision', async ({
     request,
