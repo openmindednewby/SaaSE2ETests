@@ -1,5 +1,5 @@
 // MODB-2 Q5 — the D-INT-12 demo scenarios, mirrored as DATA from wl-mvp-frontend `lib/demo-scenarios.ts`
-// (feature/modb-staging-wave2, b1071ee). Deliberately NOT imported across repos: when the two drift, this suite
+// (feature/modb-staging-wave2, 988c72e: 9 scenarios, the no_callback ones dropped). Deliberately NOT imported across repos: when the two drift, this suite
 // and that file disagree in review instead of silently agreeing. Each `expected` line is copied verbatim; the
 // structured fields below it are what the suite asserts, derived from that line and nothing else.
 import type { MockOutcome } from './modb-helpers.js';
@@ -79,13 +79,6 @@ export const MODB_SCENARIOS: readonly ModbScenario[] = [
       'MRZ match Failed (service error) · AML Cancelled: mrz_match ended failed · Utility authenticity Failed after 3 attempts (~15 s)',
   },
   {
-    id: 'mrz-no-callback',
-    outcomes: { ...ALL_PASSED, mrz_match: 'no_callback' },
-    aml: 'cancelled_after_timeout',
-    expected:
-      'Slow: MRZ match stays Running for up to ~3 h (3 attempts x 60 min callback wait), then Failed · AML waits, then Cancelled',
-  },
-  {
     id: 'face-match-failed',
     outcomes: { ...ALL_PASSED, face_match: 'failed' },
     aml: 'screened',
@@ -113,13 +106,6 @@ export const MODB_SCENARIOS: readonly ModbScenario[] = [
     expected: 'Utility authenticity Failed · AML still screens',
   },
   {
-    id: 'liveness-no-callback',
-    outcomes: { ...ALL_PASSED, liveness: 'no_callback' },
-    aml: 'screened',
-    expected:
-      'AML screens without waiting · Liveness stays Running for up to ~3 h (3 attempts x 60 min callback wait), then Failed',
-  },
-  {
     id: 'mixed',
     outcomes: {
       liveness: 'passed',
@@ -130,6 +116,27 @@ export const MODB_SCENARIOS: readonly ModbScenario[] = [
     },
     aml: 'screened',
     expected: 'Face match and Utility extraction Needs review, Utility authenticity Failed · AML still screens',
+  },
+];
+
+/**
+ * Suite-only, OPT-IN (MODB_E2E_NO_CALLBACK=1). Dropped from the frontend in 988c72e because each one holds its
+ * check's single worker slot for ~3 h on staging. Kept here so the non-terminal-after-dispatch contract stays written.
+ */
+export const MODB_NO_CALLBACK_SCENARIOS: readonly ModbScenario[] = [
+  {
+    id: 'mrz-no-callback',
+    outcomes: { ...ALL_PASSED, mrz_match: 'no_callback' },
+    aml: 'cancelled_after_timeout',
+    expected:
+      'Slow: MRZ match stays Running for up to ~3 h (3 attempts x 60 min callback wait), then Failed · AML waits, then Cancelled',
+  },
+  {
+    id: 'liveness-no-callback',
+    outcomes: { ...ALL_PASSED, liveness: 'no_callback' },
+    aml: 'screened',
+    expected:
+      'AML screens without waiting · Liveness stays Running for up to ~3 h (3 attempts x 60 min callback wait), then Failed',
   },
 ];
 

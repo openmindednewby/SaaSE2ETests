@@ -30,7 +30,11 @@ export function expectSources(rows: CheckRow[]): void {
   }
 }
 
-/** `integration_trace`: the run's mode, every step timestamp non-null and non-decreasing, first attempt n=1. */
+/**
+ * `integration_trace` as the FIRST terminal response carries it (gateway 7d0e0af writes the terminal status and
+ * completed_at atomically, and stamps dispatched_at before publish): the run's mode, every step non-null and
+ * non-decreasing with no tolerance (one k3s node, one clock), first attempt n=1.
+ */
 export function expectIntegrationTrace(aml: CheckRow): void {
   const trace = (aml.result ?? {}).integration_trace as IntegrationTrace | undefined;
   expect(trace, 'result.integration_trace').toBeDefined();

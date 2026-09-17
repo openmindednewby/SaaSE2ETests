@@ -17,7 +17,13 @@ import {
   waitForAmlTerminal,
   waitForSettled,
 } from './modb-helpers.js';
-import { MOCK_CHECK_TYPES, MODB_SCENARIOS, expectedCheck, pendingChecks } from './modb-scenarios.js';
+import {
+  MOCK_CHECK_TYPES,
+  MODB_NO_CALLBACK_SCENARIOS,
+  MODB_SCENARIOS,
+  expectedCheck,
+  pendingChecks,
+} from './modb-scenarios.js';
 
 const SUBMITTED_CHECKS = [...MOCK_CHECK_TYPES];
 const MAX_DEPENDENCY_ATTEMPTS = 3;
@@ -94,7 +100,7 @@ test.describe('MODB D-INT-12 demo scenarios @modb-api', () => {
     await assertGatewayReachable(request);
   });
 
-  for (const scenario of MODB_SCENARIOS) {
+  for (const scenario of [...MODB_SCENARIOS, ...MODB_NO_CALLBACK_SCENARIOS]) {
     const pending = pendingChecks(scenario);
     const optIn = pending.length > 0 && !RUN_NO_CALLBACK;
     (optIn ? test.skip : test)(`${scenario.id}: ${scenario.expected}`, async ({ request }) => {

@@ -149,6 +149,7 @@ export async function waitForSettled(
   stillPending: readonly string[] = [],
 ): Promise<CheckRow[]> {
   let rows: CheckRow[] = [];
+  let last = 'never polled';
   await expect
     .poll(
       async () => {
@@ -158,11 +159,12 @@ export async function waitForSettled(
         if (response instanceof Error) return `transport-error: ${response.message.split(/\r?\n/)[0]}`;
         expect(response.status()).toBe(200);
         rows = (await response.json()).data as CheckRow[];
+        last = rows.map((row) => `${row.check_type}:${row.status}/${row.attempt_count}`).join(',');
         if (!rows.some((row) => row.check_type === AML_CHECK)) return 'aml row absent';
         const open = rows.filter((row) => !TERMINAL_STATUSES.includes(row.status) && !stillPending.includes(row.check_type));
         return open.length === 0 ? 'settled' : open.map((row) => `${row.check_type}:${row.status}`).join(',');
       },
-      { timeout: SETTLE_TIMEOUT_MS, intervals: POLL_INTERVALS_MS, message: `checks of ${requestId} never settled` },
+      { timeout: SETTLE_TIMEOUT_MS, intervals: POLL_INTERVALS_MS, message: `checks of ${requestId} never settled (last: ${last})` },
     )
     .toBe('settled');
   return rows;
