@@ -87,7 +87,7 @@ test.describe('MODB gateway <-> mocks <-> AML @modb-api', () => {
     // The reason as the API exposes it today: the AML row's `error`, not a separate field.
     await expectCancelledAml(request, requestId, rowOf(rows, AML_CHECK), {
       code: 'AML_REQUIRED_CHECK_NOT_PASSED',
-      message: 'mrz_match completed with outcome failed',
+      message: 'Required check mrz_match completed with outcome failed; AML screening was not requested.',
     });
   });
 

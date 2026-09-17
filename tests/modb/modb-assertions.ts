@@ -100,7 +100,7 @@ export async function expectScreenedAml(request: APIRequestContext, requestId: s
   expect(caseData.matches.length, `AM Ok but ${note}`).toBeGreaterThan(0);
 }
 
-/** A cancelled AML row: no result, the stated reason, and no screening behind it. */
+/** A cancelled AML row: no result, the gateway's exact refusal sentence (adeda6b), and no screening behind it. */
 export async function expectCancelledAml(
   request: APIRequestContext,
   requestId: string,
@@ -112,7 +112,7 @@ export async function expectCancelledAml(
   expect(aml.outcome).toBeNull();
   expect(aml.result).toBeNull();
   expect(aml.error?.code).toBe(reason.code);
-  expect(aml.error?.message).toContain(reason.message);
+  expect(aml.error?.message).toBe(reason.message);
   const missing = await getAmlCase(request, requestId);
   expect(missing.status()).toBe(404);
   expect((await missing.json()).error?.code).toBe('AML_SCREENING_NOT_FOUND');
