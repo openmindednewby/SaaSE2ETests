@@ -12,7 +12,14 @@
 // Env:  AML_API_URL (default staging) · AML_API_KEY (a TEST-class demo-tenant key)
 //       AML_OTHER_TENANT_SCREENING_ID (optional: a screening owned by a different tenant)
 //
+// D-INT-17-D1 "unlock AC-17-8/11/12 and fix the tests, not the endpoint" (owner 2026-09-18): AC-17-8, -11 and -12
+// post the Module-B verification envelope the shipped endpoint validates
+// (AMLService VerificationScreeningRequestValidator.cs:16-49), not the flat subject they were first written against.
+// What each asserts (201 / 201 / 202 / the trace) is unchanged. AC-17-4 and AC-17-21 keep the flat subject: they
+// assert a refusal before any body is read.
+//
 // Locked per SPEC-1 Q7 (.claude/hooks/acceptance-lock.js).
+import { randomUUID } from 'node:crypto';
 import { expect, test, type APIRequestContext } from '@playwright/test';
 
 const AML_API_URL = (process.env.AML_API_URL?.trim() || 'https://aml-screening.dloizides.com').replace(/\/$/, '');
@@ -37,9 +44,9 @@ async function call(
   request: APIRequestContext,
   method: 'get' | 'post',
   path: string,
-  options: { key?: string; bearer?: string; data?: unknown } = {},
+  options: { key?: string; bearer?: string; data?: unknown; headers?: Record<string, string> } = {},
 ): Promise<Call> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...options.headers };
   if (options.key) headers['X-Api-Key'] = options.key;
   if (options.bearer) headers.Authorization = `Bearer ${options.bearer}`;
   try {
@@ -80,10 +87,38 @@ const syntheticSubject = (suffix: string) => ({
   externalReference: `d-int-17-${suffix}`,
 });
 
+/** Synthetic surname of the envelope identity; not a real person, and it must never reach the trace. */
+const ENVELOPE_SURNAME = 'SYNTHETICDINT';
+
+/**
+ * A contract verification-screening.v1 request (D-INT-17-D1): MRZ completed + passed, so the aggregate
+ * verification_outcome is 'passed', and a synthetic identity. The request id doubles as the idempotency key.
+ */
+function moduleBEnvelope(suffix: string): { requestId: string; data: Record<string, unknown>; headers: Record<string, string> } {
+  const requestId = randomUUID();
+  return {
+    requestId,
+    headers: { 'Idempotency-Key': requestId },
+    data: {
+      contract_version: '1.0',
+      request_id: requestId,
+      verification_outcome: 'passed',
+      checks: [{ check_type: 'mrz_match', status: 'completed', outcome: 'passed', completed_at: new Date().toISOString() }],
+      identity: { surname: ENVELOPE_SURNAME, given_names: ['TEST', suffix.toUpperCase()], birth_date: '1980-01-01', nationality: 'CYP' },
+    },
+  };
+}
+
 const traceOf = (body: Record<string, unknown>): Record<string, unknown> | null =>
   (body.processingTrace as Record<string, unknown> | undefined) ?? null;
 
 test.describe('D-INT-17 integration trace and test lab @aml-api', () => {
+  // A sync screen of a cold AMLService runs the local watchlist (~17 s measured, MODB-2-INT 8-AM-diag) plus the 5 s
+  // adverse-media budget; the project's 30 s test default equals REQUEST_TIMEOUT_MS and timed out AC-17-8 on the
+  // first screen of the 2026-09-18 run while the identical AC-17-11 passed warm. Budget: reachability + one screen
+  // + one read + the async poll ceiling.
+  test.describe.configure({ timeout: 120_000 });
+
   test('AC-17-4: the SERVICE refuses a verification run without an api key, UI gate removed from the path', async ({ request }) => {
     await expectReachable(request);
 
@@ -104,7 +139,8 @@ test.describe('D-INT-17 integration trace and test lab @aml-api', () => {
     await expectReachable(request);
     const key = expectTestKey();
 
-    const run = await call(request, 'post', '/v1/screenings/verification', { key, data: syntheticSubject('trace') });
+    const envelope = moduleBEnvelope('trace');
+    const run = await call(request, 'post', '/v1/screenings/verification', { key, data: envelope.data, headers: envelope.headers });
     expect(run.status).toBe(201);
     const screeningId = String(run.body.screeningId ?? run.body.id ?? '');
     expect(screeningId).not.toHaveLength(0);
@@ -121,6 +157,7 @@ test.describe('D-INT-17 integration trace and test lab @aml-api', () => {
 
     const traceJson = JSON.stringify(trace);
     expect(PII_FIELDS.filter((field) => traceJson.includes(`"${field}"`))).toEqual([]);
+    expect(traceJson.toUpperCase()).not.toContain(ENVELOPE_SURNAME);
   });
 
   test('AC-17-9: a screening owned by another tenant does not return its trace', async ({ request }) => {
@@ -136,7 +173,8 @@ test.describe('D-INT-17 integration trace and test lab @aml-api', () => {
     await expectReachable(request);
     const key = expectTestKey();
 
-    const run = await call(request, 'post', '/v1/screenings/verification', { key, data: syntheticSubject('sync') });
+    const envelope = moduleBEnvelope('sync');
+    const run = await call(request, 'post', '/v1/screenings/verification', { key, data: envelope.data, headers: envelope.headers });
     expect(run.status).toBe(201);
     const screeningId = String(run.body.screeningId ?? run.body.id ?? '');
     expect(screeningId).not.toHaveLength(0);
@@ -150,7 +188,8 @@ test.describe('D-INT-17 integration trace and test lab @aml-api', () => {
     await expectReachable(request);
     const key = expectTestKey();
 
-    const run = await call(request, 'post', '/v1/screenings/verification/async', { key, data: syntheticSubject('async') });
+    const envelope = moduleBEnvelope('async');
+    const run = await call(request, 'post', '/v1/screenings/verification/async', { key, data: envelope.data, headers: envelope.headers });
     expect(run.status).toBe(202);
     const screeningId = String(run.body.screeningId ?? '');
     expect(screeningId).not.toHaveLength(0);
