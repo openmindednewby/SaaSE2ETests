@@ -34,8 +34,11 @@ async function screenedCase(request: APIRequestContext): Promise<{ requestId: st
   return { requestId, data };
 }
 
-/** An adverse-media match is the one that carries an article headline (gateway aml-case matches). */
-const isAdverseMedia = (match: Match): boolean => typeof match.headline === 'string' && match.headline !== '';
+/**
+ * An adverse-media match is one whose source list is ADVERSE_MEDIA (gateway aml-case matches). Keyed on source_list, not
+ * headline: a real ADVERSE_MEDIA match can have headline:null (lrb.co.uk, MOCK-1-D5).
+ */
+const isAdverseMedia = (match: Match): boolean => match.source_list === 'ADVERSE_MEDIA';
 
 test.describe('MODB-MOCK-1 AML source links on the gateway aml-case @modb-api', () => {
   test('AC-MOCK-6: adverse-media matches carry a source_url; the field is omitted, never "", where there is none', async ({ request }) => {
