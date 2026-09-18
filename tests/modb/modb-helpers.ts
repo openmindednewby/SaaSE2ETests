@@ -115,12 +115,14 @@ export async function assertGatewayReachable(request: APIRequestContext): Promis
 
 /**
  * POST /api/v1/verifications with the given checks (default: MRZ only) and a per-request mock outcome map.
- * A utility bill is attached only when a utility check is requested. Returns the request id.
+ * A utility bill is attached only when a utility check is requested. `extraFields` adds plain form fields (MODB-MOCK-1
+ * "demo identity picker + AML source links": `mock_identity`). Returns the request id.
  */
 export async function submitVerification(
   request: APIRequestContext,
   mockOutcomes: Partial<Record<string, MockOutcome>>,
   checkTypes: readonly string[] = [MRZ_CHECK],
+  extraFields: Readonly<Record<string, string>> = {},
 ): Promise<string> {
   const requestId = randomUUID();
   const needsBill = checkTypes.some((checkType) => checkType.startsWith('utility_'));
@@ -136,6 +138,7 @@ export async function submitVerification(
       document_back: image('back.png'),
       selfie: image('selfie.png'),
       ...(needsBill ? { utility_bill: image('bill.png', BILL_PNG) } : {}),
+      ...extraFields,
     },
   });
   expect(response.status(), await response.text()).toBe(HTTP_ACCEPTED);
