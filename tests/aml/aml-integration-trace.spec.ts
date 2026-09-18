@@ -9,7 +9,10 @@
 // Every request goes through `call()`, which converts a transport failure into `status: 0` instead
 // of throwing, so each test REACHES its assertion and reports what it saw rather than a stack.
 //
-// Env:  AML_API_URL (default staging) · AML_API_KEY (a TEST-class demo-tenant key)
+// Env:  AML_API_URL (default staging) · AML_API_KEY (a LIVE-class `aml_live_` key; measured 2026-09-18)
+//       AML_TEST_API_KEY (the demo tenant's `aml_test_` key) is loaded by fixtures/env-loader.ts but
+//       deliberately NOT sent by AC-17-21: that key is INSIDE the D-INT-24 guard (demo tenant + test class,
+//       AMLService OperatorQueuePublish.cs:68-77), so the gate admits it (202) and AC-17-21 asserts refusals only.
 //       AML_OTHER_TENANT_SCREENING_ID (optional: a screening owned by a different tenant)
 //
 // D-INT-17-D1 "unlock AC-17-8/11/12 and fix the tests, not the endpoint" (owner 2026-09-18): AC-17-8, -11 and -12
@@ -212,7 +215,9 @@ test.describe('D-INT-17 integration trace and test lab @aml-api', () => {
 
   test('AC-17-21: the queue publish endpoint refuses everything outside its operator/test-class guard', async ({ request }) => {
     await expectReachable(request);
-    const path = '/v1/screenings/verification/queue-test';
+    // The shipped route (AMLService VerificationQueuePublishController.cs `screenings/verification/queue`);
+    // `queue-test` was the spec's placeholder name.
+    const path = '/v1/screenings/verification/queue';
 
     const noKey = await call(request, 'post', path, { data: syntheticSubject('queue-nokey') });
     expect(noKey.status === 404 ? 'NOT IMPLEMENTED: the D-INT-24 queue publish endpoint does not exist' : 'implemented').toBe('implemented');
