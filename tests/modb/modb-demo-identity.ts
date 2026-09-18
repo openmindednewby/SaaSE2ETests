@@ -39,8 +39,10 @@ export function loadDemoIdentities(): DemoIdentity[] | null {
   const file = demoIdentitiesPath();
   if (!existsSync(file)) return null;
   const parsed = JSON.parse(readFileSync(file, 'utf8')) as unknown;
-  expect(Array.isArray(parsed), `${file} must be a JSON array`).toBe(true);
-  const identities = parsed as DemoIdentity[];
+  // The curation script wraps the list as { generatedBy, sha256, identities }; a bare array is the older shape.
+  const list = Array.isArray(parsed) ? parsed : (parsed as { identities?: unknown } | null)?.identities;
+  expect(Array.isArray(list), `${file} must be a JSON array or { identities: [...] }`).toBe(true);
+  const identities = list as DemoIdentity[];
   for (const [index, entry] of identities.entries()) {
     for (const key of ['name', 'label', 'screeningId', 'classification', 'verifiedAt'] as const) {
       expect(typeof entry[key] === 'string' && entry[key].trim() !== '', `${file}[${index}].${key}`).toBe(true);
