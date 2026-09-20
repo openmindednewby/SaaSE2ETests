@@ -59,6 +59,26 @@ test.describe('MODB-MOCK-1 AML source links on the gateway aml-case @modb-api', 
     for (const match of matches.filter((candidate) => !isAdverseMedia(candidate))) expect(match).not.toHaveProperty('source_url');
   });
 
+  // AC-MOCK-6B pairs with AC-MOCK-6 as the two halves of one flag (owner decision D-MODB-AM-1 "Suppress
+  // adverse media at the response mapper", 2026-09-20). AC-MOCK-6 asserts the link-carrying behaviour the
+  // product is built to have; this asserts the CLIENT-FACING DEFAULT, which is that the link is not emitted
+  // at all. `AdverseMedia:Surface:Enabled` (AdverseMediaSurfaceOptions, default FALSE) decides which of the
+  // two holds, so exactly one of this pair is green in any one deployment -- that is the contract, not a
+  // conflict. Neither may be amended to agree with whatever the configuration currently is.
+  //
+  // Scope: the gateway's own `source_url` field ONLY. Out of scope and NOT asserted absent here --
+  // `external_id` still carries the GDELT article URL and the leadership link still rides inside
+  // Presentation.Evidence (open item AM-SURFACE-2). Asserting those absent would fail on a known gap and
+  // say nothing about this flag.
+  test('AC-MOCK-6B: with the adverse-media surface OFF (the default), no match carries a source_url', async ({ request }) => {
+    const { data } = await screenedCase(request);
+    const matches = data.matches as Match[];
+    const adverseMedia = matches.filter(isAdverseMedia);
+    expect(adverseMedia.length, 'the specimen screen returned no adverse-media match, so the gate is unobserved').toBeGreaterThanOrEqual(1);
+    const linked = matches.filter((match) => 'source_url' in match).map((match) => String(match.source_url));
+    expect(linked, 'the surface is OFF, so no match may carry source_url; these did').toEqual([]);
+  });
+
   test('AC-MOCK-8 (API side): every match is returned in one response, and no paging parameter changes it', async ({ request }) => {
     const { requestId, data } = await screenedCase(request);
     const matches = data.matches as Match[];
