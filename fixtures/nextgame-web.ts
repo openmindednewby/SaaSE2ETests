@@ -73,6 +73,30 @@ export const REAL_ROUTES: SpaRoute[] = [
 /** The subset known NOT to be session/flow-gated: a hard load renders that route's OWN screen. */
 export const UNGATED_ROUTES: SpaRoute[] = REAL_ROUTES.filter((route) => ['landing', 'privacy', 'age'].includes(route.name));
 
+/**
+ * The seven routes that mount `useSetupGate` (nextgame-web/app/*.tsx). DECLARED here, never derived
+ * by grepping the app for `useSetupGate`: a list derived from the gate's own presence would shrink
+ * in step with a deleted gate and the suite would stay green - which is exactly the hole
+ * GUEST-GATE-E2E-1 exists to close.
+ */
+const GATED_ROUTE_NAMES = ['consent', 'empty-library', 'importing', 'platforms', 'profile', 'quiz', 'results'];
+
+function lookupRoute(name: string): SpaRoute {
+  const route = REAL_ROUTES.find((candidate) => candidate.name === name);
+  if (!route) throw new Error(`nextgame-web.ts REAL_ROUTES has no entry named ${name}`);
+  return route;
+}
+
+export const GATED_ROUTES: SpaRoute[] = GATED_ROUTE_NAMES.map(lookupRoute);
+
+/** The step that owns the birth year, and the step that owns the consent - the two gate destinations. */
+export const AGE_ROUTE = lookupRoute('age');
+export const CONSENT_ROUTE = lookupRoute('consent');
+
+/** Where the guest consent step lands (useSubmitConsent pushes it), and itself a GATED route - so it is
+ * the route a completed guest reloads. */
+export const EMPTY_LIBRARY_ROUTE = lookupRoute('empty-library');
+
 export const NOT_FOUND_ROUTE: SpaRoute = {
   name: 'not-found',
   path: '/definitely-not-a-route',

@@ -86,3 +86,4 @@ test-results/
 # Ignoring them keeps the tree clean, keeps scratch OUT of the shipped image, and
 # leaves the debugging workflow untouched.
 probe*.mjs
+test-reports/
