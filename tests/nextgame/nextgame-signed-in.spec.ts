@@ -51,6 +51,10 @@ test.describe('nextgame signed-in age and consent gate', () => {
     await expect(page.getByTestId(TestIds.AGE_SCREEN)).toBeVisible();
 
     await page.getByTestId(TestIds.AGE_BIRTH_YEAR).fill(BIRTH_YEAR);
+    // The year and the consents are two steps now: the year is posted here, the consents on /consent.
+    await page.getByTestId(TestIds.AGE_CONTINUE).click();
+    await expect(page.getByTestId(TestIds.CONSENT_SCREEN)).toBeVisible();
+
     // A screen reader must hear the consent state: required + locked on, optional off until toggled.
     const recommendations = page.getByTestId(TestIds.AGE_CONSENT_RECOMMENDATIONS);
     await expect(recommendations).toHaveAttribute('role', 'checkbox');
@@ -61,7 +65,7 @@ test.describe('nextgame signed-in age and consent gate', () => {
     await expect(insights).toHaveAttribute('aria-checked', 'false');
     await insights.click();
     await expect(insights).toHaveAttribute('aria-checked', 'true');
-    await page.getByTestId(TestIds.AGE_CONTINUE).click();
+    await page.getByTestId(TestIds.CONSENT_CONTINUE).click();
 
     // Wait for EITHER outcome so a blocked gate fails fast and names itself.
     const blocked = page.getByText(AGE_CONSENT_FAILED_TEXT, { exact: true });
