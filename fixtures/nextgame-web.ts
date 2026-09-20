@@ -20,8 +20,10 @@ export const UMAMI_WEBSITE_ID = 'b3560325-b595-41d7-989a-1db789edfb50';
 
 export const HTTP_OK = 200;
 export const HTTP_NOT_FOUND = 404;
-export const MIN_TARGET_PX = 44;
-export const MOBILE_VIEWPORT = { width: 400, height: 860 };
+// Converged on the shared breakpoint module (MOBILE-STD-1 AC-3). The old
+// bare `{ width: 400, height: 860 }` was the weak form: no touch flag, no
+// device scale factor, a desktop UA. Use the DESCRIPTOR.
+export { MIN_TARGET_PX, MOBILE_REPRESENTATIVE } from './mobile-gates.js';
 
 interface EnLocale {
   seo: { titles: Record<string, string> };

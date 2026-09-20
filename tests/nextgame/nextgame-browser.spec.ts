@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 
 import { expect, test, type Request } from '@playwright/test';
 
+import { expectNoHorizontalOverflow, expectTouchTargets } from '../../fixtures/mobile-gates.js';
 import {
   ANALYTICS_HEADING,
   ANALYTICS_HOST,
@@ -9,8 +10,7 @@ import {
   HTTP_NOT_FOUND,
   HTTP_OK,
   interceptAnalytics,
-  MIN_TARGET_PX,
-  MOBILE_VIEWPORT,
+  MOBILE_REPRESENTATIVE,
   NOT_FOUND_ROUTE,
   POLICY_VERSION_TEXT,
   UNGATED_ROUTES,
@@ -111,8 +111,8 @@ test.describe('nextgame SPA in a real browser', () => {
     await expect(analyticsSection).toContainText(ANALYTICS_HEADING);
   });
 
-  test.describe('at 400px wide', () => {
-    test.use({ viewport: MOBILE_VIEWPORT });
+  test.describe('at phone width (Pixel 5 descriptor, 393x727)', () => {
+    test.use(MOBILE_REPRESENTATIVE);
 
     for (const route of [...UNGATED_ROUTES, NOT_FOUND_ROUTE]) {
       test(`${route.path} has no horizontal scroll and 44px targets`, async ({ page }) => {
@@ -122,22 +122,9 @@ test.describe('nextgame SPA in a real browser', () => {
         await expectPageViewBeacon(analytics);
         const targets = page.locator('button, a[href], [role="button"], [role="link"]');
         await expect(targets.first()).toBeVisible();
-        expect(await page.evaluate(() => window.innerWidth)).toBe(MOBILE_VIEWPORT.width);
-        const widths = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: window.innerWidth }));
-        expect(widths.scroll, 'page scrolls horizontally').toBeLessThanOrEqual(widths.inner);
+        await expectNoHorizontalOverflow(page, `nextgame ${route.path}`);
 
-        const measureTargets = async () =>
-          targets.evaluateAll((els) =>
-            els
-              .map((e) => ({ label: (e.getAttribute('data-testid') ?? e.textContent ?? '').slice(0, 40), rect: e.getBoundingClientRect() }))
-              .filter((t) => t.rect.width > 0 && t.rect.height > 0)
-              .map((t) => ({ label: t.label, width: Math.round(t.rect.width), height: Math.round(t.rect.height) })),
-          );
-        // Hydration re-renders the static export; poll until laid-out targets exist, then measure.
-        await expect.poll(async () => (await measureTargets()).length, 'no interactive targets found').toBeGreaterThan(0);
-        const boxes = await measureTargets();
-        const small = boxes.filter((b) => b.width < MIN_TARGET_PX || b.height < MIN_TARGET_PX);
-        expect(small, `targets under ${String(MIN_TARGET_PX)}px`).toEqual([]);
+        await expectTouchTargets(page, `nextgame ${route.path}`);
 
         mkdirSync(SCREENSHOT_DIR, { recursive: true });
         await page.screenshot({ path: `${SCREENSHOT_DIR}/mobile-400-${route.name}.png`, fullPage: true });

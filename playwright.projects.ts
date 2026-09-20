@@ -1,4 +1,6 @@
 import { devices } from '@playwright/test';
+
+import { MOBILE_FLOOR, MOBILE_REPRESENTATIVE } from './fixtures/mobile-gates.js';
 import type { PlaywrightTestConfig } from '@playwright/test';
 
 type ProjectConfig = NonNullable<PlaywrightTestConfig['projects']>;
@@ -134,6 +136,35 @@ export function buildProjects(): ProjectConfig {
   const KAT = { auth: true, multiTenant: true, app: 'katalogos' } as const;
   // UI chunk on erevna-web.
   const ERV = { auth: true, multiTenant: true, app: 'erevna' } as const;
+
+  // ---- MOBILE GATES (MOBILE-STD-1 "mobile gates and the shared breakpoint
+  // module", AC-2) --------------------------------------------------------
+  // One project per portal per DEVICE CLASS: the device is the variable under
+  // test, so a failure has to name the screen it happened on. Device
+  // DESCRIPTORS, never bare viewports - fixtures/mobile-gates.ts carries the
+  // reasoning. A portal whose deployed host is not configured for the current
+  // E2E_TARGET gets the `.invalid` sentinel, so the spec SKIPS with a reason
+  // instead of silently measuring the GLOBAL baseURL's app and filing the
+  // result under another portal's name.
+  const UNCONFIGURED_HOST = 'http://unconfigured.invalid';
+  const MOBILE_PORTALS = [
+    { portal: 'nextgame', url: process.env.NEXTGAME_BASE_URL ?? 'https://nextgame.dloizides.com' },
+    { portal: 'katalogos', url: process.env.KATALOGOS_BASE_URL ?? process.env.BASE_URL },
+    { portal: 'erevna', url: erevnaUrl },
+    { portal: 'kefi', url: kefiWebUrl },
+    { portal: 'ichnos', url: ichnosWebUrl },
+    { portal: 'agora', url: agoraWebUrl },
+    { portal: 'zygos', url: zygosWebUrl },
+    { portal: 'poueni', url: process.env.POUENI_WEB_URL },
+    { portal: 'digital-kin', url: digitalKinSiteUrl },
+  ] as const;
+  // 360x640 is the FLOOR every surface must survive; 393x727 is the
+  // representative modern phone (the descriptor height already excludes
+  // browser chrome - it is not the 393x851 physical screen).
+  const MOBILE_DEVICES = [
+    { suffix: 'floor', device: MOBILE_FLOOR },
+    { suffix: 'pixel5', device: MOBILE_REPRESENTATIVE },
+  ] as const;
 
   return [
     // ---- Setup projects (run first, results shared by every chunk) ----
@@ -1261,5 +1292,16 @@ export function buildProjects(): ProjectConfig {
       testMatch: /prod-gate\/.*\.spec\.ts/,
       use: CHROME,
     },
+    // ---- Mobile gates: no horizontal overflow + 44px touch targets --------
+    // Read-only. Public routes only; never signs in, never writes.
+    ...MOBILE_PORTALS.flatMap(({ portal, url }) =>
+      MOBILE_DEVICES.map(({ suffix, device }) => ({
+        name: `mobile-gates-${portal}-${suffix}`,
+        workers: 1,
+        timeout: 180_000,
+        testMatch: /mobile[/\\]mobile-gates\.spec\.ts/,
+        use: { ...device, baseURL: url || UNCONFIGURED_HOST },
+      })),
+    ),
   ];
 }
