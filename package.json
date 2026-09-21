@@ -271,7 +271,7 @@
     "yagni": "ts-prune --ignore \"\\\\node_modules\\\\|\\\\dist\\\\|.config.|__mocks__|.test.|.spec.\"",
     "yagni:ci": "ts-prune --error --ignore \"\\\\node_modules\\\\|\\\\dist\\\\|.config.|__mocks__|.test.|.spec.\"",
     "test:aml:api": "node scripts/run-aml-e2e.mjs",
-    "test:aml:adverse-media": "node scripts/run-aml-e2e.mjs tests/aml/aml-adverse-media.spec.ts tests/aml/aml-adverse-media-hit.spec.ts",
+    "test:aml:adverse-media": "node scripts/run-aml-e2e.mjs tests/aml/aml-adverse-media.spec.ts tests/aml/aml-adverse-media-hit.spec.ts tests/aml/aml-adverse-media-surface.spec.ts",
     "test:aml:fuzzy": "node scripts/run-aml-e2e.mjs tests/aml/aml-fuzzy-matching.spec.ts --reporter=line",
     "test:aml:latency": "node scripts/run-aml-e2e.mjs tests/aml/aml-screening-latency.spec.ts --reporter=line",
     "test:aml:screening-100": "node scripts/run-aml-e2e.mjs tests/aml/aml-screening-100-cases.spec.ts --reporter=line",

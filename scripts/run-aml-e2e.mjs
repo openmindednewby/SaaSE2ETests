@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 // Run the E2ETests `aml-api` Playwright project against a DEPLOYED AMLService.
 //
-// WHY THIS EXISTS: E2ETests/playwright.config.ts deliberately loads no .env, and the AML credentials
-// (AML_API_KEY, AML_BASE_URL) live in PROOViD/AMLService/.env — which is where the AMLService waves
+// WHY THIS EXISTS: E2ETests/playwright.config.ts loads only E2ETests/.env.<E2E_TARGET>[.secrets]
+// (fixtures/env-loader.ts, default target `local`), and the AML credentials (AML_API_KEY, AML_BASE_URL)
+// live in PROOViD/AMLService/.env — which is where the AMLService waves
 // read them from. Without this shim the E2ETests aml specs authenticate with nothing and every test
 // SKIPS: a green run that observed literally nothing. Real env vars always win over the file.
+// The surface-ON tenant (MODB_SURFACE_ON_TENANT_ID / MODB_SURFACE_ON_AML_API_KEY, D-MODB-AM-13) is NOT
+// loaded here: it comes from .env.<E2E_TARGET>.secrets via that config loader, like the modb suite.
 //
 // Usage:  node scripts/run-aml-e2e.mjs [extra playwright args...]
 import { spawnSync } from 'node:child_process';
