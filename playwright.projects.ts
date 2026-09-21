@@ -720,6 +720,14 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      // Organizer check-in / undo — the kefi-web roster row's write, client-shaped (KEFI-REF-1 step 5). Pure @api.
+      name: 'kefi-organizer-checkin',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-organizer-checkin\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       // Kefi organizer hard-delete-attendee (#278) — import one attendee then
       // delete it; assert the row is gone; cross-tenant/unknown → 404. Pure @api
       // (master-admin provisions the tenant); no browser/IMAP → 300s is plenty.
