@@ -26,6 +26,10 @@
 // TENANT-SCOPED SUBSET of the tailer's cross-tenant book, so "not on the roster" is not observable
 // absence from the book — see the header of am-name-book-probe.ts.
 //
+// D-MODB-AM-15 "Adverse media fully OFF by default, with a per-tenant MASTER switch for development" (owner,
+// 2026-09-21): AM-E2E-5 and AM-E2E-7 screen as the surface-ON tenant (surfaceOnKeyOrSkip), the only tenant
+// whose adverse-media stage runs on staging. The name-book probe still reads the default tenant's roster.
+//
 // AM-E2E-6 / 6B (the per-tenant adverse-media surface gate, D-MODB-AM-13) live in
 // aml-adverse-media-surface.spec.ts; the shared helpers in am-hit-helpers.ts.
 import { expect, test } from '@playwright/test';
@@ -38,6 +42,7 @@ import {
   amOf,
   isAm,
   requireAvailableStage,
+  surfaceOnKeyOrSkip,
   type AmScreen,
   type CaseDetail,
 } from './am-hit-helpers.js';
@@ -59,12 +64,13 @@ test.describe('AML adverse media — switched on @aml-api', () => {
   test('AM-E2E-5 an AVAILABLE adverse-media stage surfaces at least one hit across the positive corpus', async ({
     request,
   }) => {
-    if (!(await requireAvailableStage(request))) return;
+    const onKey = surfaceOnKeyOrSkip();
+    if (!(await requireAvailableStage(request, onKey))) return;
 
     let total = 0;
     const perSubject: string[] = [];
     for (const fullName of POSITIVE_CORPUS) {
-      const res = await screen(request, { fullName, adverseMedia: true, includeReasoning: true });
+      const res = await screen(request, { fullName, adverseMedia: true, includeReasoning: true }, onKey);
       expect(res, `screening endpoint unreachable for '${fullName}'`).not.toBeNull();
       if (AUTH_REJECTED.includes(res!.status())) {
         test.skip(true, `AML_API_KEY not accepted at ${AML_API_URL}.`);
@@ -110,7 +116,8 @@ test.describe('AML adverse media — switched on @aml-api', () => {
   test('AM-E2E-7 the per-match disposition operates on an ADVERSE-MEDIA match and is reversible', async ({
     request,
   }) => {
-    if (!(await requireAvailableStage(request))) return;
+    const onKey = surfaceOnKeyOrSkip();
+    if (!(await requireAvailableStage(request, onKey))) return;
 
     const userReference = `e2e-am-${Date.now()}`;
     const screened = await screen(request, {
@@ -118,7 +125,7 @@ test.describe('AML adverse media — switched on @aml-api', () => {
       adverseMedia: true,
       includeReasoning: true,
       userReference,
-    });
+    }, onKey);
     expect(screened, 'screening endpoint unreachable').not.toBeNull();
     if (AUTH_REJECTED.includes(screened!.status())) {
       test.skip(true, `AML_API_KEY not accepted at ${AML_API_URL}.`);
@@ -126,7 +133,7 @@ test.describe('AML adverse media — switched on @aml-api', () => {
     }
     expect(screened!.status()).toBe(CREATED);
 
-    const list = await amlGet(request, `/v1/cases?userReference=${encodeURIComponent(userReference)}`);
+    const list = await amlGet(request, `/v1/cases?userReference=${encodeURIComponent(userReference)}`, onKey);
     expect(list, 'cases list unreachable').not.toBeNull();
     expect(list!.status()).toBe(OK);
     const page = (await list!.json()) as { items: Array<{ id: string }> };
@@ -136,7 +143,7 @@ test.describe('AML adverse media — switched on @aml-api', () => {
     }
     const caseId = page.items[0].id;
 
-    const detailRes = await amlGet(request, `/v1/cases/${caseId}`);
+    const detailRes = await amlGet(request, `/v1/cases/${caseId}`, onKey);
     expect(detailRes!.status()).toBe(OK);
     const detail = (await detailRes!.json()) as CaseDetail;
     const caseLevelBefore = detail.reviewStatus;
@@ -160,7 +167,7 @@ test.describe('AML adverse media — switched on @aml-api', () => {
     }
 
     const url = `/v1/cases/${caseId}/matches/${amMatch.matchKey}/disposition`;
-    const cleared = await amlPost(request, url, { status: 'cleared', reason: 'e2e: co-occurrence only' });
+    const cleared = await amlPost(request, url, { status: 'cleared', reason: 'e2e: co-occurrence only' }, onKey);
     expect(cleared, 'disposition endpoint unreachable').not.toBeNull();
     if (AUTH_REJECTED.includes(cleared!.status())) {
       test.skip(true, 'the AML_API_KEY does not carry ScreeningWrite — cannot disposition.');
@@ -169,7 +176,7 @@ test.describe('AML adverse media — switched on @aml-api', () => {
     expect(cleared!.status()).toBe(OK);
 
     // A fresh read, not the POST echo: a read weeks later must not disagree with the analyst.
-    const rereadRes = await amlGet(request, `/v1/cases/${caseId}`);
+    const rereadRes = await amlGet(request, `/v1/cases/${caseId}`, onKey);
     const reread = (await rereadRes!.json()) as CaseDetail;
     const after = reread.matches.find(m => m.matchKey === amMatch.matchKey);
     expect(after, 'the dispositioned match vanished from the case').toBeTruthy();
@@ -183,9 +190,9 @@ test.describe('AML adverse media — switched on @aml-api', () => {
     ).toBe(caseLevelBefore);
 
     // Reversible: an analyst who clears the wrong article must be able to put it back.
-    const reopened = await amlPost(request, url, { status: 'open', reason: 'e2e: reopened' });
+    const reopened = await amlPost(request, url, { status: 'open', reason: 'e2e: reopened' }, onKey);
     expect(reopened!.status()).toBe(OK);
-    const finalRes = await amlGet(request, `/v1/cases/${caseId}`);
+    const finalRes = await amlGet(request, `/v1/cases/${caseId}`, onKey);
     const final = (await finalRes!.json()) as CaseDetail;
     expect(final.matches.find(m => m.matchKey === amMatch.matchKey)!.reviewStatus).toBe('open');
   });

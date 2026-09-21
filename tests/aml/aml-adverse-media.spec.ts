@@ -13,6 +13,11 @@
 //
 // What a regression here looks like: someone re-marks adverse_media inert / maps it to Pass / drops it
 // from DecisionMatrix.Categories. Every such change turns AM-E2E-2 RED.
+//
+// D-MODB-AM-15 "Adverse media fully OFF by default, with a per-tenant MASTER switch for development" (owner,
+// 2026-09-21): only the surface-ON tenant's adverse-media stage runs on staging, so every test that needs the stage
+// to RUN (AM-E2E-3, 4, 8, 10, 11, 12, 13) screens as that tenant. AM-E2E-1, 2 and 9 read tenant config and stay on
+// AML_API_KEY. "The default tenant sees no adverse media" is asserted by AM-E2E-6B (aml-adverse-media-surface.spec.ts).
 import { expect, test } from '@playwright/test';
 import {
   ADVERSE_MEDIA_CATEGORY,
@@ -28,6 +33,7 @@ import {
   amlReachable,
   screen,
 } from './aml-helpers.js';
+import { surfaceOnKeyOrSkip } from './am-hit-helpers.js';
 
 const AUTH_REJECTED = [401, 403];
 const MULTIPLICITY_COUNT = 2; // single + multiple
@@ -162,7 +168,8 @@ test.describe('AML adverse media @aml-api', () => {
   test('AM-E2E-3 a screen reports its adverse-media status and any AM match drives the decision', async ({
     request,
   }) => {
-    const res = await screen(request, { ...AM_SUBJECT, adverseMedia: true, includeReasoning: true });
+    const onKey = surfaceOnKeyOrSkip();
+    const res = await screen(request, { ...AM_SUBJECT, adverseMedia: true, includeReasoning: true }, onKey);
     expect(res, 'screening endpoint unreachable').not.toBeNull();
     if (skipIfUnauthorised(res!.status())) return;
     expect(res!.status()).toBe(201);
@@ -211,11 +218,12 @@ test.describe('AML adverse media @aml-api', () => {
   // status; a decision that wobbles is not auditable, and the regulator pack quotes it.
   test('AM-E2E-4 the adverse-media decision is reproducible across identical screens', async ({ request }) => {
     const body = { ...AM_SUBJECT, adverseMedia: true, includeReasoning: true };
-    const first = await screen(request, body);
+    const onKey = surfaceOnKeyOrSkip();
+    const first = await screen(request, body, onKey);
     expect(first).not.toBeNull();
     if (skipIfUnauthorised(first!.status())) return;
     expect(first!.status()).toBe(201);
-    const second = await screen(request, body);
+    const second = await screen(request, body, onKey);
     expect(second).not.toBeNull();
     expect(second!.status()).toBe(201);
 
@@ -260,11 +268,12 @@ test.describe('AML adverse media @aml-api', () => {
     request,
   }) => {
     const subject = { ...AM_SUBJECT, includeReasoning: true };
-    const onRes = await screen(request, { ...subject, adverseMedia: true });
+    const onKey = surfaceOnKeyOrSkip();
+    const onRes = await screen(request, { ...subject, adverseMedia: true }, onKey);
     expect(onRes, 'screening endpoint unreachable').not.toBeNull();
     if (skipIfUnauthorised(onRes!.status())) return;
     expect(onRes!.status()).toBe(201);
-    const offRes = await screen(request, { ...subject, adverseMedia: false });
+    const offRes = await screen(request, { ...subject, adverseMedia: false }, onKey);
     expect(offRes, 'screening endpoint unreachable').not.toBeNull();
     expect(offRes!.status()).toBe(201);
 
@@ -365,7 +374,8 @@ test.describe('AML adverse media @aml-api', () => {
     test('AM-E2E-10 mentions search by name returns rows for a known name and empty for an unknown one', async ({
       request,
     }) => {
-      const known = await amlGet(request, '/v1/adverse-media/mentions?name=Ivan%20Petrov');
+      const onKey = surfaceOnKeyOrSkip();
+      const known = await amlGet(request, '/v1/adverse-media/mentions?name=Ivan%20Petrov', onKey);
       expect(known, 'mentions endpoint unreachable').not.toBeNull();
       if (skipIfUnauthorised(known!.status())) return;
       expect(known!.status(), 'mentions-by-name must not 404').toBe(200);
@@ -375,6 +385,7 @@ test.describe('AML adverse media @aml-api', () => {
       const unknown = await amlGet(
         request,
         '/v1/adverse-media/mentions?name=Zzzqqx%20Nonexistentsubject',
+        onKey,
       );
       expect(
         unknown!.status(),
@@ -390,7 +401,8 @@ test.describe('AML adverse media @aml-api', () => {
     }) => {
       const from = '2024-01-01';
       const to = '2024-01-31';
-      const res = await amlGet(request, `/v1/adverse-media/mentions?from=${from}&to=${to}`);
+      const onKey = surfaceOnKeyOrSkip();
+      const res = await amlGet(request, `/v1/adverse-media/mentions?from=${from}&to=${to}`, onKey);
       expect(res, 'mentions endpoint unreachable').not.toBeNull();
       if (skipIfUnauthorised(res!.status())) return;
       expect(res!.status(), 'mentions-by-date-range must not 404').toBe(200);
@@ -444,11 +456,12 @@ test.describe('AML adverse media @aml-api', () => {
   async function runBatch(
     request: Parameters<typeof amlUpload>[0],
     adverseMedia: boolean,
+    apiKey: string,
   ): Promise<{ rows: BatchRow[]; state: string } | null> {
     const upload = await amlUpload(request, '/v1/screenings/batch', {
       file: { name: 'am-batch.csv', mimeType: 'text/csv', buffer: Buffer.from(BATCH_CSV, 'utf8') },
       adverseMedia: String(adverseMedia),
-    });
+    }, apiKey);
     expect(upload, 'batch upload endpoint unreachable').not.toBeNull();
     if (AUTH_REJECTED.includes(upload!.status())) return null;
     expect(upload!.status(), `POST /v1/screenings/batch adverseMedia=${adverseMedia}`).toBe(202);
@@ -457,18 +470,26 @@ test.describe('AML adverse media @aml-api', () => {
     expect(jobId, 'batch upload returned no job id').toBeTruthy();
 
     let state = '';
-    for (let attempt = 0; attempt < BATCH_POLL_ATTEMPTS; attempt++) {
-      const statusRes = await amlGet(request, `/v1/screenings/batch/${jobId}`);
-      expect(statusRes, 'batch status endpoint unreachable').not.toBeNull();
-      expect(statusRes!.status()).toBe(200);
-      const status = (await statusRes!.json()) as { state?: string; status?: string };
-      state = status.state ?? status.status ?? '';
-      if (TERMINAL_STATES.has(state)) break;
-      await new Promise(resolve => setTimeout(resolve, BATCH_POLL_MS));
-    }
+    await expect
+      .poll(
+        async () => {
+          const statusRes = await amlGet(request, `/v1/screenings/batch/${jobId}`, apiKey);
+          expect(statusRes, 'batch status endpoint unreachable').not.toBeNull();
+          expect(statusRes!.status()).toBe(200);
+          const status = (await statusRes!.json()) as { state?: string; status?: string };
+          state = status.state ?? status.status ?? '';
+          return TERMINAL_STATES.has(state);
+        },
+        {
+          message: 'batch job never reached a terminal state',
+          intervals: [BATCH_POLL_MS],
+          timeout: BATCH_POLL_MS * BATCH_POLL_ATTEMPTS,
+        },
+      )
+      .toBe(true);
     expect(TERMINAL_STATES.has(state), `batch job never reached a terminal state (last: "${state}")`).toBe(true);
 
-    const resultsRes = await amlGet(request, `/v1/screenings/batch/${jobId}/results?format=json`);
+    const resultsRes = await amlGet(request, `/v1/screenings/batch/${jobId}/results?format=json`, apiKey);
     expect(resultsRes, 'batch results endpoint unreachable').not.toBeNull();
     expect(resultsRes!.status()).toBe(200);
     const body = (await resultsRes!.json()) as { rows?: BatchRow[]; results?: BatchRow[] };
@@ -480,7 +501,7 @@ test.describe('AML adverse media @aml-api', () => {
     request,
   }) => {
     test.setTimeout(300_000);
-    const run = await runBatch(request, true);
+    const run = await runBatch(request, true, surfaceOnKeyOrSkip());
     if (run === null) {
       test.skip(true, 'AML_API_KEY not accepted for batch (AM-READY-5 §5, F6) — not a product verdict');
       return;
@@ -499,7 +520,8 @@ test.describe('AML adverse media @aml-api', () => {
     request,
   }) => {
     test.setTimeout(300_000);
-    const on = await runBatch(request, true);
+    const onKey = surfaceOnKeyOrSkip();
+    const on = await runBatch(request, true, onKey);
     if (on === null) {
       test.skip(true, 'AML_API_KEY not accepted for batch (AM-READY-5 §5, F6) — not a product verdict');
       return;
@@ -522,7 +544,7 @@ test.describe('AML adverse media @aml-api', () => {
       ).not.toBe('Skipped');
     }
 
-    const off = await runBatch(request, false);
+    const off = await runBatch(request, false, onKey);
     expect(off, 'batch upload endpoint unreachable on the OFF run').not.toBeNull();
     for (const row of off!.rows) {
       expect(

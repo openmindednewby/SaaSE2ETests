@@ -5,6 +5,7 @@
 import { expect, test } from '@playwright/test';
 import {
   ADVERSE_MEDIA_CATEGORY,
+  AML_API_KEY,
   AML_API_URL,
   adverseMediaCapability,
   screen,
@@ -83,6 +84,42 @@ export const amOf = (body: AmScreen): AmMatch[] => body.matchedEntities.filter(i
 // D-MODB-AM-13: the tenant whose adverse-media surface override is ON (created for D-MODB-AM-9).
 export const SURFACE_ON_TENANT_ID = process.env.MODB_SURFACE_ON_TENANT_ID?.trim() || null;
 export const SURFACE_ON_API_KEY = process.env.MODB_SURFACE_ON_AML_API_KEY?.trim() || null;
+
+/**
+ * D-MODB-AM-15 "Adverse media fully OFF by default, with a per-tenant MASTER switch for development" (owner,
+ * 2026-09-21): staging runs `AdverseMedia__Enabled=false` and only the surface-ON tenant has the master ON. Every
+ * spec that needs the adverse-media stage to RUN screens as that tenant. Skips (never fails) when its key is unset.
+ */
+export function surfaceOnKeyOrSkip(): string {
+  test.skip(
+    !SURFACE_ON_TENANT_ID || !SURFACE_ON_API_KEY,
+    'MODB_SURFACE_ON_TENANT_ID / MODB_SURFACE_ON_AML_API_KEY are not set (E2ETests/.env.<target>.secrets): since ' +
+      'D-MODB-AM-15 only that tenant has adverse media ON, so the adverse-media path is unobserved',
+  );
+  test.info().annotations.push({ type: 'tenant', description: String(SURFACE_ON_TENANT_ID) });
+  return SURFACE_ON_API_KEY as string;
+}
+
+/**
+ * D-MODB-AM-15: what a tenant with adverse media OFF must see on a direct screen. No adverse-media match, no
+ * adverse-media reason, no link, and no status claiming the stage ran. Measured 2026-09-21 on staging: the
+ * default tenant's `adverseMediaStatus` is null.
+ */
+export function expectAdverseMediaAbsent(body: AmScreen, who: string): void {
+  expect(
+    amOf(body).map((match) => match.externalId ?? match.publisher ?? '(no id)'),
+    `${who}: adverse media is OFF for this tenant (D-MODB-AM-15), yet adverse-media matches came back`,
+  ).toEqual([]);
+  const codes = [...(body.reasonCodes ?? []), body.reason?.code ?? ''];
+  expect(codes, `${who}: an ADVERSE_MEDIA reason on a tenant with adverse media OFF`).not.toContain('ADVERSE_MEDIA');
+  expect(body.reason?.category ?? null, `${who}: the decision reason is adverse media`).not.toBe(ADVERSE_MEDIA_CATEGORY);
+  const linked = body.matchedEntities.filter((match) => (match as Record<string, unknown>).sourceUrl != null);
+  expect(linked.length, `${who}: a match carries sourceUrl on a tenant with adverse media OFF`).toBe(0);
+  expect(
+    ['Ok', 'Stale', 'Unavailable'],
+    `${who}: adverseMediaStatus '${body.adverseMediaStatus}' says the stage ran for a tenant that has it OFF`,
+  ).not.toContain(body.adverseMediaStatus ?? '');
+}
 /**
  * `adverseMediaStatus=Unavailable` means the GDELT stage missed its latency budget, i.e. "not yet", not
  * "broken". Re-screen with backoff, the same way AC-MOCK-6 does (modb-mock-source-links.spec.ts).
@@ -155,8 +192,9 @@ export function skipNoCorpusHit(testId: string): void {
  */
 export async function requireAvailableStage(
   request: Parameters<typeof screen>[0],
+  apiKey: string | null = AML_API_KEY,
 ): Promise<AdverseMediaCapability | null> {
-  const cap = await adverseMediaCapability(request);
+  const cap = await adverseMediaCapability(request, apiKey);
   if (!cap) {
     test.skip(true, `screening-capabilities unreadable at ${AML_API_URL} — cannot tell on from off.`);
     return null;

@@ -76,12 +76,13 @@ export async function screen(
 export async function amlGet(
   request: APIRequestContext,
   path: string,
+  apiKey: string | null = AML_API_KEY,
 ): Promise<APIResponse | null> {
-  if (!AML_API_KEY) return null;
+  if (!apiKey) return null;
   const result = await tryRequest(request, AML_API_URL, path, {
     headers: {
-      'X-Api-Key': AML_API_KEY,
-      Authorization: `Bearer ${AML_API_KEY}`,
+      'X-Api-Key': apiKey,
+      Authorization: `Bearer ${apiKey}`,
     },
     timeoutMs: 20_000,
   });
@@ -128,15 +129,16 @@ export async function amlPost(
   request: APIRequestContext,
   path: string,
   body: Record<string, unknown>,
+  apiKey: string | null = AML_API_KEY,
 ): Promise<APIResponse | null> {
-  if (!AML_API_KEY) return null;
+  if (!apiKey) return null;
   const result = await tryRequest(request, AML_API_URL, path, {
     method: 'POST',
     data: body,
     headers: {
       'Content-Type': 'application/json',
-      'X-Api-Key': AML_API_KEY,
-      Authorization: `Bearer ${AML_API_KEY}`,
+      'X-Api-Key': apiKey,
+      Authorization: `Bearer ${apiKey}`,
     },
     timeoutMs: 25_000,
   });
@@ -146,8 +148,9 @@ export async function amlPost(
 /** Read the tenant's adverse-media capability, or null when it cannot be read. */
 export async function adverseMediaCapability(
   request: APIRequestContext,
+  apiKey: string | null = AML_API_KEY,
 ): Promise<AdverseMediaCapability | null> {
-  const res = await amlGet(request, '/v1/tenants/me/screening-capabilities');
+  const res = await amlGet(request, '/v1/tenants/me/screening-capabilities', apiKey);
   if (!res || !res.ok()) return null;
   const body = (await res.json()) as { adverseMedia?: AdverseMediaCapability };
   return body.adverseMedia ?? null;
@@ -170,14 +173,15 @@ export async function amlUpload(
   request: APIRequestContext,
   path: string,
   multipart: Record<string, string | { name: string; mimeType: string; buffer: Buffer }>,
+  apiKey: string | null = AML_API_KEY,
 ): Promise<APIResponse | null> {
-  if (!AML_API_KEY) return null;
+  if (!apiKey) return null;
   try {
     return await request.post(`${AML_API_URL}${path}`, {
       multipart,
       headers: {
-        'X-Api-Key': AML_API_KEY,
-        Authorization: `Bearer ${AML_API_KEY}`,
+        'X-Api-Key': apiKey,
+        Authorization: `Bearer ${apiKey}`,
       },
       timeout: 60_000,
     });

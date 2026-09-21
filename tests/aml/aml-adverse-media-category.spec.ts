@@ -7,8 +7,13 @@
 // UI, so it structurally cannot observe a client-side defect — a portal that renders `GeneralCrime` as
 // blank, or crashes on an unknown category, passes this file. It also cannot adjudicate PRECISION: it
 // asserts the label is well-formed, never that the label is TRUE of the article.
+//
+// D-MODB-AM-15 "Adverse media fully OFF by default, with a per-tenant MASTER switch for development" (owner,
+// 2026-09-21): screened as the surface-ON tenant, the only one whose adverse-media stage runs. On the default
+// tenant this file would observe zero categories every run.
 import { expect, test } from '@playwright/test';
 import { AML_API_KEY, AML_API_URL, amlReachable, screen, type ScreeningResult } from './aml-helpers.js';
+import { surfaceOnKeyOrSkip } from './am-hit-helpers.js';
 
 const AUTH_REJECTED = [401, 403];
 
@@ -34,7 +39,7 @@ test.describe('AML adverse-media category @aml-api', () => {
 
   for (const fullName of SUBJECTS) {
     test(`adverseMediaCategory stays inside the declared taxonomy — ${fullName}`, async ({ request }) => {
-      const res = await screen(request, { fullName });
+      const res = await screen(request, { fullName }, surfaceOnKeyOrSkip());
       if (!res || AUTH_REJECTED.includes(res.status())) {
         test.skip(true, `AML_API_KEY not accepted at ${AML_API_URL}.`);
         return;

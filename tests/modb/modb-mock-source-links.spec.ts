@@ -1,8 +1,13 @@
 // @modb-api tier — MODB-MOCK-1 "demo identity picker + AML source links", acceptance tests AC-MOCK-6 and the API
 // side of AC-MOCK-8 (owner decision MOCK-1-D4, MODB-MOCK-1-SPEC.md §3.3 + §4).
 //
-// AC-MOCK-6B and AC-MOCK-8 go through the wl-api-gateway and screen the synthetic MRZ specimen, so the payload has
-// adverse-media matches to carry links and more than ten matches for the display cap.
+// AC-MOCK-6B and AC-MOCK-8 go through the wl-api-gateway and screen the synthetic MRZ specimen as tenant 706772f5.
+//
+// 🔴 D-MODB-AM-15 "Adverse media fully OFF by default, with a per-tenant MASTER switch for development" (owner,
+// 2026-09-21; AMLService 1654f960 on staging, `AdverseMedia__Enabled=false`, master ON only for the surface-ON
+// tenant). The gateway tenant 706772f5 now gets `adverse_media_status=NotReported` and NO adverse media at all, so
+// AC-MOCK-6B asserts that absence (no ADVERSE_MEDIA match, no adverse-media reason, no source_url) against at least
+// one watchlist match, instead of "adverse-media matches exist but carry no link".
 //
 // AC-MOCK-6 calls AMLService DIRECTLY (owner decision D-MODB-AM-9 "AC-MOCK-6 calls AMLService directly as a second
 // tenant", 2026-09-21). The gateway pins ONE tenant (706772f5, modb-api-gateway.yml:101) and the per-tenant flag
@@ -71,7 +76,7 @@ async function screenAsSurfaceOnTenant(request: APIRequestContext, apiKey: strin
   return last as unknown as DirectScreen;
 }
 
-/** Screen the specimen and return its aml-case `data`, requiring adverse media to have been checked. */
+/** Screen the specimen through the gateway and return its aml-case `data`. Adverse media is OFF for this tenant (D-MODB-AM-15). */
 async function screenedCase(request: APIRequestContext): Promise<{ requestId: string; data: Record<string, unknown> }> {
   await assertGatewayReachable(request);
   const requestId = await submitVerification(request, { mrz_match: 'passed' });
@@ -80,8 +85,6 @@ async function screenedCase(request: APIRequestContext): Promise<{ requestId: st
   const amlCase = await getAmlCase(request, requestId);
   expect(amlCase.status()).toBe(200);
   const data = (await amlCase.json()).data as Record<string, unknown>;
-  // Not Ok = the adverse-media index did not answer (cold page cache, MODB-2-INT 8-AM-diag): environment, not feature.
-  expect(data.adverse_media_status, 'adverse media must have been checked for links to exist').toBe('Ok');
   return { requestId, data };
 }
 
@@ -113,24 +116,34 @@ test.describe('MODB-MOCK-1 AML source links on the gateway aml-case @modb-api', 
     for (const match of matches.filter((candidate) => !isDirectAdverseMedia(candidate))) expect(match.sourceUrl ?? null).toBeNull();
   });
 
-  // AC-MOCK-6B pairs with AC-MOCK-6 as the two halves of one flag (owner decision D-MODB-AM-1 "Suppress
-  // adverse media at the response mapper", 2026-09-20). AC-MOCK-6 asserts the link-carrying behaviour the
-  // product is built to have; this asserts the CLIENT-FACING DEFAULT, which is that the link is not emitted
-  // at all. `AdverseMedia:Surface:Enabled` (AdverseMediaSurfaceOptions, default FALSE) decides which of the
-  // two holds, so exactly one of this pair is green in any one deployment -- that is the contract, not a
-  // conflict. Neither may be amended to agree with whatever the configuration currently is.
-  //
-  // Scope: the gateway's own `source_url` field ONLY. Out of scope and NOT asserted absent here --
-  // `external_id` still carries the GDELT article URL and the leadership link still rides inside
-  // Presentation.Evidence (open item AM-SURFACE-2). Asserting those absent would fail on a known gap and
-  // say nothing about this flag.
-  test('AC-MOCK-6B: with the adverse-media surface OFF (the default), no match carries a source_url', async ({ request }) => {
+  // AC-MOCK-6B — D-MODB-AM-15 "Adverse media fully OFF by default, with a per-tenant MASTER switch for development"
+  // (owner, 2026-09-21) replaces the D-MODB-AM-1 reading of this test ("adverse-media matches exist, links hidden").
+  // The gateway tenant 706772f5 has the master OFF, so the gateway case must carry no adverse media at all: no
+  // ADVERSE_MEDIA match, no adverse-media reason or category anywhere in `data`, and no `source_url` on any match.
+  // At least one watchlist match must exist, or "no adverse media" and "no link" are true of an empty list.
+  // AC-MOCK-6 (surface-ON tenant, direct AMLService) remains the half that proves links are emitted when ON.
+  test('AC-MOCK-6B: the gateway tenant has adverse media OFF (D-MODB-AM-15): no adverse-media match or reason, no source_url', async ({ request }) => {
     const { data } = await screenedCase(request);
     const matches = data.matches as Match[];
-    const adverseMedia = matches.filter(isAdverseMedia);
-    expect(adverseMedia.length, 'the specimen screen returned no adverse-media match, so the gate is unobserved').toBeGreaterThanOrEqual(1);
+    expect(data.adverse_media_status, 'the gateway tenant has the adverse-media master OFF (D-MODB-AM-15)').toBe('NotReported');
+
+    const watchlist = matches.filter((match) => !isAdverseMedia(match));
+    expect(watchlist.length, 'the specimen screen returned no watchlist match, so the absence checks below are vacuous').toBeGreaterThanOrEqual(1);
+    expect(
+      matches.filter(isAdverseMedia).map((match) => String(match.external_id ?? match.name ?? '?')),
+      'adverse media is OFF for the gateway tenant, yet ADVERSE_MEDIA matches came back',
+    ).toEqual([]);
+
+    // Reasons and categories are checked over the WHOLE payload, not a guessed field name. The status key itself is
+    // dropped first because its NAME contains "adverse_media".
+    const rest: Record<string, unknown> = { ...data };
+    delete rest.adverse_media_status;
+    const payload = JSON.stringify(rest);
+    expect(payload, 'an ADVERSE_MEDIA source or reason code is on the gateway case').not.toContain('ADVERSE_MEDIA');
+    expect(payload, 'an adverse_media category is on the gateway case').not.toContain('"adverse_media"');
+
     const linked = matches.filter((match) => 'source_url' in match).map((match) => String(match.source_url));
-    expect(linked, 'the surface is OFF, so no match may carry source_url; these did').toEqual([]);
+    expect(linked, 'no match may carry source_url while adverse media is OFF; these did').toEqual([]);
   });
 
   test('AC-MOCK-8 (API side): every match is returned in one response, and no paging parameter changes it', async ({ request }) => {

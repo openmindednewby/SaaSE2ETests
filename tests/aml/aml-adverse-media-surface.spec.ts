@@ -8,6 +8,12 @@
 // `externalId` KEY to be ABSENT on adverse-media matches (not "", not null), exactly like `sourceUrl`,
 // while watchlist matches keep theirs.
 //
+// 🔴 D-MODB-AM-15 "Adverse media fully OFF by default, with a per-tenant MASTER switch for development" (owner,
+// 2026-09-21) supersedes the 6B half above. Staging now runs `AdverseMedia__Enabled=false` with the master ON only
+// for the surface-ON tenant, so the default tenant no longer receives adverse-media matches with a hidden
+// externalId: it receives NO adverse media at all. AM-E2E-6B now asserts exactly that, on the subject the
+// surface-ON tenant just got hits for, so the absence is observed on a subject that HAS adverse media.
+//
 // Needs an AVAILABLE adverse-media stage (requireAvailableStage) and a corpus subject with a hit; see
 // aml-adverse-media-hit.spec.ts for why the corpus is what it is and for AM-E2E-5, the control that
 // turns a corpus-wide zero red.
@@ -16,14 +22,17 @@ import {
   ADVERSE_MEDIA_CATEGORIES,
   AM_E2E_6_TIMEOUT_MS,
   HTTP_URL,
-  SURFACE_ON_API_KEY,
+  CREATED,
   SURFACE_ON_TENANT_ID,
+  expectAdverseMediaAbsent,
   firstCorpusHit,
   isAm,
   requireAvailableStage,
   skipNoCorpusHit,
+  surfaceOnKeyOrSkip,
+  type AmScreen,
 } from './am-hit-helpers.js';
-import { ADVERSE_MEDIA_CATEGORY, AML_API_KEY, AML_API_URL, amlReachable } from './aml-helpers.js';
+import { ADVERSE_MEDIA_CATEGORY, AML_API_KEY, AML_API_URL, amlReachable, screen } from './aml-helpers.js';
 
 test.describe('AML adverse media — per-tenant surface gate @aml-api', () => {
   test.beforeEach(async ({ request }) => {
@@ -44,15 +53,10 @@ test.describe('AML adverse media — per-tenant surface gate @aml-api', () => {
     request,
   }) => {
     test.setTimeout(AM_E2E_6_TIMEOUT_MS);
-    test.skip(
-      !SURFACE_ON_TENANT_ID || !SURFACE_ON_API_KEY,
-      'MODB_SURFACE_ON_TENANT_ID / MODB_SURFACE_ON_AML_API_KEY are not set (E2ETests/.env.<target>.secrets): ' +
-        'the surface-ON tenant is unobserved (D-MODB-AM-13)',
-    );
-    if (!(await requireAvailableStage(request))) return;
-    test.info().annotations.push({ type: 'tenant', description: String(SURFACE_ON_TENANT_ID) });
+    const onKey = surfaceOnKeyOrSkip();
+    if (!(await requireAvailableStage(request, onKey))) return;
 
-    const found = await firstCorpusHit(request, SURFACE_ON_API_KEY!, `surface-ON tenant ${SURFACE_ON_TENANT_ID}`);
+    const found = await firstCorpusHit(request, onKey, `surface-ON tenant ${SURFACE_ON_TENANT_ID}`);
     if (!found) {
       skipNoCorpusHit('am-e2e-6');
       return;
@@ -108,40 +112,42 @@ test.describe('AML adverse media — per-tenant surface gate @aml-api', () => {
     }
   });
 
-  // 6B — the other half of the D-MODB-AM-13 gate. The SAME screen as the default tenant (surface OFF):
-  // the article URL must not leave the API. The key is ABSENT, never "" and never null, so it behaves
-  // exactly like `sourceUrl`. Watchlist matches are untouched by the gate and keep their externalId.
-  test('AM-E2E-6B as the default tenant (surface OFF), adverse-media matches OMIT externalId while watchlist matches keep it', async ({
+  // 6B — D-MODB-AM-15: the default tenant has adverse media fully OFF. The control screen (surface-ON tenant)
+  // proves the subject HAS adverse media; the same subject screened as the default tenant must then carry no
+  // adverse-media match, no ADVERSE_MEDIA reason, no sourceUrl and no "stage ran" status, while its watchlist
+  // matches are untouched and keep their externalId.
+  test('AM-E2E-6B as the default tenant (adverse media OFF, D-MODB-AM-15), a subject with adverse media returns none and watchlist matches keep externalId', async ({
     request,
   }) => {
     test.setTimeout(AM_E2E_6_TIMEOUT_MS);
-    if (!(await requireAvailableStage(request))) return;
+    const onKey = surfaceOnKeyOrSkip();
+    if (!(await requireAvailableStage(request, onKey))) return;
 
-    const found = await firstCorpusHit(request, AML_API_KEY!, 'the default tenant (AML_API_KEY)');
-    if (!found) {
+    const control = await firstCorpusHit(request, onKey, `surface-ON tenant ${SURFACE_ON_TENANT_ID}`);
+    if (!control) {
       skipNoCorpusHit('am-e2e-6b');
       return;
     }
-    const { body, hits } = found;
-    test.info().annotations.push({ type: 'am-subject', description: `${found.fullName} (${hits.length} hits)` });
+    const res = await screen(request, { fullName: control.fullName, adverseMedia: true, includeReasoning: true });
+    expect(res, 'screening endpoint unreachable').not.toBeNull();
+    expect(res!.status(), `default-tenant screen of '${control.fullName}'`).toBe(CREATED);
+    const body = (await res!.json()) as AmScreen;
+    test.info().annotations.push({
+      type: 'am-subject',
+      description: `${control.fullName}: surface-ON tenant ${control.hits.length} hits; default tenant status=${body.adverseMediaStatus}`,
+    });
 
-    for (const [index, match] of hits.entries()) {
-      expect(
-        Object.keys(match),
-        `adverse-media match ${index}: the surface is OFF, so the externalId KEY must be absent ` +
-          `(got ${JSON.stringify(match.externalId)}); "" or null still tells the client a link exists`,
-      ).not.toContain('externalId');
-    }
+    expectAdverseMediaAbsent(body, `default tenant screening '${control.fullName}'`);
 
     const watchlist = body.matchedEntities.filter((match) => !isAm(match));
     expect(
       watchlist.length,
-      `screening '${found.fullName}' returned no watchlist match, so "watchlist matches keep externalId" is unobserved`,
+      `screening '${control.fullName}' returned no watchlist match, so "no adverse media" and "watchlist keeps externalId" are unobserved`,
     ).toBeGreaterThanOrEqual(1);
     for (const [index, match] of watchlist.entries()) {
       expect(
         (match.externalId ?? '').trim(),
-        `watchlist match ${index} lost its externalId: the D-MODB-AM-13 gate must touch adverse media only`,
+        `watchlist match ${index} lost its externalId: turning adverse media off must touch adverse media only`,
       ).toBeTruthy();
     }
   });
