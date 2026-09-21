@@ -25,6 +25,15 @@
 // PRECISION — whether the article is genuinely about this subject. And the roster it probes is a
 // TENANT-SCOPED SUBSET of the tailer's cross-tenant book, so "not on the roster" is not observable
 // absence from the book — see the header of am-name-book-probe.ts.
+//
+// 🔴 D-MODB-AM-13 "AM-E2E-6 screens as the surface-ON tenant, and the gate OMITS externalId" (owner,
+// 2026-09-21, MODB-BOARD-1 "Azure board items to Module B PR bundles" §24). The response mapper
+// (ScreeningResponseMapper.OutwardExternalId) hides the adverse-media article URL for every tenant whose
+// `AdverseMedia:Surface` is OFF, which is the default. So AM-E2E-6 screens as the surface-ON tenant
+// MODB_SURFACE_ON_TENANT_ID (the D-MODB-AM-9 pattern, modb-mock-source-links.spec.ts AC-MOCK-6), and its
+// sibling AM-E2E-6B screens the SAME request as the default tenant (AML_API_KEY) and requires the
+// `externalId` KEY to be ABSENT on adverse-media matches (not "", not null), exactly like `sourceUrl`,
+// while watchlist matches keep theirs.
 import { expect, test } from '@playwright/test';
 import { probeAmNameBook, ruleOnAmCorpus } from './am-name-book-probe.js';
 import {
@@ -107,6 +116,75 @@ const isAm = (m: AmMatch | CaseMatch): boolean =>
   m.rejectionTag === ADVERSE_MEDIA_CATEGORY || !!(m as AmMatch).adverseMediaCategory;
 
 const amOf = (body: AmScreen): AmMatch[] => body.matchedEntities.filter(isAm);
+
+// D-MODB-AM-13: the tenant whose adverse-media surface override is ON (created for D-MODB-AM-9).
+const SURFACE_ON_TENANT_ID = process.env.MODB_SURFACE_ON_TENANT_ID?.trim() || null;
+const SURFACE_ON_API_KEY = process.env.MODB_SURFACE_ON_AML_API_KEY?.trim() || null;
+/**
+ * `adverseMediaStatus=Unavailable` means the GDELT stage missed its latency budget, i.e. "not yet", not
+ * "broken". Re-screen with backoff, the same way AC-MOCK-6 does (modb-mock-source-links.spec.ts).
+ */
+const AM_RETRY_INTERVALS_MS = [5_000, 10_000, 20_000, 30_000];
+const AM_RETRY_TIMEOUT_MS = 120_000;
+/** Up to three corpus subjects, each allowed one full retry budget. */
+const AM_E2E_6_TIMEOUT_MS = 420_000;
+const HTTP_URL = /^https?:\/\/\S+$/;
+
+/** Screen `fullName` with `apiKey` until adverse media leaves Unavailable, or fail with the last status seen. */
+async function screenUntilAmSettles(
+  request: Parameters<typeof screen>[0],
+  fullName: string,
+  apiKey: string,
+  who: string,
+): Promise<AmScreen> {
+  let last: AmScreen | null = null;
+  await expect
+    .poll(
+      async () => {
+        const res = await screen(request, { fullName, adverseMedia: true, includeReasoning: true }, apiKey);
+        const http = res?.status() ?? 0;
+        if (!res || http !== CREATED) return `http ${http}`;
+        last = (await res.json()) as AmScreen;
+        return last.adverseMediaStatus ?? 'missing';
+      },
+      {
+        message:
+          `screening '${fullName}' as ${who} at ${AML_API_URL} never reached adverseMediaStatus=Ok within the ` +
+          'retry budget (Unavailable = the GDELT stage kept missing its latency budget; http 401/403 = key rejected)',
+        intervals: AM_RETRY_INTERVALS_MS,
+        timeout: AM_RETRY_TIMEOUT_MS,
+      },
+    )
+    .toBe('Ok');
+  return last as unknown as AmScreen;
+}
+
+/** The first corpus subject whose settled screen carries an adverse-media match, or null if none does. */
+async function firstCorpusHit(
+  request: Parameters<typeof screen>[0],
+  apiKey: string,
+  who: string,
+): Promise<{ fullName: string; body: AmScreen; hits: AmMatch[] } | null> {
+  for (const fullName of POSITIVE_CORPUS) {
+    const body = await screenUntilAmSettles(request, fullName, apiKey, who);
+    const hits = amOf(body);
+    if (hits.length > 0) return { fullName, body, hits };
+  }
+  return null;
+}
+
+function skipNoCorpusHit(testId: string): void {
+  test.info().annotations.push({
+    type: `${testId}-never-executed`,
+    description: `no corpus subject carried an adverse-media match, so ${testId} asserted nothing on this run.`,
+  });
+  test.skip(
+    true,
+    'the stage is available but no corpus subject carried an adverse-media match. AM-E2E-5 is the ' +
+      'control for this: it FAILS when a corpus subject is provably in the indexed name book and ' +
+      'slices were scanned against it, and reports its own no-input outcome otherwise.',
+  );
+}
 
 /**
  * Skip ONLY when the stage says it is unavailable. This is the discriminator AM-E2E-3 lacks: an empty
@@ -196,45 +274,27 @@ test.describe('AML adverse media — switched on @aml-api', () => {
   // 6 — the decision + reason + presentable-evidence contract ON A REAL HIT. AM-E2E-3 asserts only
   // `decision !== 'Pass'`; the shipped posture (Q7, 2026-08-23) is REVIEW, and a Fail would satisfy
   // `!== 'Pass'` while contradicting that posture. Assert the value, not the negation.
-  test('AM-E2E-6 a real adverse-media hit resolves to Review and carries a usable reason + evidence', async ({
+  // D-MODB-AM-13: screened as the surface-ON tenant, the only tenant for which externalId is the article URL.
+  test('AM-E2E-6 as the surface-ON tenant, a real adverse-media hit resolves to Review and carries a usable reason + evidence', async ({
     request,
   }) => {
+    test.setTimeout(AM_E2E_6_TIMEOUT_MS);
+    test.skip(
+      !SURFACE_ON_TENANT_ID || !SURFACE_ON_API_KEY,
+      'MODB_SURFACE_ON_TENANT_ID / MODB_SURFACE_ON_AML_API_KEY are not set (E2ETests/.env.<target>.secrets): ' +
+        'the surface-ON tenant is unobserved (D-MODB-AM-13)',
+    );
     if (!(await requireAvailableStage(request))) return;
+    test.info().annotations.push({ type: 'tenant', description: String(SURFACE_ON_TENANT_ID) });
 
-    let hit: AmMatch | null = null;
-    let body: AmScreen | null = null;
-    for (const fullName of POSITIVE_CORPUS) {
-      const res = await screen(request, { fullName, adverseMedia: true, includeReasoning: true });
-      if (!res || AUTH_REJECTED.includes(res.status())) {
-        test.skip(true, `AML_API_KEY not accepted at ${AML_API_URL}.`);
-        return;
-      }
-      expect(res.status()).toBe(CREATED);
-      const parsed = (await res.json()) as AmScreen;
-      const matches = amOf(parsed);
-      if (matches.length > 0) {
-        [hit] = matches;
-        body = parsed;
-        break;
-      }
-    }
-    if (!hit || !body) {
-      test.info().annotations.push({
-        type: 'am-e2e-6-never-executed',
-        description:
-          'ZERO assertions have ever run in AM-E2E-6. Its Review-decision, reason-code, taxonomy and ' +
-          'headline/publisher expectations below are INFERRED from the TS interface and have never ' +
-          'been observed on a live payload. Three skips are three unverified contracts, not passes.',
-      });
-      test.skip(
-        true,
-        'the stage is available but no corpus subject carried an adverse-media match. AM-E2E-5 is the ' +
-          'control for this: it FAILS when a corpus subject is provably in the indexed name book and ' +
-          'slices were scanned against it, and reports its own no-input outcome otherwise — read its ' +
-          'am-name-book annotation to see which of the two happened on this run.',
-      );
+    const found = await firstCorpusHit(request, SURFACE_ON_API_KEY!, `surface-ON tenant ${SURFACE_ON_TENANT_ID}`);
+    if (!found) {
+      skipNoCorpusHit('am-e2e-6');
       return;
     }
+    const { body, hits } = found;
+    const [hit] = hits;
+    test.info().annotations.push({ type: 'am-subject', description: `${found.fullName} (${hits.length} hits)` });
 
     expect(
       body.decision,
@@ -255,28 +315,22 @@ test.describe('AML adverse media — switched on @aml-api', () => {
           'the tenant warning-type policy has no key for silently drops the warning',
       ).toBeTruthy();
     }
-    // 🔴 REWRITTEN 2026-09-08 against a REAL payload — the first one this assertion has ever seen.
-    // The old form was `headline + publisher` truthy, and both names were INFERRED from the TS
-    // interface. Measured on the live wire: both fields exist verbatim (the API maps DB `title` →
-    // `headline` and `domain` → `publisher`), `publisher` is populated, and `headline` is NULL on
-    // every row — the `gkg:v1minimal:themegated:v1` parse profile captures no article title. The old
-    // form would therefore have gone GREEN on `publisher` alone while the headline half was never
-    // once satisfied: a passing assertion that silently covered nothing.
-    //
-    // So assert the fields that ARE meaningful, each on its own so a regression names itself, and
-    // record the headline gap as a KNOWN PRODUCT LIMITATION instead of dropping it. Do NOT convert
-    // this into `expect(hit.headline).toBeNull()` — that would PIN the defect and turn fixing the
-    // parse profile into a test failure.
+    // 🔴 REWRITTEN 2026-09-08 against a REAL payload. `headline` is NULL on every row (the
+    // `gkg:v1minimal:themegated:v1` parse profile captures no title), so each field is asserted on its
+    // own and the headline gap is recorded as a KNOWN PRODUCT LIMITATION. Do NOT convert this into
+    // `expect(hit.headline).toBeNull()` — that would PIN the defect.
     expect(
       (hit.publisher ?? '').trim(),
       'an adverse-media match with no publisher is not reviewable evidence — the analyst is asked to ' +
         'judge an article they cannot attribute to any outlet',
     ).toBeTruthy();
-    expect(
-      (hit.externalId ?? '').trim(),
-      'for an adverse-media hit externalId IS the article URL (AdverseMediaArticle.cs:14). With the ' +
-        'headline empty it is the only way an analyst can reach the article at all',
-    ).toMatch(/^https?:\/\//);
+    for (const [index, match] of hits.entries()) {
+      expect(
+        match.externalId,
+        `adverse-media match ${index}: for the surface-ON tenant externalId IS the article URL ` +
+          '(AdverseMediaArticle.cs:14). With the headline empty it is the only way an analyst can reach the article',
+      ).toEqual(expect.stringMatching(HTTP_URL));
+    }
     if (!(hit.headline ?? '').trim()) {
       test.info().annotations.push({
         type: 'am-headline-gap',
@@ -286,6 +340,44 @@ test.describe('AML adverse media — switched on @aml-api', () => {
           '`gkg:v1minimal:themegated:v1` extracts no article title. A customer-facing surface can ' +
           `show only the publisher domain (${hit.publisher}) and the URL. Track 8 renders this field.`,
       });
+    }
+  });
+
+  // 6B — the other half of the D-MODB-AM-13 gate. The SAME screen as the default tenant (surface OFF):
+  // the article URL must not leave the API. The key is ABSENT, never "" and never null, so it behaves
+  // exactly like `sourceUrl`. Watchlist matches are untouched by the gate and keep their externalId.
+  test('AM-E2E-6B as the default tenant (surface OFF), adverse-media matches OMIT externalId while watchlist matches keep it', async ({
+    request,
+  }) => {
+    test.setTimeout(AM_E2E_6_TIMEOUT_MS);
+    if (!(await requireAvailableStage(request))) return;
+
+    const found = await firstCorpusHit(request, AML_API_KEY!, 'the default tenant (AML_API_KEY)');
+    if (!found) {
+      skipNoCorpusHit('am-e2e-6b');
+      return;
+    }
+    const { body, hits } = found;
+    test.info().annotations.push({ type: 'am-subject', description: `${found.fullName} (${hits.length} hits)` });
+
+    for (const [index, match] of hits.entries()) {
+      expect(
+        Object.keys(match),
+        `adverse-media match ${index}: the surface is OFF, so the externalId KEY must be absent ` +
+          `(got ${JSON.stringify(match.externalId)}); "" or null still tells the client a link exists`,
+      ).not.toContain('externalId');
+    }
+
+    const watchlist = body.matchedEntities.filter((match) => !isAm(match));
+    expect(
+      watchlist.length,
+      `screening '${found.fullName}' returned no watchlist match, so "watchlist matches keep externalId" is unobserved`,
+    ).toBeGreaterThanOrEqual(1);
+    for (const [index, match] of watchlist.entries()) {
+      expect(
+        (match.externalId ?? '').trim(),
+        `watchlist match ${index} lost its externalId: the D-MODB-AM-13 gate must touch adverse media only`,
+      ).toBeTruthy();
     }
   });
 
