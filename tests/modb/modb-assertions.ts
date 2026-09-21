@@ -1,5 +1,9 @@
 // MODB-2 Q5 — contract assertions shared by the MODB API suite: integration trace, source labels, the screened
 // AML result (score, adverse media, case detail) and the cancelled AML row. API contract only, never a page.
+//
+// D-MODB-AM-15 "Adverse media fully OFF by default, with a per-tenant MASTER switch for development"
+// (owner, 2026-09-21): the gateway tenant 706772f5 has the adverse-media master OFF, so every screened row reports
+// `adverse_media_status=NotReported` and the case lists only the `local` source (measured on staging 2026-09-21).
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import {
   ADVERSE_MEDIA_STATUSES,
@@ -64,9 +68,8 @@ export function expectIntegrationTrace(aml: CheckRow): void {
 }
 
 /**
- * A screened AML row and its case detail. The mock identity is always the ERIKSSON specimen
- * (ModuleBMock IdentityResultFactory.cs:79), whose matches all come from adverse media, so AM `Ok` must yield a
- * positive score and matches. AM not `Ok` is recorded in screenLedger, never passed off as clean.
+ * A screened AML row and its case detail. Adverse media is OFF for the gateway tenant (D-MODB-AM-15), so the status
+ * is `NotReported` and only the local source ran. A positive score must still come with matches (watchlist).
  */
 export async function expectScreenedAml(request: APIRequestContext, requestId: string, aml: CheckRow): Promise<void> {
   expect(aml.status, JSON.stringify(aml.error)).toBe('completed');
@@ -81,8 +84,8 @@ export async function expectScreenedAml(request: APIRequestContext, requestId: s
   expect(result).toHaveProperty('adverse_media_status');
   const amStatus = result.adverse_media_status as string;
   expect(ADVERSE_MEDIA_STATUSES).toContain(amStatus);
-  // Every transport now carries the AM status (Q1/Q2), so NotReported is a defect in all three modes.
-  expect(amStatus).not.toBe('NotReported');
+  // D-MODB-AM-15: the gateway tenant has the adverse-media master OFF, so the stage is not reported in any mode.
+  expect(amStatus, 'the gateway tenant has adverse media OFF (D-MODB-AM-15)').toBe('NotReported');
 
   const amlCase = await getAmlCase(request, requestId);
   expect(amlCase.status()).toBe(200);
@@ -90,14 +93,13 @@ export async function expectScreenedAml(request: APIRequestContext, requestId: s
   expect(caseData.screening_id).toBe(result.screening_id);
   expect(caseData.adverse_media_status).toBe(amStatus);
   const sources = (caseData.sources as { source: string }[]).map((entry) => entry.source);
-  expect(sources).toEqual(expect.arrayContaining(['local', 'adverse-media']));
+  // D-MODB-AM-15: the adverse-media source must not appear while the tenant's master is OFF.
+  expect(sources, 'only the local watchlist runs for the gateway tenant (D-MODB-AM-15)').toEqual(['local']);
   expect(Array.isArray(caseData.matches)).toBe(true);
 
   const note = `${requestId} decision=${result.decision} score=${result.score} am=${amStatus} matches=${caseData.matches.length}`;
   recordAdverseMedia(note, amStatus, result.score);
-  if (amStatus !== 'Ok') return;
-  expect(result.score as number, `AM Ok but ${note}`).toBeGreaterThan(0);
-  expect(caseData.matches.length, `AM Ok but ${note}`).toBeGreaterThan(0);
+  if ((result.score as number) > 0) expect(caseData.matches.length, `score > 0 but ${note}`).toBeGreaterThan(0);
 }
 
 /** A cancelled AML row: no result, the gateway's exact refusal sentence (adeda6b), and no screening behind it. */

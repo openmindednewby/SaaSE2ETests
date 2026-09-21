@@ -1,7 +1,9 @@
 // @modb-api tier — MODB-MOCK-1 "demo identity picker + AML source links", acceptance tests AC-MOCK-6 and the API
 // side of AC-MOCK-8 (owner decision MOCK-1-D4, MODB-MOCK-1-SPEC.md §3.3 + §4).
 //
-// AC-MOCK-6B and AC-MOCK-8 go through the wl-api-gateway and screen the synthetic MRZ specimen as tenant 706772f5.
+// AC-MOCK-6B and AC-MOCK-8 go through the wl-api-gateway as tenant 706772f5, naming the subject through the mock identity
+// field. The ERIKSSON specimen screens clean once adverse media is OFF (0 matches, measured 2026-09-21), so 6B screens
+// "Viktor Bout" (1 OFAC match) and 8 screens "Mohammed Ali" (25 watchlist matches, above the display cap of 10).
 //
 // 🔴 D-MODB-AM-15 "Adverse media fully OFF by default, with a per-tenant MASTER switch for development" (owner,
 // 2026-09-21; AMLService 1654f960 on staging, `AdverseMedia__Enabled=false`, master ON only for the surface-ON
@@ -17,11 +19,16 @@
 // (http-aml-case.reader.ts). Only the OFF case (6B) covers the full gateway path.
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { ADVERSE_MEDIA_CATEGORY, AML_API_URL, screen } from '../aml/aml-helpers.js';
-import { AML_CHECK, assertGatewayReachable, getAmlCase, rowOf, submitVerification, waitForAmlTerminal } from './modb-helpers.js';
+import { AML_CHECK, MRZ_CHECK, assertGatewayReachable, getAmlCase, rowOf, submitVerification, waitForAmlTerminal } from './modb-helpers.js';
+import { mockIdentityFields } from './modb-demo-identity.js';
 import { resolveGatewayUrl } from './modb-guards.js';
 
 /** The portal renders the first 10 and a "show all N" control (spec §3.3). */
 const DISPLAY_CAP = 10;
+/** One OFAC match through the gateway (measured 2026-09-21). */
+const WATCHLIST_SUBJECT = 'Viktor Bout';
+/** 25 watchlist matches through the gateway (EU/UK/OFAC/WIKIDATA, measured 2026-09-21), above DISPLAY_CAP. */
+const MANY_MATCHES_SUBJECT = 'Mohammed Ali';
 const PAGING_QUERY = 'limit=10&offset=0&page=1&page_size=10&cursor=0';
 const PAGING_KEYS = ['page', 'page_size', 'limit', 'offset', 'cursor', 'next', 'next_cursor', 'has_more', 'total_pages', 'total'];
 const HTTP_BAD_REQUEST = 400;
@@ -77,9 +84,9 @@ async function screenAsSurfaceOnTenant(request: APIRequestContext, apiKey: strin
 }
 
 /** Screen the specimen through the gateway and return its aml-case `data`. Adverse media is OFF for this tenant (D-MODB-AM-15). */
-async function screenedCase(request: APIRequestContext): Promise<{ requestId: string; data: Record<string, unknown> }> {
+async function screenedCase(request: APIRequestContext, subject: string): Promise<{ requestId: string; data: Record<string, unknown> }> {
   await assertGatewayReachable(request);
-  const requestId = await submitVerification(request, { mrz_match: 'passed' });
+  const requestId = await submitVerification(request, { mrz_match: 'passed' }, [MRZ_CHECK], mockIdentityFields(subject));
   test.info().annotations.push({ type: 'request_id', description: requestId });
   expect(rowOf(await waitForAmlTerminal(request, requestId), AML_CHECK).status).toBe('completed');
   const amlCase = await getAmlCase(request, requestId);
@@ -123,7 +130,7 @@ test.describe('MODB-MOCK-1 AML source links on the gateway aml-case @modb-api', 
   // At least one watchlist match must exist, or "no adverse media" and "no link" are true of an empty list.
   // AC-MOCK-6 (surface-ON tenant, direct AMLService) remains the half that proves links are emitted when ON.
   test('AC-MOCK-6B: the gateway tenant has adverse media OFF (D-MODB-AM-15): no adverse-media match or reason, no source_url', async ({ request }) => {
-    const { data } = await screenedCase(request);
+    const { data } = await screenedCase(request, WATCHLIST_SUBJECT);
     const matches = data.matches as Match[];
     expect(data.adverse_media_status, 'the gateway tenant has the adverse-media master OFF (D-MODB-AM-15)').toBe('NotReported');
 
@@ -140,14 +147,15 @@ test.describe('MODB-MOCK-1 AML source links on the gateway aml-case @modb-api', 
     delete rest.adverse_media_status;
     const payload = JSON.stringify(rest);
     expect(payload, 'an ADVERSE_MEDIA source or reason code is on the gateway case').not.toContain('ADVERSE_MEDIA');
-    expect(payload, 'an adverse_media category is on the gateway case').not.toContain('"adverse_media"');
+    // As a VALUE only: the key "adverse_media" legitimately names the (null) stage in aml_processing.stages.
+    expect(payload, 'an adverse_media category is on the gateway case').not.toContain(':"adverse_media"');
 
     const linked = matches.filter((match) => 'source_url' in match).map((match) => String(match.source_url));
     expect(linked, 'no match may carry source_url while adverse media is OFF; these did').toEqual([]);
   });
 
   test('AC-MOCK-8 (API side): every match is returned in one response, and no paging parameter changes it', async ({ request }) => {
-    const { requestId, data } = await screenedCase(request);
+    const { requestId, data } = await screenedCase(request, MANY_MATCHES_SUBJECT);
     const matches = data.matches as Match[];
     expect(matches.length, 'the display cap needs more than 10 matches to mean anything').toBeGreaterThan(DISPLAY_CAP);
     for (const key of PAGING_KEYS) expect(data, `aml-case data carries paging key "${key}"`).not.toHaveProperty(key);

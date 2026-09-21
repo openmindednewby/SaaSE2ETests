@@ -131,8 +131,10 @@ export function expectAmlProcessing(raw: unknown, channel: string): AmlProcessin
   const receivedAt = expectTimestamp(trace.received_at, 'received_at');
   expect(trace.processing_ms, `processing_ms ${dump}`).toBeGreaterThan(0);
   expectStage(trace.stages?.local_watchlist, 'stages.local_watchlist', receivedAt);
-  expectStage(trace.stages?.adverse_media, 'stages.adverse_media', receivedAt);
-  expect(trace.am_attempts?.length ?? 0, `am_attempts ${dump}`).toBeGreaterThanOrEqual(1);
+  // D-MODB-AM-15: the MODB tenant has the adverse-media master OFF, so the stage never runs. Measured 2026-09-21 on
+  // queue, sync and the GET read-back: `stages.adverse_media` is null and `am_attempts` is [].
+  expect(trace.stages?.adverse_media ?? null, `stages.adverse_media must be absent while adverse media is OFF ${dump}`).toBeNull();
+  expect(trace.am_attempts ?? [], `am_attempts must be empty while adverse media is OFF ${dump}`).toEqual([]);
   (trace.am_attempts ?? []).forEach((attempt, index) => {
     expect(attempt.n, `am_attempts[${index}].n`).toBe(index + 1);
     expect(attempt.step_reached, `am_attempts[${index}].step_reached`).toEqual(expect.stringMatching(/\S/));

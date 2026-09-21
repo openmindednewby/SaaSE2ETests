@@ -48,10 +48,14 @@ export function newScreenLedger(): ScreenLedger {
   return { screened: 0, positive: 0, notObserved: [] };
 }
 
-/** Records one screened result. Returns true only for adverse media `Ok` with a numeric score above zero. */
-export function recordScreen(ledger: ScreenLedger, note: string, amStatus: unknown, score: unknown): boolean {
+/**
+ * Records one screened result. Returns true only for a numeric score above zero. Adverse media no longer counts:
+ * D-MODB-AM-15 turned it OFF for the gateway tenant, so a positive screen is now a watchlist hit (amStatus is kept
+ * in the note by the caller, not required here).
+ */
+export function recordScreen(ledger: ScreenLedger, note: string, _amStatus: unknown, score: unknown): boolean {
   ledger.screened += 1;
-  const positive = amStatus === 'Ok' && typeof score === 'number' && score > 0;
+  const positive = typeof score === 'number' && score > 0;
   if (positive) ledger.positive += 1;
   else ledger.notObserved.push(note);
   return positive;
@@ -72,7 +76,7 @@ export function positiveScreenVerdict(ledger: ScreenLedger, env: Env): ScreenVer
   if (allow && allow !== '1') throw new Error(`${ALLOW_AM_UNAVAILABLE_ENV}=${allow}: only 1 is accepted`);
   if (ledger.screened === 0 || ledger.positive > 0) return { fail: null, warn: null };
   const summary =
-    `${ledger.screened} screening(s), none observed adverse media Ok with score > 0, so the positive-screen ` +
+    `${ledger.screened} screening(s), none observed a score > 0, so the positive-screen ` +
     `contract was NOT checked: ${ledger.notObserved.join('; ')}`;
   if (allow === '1') return { fail: null, warn: `${summary} (allowed by ${ALLOW_AM_UNAVAILABLE_ENV}=1)` };
   return { fail: `${summary}. Set ${ALLOW_AM_UNAVAILABLE_ENV}=1 only when GDELT is known degraded.`, warn: null };

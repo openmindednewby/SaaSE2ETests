@@ -8,13 +8,19 @@
 //   MODB_E2E_NO_CALLBACK=<id>        enables exactly ONE no_callback scenario (`mrz-no-callback` or
 //                                    `liveness-no-callback`). Blocks a shared staging check worker for ~3 h: see
 //                                    NO_CALLBACK_BLAST_RADIUS below.
-//   MODB_E2E_ALLOW_AM_UNAVAILABLE=1  a run that screened but never observed adverse media `Ok` with score > 0 warns
+//   MODB_E2E_ALLOW_AM_UNAVAILABLE=1  a run that screened but never observed a score > 0 warns
 //                                    instead of failing. Set it only when GDELT is known degraded on staging.
+//
+// D-MODB-AM-15 "Adverse media fully OFF by default, with a per-tenant MASTER switch for development"
+// (owner, 2026-09-21): the gateway tenant has adverse media OFF, so every screened row asserts
+// `adverse_media_status=NotReported` (modb-assertions.ts). The ERIKSSON specimen now screens clean (0 matches), so
+// (e) screens "Viktor Bout" (OFAC) through the mock identity field: that is this suite's positive screen.
 //
 // Structurally blind to: client-side JS errors in wl-mvp-frontend, camera capture, and the browser ->
 // Next.js server-action path of the public host. Those need a browser tier (MODB-2 task 8).
 import { expect, test } from '@playwright/test';
 import { expectCancelledAml, expectScreenedAml, expectSources, recordAdverseMedia, screenLedger } from './modb-assertions.js';
+import { mockIdentityFields } from './modb-demo-identity.js';
 import { positiveScreenVerdict, scenarioEnabled, selectNoCallbackScenario } from './modb-guards.js';
 import {
   AML_CHECK,
@@ -36,6 +42,8 @@ import {
 } from './modb-scenarios.js';
 
 const SUBMITTED_CHECKS = [...MOCK_CHECK_TYPES];
+/** A sanctions subject with an OFAC watchlist match (wl-mvp-frontend demo-identities.json). */
+const WATCHLIST_SUBJECT = 'Viktor Bout';
 const MAX_DEPENDENCY_ATTEMPTS = 3;
 /**
  * NO_CALLBACK_BLAST_RADIUS. no_callback scenarios are OPT-IN, ONE per run (MODB_E2E_NO_CALLBACK=<scenario id>).
@@ -51,7 +59,7 @@ const SELECTED_NO_CALLBACK = selectNoCallbackScenario(
   MODB_NO_CALLBACK_SCENARIOS.map((scenario) => scenario.id),
 );
 
-// A green run must prove a positive screen happened: fail when this worker screened and never saw AM Ok, score > 0.
+// A green run must prove a positive screen happened: fail when this worker screened and never saw a score > 0.
 test.afterAll(() => {
   const verdict = positiveScreenVerdict(screenLedger, process.env);
   if (verdict.warn) test.info().annotations.push({ type: 'aml-not-observed', description: verdict.warn });
@@ -94,7 +102,7 @@ test.describe('MODB gateway <-> mocks <-> AML @modb-api', () => {
   // (c) WATCHLIST_UNAVAILABLE forcing is out of scope by owner decision D-INT-6 (MODB-2-INT-checklist.md); retry is unit-tested in the gateway.
 
   test('(e) aml-case returns the screening with matches; a request never screened is 404', async ({ request }) => {
-    const screened = await submitVerification(request, { mrz_match: 'passed' });
+    const screened = await submitVerification(request, { mrz_match: 'passed' }, [MRZ_CHECK], mockIdentityFields(WATCHLIST_SUBJECT));
     const refused = await submitVerification(request, { mrz_match: 'failed' });
     test.info().annotations.push({ type: 'request_id', description: `screened=${screened} refused=${refused}` });
 
@@ -109,8 +117,9 @@ test.describe('MODB gateway <-> mocks <-> AML @modb-api', () => {
     const score = screenedAml.result?.score;
     const note = `(e) ${screened} score=${score} am=${amStatus} matches=${body.data.matches.length}`;
     recordAdverseMedia(note, amStatus, score);
-    // ERIKSSON's matches all come from adverse media, so only AM Ok promises a non-empty list to check.
-    if (amStatus === 'Ok') expect(body.data.matches.length, `AM Ok but ${note}`).toBeGreaterThan(0);
+    expect(amStatus, 'the gateway tenant has adverse media OFF (D-MODB-AM-15)').toBe('NotReported');
+    // Viktor Bout carries an OFAC match (measured 2026-09-21: 1 match, score 0.735), so the list is never vacuous.
+    expect(body.data.matches.length, `a watchlist subject screened with no match: ${note}`).toBeGreaterThan(0);
     for (const match of body.data.matches) expect(match).toHaveProperty('source_list');
 
     await waitForAmlTerminal(request, refused);

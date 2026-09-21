@@ -4,6 +4,10 @@
 // queue  through the gateway (its standing mode): `integration_trace.aml_processing` on /checks and aml-case.
 // sync   AMLService directly: the 201 `processingTrace`, repeated on GET /v1/screenings/{id} and /v1/cases/{id}.
 // async  AMLService directly: receipt = acceptance; `replyPublishedAt` only when a webhook endpoint is subscribed.
+//
+// D-MODB-AM-15 "Adverse media fully OFF by default, with a per-tenant MASTER switch for development"
+// (owner, 2026-09-21): the MODB tenant has adverse media OFF, so every channel asserts the adverse-media stage is
+// ABSENT (null) with no AM attempts (expectAmlProcessing).
 import { expect, test } from '@playwright/test';
 import { AML_CHECK, MODB_AML_MODE, assertGatewayReachable, getAmlCase, rowOf, submitVerification, waitForAmlTerminal } from './modb-helpers.js';
 import {
