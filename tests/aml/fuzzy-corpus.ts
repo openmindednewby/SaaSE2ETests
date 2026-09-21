@@ -101,14 +101,18 @@ export const VARIANT_CASES: readonly VariantCase[] = [
 ];
 
 /**
- * 🔴 THE NEGATIVE CONTROL (precision). Invented names that share no surname token with any list
- * entity. A recall suite with no precision case passes an engine that matches everything, which is
+ * 🔴 THE NEGATIVE CONTROL (precision). Invented names that share NO token (given name included) with
+ * any list entity. A recall suite with no precision case passes an engine that matches everything, which is
  * the exact failure mode the 596-vs-244 candidate expansion produced.
  */
 export const NEGATIVE_CONTROLS: readonly string[] = [
   'Zephyrine Qualtrough-Vandersloot',
-  'Bartholomew Quintwistle',
-  'Ignatius Fernsby-Wraith',
+  // 🔴 MODB-BOARD-1 F4: EVERY token must be absent from AMLService TokenIdfCorpus.tsv, not just the
+  // surname. 'Bartholomew Quintwistle' (bartholomew = 41 in the corpus) hit the real adverse-media
+  // person `bart bartholomew`; 'Ignatius' (65) carried the same latent defect. A given name that is a
+  // real name is not an invented name.
+  'Wexcombe Quintwistle',
+  'Drustan Fernsby-Wraith',
 ];
 
 /**

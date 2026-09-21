@@ -34,6 +34,7 @@ import {
   visibleIn,
   type Measured,
 } from './fuzzy-assertions.js';
+import { loadRunState, saveRunState } from './fuzzy-run-cache.js';
 
 // ---------------------------------------------------------------------------------------------
 // FLOORS — stated BEFORE the first run, each with the reason it is that number.
@@ -102,6 +103,17 @@ test.describe.configure({ timeout: ASSERT_TIMEOUT_MS, retries: 0 });
 test.describe('AML fuzzy matching floors @aml-api', () => {
   test.beforeAll(async () => {
     test.setTimeout(RUN_TIMEOUT_MS);
+    // A failed test replaces the worker and re-runs this hook; reuse the run's one measurement.
+    const cached = loadRunState();
+    if (cached) {
+      ({ measured, skipReason, fatal } = cached);
+      return;
+    }
+    await measureOnce();
+    saveRunState({ measured, skipReason, fatal });
+  });
+
+  async function measureOnce(): Promise<void> {
     if (!AML_API_KEY) {
       skipReason = 'AML_API_KEY is not set — cannot authenticate screenings.';
       return;
@@ -133,7 +145,7 @@ test.describe('AML fuzzy matching floors @aml-api', () => {
       reportTransport(rows.filter((row): row is Screened => row !== null));
       await ctx.dispose();
     }
-  });
+  }
 
   test.beforeEach(() => {
     if (skipReason) test.skip(true, skipReason);
