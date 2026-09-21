@@ -1,13 +1,17 @@
 // @modb-api tier — MODB-MOCK-1 "demo identity picker + AML source links", acceptance tests AC-MOCK-6 and the API
-// side of AC-MOCK-8 (owner decision MOCK-1-D4, MODB-MOCK-1-SPEC.md §3.3 + §4). HTTP only, against the wl-api-gateway.
+// side of AC-MOCK-8 (owner decision MOCK-1-D4, MODB-MOCK-1-SPEC.md §3.3 + §4).
 //
-// Each test screens the synthetic MRZ specimen (46 matches with adverse media Ok on staging, MODB-2-INT 8-AM-diag), so
-// the payload has adverse-media matches to carry links and more than ten matches for the display cap.
+// AC-MOCK-6B and AC-MOCK-8 go through the wl-api-gateway and screen the synthetic MRZ specimen, so the payload has
+// adverse-media matches to carry links and more than ten matches for the display cap.
 //
-// AC-MOCK-6 is committed RED: no gateway match carries `source_url` until AMLService maps GdeltArticleIndexEntry.Url
-// onto MatchedEntityResponse and http-aml-case.reader.ts forwards it. AC-MOCK-8 (API side) is a guard that the display
-// cap never becomes API paging, and is expected green throughout.
+// AC-MOCK-6 calls AMLService DIRECTLY (owner decision D-MODB-AM-9 "AC-MOCK-6 calls AMLService directly as a second
+// tenant", 2026-09-21). The gateway pins ONE tenant (706772f5, modb-api-gateway.yml:101) and the per-tenant flag
+// `AdverseMedia__Surface__TenantOverrides__<tenantId>` can make only one of 6/6B true for it. So 6 screens as tenant
+// MODB_SURFACE_ON_TENANT_ID "ModB E2E Surface-ON (staging)" with MODB_SURFACE_ON_AML_API_KEY, whose override is ON.
+// ACCEPTED GAP (D-MODB-AM-9): the surface-ON case no longer covers the gateway forwarding `source_url`
+// (http-aml-case.reader.ts). Only the OFF case (6B) covers the full gateway path.
 import { expect, test, type APIRequestContext } from '@playwright/test';
+import { ADVERSE_MEDIA_CATEGORY, AML_API_URL, screen } from '../aml/aml-helpers.js';
 import { AML_CHECK, assertGatewayReachable, getAmlCase, rowOf, submitVerification, waitForAmlTerminal } from './modb-helpers.js';
 import { resolveGatewayUrl } from './modb-guards.js';
 
@@ -19,6 +23,53 @@ const HTTP_BAD_REQUEST = 400;
 const REQUEST_TIMEOUT_MS = 30_000;
 
 type Match = Record<string, unknown>;
+
+/** A subject with dense GDELT coverage; 10/10 adverse-media matches carried sourceUrl when checked by hand (§24). */
+const SURFACE_ON_SUBJECT = 'Najib Razak';
+const SURFACE_ON_TENANT_ID = process.env.MODB_SURFACE_ON_TENANT_ID?.trim() || null;
+const SURFACE_ON_API_KEY = process.env.MODB_SURFACE_ON_AML_API_KEY?.trim() || null;
+const HTTP_CREATED = 201;
+/**
+ * `adverseMediaStatus=Unavailable` means the GDELT stage missed its latency budget (ScreeningServiceCollectionExtensions.cs:304),
+ * i.e. "not yet", not "broken". Re-screen with backoff, bounded well inside the 240 s modb-api test timeout.
+ */
+const AM_RETRY_INTERVALS_MS = [5_000, 10_000, 20_000, 30_000];
+const AM_RETRY_TIMEOUT_MS = 180_000;
+
+interface DirectScreen {
+  adverseMediaStatus?: string | null;
+  matchedEntities: Match[];
+}
+
+/** AMLService direct-response discriminator, the same one the aml-api specs use (aml-adverse-media-hit.spec.ts:106). */
+const isDirectAdverseMedia = (match: Match): boolean =>
+  match.rejectionTag === ADVERSE_MEDIA_CATEGORY || !!match.adverseMediaCategory;
+
+/** Screen as the surface-ON tenant until adverse media leaves Unavailable, or fail with the last status seen. */
+async function screenAsSurfaceOnTenant(request: APIRequestContext, apiKey: string): Promise<DirectScreen> {
+  let last: DirectScreen | null = null;
+  let lastHttp = 0;
+  await expect
+    .poll(
+      async () => {
+        const res = await screen(request, { fullName: SURFACE_ON_SUBJECT, adverseMedia: true, includeReasoning: true }, apiKey);
+        lastHttp = res?.status() ?? 0;
+        if (!res || lastHttp !== HTTP_CREATED) return `http ${lastHttp}`;
+        last = (await res.json()) as DirectScreen;
+        return last.adverseMediaStatus ?? 'missing';
+      },
+      {
+        message:
+          `AMLService ${AML_API_URL} screening '${SURFACE_ON_SUBJECT}' as tenant ${SURFACE_ON_TENANT_ID} never reached ` +
+          'adverseMediaStatus=Ok within the retry budget (Unavailable = the GDELT stage kept missing its latency budget; ' +
+          'http 401/403 = MODB_SURFACE_ON_AML_API_KEY rejected)',
+        intervals: AM_RETRY_INTERVALS_MS,
+        timeout: AM_RETRY_TIMEOUT_MS,
+      },
+    )
+    .toBe('Ok');
+  return last as unknown as DirectScreen;
+}
 
 /** Screen the specimen and return its aml-case `data`, requiring adverse media to have been checked. */
 async function screenedCase(request: APIRequestContext): Promise<{ requestId: string; data: Record<string, unknown> }> {
@@ -41,22 +92,25 @@ async function screenedCase(request: APIRequestContext): Promise<{ requestId: st
 const isAdverseMedia = (match: Match): boolean => match.source_list === 'ADVERSE_MEDIA';
 
 test.describe('MODB-MOCK-1 AML source links on the gateway aml-case @modb-api', () => {
-  test('AC-MOCK-6: adverse-media matches carry a source_url; the field is omitted, never "", where there is none', async ({ request }) => {
-    const { data } = await screenedCase(request);
-    const matches = data.matches as Match[];
-    const adverseMedia = matches.filter(isAdverseMedia);
-    expect(adverseMedia.length, 'the specimen screen returned no adverse-media match to link').toBeGreaterThanOrEqual(1);
+  test('AC-MOCK-6: as the surface-ON tenant, direct AMLService adverse-media matches carry a non-empty sourceUrl', async ({ request }) => {
+    test.skip(
+      !SURFACE_ON_TENANT_ID || !SURFACE_ON_API_KEY,
+      'MODB_SURFACE_ON_TENANT_ID / MODB_SURFACE_ON_AML_API_KEY missing from .env.<target>.secrets: the surface-ON tenant is unobserved',
+    );
+    test.info().annotations.push({ type: 'tenant', description: String(SURFACE_ON_TENANT_ID) });
+    const body = await screenAsSurfaceOnTenant(request, SURFACE_ON_API_KEY!);
+    const matches = body.matchedEntities;
+    const adverseMedia = matches.filter(isDirectAdverseMedia);
+    // Without this, "every match has a sourceUrl" is vacuously true over zero matches.
+    expect(adverseMedia.length, `screening '${SURFACE_ON_SUBJECT}' returned no adverse-media match to link`).toBeGreaterThanOrEqual(1);
 
-    const linked = adverseMedia.filter((match) => 'source_url' in match);
-    expect(linked.length, 'NOT IMPLEMENTED: no adverse-media match carries source_url').toBeGreaterThanOrEqual(1);
-    for (const [index, match] of matches.entries()) {
-      if (!('source_url' in match)) continue;
-      expect(match.source_url, `matches[${index}].source_url is present, so it must be a full URL`).toEqual(
+    for (const [index, match] of adverseMedia.entries()) {
+      expect(match.sourceUrl, `adverse-media match ${index} (${String(match.externalId)}) must carry a full sourceUrl`).toEqual(
         expect.stringMatching(/^https?:\/\/\S+$/),
       );
     }
-    // A watchlist match has no article: its link is absent, not null and not "".
-    for (const match of matches.filter((candidate) => !isAdverseMedia(candidate))) expect(match).not.toHaveProperty('source_url');
+    // A watchlist match has no article: its link is absent, never "".
+    for (const match of matches.filter((candidate) => !isDirectAdverseMedia(candidate))) expect(match.sourceUrl ?? null).toBeNull();
   });
 
   // AC-MOCK-6B pairs with AC-MOCK-6 as the two halves of one flag (owner decision D-MODB-AM-1 "Suppress

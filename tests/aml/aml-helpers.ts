@@ -43,20 +43,22 @@ export async function amlReachable(request: APIRequestContext): Promise<boolean>
 /**
  * POST a screening. Returns the raw response, or null when the service is unreachable (network) so a
  * spec can `test.skip` gracefully. A 401/403 comes back as a real response — the caller skips on it
- * (the AML_API_KEY isn't valid for this environment), rather than false-failing.
+ * (the AML_API_KEY isn't valid for this environment), rather than false-failing. `apiKey` defaults to
+ * AML_API_KEY; pass another tenant's key to screen as that tenant (D-MODB-AM-9, modb-mock-source-links).
  */
 export async function screen(
   request: APIRequestContext,
   body: Record<string, unknown>,
+  apiKey: string | null = AML_API_KEY,
 ): Promise<APIResponse | null> {
-  if (!AML_API_KEY) return null;
+  if (!apiKey) return null;
   const result = await tryRequest(request, AML_API_URL, '/v1/screenings/check', {
     method: 'POST',
     data: body,
     headers: {
       'Content-Type': 'application/json',
-      'X-Api-Key': AML_API_KEY,
-      Authorization: `Bearer ${AML_API_KEY}`,
+      'X-Api-Key': apiKey,
+      Authorization: `Bearer ${apiKey}`,
     },
     timeoutMs: 25_000,
   });
