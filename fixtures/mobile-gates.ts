@@ -1,4 +1,8 @@
-import { devices, expect, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+
+export { MOBILE_FLOOR, MOBILE_REPRESENTATIVE } from './mobile-devices.js';
+export * from './mobile-overflow.js';
+export { PORTAL_ROUTES, portalFromProjectName } from './mobile-portal-routes.js';
 
 /**
  * The two mobile assertions the estate kept getting WRONG, in one place.
@@ -35,103 +39,6 @@ import { devices, expect, type Page } from '@playwright/test';
 /** WCAG 2.5.5 / platform minimum, in CSS px. */
 export const MIN_TARGET_PX = 44;
 
-/**
- * Device DESCRIPTORS, never bare viewports. A `viewport: {width, height}` alone
- * leaves `isMobile` false, the device-scale-factor at 1, `hasTouch` off and a
- * DESKTOP user-agent, so the page is rendered by a desktop engine that happens
- * to be narrow: `<meta name="viewport">` is not honoured, the visual viewport is
- * not emulated, and a layout that only breaks under real mobile viewport
- * semantics is papered over instead of reproduced.
- *
- * The heights below are the descriptors' own values, read from the installed
- * Playwright rather than from a spec sheet - a descriptor height is the USABLE
- * viewport with browser chrome already subtracted, so Pixel 5 is 393x727 and
- * not the 393x851 physical screen.
- */
-/** The floor every surface must survive: 360x640. */
-export const MOBILE_FLOOR = devices['Galaxy S5'];
-/** The representative modern phone: 393x727 (screen 393x851). */
-export const MOBILE_REPRESENTATIVE = devices['Pixel 5'];
-
-export interface OverflowReading {
-  scrollWidth: number;
-  visualViewportWidth: number;
-  innerWidth: number;
-  clientWidth: number;
-  overflowPx: number;
-  /** innerWidth drifting above visualViewport IS the signature of the layout-viewport defect. */
-  layoutViewportDrift: number;
-}
-
-export async function readHorizontalOverflow(page: Page): Promise<OverflowReading> {
-  return page.evaluate(() => {
-    const vvWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
-    const scrollWidth = document.documentElement.scrollWidth;
-    return {
-      scrollWidth,
-      visualViewportWidth: vvWidth,
-      innerWidth: window.innerWidth,
-      clientWidth: document.documentElement.clientWidth,
-      overflowPx: scrollWidth - Math.ceil(vvWidth),
-      layoutViewportDrift: window.innerWidth - Math.ceil(vvWidth),
-    };
-  });
-}
-
-/** One route's overflow reading. Measures and asserts NOTHING. */
-export interface RouteOverflow {
-  route: string;
-  reading: OverflowReading;
-}
-
-/**
- * Measures one route and asserts NOTHING, so the first overflowing route cannot
- * hide every route after it. Same shape as `auditRoute` below - one idiom, not two.
- */
-export async function measureHorizontalOverflow(page: Page, route: string): Promise<RouteOverflow> {
-  return { route, reading: await readHorizontalOverflow(page) };
-}
-
-function renderOverflow({ route, reading: r }: RouteOverflow): string {
-  const head = r.overflowPx > 0 ? `OVERFLOWS by ${String(r.overflowPx)}px` : 'ok';
-  return `\n  ${route}: ${head} - scrollWidth=${String(r.scrollWidth)}`
-    + ` vs visualViewport=${String(Math.ceil(r.visualViewportWidth))}`
-    + ` (innerWidth=${String(r.innerWidth)}, clientWidth=${String(r.clientWidth)}`
-    + `, layout-viewport drift=${String(r.layoutViewportDrift)}px)`;
-}
-
-/**
- * ONE assertion per PORTAL, covering every route.
- *
- * `expectNoHorizontalOverflow` used to be called INSIDE the caller's route loop,
- * and it throws, so it reported the FIRST overflowing route and hid every route
- * after it - the same early-exit shape `expectTouchTargetsAcrossRoutes` was
- * rewritten to remove. `expect.soft` was rejected for the reason it was rejected
- * there: one error per route buries the portal tally the gate exists to produce.
- *
- * The denominator stays `window.visualViewport.width`, never `innerWidth`: a
- * full-width transition layer widens the LAYOUT viewport along with the
- * document, so `innerWidth` reads 385 === 385 and passes on the exact defect.
- * `layoutViewportDrift` is printed per route because that drift IS the signature.
- */
-export function expectNoHorizontalOverflowAcrossRoutes(readings: RouteOverflow[], portal: string): void {
-  expect(readings.length, `${portal}: no routes were measured at all`).toBeGreaterThan(0);
-  const bad = readings.filter((r) => r.reading.overflowPx > 0);
-  const worst = readings.reduce((n, r) => Math.max(n, r.reading.overflowPx), 0);
-  expect(
-    bad.length,
-    `${portal}: ${String(readings.length)} reading(s), ${String(bad.length)} scroll horizontally`
-      + `; worst overflow ${String(worst)}px`
-      + readings.map(renderOverflow).join(''),
-  ).toBe(0);
-}
-
-/** Single-route convenience over the per-portal assertion above. */
-export async function expectNoHorizontalOverflow(page: Page, where: string): Promise<OverflowReading> {
-  const r = await measureHorizontalOverflow(page, where);
-  expectNoHorizontalOverflowAcrossRoutes([r], where);
-  return r.reading;
-}
 
 export interface TargetFinding {
   /** Index within the audited set, so host-side code can tell whether one element is in BOTH lists. */
@@ -364,39 +271,4 @@ export async function expectTouchTargets(page: Page, where: string, minPx = MIN_
   const reading = await auditRoute(page, where, minPx);
   expectTouchTargetsAcrossRoutes([reading], where, minPx);
   return reading.audit;
-}
-
-/** Public, signed-out-reachable routes per portal. Keyed by the mobile project's portal slug. */
-/**
- * Public, signed-out-reachable routes per portal, keyed by the mobile project's
- * portal slug.
- *
- * Every route below was RENDERED at 360x640 before being added, never curl'd:
- * all eight hosts are SPA fallbacks that answer HTTP 200 on `/nope-404`, so a
- * status code proves nothing here. The check was the rendered pathname plus the
- * body text. Dropped for that reason: katalogos `/menus`; kefi
- * `/organizer/landing`, `/organizer/pricing`, `/request-access`; poueni `/map`,
- * `/devices`, `/settings` - all redirect to `/login`, so they would have
- * measured the login screen under another route's name. Also dropped: ichnos
- * `/forgot-password`, which renders an error boundary.
- *
- * agora, zygos and poueni redirect `/` to `/login` and expose no other public
- * surface, so their portal total is honestly ONE screen; both entries are kept
- * so the redirect itself stays measured.
- */
-export const PORTAL_ROUTES: Record<string, string[]> = {
-  nextgame: ['/', '/age', '/privacy'],
-  katalogos: ['/', '/pricing', '/public/privacy', '/public/terms'],
-  erevna: ['/', '/pricing', '/public/privacy', '/public/terms'],
-  kefi: ['/', '/privacy', '/login'],
-  ichnos: ['/', '/login', '/register'],
-  agora: ['/', '/login'],
-  zygos: ['/', '/login'],
-  poueni: ['/', '/login'],
-  'digital-kin': ['/'],
-};
-
-/** `mobile-gates-<portal>-<device>` -> `<portal>`. */
-export function portalFromProjectName(projectName: string): string {
-  return projectName.replace(/^mobile-gates-/, '').replace(/-(floor|pixel5)$/, '');
 }
