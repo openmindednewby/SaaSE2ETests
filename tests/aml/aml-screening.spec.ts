@@ -58,9 +58,9 @@ test.describe('AML screening decision engine @aml-api', () => {
     expect(res.status()).toBe(201);
     const body = (await res.json()) as ScreeningResult;
 
-    // António Guterres (Q57757) — UN Secretary-General, the canonical senior IGO official.
-    const guterres = body.matchedEntities.find(m => m.externalId === 'Q57757');
-    expect(guterres, 'Guterres (Q57757) should be a match').toBeTruthy();
+    // António Guterres (Q311440) — UN Secretary-General, the canonical senior IGO official.
+    const guterres = body.matchedEntities.find(m => m.externalId === 'Q311440');
+    expect(guterres, 'Guterres (Q311440) should be a match').toBeTruthy();
     // §5.5 class 2 (Regional) covers senior international-organisation officials; "National" is the #364 mis-tier.
     expect(guterres!.pepTier).toBe('Regional');
   });
