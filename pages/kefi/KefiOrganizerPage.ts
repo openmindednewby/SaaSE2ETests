@@ -119,8 +119,50 @@ export class KefiOrganizerPage {
     return response.status();
   }
 
-  /** The revoke button for one access-link row. */
-  accessLinkRevoke(linkExternalId: string): Locator {
-    return this.page.getByTestId(`organizer-access-link-revoke-${linkExternalId}`);
+  /** The `RowActionGroup` testID of one access-link row. */
+  accessLinkRowActionsTestId(linkExternalId: string): string {
+    return `organizer-access-link-actions-${linkExternalId}`;
+  }
+
+  /**
+   * Where a row action can be reached from: the inline button, or the row's `⋯`
+   * overflow trigger when the action folded into the menu.
+   *
+   * Since `@dloizides/ui-buttons@1.16.0` `RowActionGroup` (KEFI-REF-1 "labelled
+   * promoter row actions") an action that does not fit the row width is NOT in
+   * the DOM inline — it renders as `<actionTestID>-menu-item` only after
+   * `<groupTestID>-overflow` is pressed, and destructive actions are ordered LAST
+   * so they fold first. Pre-1.16 builds render every action inline and have no
+   * trigger, so this locator resolves on both.
+   */
+  rowActionEntry(rowActionsTestId: string, actionTestId: string): Locator {
+    // ONE selector (a CSS union), first in DOM order: the inline button, or the
+    // trigger — never both for the same action, since a folded action is not inline.
+    return this.page
+      .locator(`[data-testid="${actionTestId}"], [data-testid="${rowActionsTestId}-overflow"]`)
+      .first();
+  }
+
+  /**
+   * Press a row action wherever it currently lives: inline if rendered, else
+   * open the row's `⋯` menu and press `<actionTestID>-menu-item`.
+   *
+   * @param rowActionsTestId the row's `RowActionGroup` testID, e.g.
+   *   `organizer-access-link-actions-<id>` (overflow trigger = `<it>-overflow`).
+   * @param actionTestId the action's own testID, e.g. `organizer-access-link-revoke-<id>`.
+   */
+  async clickRowAction(rowActionsTestId: string, actionTestId: string): Promise<void> {
+    const inline = this.page.getByTestId(actionTestId);
+    const entry = this.rowActionEntry(rowActionsTestId, actionTestId);
+    await entry.scrollIntoViewIfNeeded();
+    await expect(entry, `row action ${actionTestId} is reachable (inline or via ⋯)`).toBeVisible();
+    if (await inline.isVisible()) {
+      await inline.click();
+      return;
+    }
+    await this.page.getByTestId(`${rowActionsTestId}-overflow`).click();
+    const menuItem = this.page.getByTestId(`${actionTestId}-menu-item`);
+    await expect(menuItem, `${actionTestId} is listed in the ⋯ overflow menu`).toBeVisible();
+    await menuItem.click();
   }
 }

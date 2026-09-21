@@ -266,9 +266,12 @@ test.describe('Kefi organizer dashboard at phone width', () => {
     expect(passBox, 'the passes row-action button has a measurable box').not.toBeNull();
 
     await openSection('attendees');
-    const attendeeDelete = page.locator('[data-testid^="organizer-attendee-delete-"]').first();
-    await expect(attendeeDelete, 'an attendees row-action button is present to measure').toBeVisible();
-    const attendeeBox = await attendeeDelete.boundingBox();
+    // Measure a LEAD action: WhatsApp is pushed on every row and never folds
+    // first. Delete is destructive, ordered LAST, and on a phone lives in the
+    // `⋯` overflow menu (ui-buttons >=1.16, KEFI-REF-1) — not in the DOM inline.
+    const attendeeLead = page.locator('[data-testid^="organizer-attendee-whatsapp-"]').first();
+    await expect(attendeeLead, 'an attendees row-action button is present to measure').toBeVisible();
+    const attendeeBox = await attendeeLead.boundingBox();
     expect(attendeeBox, 'the attendees row-action button has a measurable box').not.toBeNull();
 
     const passSize = Math.round(passBox!.height);

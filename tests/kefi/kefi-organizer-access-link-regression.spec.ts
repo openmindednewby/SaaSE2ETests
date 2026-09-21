@@ -127,8 +127,13 @@ test.describe('Kefi organizer surface survives an existing access link', () => {
 
       // The link we minted is actually listed, so the render really did walk the
       // row that carries the nulls — an empty list would pass vacuously.
+      // Revoke is the row's destructive action, ordered LAST, so on a narrow row
+      // it folds into `⋯` (ui-buttons >=1.16) — accept either entry point.
       await expect(
-        organizer.accessLinkRevoke(doorLink.externalId),
+        organizer.rowActionEntry(
+          organizer.accessLinkRowActionsTestId(doorLink.externalId),
+          `organizer-access-link-revoke-${doorLink.externalId}`,
+        ),
         'our minted link is rendered as a row (the null-bearing row WAS traversed)',
       ).toBeVisible({ timeout: 30_000 });
 
