@@ -1,18 +1,18 @@
 // @aml-api tier — the per-tenant adverse-media SURFACE gate on the screening response.
-// 🔴 D-MODB-AM-13 "AM-E2E-6 screens as the surface-ON tenant, and the gate OMITS externalId" (owner,
-// 2026-09-21, MODB-BOARD-1 "Azure board items to Module B PR bundles" §24). The response mapper
-// (ScreeningResponseMapper.OutwardExternalId) hides the adverse-media article URL for every tenant whose
-// `AdverseMedia:Surface` is OFF, which is the default. So AM-E2E-6 screens as the surface-ON tenant
-// MODB_SURFACE_ON_TENANT_ID (the D-MODB-AM-9 pattern, modb-mock-source-links.spec.ts AC-MOCK-6), and its
-// sibling AM-E2E-6B screens the SAME request as the default tenant (AML_API_KEY) and requires the
-// `externalId` KEY to be ABSENT on adverse-media matches (not "", not null), exactly like `sourceUrl`,
-// while watchlist matches keep theirs.
+// 🔴 D-MODB-AM-18 "Article links always travel with adverse-media matches" (owner, 2026-09-22, shipped as
+// AM-LINKS-1 "Article links always on", AMLService `623c2240`) supersedes the link-hiding of D-MODB-AM-13
+// "AM-E2E-6 screens as the surface-ON tenant, and the gate OMITS externalId". Every adverse-media match that
+// is returned now carries its article link (`sourceUrl` + a URL `externalId`) regardless of
+// `AdverseMedia:Surface:Enabled`; the surface switch no longer hides anything on the wire.
 //
 // 🔴 D-MODB-AM-15 "Adverse media fully OFF by default, with a per-tenant MASTER switch for development" (owner,
-// 2026-09-21) supersedes the 6B half above. Staging now runs `AdverseMedia__Enabled=false` with the master ON only
-// for the surface-ON tenant, so the default tenant no longer receives adverse-media matches with a hidden
-// externalId: it receives NO adverse media at all. AM-E2E-6B now asserts exactly that, on the subject the
-// surface-ON tenant just got hits for, so the absence is observed on a subject that HAS adverse media.
+// 2026-09-21) is UNCHANGED and is what splits the two tests. Staging runs `AdverseMedia__Enabled=false` with the
+// master ON only for tenant MODB_SURFACE_ON_TENANT_ID. So AM-E2E-6 screens as that tenant (the D-MODB-AM-9
+// pattern, modb-mock-source-links.spec.ts AC-MOCK-6), because it is the only tenant that receives adverse media
+// at all, and asserts every adverse-media match carries its article URL. AM-E2E-6B screens the SAME subject as
+// the default tenant (AML_API_KEY) and asserts NO adverse media comes back (no match, no ADVERSE_MEDIA reason,
+// no sourceUrl, no "stage ran" status), so the absence is observed on a subject that HAS adverse media, while
+// the watchlist matches keep their externalId.
 //
 // Needs an AVAILABLE adverse-media stage (requireAvailableStage) and a corpus subject with a hit; see
 // aml-adverse-media-hit.spec.ts for why the corpus is what it is and for AM-E2E-5, the control that
