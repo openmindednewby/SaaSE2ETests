@@ -9,14 +9,18 @@
 //   GET  /api/v1/verifications/current            (browser, applicant progress)
 //   GET  /api/internal/v1/checks/sessions/:id     (operator, x-internal-token)
 // Images are synthetic solid-colour PNGs; the MRZ mock answers with its ERIKSSON / UTO specimen. No personal data.
+import { randomUUID } from 'node:crypto';
 import { deflateSync } from 'node:zlib';
-import { expect, type APIRequestContext } from '@playwright/test';
+import { expect, type APIRequestContext, type APIResponse } from '@playwright/test';
 import { resolveGatewayUrl } from './modb-guards.js';
 
 /** Buyer API key (gateway CLIENT_API_KEY). Unset = the session API cannot be exercised at all. */
 export const CLIENT_KEY_ENV = 'MODB_CLIENT_API_KEY';
 /** Operator token (gateway INTERNAL_API_TOKEN) for reading the check rows of a session. */
 export const INTERNAL_TOKEN_ENV = 'MODB_INTERNAL_TOKEN';
+
+/** The smallest flow that still screens: document (mrz_match) then aml-screening. */
+export const MINIMAL_AML_FLOW = 'frontend-v1-passive-mrz-match.aml-screening';
 
 export const AML_CHECK = 'aml_screening';
 export const MRZ_CHECK = 'mrz_match';
@@ -38,13 +42,31 @@ export interface SessionHandle {
   token: string;
 }
 
+/** Forced mock outcome per check type (Module B mock `Scenarios/RequestOutcomes.cs`). */
+export type MockOutcome = 'passed' | 'review' | 'failed' | 'check_failed' | 'no_callback';
+
+/**
+ * Per-verification mock controls on a per-step submit: gateway `presentation/mock-request.ts` (`8574303`) behind
+ * VERIFICATION_MOCK_OUTCOMES_ENABLED. `extraFields` carries `mock_identity` (modb-demo-identity.mockIdentityFields).
+ * `document/type-validation` rejects both fields; only the real step submits accept them.
+ */
+export interface StepMockControls {
+  mockOutcomes?: Partial<Record<string, MockOutcome>>;
+  extraFields?: Readonly<Record<string, string>>;
+  documentType?: string;
+}
+
+/** One check row as `VerificationCheckDto.from` emits it, the same shape on the request and the session route. */
 export interface CheckRow {
   request_id: string;
   check_type: string;
   status: string;
   outcome: string | null;
+  result: Record<string, unknown> | null;
+  error: { code: string; message: string } | null;
+  attempt_count: number;
   session_id?: string | null;
-  error?: { code: string; message: string } | null;
+  source?: string;
 }
 
 function api(): string {
@@ -144,18 +166,21 @@ export async function sessionConfiguration(
   return (await response.json()).data;
 }
 
-/** Submits the document step of a session. Returns the gateway request id of that step. */
+/** Submits the document step of a session, with optional mock controls. Returns the gateway request id of that step. */
 export async function submitDocument(
   request: APIRequestContext,
   session: SessionHandle,
-  documentType = 'identity_card',
+  controls: StepMockControls = {},
 ): Promise<string> {
+  const { mockOutcomes, extraFields = {}, documentType = 'identity_card' } = controls;
   const response = await request.post(`${api()}/v1/verifications/document`, {
     headers: { Authorization: `Bearer ${session.token}` },
     timeout: REQUEST_TIMEOUT_MS,
     failOnStatusCode: false,
     multipart: {
       document_type: documentType,
+      ...(mockOutcomes ? { mock_outcomes: JSON.stringify(mockOutcomes) } : {}),
+      ...extraFields,
       document_front: image('front.png'),
       document_back: image('back.png'),
     },
@@ -216,4 +241,41 @@ export function rowOf(rows: CheckRow[], checkType: string): CheckRow {
   const seen = rows.map((candidate) => candidate.check_type).join(',') || 'none';
   expect(row, `the session must carry a ${checkType} row; rows present: ${seen}`).toBeTruthy();
   return row as CheckRow;
+}
+
+/**
+ * Hard reachability probe. The suite FAILS when the gateway is down or the operator token is wrong: an all-skip
+ * run observes nothing. It probes the operator API, because the public `/api/v1/checks` route was retired with
+ * `POST /api/v1/verifications` (MODB-ENDPOINT-1, cause `726f2b1`).
+ */
+export async function assertGatewayReachable(request: APIRequestContext): Promise<void> {
+  const probe = await request.get(`${api()}/internal/v1/checks/${randomUUID()}`, {
+    headers: { 'x-internal-token': internalToken() ?? '' },
+    failOnStatusCode: false,
+    timeout: REQUEST_TIMEOUT_MS,
+  });
+  expect(probe.status(), `gateway at ${api()} must answer an unknown request id with 404: ${await probe.text()}`).toBe(
+    404,
+  );
+  expect((await probe.json()).error?.code).toBe('NOT_FOUND');
+}
+
+/** The AML case of one verification request, read through the operator API (`internal-checks.controller.ts:144`). */
+export function amlCase(request: APIRequestContext, requestId: string, query = ''): Promise<APIResponse> {
+  return request.get(`${api()}/internal/v1/checks/${requestId}/aml-case${query ? `?${query}` : ''}`, {
+    headers: { 'x-internal-token': internalToken() ?? '' },
+    failOnStatusCode: false,
+    timeout: REQUEST_TIMEOUT_MS,
+  });
+}
+
+/** Every check row of ONE verification request (one session step), through the operator API. */
+export async function requestChecks(request: APIRequestContext, requestId: string): Promise<CheckRow[]> {
+  const response = await request.get(`${api()}/internal/v1/checks/${requestId}`, {
+    headers: { 'x-internal-token': internalToken() ?? '' },
+    failOnStatusCode: false,
+    timeout: REQUEST_TIMEOUT_MS,
+  });
+  expect(response.status(), `GET /api/internal/v1/checks/${requestId}: ${await response.text()}`).toBe(HTTP_OK);
+  return (await response.json()).data as CheckRow[];
 }

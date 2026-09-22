@@ -11,9 +11,9 @@ import {
   AML_DECISIONS,
   MODB_AML_MODE,
   SOURCE_BY_CHECK,
-  getAmlCase,
   type CheckRow,
 } from './modb-helpers.js';
+import { amlCase as readAmlCase } from './modb-session-helpers.js';
 import { newScreenLedger, recordScreen } from './modb-guards.js';
 
 const OUTCOME_BY_DECISION: Record<string, string> = { Pass: 'passed', Review: 'review', Fail: 'failed' };
@@ -87,9 +87,9 @@ export async function expectScreenedAml(request: APIRequestContext, requestId: s
   // D-MODB-AM-15: the gateway tenant has the adverse-media master OFF, so the stage is not reported in any mode.
   expect(amStatus, 'the gateway tenant has adverse media OFF (D-MODB-AM-15)').toBe('NotReported');
 
-  const amlCase = await getAmlCase(request, requestId);
-  expect(amlCase.status()).toBe(200);
-  const caseData = (await amlCase.json()).data;
+  const caseRead = await readAmlCase(request, requestId);
+  expect(caseRead.status(), await caseRead.text()).toBe(200);
+  const caseData = (await caseRead.json()).data;
   expect(caseData.screening_id).toBe(result.screening_id);
   expect(caseData.adverse_media_status).toBe(amStatus);
   const sources = (caseData.sources as { source: string }[]).map((entry) => entry.source);
@@ -115,7 +115,7 @@ export async function expectCancelledAml(
   expect(aml.result).toBeNull();
   expect(aml.error?.code).toBe(reason.code);
   expect(aml.error?.message).toBe(reason.message);
-  const missing = await getAmlCase(request, requestId);
+  const missing = await readAmlCase(request, requestId);
   expect(missing.status()).toBe(404);
   expect((await missing.json()).error?.code).toBe('AML_SCREENING_NOT_FOUND');
 }

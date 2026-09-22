@@ -16,23 +16,35 @@
 // `adverse_media_status=NotReported` (modb-assertions.ts). The ERIKSSON specimen now screens clean (0 matches), so
 // (e) screens "Viktor Bout" (OFAC) through the mock identity field: that is this suite's positive screen.
 //
+// MODB-E2E-MIGRATE-1 (2026-09-23): (a), (b) and (e) now drive the SESSION API (create a session on
+// `frontend-v1-passive-mrz-match.aml-screening`, submit the document step with per-step `mock_outcomes` /
+// `mock_identity`, poll the session's check rows), because `POST /api/v1/verifications` is unregistered on the
+// deployed gateway (404, cause `726f2b1`, MODB-ENDPOINT-1). What they assert is unchanged.
+//
+// 🔴 The D-INT-12 scenario block below CANNOT survive that move and is deliberately left RED on the retired route:
+// each scenario submits all five mock checks in ONE request and asserts the dependency graph between them
+// (face_match cancelled after a failed liveness, attempt_count 3 on a dependency failure). On the session API each
+// step is a separate applicant submit, and a flow that contains `face-match` must use ACTIVE liveness
+// (verification-flow.catalog.ts:92-95), i.e. a challenge token plus a video the suite has no fixture for. Dropping
+// face_match would change what the scenarios assert, so they stay as written until MODB-SCENARIO-2 provides an
+// active-liveness fixture.
+//
 // Structurally blind to: client-side JS errors in wl-mvp-frontend, camera capture, and the browser ->
 // Next.js server-action path of the public host. Those need a browser tier (MODB-2 task 8).
 import { expect, test } from '@playwright/test';
 import { expectCancelledAml, expectScreenedAml, expectSources, recordAdverseMedia, screenLedger } from './modb-assertions.js';
-import { mockIdentityFields } from './modb-demo-identity.js';
 import { positiveScreenVerdict, scenarioEnabled, selectNoCallbackScenario } from './modb-guards.js';
+import { submitVerification, waitForSettled } from './modb-helpers.js';
 import {
   AML_CHECK,
   MRZ_CHECK,
   TERMINAL_STATUSES,
+  amlCase,
   assertGatewayReachable,
-  getAmlCase,
   rowOf,
-  submitVerification,
   waitForAmlTerminal,
-  waitForSettled,
-} from './modb-helpers.js';
+} from './modb-session-helpers.js';
+import { screenViaSession } from './modb-session-mock.js';
 import {
   MOCK_CHECK_TYPES,
   MODB_NO_CALLBACK_SCENARIOS,
@@ -72,10 +84,10 @@ test.describe('MODB gateway <-> mocks <-> AML @modb-api', () => {
   });
 
   test('(a) every required mock check passes -> AML runs to a terminal result', async ({ request }) => {
-    const requestId = await submitVerification(request, { mrz_match: 'passed' });
-    test.info().annotations.push({ type: 'request_id', description: requestId });
+    const { session, requestId } = await screenViaSession(request);
+    test.info().annotations.push({ type: 'request_id', description: `${requestId} session=${session.sessionId}` });
 
-    const rows = await waitForAmlTerminal(request, requestId);
+    const rows = await waitForAmlTerminal(request, session.sessionId);
     const mrz = rowOf(rows, MRZ_CHECK);
     expect(mrz.status).toBe('completed');
     expect(mrz.outcome).toBe('passed');
@@ -84,10 +96,10 @@ test.describe('MODB gateway <-> mocks <-> AML @modb-api', () => {
   });
 
   test('(b) a required check forced to fail -> AML is cancelled with a stated reason', async ({ request }) => {
-    const requestId = await submitVerification(request, { mrz_match: 'failed' });
-    test.info().annotations.push({ type: 'request_id', description: requestId });
+    const { session, requestId } = await screenViaSession(request, { mockOutcomes: { mrz_match: 'failed' } });
+    test.info().annotations.push({ type: 'request_id', description: `${requestId} session=${session.sessionId}` });
 
-    const rows = await waitForAmlTerminal(request, requestId);
+    const rows = await waitForAmlTerminal(request, session.sessionId);
     const mrz = rowOf(rows, MRZ_CHECK);
     expect(mrz.status).toBe('completed');
     expect(mrz.outcome).toBe('failed');
@@ -102,14 +114,16 @@ test.describe('MODB gateway <-> mocks <-> AML @modb-api', () => {
   // (c) WATCHLIST_UNAVAILABLE forcing is out of scope by owner decision D-INT-6 (MODB-2-INT-checklist.md); retry is unit-tested in the gateway.
 
   test('(e) aml-case returns the screening with matches; a request never screened is 404', async ({ request }) => {
-    const screened = await submitVerification(request, { mrz_match: 'passed' }, [MRZ_CHECK], mockIdentityFields(WATCHLIST_SUBJECT));
-    const refused = await submitVerification(request, { mrz_match: 'failed' });
+    const screenedRun = await screenViaSession(request, { subject: WATCHLIST_SUBJECT });
+    const refusedRun = await screenViaSession(request, { mockOutcomes: { mrz_match: 'failed' } });
+    const screened = screenedRun.requestId;
+    const refused = refusedRun.requestId;
     test.info().annotations.push({ type: 'request_id', description: `screened=${screened} refused=${refused}` });
 
-    const screenedAml = rowOf(await waitForAmlTerminal(request, screened), AML_CHECK);
+    const screenedAml = rowOf(await waitForAmlTerminal(request, screenedRun.session.sessionId), AML_CHECK);
     expect(screenedAml.status, JSON.stringify(screenedAml.error)).toBe('completed');
-    const ok = await getAmlCase(request, screened);
-    expect(ok.status()).toBe(200);
+    const ok = await amlCase(request, screened);
+    expect(ok.status(), await ok.text()).toBe(200);
     const body = await ok.json();
     expect(body.meta.request_id).toBe(screened);
     expect(body.data.screening_id).toBe(screenedAml.result?.screening_id);
@@ -122,8 +136,8 @@ test.describe('MODB gateway <-> mocks <-> AML @modb-api', () => {
     expect(body.data.matches.length, `a watchlist subject screened with no match: ${note}`).toBeGreaterThan(0);
     for (const match of body.data.matches) expect(match).toHaveProperty('source_list');
 
-    await waitForAmlTerminal(request, refused);
-    const missing = await getAmlCase(request, refused);
+    await waitForAmlTerminal(request, refusedRun.session.sessionId);
+    const missing = await amlCase(request, refused);
     expect(missing.status()).toBe(404);
     expect((await missing.json()).error?.code).toBe('AML_SCREENING_NOT_FOUND');
   });

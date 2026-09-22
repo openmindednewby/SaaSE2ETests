@@ -8,8 +8,21 @@
 // D-MODB-AM-15 "Adverse media fully OFF by default, with a per-tenant MASTER switch for development"
 // (owner, 2026-09-21): the MODB tenant has adverse media OFF, so every channel asserts the adverse-media stage is
 // ABSENT (null) with no AM attempts (expectAmlProcessing).
+//
+// MODB-E2E-MIGRATE-1 (2026-09-23): the QUEUE case now drives the session API (`POST /api/v1/verifications` is
+// unregistered on the deployed gateway, MODB-ENDPOINT-1) and reads the case through the operator API. The sync and
+// async cases already call AMLService directly and are unchanged.
 import { expect, test } from '@playwright/test';
-import { AML_CHECK, MODB_AML_MODE, assertGatewayReachable, getAmlCase, rowOf, submitVerification, waitForAmlTerminal } from './modb-helpers.js';
+import { MODB_AML_MODE } from './modb-helpers.js';
+import {
+  AML_CHECK,
+  amlCase as readAmlCase,
+  assertGatewayReachable,
+  requestChecks,
+  rowOf,
+  waitForAmlTerminal,
+} from './modb-session-helpers.js';
+import { screenViaSession } from './modb-session-mock.js';
 import {
   amlGet,
   expectAmlProcessing,
@@ -42,14 +55,14 @@ test.describe('MODB D-INT-16e processing trace @modb-api', () => {
   test('queue: gateway aml_processing is complete, separate from dispatch attempts, and equal on aml-case', async ({ request }) => {
     await assertGatewayReachable(request);
     expect(MODB_AML_MODE, 'this test gates the standing queue mode').toBe('queue');
-    const requestId = await submitVerification(request, { mrz_match: 'passed' });
-    test.info().annotations.push({ type: 'request_id', description: `queue=${requestId}` });
+    const { session, requestId } = await screenViaSession(request);
+    test.info().annotations.push({ type: 'request_id', description: `queue=${requestId} session=${session.sessionId}` });
 
     let trace: GatewayTrace | undefined;
     await expect
       .poll(
         async () => {
-          const aml = rowOf(await waitForAmlTerminal(request, requestId), AML_CHECK);
+          const aml = rowOf(await waitForAmlTerminal(request, session.sessionId), AML_CHECK);
           expect(aml.status, JSON.stringify(aml.error)).toBe('completed');
           trace = aml.result?.integration_trace as GatewayTrace | undefined;
           return trace?.aml_processing?.reply_published_at ?? null;
@@ -67,9 +80,9 @@ test.describe('MODB D-INT-16e processing trace @modb-api', () => {
     expect(attempts.length).toBeGreaterThanOrEqual(1);
     for (const attempt of attempts) expect(attempt).not.toHaveProperty('step_reached');
 
-    const amlCase = await getAmlCase(request, requestId);
-    expect(amlCase.status()).toBe(200);
-    const caseData = (await amlCase.json()).data;
+    const caseRead = await readAmlCase(request, requestId);
+    expect(caseRead.status(), await caseRead.text()).toBe(200);
+    const caseData = (await caseRead.json()).data;
     expect(caseData.aml_processing).toEqual(processing);
 
     // The gateway carries what AMLService recorded for the same screening.
@@ -129,14 +142,14 @@ test.describe('MODB D-INT-16e processing trace @modb-api', () => {
 
   test('pre-change rows: the trace is null on the gateway and on AMLService, not an error', async ({ request }) => {
     await assertGatewayReachable(request);
-    const aml = rowOf(await waitForAmlTerminal(request, PRE_CHANGE_REQUEST_ID), AML_CHECK);
+    const aml = rowOf(await requestChecks(request, PRE_CHANGE_REQUEST_ID), AML_CHECK);
     expect(aml.status).toBe('completed');
     // 7e0c91c6 predates integration_trace itself (its /checks result has none), so absent-or-null is the contract.
     expect((aml.result?.integration_trace as GatewayTrace | undefined)?.aml_processing ?? null).toBeNull();
 
-    const amlCase = await getAmlCase(request, PRE_CHANGE_REQUEST_ID);
-    expect(amlCase.status()).toBe(200);
-    const caseData = (await amlCase.json()).data;
+    const oldCase = await readAmlCase(request, PRE_CHANGE_REQUEST_ID);
+    expect(oldCase.status(), await oldCase.text()).toBe(200);
+    const caseData = (await oldCase.json()).data;
     expect(caseData).toHaveProperty('aml_processing', null);
     test.info().annotations.push({ type: 'request_id', description: `old=${PRE_CHANGE_REQUEST_ID} screening=${caseData.screening_id}` });
 

@@ -12,7 +12,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, type APIRequestContext } from '@playwright/test';
-import { getAmlCase } from './modb-helpers.js';
+import { amlCase } from './modb-session-helpers.js';
 import { amlGet, SPECIMEN_IDENTITY } from './modb-processing-trace.js';
 
 export const DEMO_IDENTITIES_ENV = 'MODB_DEMO_IDENTITIES_PATH';
@@ -77,9 +77,9 @@ export const SPECIMEN_TOKENS = nameTokens([...SPECIMEN_IDENTITY.given_names, SPE
 
 /** The AML screening id the gateway recorded for a request (aml-case `data.screening_id`). */
 export async function screeningIdOf(request: APIRequestContext, requestId: string): Promise<string> {
-  const amlCase = await getAmlCase(request, requestId);
-  expect(amlCase.status(), await amlCase.text()).toBe(200);
-  const screeningId = String((await amlCase.json()).data?.screening_id ?? '');
+  const read = await amlCase(request, requestId);
+  expect(read.status(), await read.text()).toBe(200);
+  const screeningId = String((await read.json()).data?.screening_id ?? '');
   expect(screeningId, `aml-case of ${requestId} carries no screening_id`).not.toBe('');
   return screeningId;
 }

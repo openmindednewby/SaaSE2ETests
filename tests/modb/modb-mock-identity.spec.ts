@@ -8,13 +8,24 @@
 // behaviour and is expected green throughout.
 //
 // UI-owned, NOT here: AC-MOCK-1, 7, 9, 13 and the UI side of 8, 10, 11, 12 (portal unit tests + visual-qa).
+//
+// MODB-E2E-MIGRATE-1 (2026-09-23): the transport moved to the SESSION API - a buyer session on
+// `frontend-v1-passive-mrz-match.aml-screening`, then the document step carrying `mock_identity` and
+// `mock_outcomes` (gateway `8574303`). `POST /api/v1/verifications` is unregistered upstream (MODB-ENDPOINT-1).
+// What each AC asserts is unchanged: the name AML screened is read from AMLService's own case record.
 import { expect, test } from '@playwright/test';
-import { AML_CHECK, MRZ_CHECK, assertGatewayReachable, getAmlCase, rowOf, submitVerification, waitForAmlTerminal } from './modb-helpers.js';
+import {
+  AML_CHECK,
+  amlCase,
+  assertGatewayReachable,
+  rowOf,
+  waitForAmlTerminal,
+} from './modb-session-helpers.js';
+import { screenViaSession } from './modb-session-mock.js';
 import {
   SPECIMEN_TOKENS,
   fixtureAbsentReason,
   loadDemoIdentities,
-  mockIdentityFields,
   nameTokens,
   screenedName,
   screeningIdOf,
@@ -31,9 +42,12 @@ test.describe('MODB-MOCK-1 demo identity reaches the AML screening @modb-api', (
     expect(identity, 'demo-identities.json holds no identity').toBeDefined();
     await assertGatewayReachable(request);
 
-    const requestId = await submitVerification(request, { mrz_match: 'passed' }, [MRZ_CHECK], mockIdentityFields(identity.name));
-    test.info().annotations.push({ type: 'request_id', description: `${requestId} sample=${identity.label}` });
-    expect(rowOf(await waitForAmlTerminal(request, requestId), AML_CHECK).status).toBe('completed');
+    const { session, requestId } = await screenViaSession(request, { subject: identity.name });
+    test.info().annotations.push({
+      type: 'request_id',
+      description: `${requestId} session=${session.sessionId} sample=${identity.label}`,
+    });
+    expect(rowOf(await waitForAmlTerminal(request, session.sessionId), AML_CHECK).status).toBe('completed');
 
     const screened = await screenedName(request, await screeningIdOf(request, requestId));
     expect(nameTokens(screened), `screened "${screened}"`).toEqual(nameTokens(identity.name));
@@ -43,9 +57,9 @@ test.describe('MODB-MOCK-1 demo identity reaches the AML screening @modb-api', (
   test('AC-MOCK-3: free text is screened as typed, with no sample identity applied', async ({ request }) => {
     await assertGatewayReachable(request);
 
-    const requestId = await submitVerification(request, { mrz_match: 'passed' }, [MRZ_CHECK], mockIdentityFields(FREE_TEXT_NAME));
-    test.info().annotations.push({ type: 'request_id', description: requestId });
-    expect(rowOf(await waitForAmlTerminal(request, requestId), AML_CHECK).status).toBe('completed');
+    const { session, requestId } = await screenViaSession(request, { subject: FREE_TEXT_NAME });
+    test.info().annotations.push({ type: 'request_id', description: `${requestId} session=${session.sessionId}` });
+    expect(rowOf(await waitForAmlTerminal(request, session.sessionId), AML_CHECK).status).toBe('completed');
 
     const screened = nameTokens(await screenedName(request, await screeningIdOf(request, requestId)));
     expect(screened).toEqual(nameTokens(FREE_TEXT_NAME));
@@ -63,22 +77,25 @@ test.describe('MODB-MOCK-1 demo identity reaches the AML screening @modb-api', (
     await assertGatewayReachable(request);
 
     const identity = criminal as NonNullable<typeof criminal>;
-    const requestId = await submitVerification(request, { mrz_match: 'passed' }, [MRZ_CHECK], mockIdentityFields(identity.name));
-    test.info().annotations.push({ type: 'request_id', description: `${requestId} recorded=${identity.screeningId}@${identity.verifiedAt}` });
-    expect(rowOf(await waitForAmlTerminal(request, requestId), AML_CHECK).status).toBe('completed');
+    const { session, requestId } = await screenViaSession(request, { subject: identity.name });
+    test.info().annotations.push({
+      type: 'request_id',
+      description: `${requestId} session=${session.sessionId} recorded=${identity.screeningId}@${identity.verifiedAt}`,
+    });
+    expect(rowOf(await waitForAmlTerminal(request, session.sessionId), AML_CHECK).status).toBe('completed');
 
-    const amlCase = await getAmlCase(request, requestId);
-    expect(amlCase.status()).toBe(200);
+    const read = await amlCase(request, requestId);
+    expect(read.status(), await read.text()).toBe(200);
     // Red here with a changed classification means the label has EXPIRED (spec §4 NOT COVERED), not a flake.
-    expect(String((await amlCase.json()).data.classification).toLowerCase(), `label "${identity.label}"`).toBe('criminal');
+    expect(String((await read.json()).data.classification).toLowerCase(), `label "${identity.label}"`).toBe('criminal');
   });
 
   test('AC-MOCK-12 (API side): without a demo identity the MRZ-derived specimen name is screened, as today', async ({ request }) => {
     await assertGatewayReachable(request);
 
-    const requestId = await submitVerification(request, { mrz_match: 'passed' });
-    test.info().annotations.push({ type: 'request_id', description: requestId });
-    expect(rowOf(await waitForAmlTerminal(request, requestId), AML_CHECK).status).toBe('completed');
+    const { session, requestId } = await screenViaSession(request);
+    test.info().annotations.push({ type: 'request_id', description: `${requestId} session=${session.sessionId}` });
+    expect(rowOf(await waitForAmlTerminal(request, session.sessionId), AML_CHECK).status).toBe('completed');
 
     const screened = await screenedName(request, await screeningIdOf(request, requestId));
     expect(nameTokens(screened), `screened "${screened}"`).toEqual(SPECIMEN_TOKENS);

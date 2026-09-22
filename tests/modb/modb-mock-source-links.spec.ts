@@ -17,11 +17,28 @@
 // MODB_SURFACE_ON_TENANT_ID "ModB E2E Surface-ON (staging)" with MODB_SURFACE_ON_AML_API_KEY, whose override is ON.
 // ACCEPTED GAP (D-MODB-AM-9): the surface-ON case no longer covers the gateway forwarding `source_url`
 // (http-aml-case.reader.ts). Only the OFF case (6B) covers the full gateway path.
+//
+// MODB-E2E-MIGRATE-1 (2026-09-23): the gateway half (6B, 8) moved to the SESSION API and reads the case through the
+// operator API, because `POST /api/v1/verifications` and the public `/api/v1/checks` route are unregistered on the
+// deployed gateway (MODB-ENDPOINT-1). AC-MOCK-6 calls AMLService directly and is untouched by that move.
+//
+// 🔴 D-MODB-AM-18 "Article links always travel with adverse-media matches" (owner, 2026-09-22) SUPERSEDES the
+// link-hiding rule of D-MODB-AM-1 / D-MODB-AM-4: every adverse-media match that is returned carries its article
+// link, whatever `AdverseMedia:Surface:Enabled` says. AC-MOCK-6B's old line "no match may carry source_url" pinned
+// exactly the behaviour that decision reversed, so it is inverted below (owner unlock 2026-09-23, recorded in
+// BaseClient/docs/Tasks/COMPLETED/MODB-MOCK-1-SPEC.md). D-MODB-AM-15 is UNCHANGED: a master-OFF tenant still gets
+// no adverse-media matches at all, so on the gateway tenant the link rule has nothing to range over - AC-MOCK-6
+// (surface-ON tenant, direct AMLService) is the half that observes a link.
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { ADVERSE_MEDIA_CATEGORY, AML_API_URL, screen } from '../aml/aml-helpers.js';
-import { AML_CHECK, MRZ_CHECK, assertGatewayReachable, getAmlCase, rowOf, submitVerification, waitForAmlTerminal } from './modb-helpers.js';
-import { mockIdentityFields } from './modb-demo-identity.js';
-import { resolveGatewayUrl } from './modb-guards.js';
+import {
+  AML_CHECK,
+  amlCase,
+  assertGatewayReachable,
+  rowOf,
+  waitForAmlTerminal,
+} from './modb-session-helpers.js';
+import { screenViaSession } from './modb-session-mock.js';
 
 /** The portal renders the first 10 and a "show all N" control (spec §3.3). */
 const DISPLAY_CAP = 10;
@@ -32,7 +49,8 @@ const MANY_MATCHES_SUBJECT = 'Mohammed Ali';
 const PAGING_QUERY = 'limit=10&offset=0&page=1&page_size=10&cursor=0';
 const PAGING_KEYS = ['page', 'page_size', 'limit', 'offset', 'cursor', 'next', 'next_cursor', 'has_more', 'total_pages', 'total'];
 const HTTP_BAD_REQUEST = 400;
-const REQUEST_TIMEOUT_MS = 30_000;
+/** D-MODB-AM-18: an article link is a full URL, never "" and never a bare id. */
+const ARTICLE_LINK = /^https?:\/\/\S+$/;
 
 type Match = Record<string, unknown>;
 
@@ -86,12 +104,12 @@ async function screenAsSurfaceOnTenant(request: APIRequestContext, apiKey: strin
 /** Screen the specimen through the gateway and return its aml-case `data`. Adverse media is OFF for this tenant (D-MODB-AM-15). */
 async function screenedCase(request: APIRequestContext, subject: string): Promise<{ requestId: string; data: Record<string, unknown> }> {
   await assertGatewayReachable(request);
-  const requestId = await submitVerification(request, { mrz_match: 'passed' }, [MRZ_CHECK], mockIdentityFields(subject));
-  test.info().annotations.push({ type: 'request_id', description: requestId });
-  expect(rowOf(await waitForAmlTerminal(request, requestId), AML_CHECK).status).toBe('completed');
-  const amlCase = await getAmlCase(request, requestId);
-  expect(amlCase.status()).toBe(200);
-  const data = (await amlCase.json()).data as Record<string, unknown>;
+  const { session, requestId } = await screenViaSession(request, { subject });
+  test.info().annotations.push({ type: 'request_id', description: `${requestId} session=${session.sessionId}` });
+  expect(rowOf(await waitForAmlTerminal(request, session.sessionId), AML_CHECK).status).toBe('completed');
+  const read = await amlCase(request, requestId);
+  expect(read.status(), await read.text()).toBe(200);
+  const data = (await read.json()).data as Record<string, unknown>;
   return { requestId, data };
 }
 
@@ -116,7 +134,7 @@ test.describe('MODB-MOCK-1 AML source links on the gateway aml-case @modb-api', 
 
     for (const [index, match] of adverseMedia.entries()) {
       expect(match.sourceUrl, `adverse-media match ${index} (${String(match.externalId)}) must carry a full sourceUrl`).toEqual(
-        expect.stringMatching(/^https?:\/\/\S+$/),
+        expect.stringMatching(ARTICLE_LINK),
       );
     }
     // A watchlist match has no article: its link is absent, never "".
@@ -150,8 +168,15 @@ test.describe('MODB-MOCK-1 AML source links on the gateway aml-case @modb-api', 
     // As a VALUE only: the key "adverse_media" legitimately names the (null) stage in aml_processing.stages.
     expect(payload, 'an adverse_media category is on the gateway case').not.toContain(':"adverse_media"');
 
-    const linked = matches.filter((match) => 'source_url' in match).map((match) => String(match.source_url));
-    expect(linked, 'no match may carry source_url while adverse media is OFF; these did').toEqual([]);
+    // D-MODB-AM-18 (owner 2026-09-22) replaces "no match may carry source_url": a returned adverse-media match
+    // ALWAYS carries its article link. Under D-MODB-AM-15 this tenant returns none, so the rule is checked over the
+    // adverse-media matches the gateway actually returned (today: zero - see this file's header and NOT COVERED).
+    for (const [index, match] of matches.filter(isAdverseMedia).entries()) {
+      expect(
+        match.source_url,
+        `adverse-media match ${index} (${String(match.external_id)}) must carry its article link (D-MODB-AM-18)`,
+      ).toEqual(expect.stringMatching(ARTICLE_LINK));
+    }
   });
 
   test('AC-MOCK-8 (API side): every match is returned in one response, and no paging parameter changes it', async ({ request }) => {
@@ -160,15 +185,12 @@ test.describe('MODB-MOCK-1 AML source links on the gateway aml-case @modb-api', 
     expect(matches.length, 'the display cap needs more than 10 matches to mean anything').toBeGreaterThan(DISPLAY_CAP);
     for (const key of PAGING_KEYS) expect(data, `aml-case data carries paging key "${key}"`).not.toHaveProperty(key);
 
-    const again = await getAmlCase(request, requestId);
-    expect(again.status()).toBe(200);
+    const again = await amlCase(request, requestId);
+    expect(again.status(), await again.text()).toBe(200);
     expect((await again.json()).data.matches).toEqual(matches);
 
     // A paging query is either refused outright or ignored; it never trims the list.
-    const paged = await request.get(`${resolveGatewayUrl(process.env)}/api/v1/checks/${requestId}/aml-case?${PAGING_QUERY}`, {
-      failOnStatusCode: false,
-      timeout: REQUEST_TIMEOUT_MS,
-    });
+    const paged = await amlCase(request, requestId, PAGING_QUERY);
     if (paged.status() === HTTP_BAD_REQUEST) return;
     expect(paged.status()).toBe(200);
     const pagedBody = await paged.json();
