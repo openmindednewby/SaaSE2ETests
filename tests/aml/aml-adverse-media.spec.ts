@@ -38,9 +38,11 @@ import { surfaceOnKeyOrSkip } from './am-hit-helpers.js';
 const AUTH_REJECTED = [401, 403];
 const MULTIPLICITY_COUNT = 2; // single + multiple
 const EXPECTED_AM_CELLS = EVIDENCE_TIERS.length * MULTIPLICITY_COUNT;
-/** The 16 fields the console's generated JobListItemResponse declares; measured against the
- * served /v1/jobs payload 2026-09-11. Used by AM-E2E-9 in BOTH directions (missing AND extra). */
-const JOB_ROW_FIELDS = ['completedAt', 'continuous', 'detail', 'error', 'lastSuccessAt', 'name', 'phase', 'processed', 'runningTotalEntities', 'schedule', 'stale', 'startedAt', 'state', 'success', 'total', 'updatedAt'];
+/** The 19 fields the console's generated JobListItemResponse declares; measured against the
+ * served /v1/jobs payload 2026-09-11, plus estimatedCompletion/phases/category added by
+ * JOBS-VIS-1 and JOBS-VIS-3 (AMLService cc6ffb43). phases is null for non-operator keys.
+ * Used by AM-E2E-9 in BOTH directions (missing AND extra). */
+const JOB_ROW_FIELDS = ['category', 'completedAt', 'continuous', 'detail', 'error', 'estimatedCompletion', 'lastSuccessAt', 'name', 'phase', 'phases', 'processed', 'runningTotalEntities', 'schedule', 'stale', 'startedAt', 'state', 'success', 'total', 'updatedAt'];
 const AM_SUBJECT = { fullName: 'Bashar al-Assad', dateOfBirth: '1965-09-11' };
 
 interface ReasonBlock {
