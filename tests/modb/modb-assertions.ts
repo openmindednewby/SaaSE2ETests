@@ -16,6 +16,9 @@ import {
 import { amlCase as readAmlCase } from './modb-session-helpers.js';
 import { newScreenLedger, recordScreen } from './modb-guards.js';
 
+/** Gateway aml-retry.policy.ts:11 — every non-screen ends review under this code. */
+const AML_UNAVAILABLE_CODE = 'AML_UNAVAILABLE';
+
 const OUTCOME_BY_DECISION: Record<string, string> = { Pass: 'passed', Review: 'review', Fail: 'failed' };
 /** Ordered steps of `result.integration_trace`. aml_received_at and reply_received_at exist only on the queue path. */
 const QUEUE_TRACE_STEPS = ['queued_at', 'dispatched_at', 'aml_received_at', 'reply_received_at', 'completed_at'];
@@ -102,19 +105,29 @@ export async function expectScreenedAml(request: APIRequestContext, requestId: s
   if ((result.score as number) > 0) expect(caseData.matches.length, `score > 0 but ${note}`).toBeGreaterThan(0);
 }
 
-/** A cancelled AML row: no result, the gateway's exact refusal sentence (adeda6b), and no screening behind it. */
-export async function expectCancelledAml(
+/**
+ * The AML row for a scenario that never reaches a screening. Owner decision 2026-09-22 20:20
+ * (MODB-E2E-REVIEWMODEL-1): the AML check ALWAYS ends `completed`; a technical or precondition
+ * failure (unavailable / expiry / identity missing / MRZ not passed) ends `review` with
+ * AML_UNAVAILABLE and states its cause first in the message. Measured on gateway 8574303:
+ * aml-screening.service.ts:186-192 -> prisma-aml-screening-row.store.ts:50-68 (insertUnavailable
+ * writes status=completed, outcome=review, errorCode=AML_UNAVAILABLE, message=`<cause>: <text>`).
+ * No screening exists behind it, so the aml-case read is still a 404.
+ */
+export async function expectUnavailableAml(
   request: APIRequestContext,
   requestId: string,
   aml: CheckRow,
-  reason: { code: string; message: string },
 ): Promise<void> {
   expect(aml.check_type).toBe(AML_CHECK);
-  expect(aml.status).toBe('cancelled');
-  expect(aml.outcome).toBeNull();
+  expect(aml.status, JSON.stringify(aml.error ?? aml.error_code)).toBe('completed');
+  expect(aml.outcome).toBe('review');
   expect(aml.result).toBeNull();
-  expect(aml.error?.code).toBe(reason.code);
-  expect(aml.error?.message).toBe(reason.message);
+  // check-response.dto.ts:162-176: a COMPLETED row exposes a FLAT `error_code`; the nested `error`
+  // object (code + message) is emitted only while status !== 'completed'. So the stated cause
+  // (`AML_MRZ_NOT_PASSED: ...`, stored in error_message) is not readable through this API today.
+  expect(aml.error_code).toBe(AML_UNAVAILABLE_CODE);
+  expect(aml.error ?? null).toBeNull();
   const missing = await readAmlCase(request, requestId);
   expect(missing.status()).toBe(404);
   expect((await missing.json()).error?.code).toBe('AML_SCREENING_NOT_FOUND');

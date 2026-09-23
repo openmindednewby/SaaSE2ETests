@@ -56,6 +56,8 @@ export interface CheckRow {
   outcome: string | null;
   result: Record<string, unknown> | null;
   error: { code: string; message: string } | null;
+  /** check-response.dto.ts:162 — a COMPLETED row exposes the code flat here, not in `error`. */
+  error_code?: string | null;
   attempt_count: number;
   source?: string;
 }

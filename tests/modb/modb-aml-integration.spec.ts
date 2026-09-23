@@ -32,7 +32,7 @@
 // Structurally blind to: client-side JS errors in wl-mvp-frontend, camera capture, and the browser ->
 // Next.js server-action path of the public host. Those need a browser tier (MODB-2 task 8).
 import { expect, test } from '@playwright/test';
-import { expectCancelledAml, expectScreenedAml, expectSources, recordAdverseMedia, screenLedger } from './modb-assertions.js';
+import { expectUnavailableAml, expectScreenedAml, expectSources, recordAdverseMedia, screenLedger } from './modb-assertions.js';
 import { positiveScreenVerdict, scenarioEnabled, selectNoCallbackScenario } from './modb-guards.js';
 import { submitVerification, waitForSettled } from './modb-helpers.js';
 import {
@@ -95,7 +95,7 @@ test.describe('MODB gateway <-> mocks <-> AML @modb-api', () => {
     await expectScreenedAml(request, requestId, rowOf(rows, AML_CHECK));
   });
 
-  test('(b) a required check forced to fail -> AML is cancelled with a stated reason', async ({ request }) => {
+  test('(b) a required check forced to fail -> AML completes as review with a stated reason', async ({ request }) => {
     const { session, requestId } = await screenViaSession(request, { mockOutcomes: { mrz_match: 'failed' } });
     test.info().annotations.push({ type: 'request_id', description: `${requestId} session=${session.sessionId}` });
 
@@ -104,11 +104,9 @@ test.describe('MODB gateway <-> mocks <-> AML @modb-api', () => {
     expect(mrz.status).toBe('completed');
     expect(mrz.outcome).toBe('failed');
     expectSources(rows);
-    // The reason as the API exposes it today: the AML row's `error`, not a separate field.
-    await expectCancelledAml(request, requestId, rowOf(rows, AML_CHECK), {
-      code: 'AML_REQUIRED_CHECK_NOT_PASSED',
-      message: 'Required check mrz_match completed with outcome failed; AML screening was not requested.',
-    });
+    // Owner 2026-09-22 20:20: the AML row always ends `completed`. A failed MRZ is a precondition
+    // non-screen, so outcome `review` under AML_UNAVAILABLE, with AML_MRZ_NOT_PASSED as the stated cause.
+    await expectUnavailableAml(request, requestId, rowOf(rows, AML_CHECK));
   });
 
   // (c) WATCHLIST_UNAVAILABLE forcing is out of scope by owner decision D-INT-6 (MODB-2-INT-checklist.md); retry is unit-tested in the gateway.
@@ -179,7 +177,8 @@ test.describe('MODB D-INT-12 demo scenarios @modb-api', () => {
         await expectScreenedAml(request, requestId, aml);
         if (scenario.amlDecision) expect(aml.result?.decision).toBe(scenario.amlDecision);
       } else if (scenario.aml === 'cancelled') {
-        await expectCancelledAml(request, requestId, aml, scenario.cancel as { code: string; message: string });
+        // Same contract as (b): a non-screen ends completed/review/AML_UNAVAILABLE (MODB-E2E-REVIEWMODEL-1).
+        await expectUnavailableAml(request, requestId, aml);
       } else {
         expect(TERMINAL_STATUSES, 'AML waits on the silent required check').not.toContain(aml.status);
       }
