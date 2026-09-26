@@ -1,0 +1,31 @@
+# ANALYTICS-ASYNC-1 "Analytics tag must never block render" — public URLs probed by analytics-hang-probe.mjs.
+# Source: personalServerNotes/k8s/**/ingress hosts + scripts/manage.sh service map (2026-09-26).
+# Format: <url>  # <service>
+https://agora.dloizides.com/  # agora-marketing
+https://demo.agora.dloizides.com/  # agora-storefront ({shop}.agora wildcard; slug 'demo' assumed)
+https://ichnos.dloizides.com/  # ichnos-marketing
+https://kefi.dloizides.com/  # kefi-marketing
+https://zygos.dloizides.com/  # zygos-marketing
+https://digitalkin.dloizides.com/  # digital-kin-site
+https://poueni.dloizides.com/  # poueni-landing (prod ingress -> poueni-landing)
+https://app.agora.dloizides.com/  # agora-web
+https://app.ichnos.dloizides.com/  # ichnos-web
+https://app.kefi.dloizides.com/  # kefi-web
+https://nextgame.dloizides.com/  # nextgame-web
+https://erevna.dloizides.com/  # erevna-web
+https://katalogos.dloizides.com/  # katalogos-web
+https://ui.dloizides.com/  # ui-showcase
+https://unitedbybachata.dloizides.com/  # united-by-bachata
+https://united-by-salsa.kefi.dloizides.com/  # united-by-salsa
+https://aurora.dloizides.com/  # aurora
+https://eisaipollis.com/  # eisaipollis
+https://family-gallery.dloizides.com/  # family-gallery
+https://hacker-screen.dloizides.com/  # hacker-screen
+https://kizombaunioncy.dloizides.com/  # kizomba-union-cy
+https://morphe.dloizides.com/  # morphe
+https://musicstudio.dloizides.com/  # music-studio
+https://quotes.dloizides.com/  # quotes
+https://selida.dloizides.com/  # selida
+https://syncfusion-theme-studio.dloizides.com/  # syncfusion-theme-studio
+https://ai-agents.dloizides.com/  # ai-agents
+https://interview-prep-hub.dloizides.com/  # interview-prep-hub
