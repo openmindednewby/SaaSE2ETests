@@ -2,7 +2,7 @@
 # Source: personalServerNotes/k8s/**/ingress hosts + scripts/manage.sh service map (2026-09-26).
 # Format: <url>  # <service>
 https://agora.dloizides.com/  # agora-marketing
-https://demo.agora.dloizides.com/  # agora-storefront ({shop}.agora wildcard; slug 'demo' assumed)
+https://staging.demo.agora.dloizides.com/  # agora-storefront (staging-only, self-signed; prod edge owner-gated on Cloudflare DNS-01)
 https://ichnos.dloizides.com/  # ichnos-marketing
 https://kefi.dloizides.com/  # kefi-marketing
 https://zygos.dloizides.com/  # zygos-marketing

@@ -36,7 +36,8 @@ function loadUrls(argv) {
 
 async function probe(browser, url) {
   const { defaultBrowserType: _ignored, ...iphone } = devices['iPhone 13'];
-  const context = await browser.newContext(iphone);
+  // Staging hosts serve Traefik's self-signed cert; this probe measures DOMContentLoaded, not TLS.
+  const context = await browser.newContext({ ...iphone, ignoreHTTPSErrors: true });
   let hung = 0;
   // Never fulfil / continue / abort: the request stays pending, like an unresponsive host.
   await context.route(ANALYTICS_ROUTE, () => { hung += 1; });
