@@ -759,6 +759,16 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      // KEFI-PEOPLE-1 "Organizer people editor" acceptance (AC-01..07, 09) — @api,
+      // two master-admin-provisioned canary tenants + organizer/non-organizer users.
+      // AC-07 is tagged @publish (a real publish rollout) → 600s budget.
+      name: 'kefi-landing-people',
+      workers: 1,
+      timeout: 600_000,
+      testMatch: /kefi\/kefi-landing-(people|upload)\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       // Kefi published poster + pass RENDER (#266 / #276 gap #7) — publishes a
       // landing carrying price tiers + a real-image poster and asserts they RENDER
       // on the served page (extends publish coverage from "published" to
