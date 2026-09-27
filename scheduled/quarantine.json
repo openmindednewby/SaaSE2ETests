@@ -1,0 +1,1622 @@
+{
+ "staging": [
+  {
+   "file": "../helpers/login-methods-otp.ts",
+   "title": "Kefi email-OTP login (bff-kefi + kefi realm) email OTP: request a code, receive it by email, verify, signed in",
+   "project": "kefi-otp-login",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "../helpers/login-methods-suite.ts",
+   "title": "Erevna device-PIN + passkey (shared auth-web 1.4.0 components) device PIN: enrol, unlock on a remembered device, lockout, disable",
+   "project": "erevna-login-methods",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "../helpers/login-methods-suite.ts",
+   "title": "Katalogos device-PIN + passkey (shared auth-web 1.4.0 components) device PIN: enrol, unlock on a remembered device, lockout, disable",
+   "project": "katalogos-login-methods",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "a11y/a11y.spec.ts",
+   "title": "@a11y public no-auth surfaces erevna public login has no critical/serious a11y violations",
+   "project": "a11y-public",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "a11y/a11y.spec.ts",
+   "title": "@a11y public no-auth surfaces katalogos public login has no critical/serious a11y violations",
+   "project": "a11y-public",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "a11y/a11y.spec.ts",
+   "title": "@a11y public no-auth surfaces kefi marketing landing has no critical/serious a11y violations",
+   "project": "a11y-public",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "agora/agora-admin.ui.spec.ts",
+   "title": "Agora merchant admin @agora-ui @ui create a product with an image -> it appears in the list",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-admin.ui.spec.ts",
+   "title": "Agora merchant admin @agora-ui @ui create coupon -> appears in the coupons grid",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-admin.ui.spec.ts",
+   "title": "Agora merchant admin @agora-ui @ui edit a product name -> the new name appears in the list",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-admin.ui.spec.ts",
+   "title": "Agora merchant admin @agora-ui @ui merchant can log in and reach the dashboard",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-admin.ui.spec.ts",
+   "title": "Agora merchant admin @agora-ui @ui set a product sold-out (stock 0) -> it survives a reload",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-admin.ui.spec.ts",
+   "title": "Agora merchant admin @agora-ui @ui the settings screen exposes the publish control — publish is no longer Stripe-gated (ES-08)",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-api.spec.ts",
+   "title": "Agora Service API @agora-api a protected endpoint should require authentication",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-api.spec.ts",
+   "title": "Agora Service Health Probes @agora-api @health Service liveness probe should return healthy",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-api.spec.ts",
+   "title": "Agora Service Health Probes @agora-api @health Service readiness probe should return healthy",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-api.spec.ts",
+   "title": "Agora Service Health Probes @agora-api @health Service startup probe should return healthy",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-billing.spec.ts",
+   "title": "Agora ES-07 billing + plan-gate @agora-api GET /billing/subscription returns a sane, auto-trialing snapshot (NOT gated)",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-billing.spec.ts",
+   "title": "Agora ES-07 billing + plan-gate @agora-api cross-tenant: merchant B reads only its OWN billing; cannot drive A",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-billing.spec.ts",
+   "title": "Agora ES-07 billing + plan-gate @agora-api portal-session 409s before a Stripe customer; checkout-session {url} or an honest error",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-billing.spec.ts",
+   "title": "Agora ES-07 billing + plan-gate @agora-api the gate PASSES a trialing/active merchant: a WRITE returns 201",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-billing.ui.spec.ts",
+   "title": "Agora ES-07 billing @agora-ui @ui Terms + Privacy render from the footer, and the tax/merchant-of-record disclaimer is present",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-billing.ui.spec.ts",
+   "title": "Agora ES-07 billing @agora-ui @ui a Trialing merchant: status + days-left, no read-only banner, admin fully usable",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-merchant-crud.spec.ts",
+   "title": "Agora merchant admin CRUD @agora-api adjusts variant stock to zero and back",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-merchant-crud.spec.ts",
+   "title": "Agora merchant admin CRUD @agora-api creates a percentage coupon",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-merchant-crud.spec.ts",
+   "title": "Agora merchant admin CRUD @agora-api creates categories and reorders them",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-merchant-crud.spec.ts",
+   "title": "Agora merchant admin CRUD @agora-api creates, reads, updates and deletes a product",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-merchant-crud.spec.ts",
+   "title": "Agora merchant admin CRUD @agora-api dashboard summary reflects the merchant shop",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-merchant-crud.spec.ts",
+   "title": "Agora merchant admin CRUD @agora-api publishes browse-only without Stripe — live but acceptsOrders:false (ES-08)",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-merchant-crud.spec.ts",
+   "title": "Agora merchant admin CRUD @agora-api rejects a percentage coupon above 100",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-merchant-crud.spec.ts",
+   "title": "Agora merchant admin CRUD @agora-api rejects a reorder that does not list every category exactly once",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-merchant-crud.spec.ts",
+   "title": "Agora merchant admin CRUD @agora-api upserts shop settings and shipping",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-onboarding.spec.ts",
+   "title": "Agora ES-08 onboarding @agora-api @agora-onboarding GET /shop/slug-available is a live check: `demo` taken (+suggestion), a fresh slug free",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-onboarding.spec.ts",
+   "title": "Agora ES-08 onboarding @agora-api @agora-onboarding publishing without Stripe → live but acceptsOrders:false, and checkout 409s browse-only",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-onboarding.ui.spec.ts",
+   "title": "Agora ES-08 onboarding journey @agora-ui @ui a merchant goes from empty to a LIVE browse-only shop through the wizard @critical",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-onboarding.ui.spec.ts",
+   "title": "Agora ES-08 onboarding journey @agora-ui @ui step 1 live subdomain check: a known-taken slug (`demo`) reports unavailable + suggests one",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-order-isolation.spec.ts",
+   "title": "🔒 Agora cross-tenant isolation — orders + Stripe @agora-api merchant B's order list is B's own — it never carries merchant A's rows",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-orders.spec.ts",
+   "title": "Agora orders + Stripe connection @agora-api the shop reports NOT-connected, NOT-publishable, with a webhook URL to paste",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-orders.ui.spec.ts",
+   "title": "Agora ES-06 orders + Stripe settings @agora-ui @ui a rejected Stripe key is surfaced INLINE (not swallowed)",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-orders.ui.spec.ts",
+   "title": "Agora ES-06 orders + Stripe settings @agora-ui @ui the Stripe settings card renders NOT-connected with write-only secret fields",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-orders.ui.spec.ts",
+   "title": "Agora ES-06 orders + Stripe settings @agora-ui @ui the orders screen opens in a browser and renders its list surface",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-tenant-isolation.spec.ts",
+   "title": "🔒 Agora cross-tenant isolation @agora-api merchant B's product LIST does not contain merchant A's product",
+   "project": "agora-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "i18n/fleet-raw-keys.ui.spec.ts",
+   "title": "i18n raw-key guard — agora-web @i18n @ui \"dashboard\" renders no raw translation keys (text or a11y attributes)",
+   "project": "i18n-fleet",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "i18n/fleet-raw-keys.ui.spec.ts",
+   "title": "i18n raw-key guard — erevna-web @i18n @ui \"quiz templates\" renders no raw translation keys (text or a11y attributes)",
+   "project": "i18n-fleet",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "i18n/fleet-raw-keys.ui.spec.ts",
+   "title": "i18n raw-key guard — katalogos-web @i18n @ui \"menus\" renders no raw translation keys (text or a11y attributes)",
+   "project": "i18n-fleet",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "ichnos/ichnos-alert-delivery.spec.ts",
+   "title": "Ichnos alert delivery @ichnos-api worsening alert fans out to BOTH channels — HMAC webhook delivered + alert email received",
+   "project": "ichnos-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (ichnos)"
+  },
+  {
+   "file": "ichnos/ichnos-monitoring.spec.ts",
+   "title": "Ichnos monitoring @ichnos-api adds, lists, and stops a monitored address (Growth+), else asserts the 402 gate",
+   "project": "ichnos-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (ichnos)"
+  },
+  {
+   "file": "ichnos/ichnos-onboarding.spec.ts",
+   "title": "Ichnos onboarding @ichnos-api registers a fresh user, logs in by email, and screens through the BFF",
+   "project": "ichnos-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (ichnos)"
+  },
+  {
+   "file": "ichnos/ichnos-onboarding.spec.ts",
+   "title": "Ichnos onboarding @ichnos-api rejects an unauthenticated BFF-proxied screen",
+   "project": "ichnos-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (ichnos)"
+  },
+  {
+   "file": "ichnos/ichnos-regulator-pack.spec.ts",
+   "title": "Ichnos regulator packs @ichnos-api creates a pack, polls to completed, downloads a zip, and is tenant-scoped (Growth+), else 402 gate",
+   "project": "ichnos-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (ichnos)"
+  },
+  {
+   "file": "ichnos/ichnos-screening.spec.ts",
+   "title": "Ichnos screen-address @ichnos-api screens a clear address and returns provenance + credit cost",
+   "project": "ichnos-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (ichnos)"
+  },
+  {
+   "file": "ichnos/ichnos-webhooks.spec.ts",
+   "title": "Ichnos webhooks @ichnos-api registers a public https webhook, shows the secret once + never in the list, then revokes (Growth+), else 402 gate",
+   "project": "ichnos-api",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (ichnos)"
+  },
+  {
+   "file": "identity/login.spec.ts",
+   "title": "Login Flow @identity @auth should disable inputs while logging in",
+   "project": "identity-auth",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (auth / keycloak)"
+  },
+  {
+   "file": "identity/login.spec.ts",
+   "title": "Login Flow @identity @auth should display login form elements",
+   "project": "identity-auth",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (auth / keycloak)"
+  },
+  {
+   "file": "identity/login.spec.ts",
+   "title": "Login Flow @identity @auth should have no console errors on login page",
+   "project": "identity-auth",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (auth / keycloak)"
+  },
+  {
+   "file": "identity/login.spec.ts",
+   "title": "Login Flow @identity @auth should login with valid credentials @critical",
+   "project": "identity-auth",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (auth / keycloak)"
+  },
+  {
+   "file": "identity/login.spec.ts",
+   "title": "Login Flow @identity @auth should require username and password",
+   "project": "identity-auth",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (auth / keycloak)"
+  },
+  {
+   "file": "identity/login.spec.ts",
+   "title": "Login Flow @identity @auth should show error with invalid credentials",
+   "project": "identity-auth",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (auth / keycloak)"
+  },
+  {
+   "file": "identity/logout.spec.ts",
+   "title": "Logout Flow @identity @auth should logout successfully @critical",
+   "project": "identity-auth",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (auth / keycloak)"
+  },
+  {
+   "file": "identity/sec2-front-channel-logout.spec.ts",
+   "title": "SEC-2 front-channel sign-out — erevna @api erevna: a live session silently re-auths (control — proves this suite bites)",
+   "project": "sec2-logout",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (auth / keycloak)"
+  },
+  {
+   "file": "identity/sec2-front-channel-logout.spec.ts",
+   "title": "SEC-2 front-channel sign-out — erevna @api erevna: a password (ROPC) sign-out performs NO IdP navigation",
+   "project": "sec2-logout",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (auth / keycloak)"
+  },
+  {
+   "file": "identity/sec2-front-channel-logout.spec.ts",
+   "title": "SEC-2 front-channel sign-out — erevna @ui erevna: sign-out ends the IdP session AND returns to the app's /login",
+   "project": "sec2-logout",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (auth / keycloak)"
+  },
+  {
+   "file": "identity/sec2-front-channel-logout.spec.ts",
+   "title": "SEC-2 front-channel sign-out — katalogos @api katalogos: a live session silently re-auths (control — proves this suite bites)",
+   "project": "sec2-logout",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (auth / keycloak)"
+  },
+  {
+   "file": "identity/sec2-front-channel-logout.spec.ts",
+   "title": "SEC-2 front-channel sign-out — katalogos @api katalogos: a password (ROPC) sign-out performs NO IdP navigation",
+   "project": "sec2-logout",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (auth / keycloak)"
+  },
+  {
+   "file": "identity/sec2-front-channel-logout.spec.ts",
+   "title": "SEC-2 front-channel sign-out — katalogos @ui katalogos: sign-out ends the IdP session AND returns to the app's /login",
+   "project": "sec2-logout",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (auth / keycloak)"
+  },
+  {
+   "file": "identity/token-refresh.spec.ts",
+   "title": "Token Session Tests @identity @auth should maintain session with valid token",
+   "project": "identity-auth",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "backend-dev (auth / keycloak)"
+  },
+  {
+   "file": "kefi-landing-parity/dom-parity.spec.ts",
+   "title": "@kefi-landing-parity KUCY KUCY dom-parity @ desktop 1280px",
+   "project": "kefi-landing-parity",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi-landing-parity/dom-parity.spec.ts",
+   "title": "@kefi-landing-parity KUCY KUCY dom-parity @ mobile 375px",
+   "project": "kefi-landing-parity",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi-landing-parity/dom-parity.spec.ts",
+   "title": "@kefi-landing-parity KUCY KUCY dom-parity @ tablet 768px",
+   "project": "kefi-landing-parity",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi-landing-parity/dom-parity.spec.ts",
+   "title": "@kefi-landing-parity UBS UBS dom-parity @ desktop 1280px",
+   "project": "kefi-landing-parity",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi-landing-parity/dom-parity.spec.ts",
+   "title": "@kefi-landing-parity UBS UBS dom-parity @ mobile 375px",
+   "project": "kefi-landing-parity",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi-landing-parity/dom-parity.spec.ts",
+   "title": "@kefi-landing-parity UBS UBS dom-parity @ tablet 768px",
+   "project": "kefi-landing-parity",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-attendee-delete.spec.ts",
+   "title": "Kefi organizer hard-delete-attendee (#278) @api imports an attendee then deletes it; the row is gone; walls return 404",
+   "project": "kefi-attendee-delete",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-attendee-import.spec.ts",
+   "title": "Kefi organizer attendee bulk-import (#265) @api imports paid + expected attendees from JSON and CSV, dedups by email, reports errors",
+   "project": "kefi-attendee-import",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-attendee-payment.spec.ts",
+   "title": "Kefi #177 attendee Stripe-Checkout payments — reconciliation + live session reconciles paid + refunded via signed webhook, mints a live session when keyed",
+   "project": "kefi-attendee-payment",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-backoffice-approval.spec.ts",
+   "title": "Kefi back-office manual subscription override (platform-admin) platform admin grants a Stripe-less Pro plan; invalid plan + non-admin are rejected",
+   "project": "kefi-backoffice-approval",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-crew-lifecycle.spec.ts",
+   "title": "Kefi crew lifecycle — register → onboard → invite → crew login @api invited crew (organizer/ambassador/dj) each self-serve set-password via email, then log in with role + tenantId",
+   "project": "kefi-crew-lifecycle",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-critical-path.spec.ts",
+   "title": "Kefi critical path — registration → approval → payment → check-in @slow an approved registration is paid via webhook and checked in at the door",
+   "project": "kefi-critical-path",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-custom-domain.spec.ts",
+   "title": "Kefi #5 — custom domains sets a subdomain (CNAME) + an apex domain (A record), verifies + clears",
+   "project": "kefi-custom-domain",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-device-pin-unlock.spec.ts",
+   "title": "Kefi device-PIN unlock — enrol, unlock, lockout, disable returning device unlocks with a PIN; wrong PIN locks out; disable revokes",
+   "project": "kefi-device-pin",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-email-lifecycle.spec.ts",
+   "title": "Kefi Phase 13 lifecycle emails — confirmation, reminder, unsubscribe, thank-you confirms, reminds (+dedup), honors unsubscribe, thanks attendees",
+   "project": "kefi-email-lifecycle",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-free-publish.spec.ts",
+   "title": "Kefi Phase F — free-tier dynamic publish a Free tenant signs up, publishes, and its page renders from config",
+   "project": "kefi-free-publish",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-gdpr.spec.ts",
+   "title": "Kefi attendee GDPR export + erasure (#276) @api an attendee exports their data, then erases it (idempotently)",
+   "project": "kefi-gdpr",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-multi-event-publish.spec.ts",
+   "title": "Kefi #4 — per-event publish publishes two events at distinct slugs, edits a slug, books the named event",
+   "project": "kefi-multi-event-publish",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-organizer-pnl.spec.ts",
+   "title": "Kefi organizer dashboard / P&L (#276) @api P&L reflects paid + expected attendees and returns safe zeros for a Draft event",
+   "project": "kefi-organizer-pnl",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-passkey-login.spec.ts",
+   "title": "Kefi passkey — register, sign out, sign in with passkey a tenant owner registers a passkey and signs back in with it",
+   "project": "kefi-passkey",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-poster-passes-render.spec.ts",
+   "title": "Kefi published poster + pass render (#266) @slow a published landing renders its price tiers and poster image",
+   "project": "kefi-poster-passes-render",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-pro-gates-api.spec.ts",
+   "title": "Kefi KEFI-2 — freemium gates @api (FAST, no-wizard) @api Free tenant is 403 on Pro features; a Pro grant unblocks the same calls",
+   "project": "kefi-pro-gates-api",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-pro-gates-ui.spec.ts",
+   "title": "Kefi KEFI-2 — freemium gate UX @ui (FULL, real browser) @ui Free organizer sees Pro locks + upgrade CTA; a Pro grant reveals the real forms",
+   "project": "kefi-pro-gates-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-pro-gates.spec.ts",
+   "title": "Kefi KEFI-2 — freemium gates (Free blocked, Pro allowed) a Free tenant is 403 on Pro features; a Pro grant unblocks the same calls",
+   "project": "kefi-pro-gates",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-qr-checkin.spec.ts",
+   "title": "Kefi QR ticket render + door check-in (KEFI-1) issues an HMAC ticket, renders it, checks the attendee in, and gates the door list",
+   "project": "kefi-qr-checkin",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-registration-approval.spec.ts",
+   "title": "Kefi registration-request submit → approve / reject @api ambassador submits, organizer approves (→ attendee) + rejects; walls + 409 hold",
+   "project": "kefi-registration-approval",
+   "redSince": "2026-09-19",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-reset-revokes-devices.spec.ts",
+   "title": "Kefi password reset revokes remembered devices after a password reset, a previously remembered device can no longer PIN-unlock",
+   "project": "kefi-reset-revokes-devices",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-role-surfaces.spec.ts",
+   "title": "Kefi role surfaces render for their role (#276) @ui dj / media / ambassador / audit dashboards render without an error boundary",
+   "project": "kefi-role-surfaces",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-tenant-lifecycle.spec.ts",
+   "title": "Kefi tenant lifecycle — full self-serve canary signs up, completes wizard, publishes, asserts KUCY renders, cleans up",
+   "project": "kefi-lifecycle",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "logging/correlation-tracking.spec.ts",
+   "title": "Correlation Tracking @logging correlation ID appears in Loki query results",
+   "project": "logging",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "logging/correlation-tracking.spec.ts",
+   "title": "Correlation Tracking @logging correlation ID propagates from request header to logs",
+   "project": "logging",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "logging/correlation-tracking.spec.ts",
+   "title": "Correlation Tracking @logging multiple services share the same correlation ID for a single request",
+   "project": "logging",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "logging/log-verification.spec.ts",
+   "title": "Log Verification @logging logs include TenantId when authenticated",
+   "project": "logging",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "logging/log-verification.spec.ts",
+   "title": "Log Verification @logging logs include correct ServiceName label",
+   "project": "logging",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "menu-styling/menu-theme-swatch.spec.ts",
+   "title": "Menu Theme Swatch - Smoke @menu-styling @online-menus should create a menu for theme-swatch testing",
+   "project": "menu-styling",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "online-menus/bff-no-token-in-browser.spec.ts",
+   "title": "BFF — no token reachable from browser JS @online-menus @bff @security after BFF login the browser holds only the httpOnly session cookie",
+   "project": "online-menus-crud",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "online-menus/logout-kills-server-session.spec.ts",
+   "title": "Logout kills the server session @online-menus @bff @security replaying the pre-logout session cookie returns 401 @critical",
+   "project": "online-menus-crud",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "online-menus/menu-activation.spec.ts",
+   "title": "Menu Activation and Deactivation @online-menus @crud should create menu for activation tests",
+   "project": "online-menus-crud",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "online-menus/menu-content-upload-advanced.spec.ts",
+   "title": "Menu Content Upload Error Handling @online-menus @content-upload should handle cancelled file selection gracefully",
+   "project": "online-menus-editor-uploads",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "online-menus/menu-content-upload-advanced.spec.ts",
+   "title": "Multiple Content Uploads @online-menus @content-upload should upload images to multiple menu items @known-bug-upload-2",
+   "project": "online-menus-editor-uploads",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "online-menus/menu-content-upload-basic.spec.ts",
+   "title": "Menu Content Upload @online-menus @content-upload should create a menu and add a category with item",
+   "project": "online-menus-editor-uploads",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "online-menus/menu-content-upload-create.spec.ts",
+   "title": "Create Menu with Category and Image @online-menus @content-upload create new menu with category and image persists correctly @known-bug-upload-3",
+   "project": "online-menus-editor-uploads",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "online-menus/menu-crud-with-activation.spec.ts",
+   "title": "Menu CRUD with Activation State @online-menus @crud should create menu with inactive status by default @critical",
+   "project": "online-menus-crud",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "online-menus/menu-display-order-sorting.spec.ts",
+   "title": "Menu DisplayOrder Sorting @online-menus @sorting should create menu with multiple categories and items for sorting test",
+   "project": "online-menus-crud",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "online-menus/menu-duplicate-names.spec.ts",
+   "title": "Menu Duplicate Names @online-menus @duplicate-names should create menu with duplicate category names (BUG-MENU-007) @critical",
+   "project": "online-menus-editor-categories",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "online-menus/menu-editor-categories-crud.spec.ts",
+   "title": "Menu Editor - Full CRUD for Categories @online-menus @categories should create menu and add multiple categories with items",
+   "project": "online-menus-editor-categories",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "online-menus/menu-editor-categories-focus.spec.ts",
+   "title": "Menu Editor Categories - Focus Retention @online-menus @categories should create a test menu for category tests",
+   "project": "online-menus-editor-categories",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "online-menus/menu-editor-categories-switching.spec.ts",
+   "title": "Menu Editor - Multiple Category Focus Switching @online-menus @categories should maintain data when switching between categories",
+   "project": "online-menus-editor-categories",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "online-menus/menu-preview-and-external-link.spec.ts",
+   "title": "Menu Preview and External Link @online-menus @preview should create menu for preview and external link tests",
+   "project": "online-menus-public-preview",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "online-menus/menu-public-anon-cold-load.spec.ts",
+   "title": "Public Menu — cold anonymous singular URL @online-menus @public-viewer renders the viewer on a single cold anonymous load of /public/menu/{id} @critical",
+   "project": "online-menus-public-viewer",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "online-menus/menu-public-page-load-basic.spec.ts",
+   "title": "Public Menu Page Load - Basic @online-menus @public-viewer should load public menu list without console errors (BUG-MENU-005/006) @critical",
+   "project": "online-menus-public-viewer",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "online-menus/menu-public-page-load-viewer.spec.ts",
+   "title": "Public Menu Page Load - Viewer @online-menus @public-viewer should load public menu viewer without errors",
+   "project": "online-menus-public-viewer",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "online-menus/menu-qr-code.spec.ts",
+   "title": "QR Code Generation @online-menus @qr-code should disable QR code button for inactive menus",
+   "project": "online-menus-public-preview",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "poueni/poueni-canary-cleanup.spec.ts",
+   "title": "Poueni canary cleanup @poueni @canary purges canary tenants (and drains leftover debris) @critical",
+   "project": "poueni-canary-cleanup",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "backend-dev (poueni)"
+  },
+  {
+   "file": "poueni/poueni-device-pin.spec.ts",
+   "title": "Poueni device-PIN (Vite dashboard + bff-poueni 1.3.2) enrol, unlock on a remembered device, repeat-unlock, lockout, disable",
+   "project": "poueni-device-pin",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "backend-dev (poueni)"
+  },
+  {
+   "file": "poueni/poueni-gdpr.spec.ts",
+   "title": "Poueni GDPR erasure + export @poueni @gdpr export shows a contribution, erase removes it, the audit row survives @critical",
+   "project": "poueni-gdpr",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "backend-dev (poueni)"
+  },
+  {
+   "file": "poueni/poueni-live-map.spec.ts",
+   "title": "Poueni dual-marker live map @poueni @presence dual beacons render two markers + the GPS↔ML error on the live map @critical",
+   "project": "poueni-live-map",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "backend-dev (poueni)"
+  },
+  {
+   "file": "poueni/poueni-passkey.spec.ts",
+   "title": "Poueni passkey login (Vite dashboard + bff-poueni 1.3.1) register a passkey from settings, sign in with it, forged callback rejected",
+   "project": "poueni-passkey",
+   "redSince": "2026-09-19",
+   "redRuns": "6/7",
+   "owner": "backend-dev (poueni)"
+  },
+  {
+   "file": "poueni/poueni-password-reset.spec.ts",
+   "title": "Poueni forgot/reset password @poueni @auth @password-reset reset → new password logs in via the dashboard, old password is rejected @critical",
+   "project": "poueni-password-reset",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "backend-dev (poueni)"
+  },
+  {
+   "file": "prod-gate/erevna-login-layout.spec.ts",
+   "title": "prod-gate: erevna login is a single grouped card, not spread",
+   "project": "prod-gate",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (per product)"
+  },
+  {
+   "file": "prod-gate/katalogos-menu-golden-path.spec.ts",
+   "title": "katalogos menu golden path signup → wizard → publish → a diner views the menu on a cold anonymous load @ui @critical",
+   "project": "prod-gate",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (per product)"
+  },
+  {
+   "file": "prod-gate/katalogos-signup.spec.ts",
+   "title": "katalogos self-serve signup full journey: signup → wizard → publish → public menu URL renders @ui @critical",
+   "project": "prod-gate",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (per product)"
+  },
+  {
+   "file": "prod-gate/katalogos-signup.spec.ts",
+   "title": "katalogos self-serve signup honeypot: a filled hidden field is refused (no session)",
+   "project": "prod-gate",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (per product)"
+  },
+  {
+   "file": "prod-gate/katalogos-signup.spec.ts",
+   "title": "katalogos self-serve signup immediate-access signup lands authenticated + self-teardown leaves no orphan @ui @critical",
+   "project": "prod-gate",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (per product)"
+  },
+  {
+   "file": "prod-gate/kefi-event-golden-path.spec.ts",
+   "title": "prod-gate: kefi public event landing renders in a real browser @ui",
+   "project": "prod-gate",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (per product)"
+  },
+  {
+   "file": "prod-gate/kefi-event-golden-path.spec.ts",
+   "title": "prod-gate: kefi public event view returns a rendered landing for an anonymous visitor @api @critical",
+   "project": "prod-gate",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (per product)"
+  },
+  {
+   "file": "prod-gate/prod-login-gate.spec.ts",
+   "title": "prod-gate: katalogos real-UI login lands on an authed route",
+   "project": "prod-gate",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (per product)"
+  },
+  {
+   "file": "prod-gate/prod-login-gate.spec.ts",
+   "title": "prod-gate: kefi real-UI login lands on an authed route",
+   "project": "prod-gate",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (per product)"
+  },
+  {
+   "file": "questioner/marketing/campaign-send.spec.ts",
+   "title": "Marketing campaigns @questioner @marketing should load the marketing campaigns screen",
+   "project": "questioner-marketing",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (erevna-web)"
+  },
+  {
+   "file": "questioner/public/survey-embed-framing.spec.ts",
+   "title": "Survey embed framing @questioner embed route is served with iframe-friendly framing headers and no answer leak",
+   "project": "questioner-public",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (erevna-web)"
+  },
+  {
+   "file": "questioner/quiz-active/quiz-multipage-navigation.spec.ts",
+   "title": "Multi-Page Quiz Navigation @questioner @validation @critical should validate all pages when submitting from last page (BUG-QUIZ-004)",
+   "project": "questioner-active",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (erevna-web)"
+  },
+  {
+   "file": "questioner/quiz-active/quiz-multipage-validation.spec.ts",
+   "title": "Multi-Page Quiz Validation @questioner @validation @critical should display submit button with correct label on last page (BUG-QUIZ-016)",
+   "project": "questioner-active",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (erevna-web)"
+  },
+  {
+   "file": "questioner/quiz-active/submit-quiz.spec.ts",
+   "title": "Submit Quiz @questioner should show thank you message after successful submission",
+   "project": "questioner-active",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (erevna-web)"
+  },
+  {
+   "file": "questioner/quiz-answers/quiz-answers-export-filter.spec.ts",
+   "title": "Quiz Answers Export Filter @questioner @export should navigate to quiz answers page",
+   "project": "questioner-answers",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (erevna-web)"
+  },
+  {
+   "file": "questioner/quiz-answers/view-answers.spec.ts",
+   "title": "View Quiz Answers @questioner should open view modal when clicking view button",
+   "project": "questioner-answers",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (erevna-web)"
+  },
+  {
+   "file": "questioner/security/bff-no-token-in-browser.spec.ts",
+   "title": "BFF — no token reachable from browser JS @questioner @bff @security after BFF login the browser holds only the httpOnly session cookie",
+   "project": "questioner-security",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (erevna-web)"
+  },
+  {
+   "file": "questioner/security/logout-kills-server-session.spec.ts",
+   "title": "Logout kills the server session @questioner @bff @security replaying the pre-logout session cookie returns 401 @critical",
+   "project": "questioner-security",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (erevna-web)"
+  },
+  {
+   "file": "questioner/templates/activate-template.spec.ts",
+   "title": "Activate Quiz Template @questioner @crud should create template for activation tests",
+   "project": "questioner-templates",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (erevna-web)"
+  },
+  {
+   "file": "questioner/templates/active-quiz-limit.spec.ts",
+   "title": "Active Quiz Limit @questioner Should only allow one active quiz at a time",
+   "project": "questioner-templates",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (erevna-web)"
+  },
+  {
+   "file": "questioner/templates/create-template.spec.ts",
+   "title": "Create Quiz Template @questioner @crud should display template creation form",
+   "project": "questioner-templates",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (erevna-web)"
+  },
+  {
+   "file": "questioner/templates/delete-inactive-templates.spec.ts",
+   "title": "Delete Inactive Templates @questioner @crud should display Delete Inactive button on templates page",
+   "project": "questioner-templates",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (erevna-web)"
+  },
+  {
+   "file": "questioner/templates/edit-template.spec.ts",
+   "title": "Edit Quiz Template @questioner @crud should create template for editing",
+   "project": "questioner-templates",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (erevna-web)"
+  },
+  {
+   "file": "smoke/critical-paths.spec.ts",
+   "title": "Critical Path Smoke Tests @smoke @critical complete user journey: create template -> activate -> view answers",
+   "project": "smoke",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "theme/theme-settings.spec.ts",
+   "title": "Theme Settings - Non-Admin @theme @settings should load theme settings page for non-admin user",
+   "project": "theme-settings",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "zygos/zygos-console.ui.spec.ts",
+   "title": "Zygos console @zygos-ui @ui 🔴 an operator can create a payment instruction through the console",
+   "project": "zygos-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (zygos-web)"
+  },
+  {
+   "file": "zygos/zygos-console.ui.spec.ts",
+   "title": "Zygos console @zygos-ui @ui 🔴 login lands on the console — and logout locks it again",
+   "project": "zygos-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (zygos-web)"
+  },
+  {
+   "file": "zygos/zygos-form-fields.ui.spec.ts",
+   "title": "Zygos instruction form — fields @zygos-ui @ui the currency + direction dropdowns offer ONLY schema-valid options",
+   "project": "zygos-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (zygos-web)"
+  },
+  {
+   "file": "zygos/zygos-form-fields.ui.spec.ts",
+   "title": "Zygos instruction form — fields @zygos-ui @ui 🔴 all four core controls render a visible label",
+   "project": "zygos-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (zygos-web)"
+  },
+  {
+   "file": "zygos/zygos-form-fields.ui.spec.ts",
+   "title": "Zygos instruction form — fields @zygos-ui @ui 🔴 the four columns are aligned — same top, same height, same bottom edge",
+   "project": "zygos-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (zygos-web)"
+  },
+  {
+   "file": "zygos/zygos-i18n.ui.spec.ts",
+   "title": "Zygos i18n — no raw translation keys @zygos-ui @ui 🔴 \"dashboard\" renders no raw translation keys (text or a11y attributes)",
+   "project": "zygos-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (zygos-web)"
+  },
+  {
+   "file": "zygos/zygos-public-surface.spec.ts",
+   "title": "Zygos public surface @zygos-api @api 🔴 the password PRINTED on the marketing site is the one the console serves",
+   "project": "zygos-api",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (zygos-web)"
+  },
+  {
+   "file": "zygos/zygos-pwa.spec.ts",
+   "title": "Zygos PWA surface @zygos-api @api 🔴 the served shell registers the service worker (app/+html.tsx reached the export)",
+   "project": "zygos-api",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (zygos-web)"
+  }
+ ],
+ "prod": [
+  {
+   "file": "agora/agora-admin.ui.spec.ts",
+   "title": "Agora merchant admin @agora-ui @ui create a product with an image -> it appears in the list",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-admin.ui.spec.ts",
+   "title": "Agora merchant admin @agora-ui @ui create coupon -> appears in the coupons grid",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-admin.ui.spec.ts",
+   "title": "Agora merchant admin @agora-ui @ui edit a product name -> the new name appears in the list",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-admin.ui.spec.ts",
+   "title": "Agora merchant admin @agora-ui @ui merchant can log in and reach the dashboard",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-admin.ui.spec.ts",
+   "title": "Agora merchant admin @agora-ui @ui set a product sold-out (stock 0) -> it survives a reload",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-admin.ui.spec.ts",
+   "title": "Agora merchant admin @agora-ui @ui the settings screen exposes the publish control — publish is no longer Stripe-gated (ES-08)",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-billing.ui.spec.ts",
+   "title": "Agora ES-07 billing @agora-ui @ui Terms + Privacy render from the footer, and the tax/merchant-of-record disclaimer is present",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-billing.ui.spec.ts",
+   "title": "Agora ES-07 billing @agora-ui @ui a Trialing merchant: status + days-left, no read-only banner, admin fully usable",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-onboarding.ui.spec.ts",
+   "title": "Agora ES-08 onboarding journey @agora-ui @ui a merchant goes from empty to a LIVE browse-only shop through the wizard @critical",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-onboarding.ui.spec.ts",
+   "title": "Agora ES-08 onboarding journey @agora-ui @ui step 1 live subdomain check: a known-taken slug (`demo`) reports unavailable + suggests one",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-orders.ui.spec.ts",
+   "title": "Agora ES-06 orders + Stripe settings @agora-ui @ui a rejected Stripe key is surfaced INLINE (not swallowed)",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-orders.ui.spec.ts",
+   "title": "Agora ES-06 orders + Stripe settings @agora-ui @ui the Stripe settings card renders NOT-connected with write-only secret fields",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "agora/agora-orders.ui.spec.ts",
+   "title": "Agora ES-06 orders + Stripe settings @agora-ui @ui the orders screen opens in a browser and renders its list surface",
+   "project": "agora-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (agora-web)"
+  },
+  {
+   "file": "i18n/fleet-raw-keys.ui.spec.ts",
+   "title": "i18n raw-key guard — agora-web @i18n @ui \"dashboard\" renders no raw translation keys (text or a11y attributes)",
+   "project": "i18n-fleet",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "kefi-landing-parity/dom-parity.spec.ts",
+   "title": "@kefi-landing-parity KUCY KUCY dom-parity @ desktop 1280px",
+   "project": "kefi-landing-parity",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi-landing-parity/dom-parity.spec.ts",
+   "title": "@kefi-landing-parity KUCY KUCY dom-parity @ mobile 375px",
+   "project": "kefi-landing-parity",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi-landing-parity/dom-parity.spec.ts",
+   "title": "@kefi-landing-parity KUCY KUCY dom-parity @ tablet 768px",
+   "project": "kefi-landing-parity",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi-landing-parity/dom-parity.spec.ts",
+   "title": "@kefi-landing-parity UBS UBS dom-parity @ desktop 1280px",
+   "project": "kefi-landing-parity",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi-landing-parity/dom-parity.spec.ts",
+   "title": "@kefi-landing-parity UBS UBS dom-parity @ mobile 375px",
+   "project": "kefi-landing-parity",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi-landing-parity/dom-parity.spec.ts",
+   "title": "@kefi-landing-parity UBS UBS dom-parity @ tablet 768px",
+   "project": "kefi-landing-parity",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-attendee-delete.spec.ts",
+   "title": "Kefi organizer hard-delete-attendee (#278) @api imports an attendee then deletes it; the row is gone; walls return 404",
+   "project": "kefi-attendee-delete",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-attendee-import.spec.ts",
+   "title": "Kefi organizer attendee bulk-import (#265) @api imports paid + expected attendees from JSON and CSV, dedups by email, reports errors",
+   "project": "kefi-attendee-import",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-attendee-payment.spec.ts",
+   "title": "Kefi #177 attendee Stripe-Checkout payments — reconciliation + live session reconciles paid + refunded via signed webhook, mints a live session when keyed",
+   "project": "kefi-attendee-payment",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-backoffice-approval.spec.ts",
+   "title": "Kefi back-office manual subscription override (platform-admin) platform admin grants a Stripe-less Pro plan; invalid plan + non-admin are rejected",
+   "project": "kefi-backoffice-approval",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-crew-lifecycle.spec.ts",
+   "title": "Kefi crew lifecycle — register → onboard → invite → crew login @api invited crew (organizer/ambassador/dj) each self-serve set-password via email, then log in with role + tenantId",
+   "project": "kefi-crew-lifecycle",
+   "redSince": "2026-09-18",
+   "redRuns": "5/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-critical-path.spec.ts",
+   "title": "Kefi critical path — registration → approval → payment → check-in @slow an approved registration is paid via webhook and checked in at the door",
+   "project": "kefi-critical-path",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-custom-domain.spec.ts",
+   "title": "Kefi #5 — custom domains sets a subdomain (CNAME) + an apex domain (A record), verifies + clears",
+   "project": "kefi-custom-domain",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-gdpr.spec.ts",
+   "title": "Kefi attendee GDPR export + erasure (#276) @api an attendee exports their data, then erases it (idempotently)",
+   "project": "kefi-gdpr",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-multi-event-publish.spec.ts",
+   "title": "Kefi #4 — per-event publish publishes two events at distinct slugs, edits a slug, books the named event",
+   "project": "kefi-multi-event-publish",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-organizer-pnl.spec.ts",
+   "title": "Kefi organizer dashboard / P&L (#276) @api P&L reflects paid + expected attendees and returns safe zeros for a Draft event",
+   "project": "kefi-organizer-pnl",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-pro-gates-api.spec.ts",
+   "title": "Kefi KEFI-2 — freemium gates @api (FAST, no-wizard) @api Free tenant is 403 on Pro features; a Pro grant unblocks the same calls",
+   "project": "kefi-pro-gates-api",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-registration-approval.spec.ts",
+   "title": "Kefi registration-request submit → approve / reject @api ambassador submits, organizer approves (→ attendee) + rejects; walls + 409 hold",
+   "project": "kefi-registration-approval",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "kefi/kefi-role-surfaces.spec.ts",
+   "title": "Kefi role surfaces render for their role (#276) @ui dj / media / ambassador / audit dashboards render without an error boundary",
+   "project": "kefi-role-surfaces",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (kefi-web) / backend-dev (kefi)"
+  },
+  {
+   "file": "logging/log-verification.spec.ts",
+   "title": "Log Verification @logging logs include correct ServiceName label",
+   "project": "logging",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "online-menus/menu-duplicate-names.spec.ts",
+   "title": "Menu Duplicate Names @online-menus @duplicate-names should render duplicate categories correctly in public view @critical",
+   "project": "online-menus-editor-categories",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (katalogos-web)"
+  },
+  {
+   "file": "questioner/public/survey-embed-framing.spec.ts",
+   "title": "Survey embed framing @questioner embed route is served with iframe-friendly framing headers and no answer leak",
+   "project": "questioner-public",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (erevna-web)"
+  },
+  {
+   "file": "smoke/critical-paths.spec.ts",
+   "title": "Critical Path Smoke Tests @smoke @critical template CRUD operations work end-to-end",
+   "project": "smoke",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "e2e-tester (triage)"
+  },
+  {
+   "file": "zygos/zygos-console.ui.spec.ts",
+   "title": "Zygos console @zygos-ui @ui 🔴 an operator can create a payment instruction through the console",
+   "project": "zygos-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (zygos-web)"
+  },
+  {
+   "file": "zygos/zygos-console.ui.spec.ts",
+   "title": "Zygos console @zygos-ui @ui 🔴 login lands on the console — and logout locks it again",
+   "project": "zygos-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "6/7",
+   "owner": "frontend-dev (zygos-web)"
+  },
+  {
+   "file": "zygos/zygos-form-fields.ui.spec.ts",
+   "title": "Zygos instruction form — fields @zygos-ui @ui the currency + direction dropdowns offer ONLY schema-valid options",
+   "project": "zygos-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (zygos-web)"
+  },
+  {
+   "file": "zygos/zygos-form-fields.ui.spec.ts",
+   "title": "Zygos instruction form — fields @zygos-ui @ui 🔴 all four core controls render a visible label",
+   "project": "zygos-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (zygos-web)"
+  },
+  {
+   "file": "zygos/zygos-form-fields.ui.spec.ts",
+   "title": "Zygos instruction form — fields @zygos-ui @ui 🔴 the four columns are aligned — same top, same height, same bottom edge",
+   "project": "zygos-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (zygos-web)"
+  },
+  {
+   "file": "zygos/zygos-i18n.ui.spec.ts",
+   "title": "Zygos i18n — no raw translation keys @zygos-ui @ui 🔴 \"dashboard\" renders no raw translation keys (text or a11y attributes)",
+   "project": "zygos-ui",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (zygos-web)"
+  },
+  {
+   "file": "zygos/zygos-public-surface.spec.ts",
+   "title": "Zygos public surface @zygos-api @api 🔴 the password PRINTED on the marketing site is the one the console serves",
+   "project": "zygos-api",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (zygos-web)"
+  },
+  {
+   "file": "zygos/zygos-pwa.spec.ts",
+   "title": "Zygos PWA surface @zygos-api @api 🔴 the served shell registers the service worker (app/+html.tsx reached the export)",
+   "project": "zygos-api",
+   "redSince": "2026-09-18",
+   "redRuns": "7/7",
+   "owner": "frontend-dev (zygos-web)"
+  }
+ ]
+}

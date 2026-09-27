@@ -1,0 +1,614 @@
+{
+ "capSeconds": 240,
+ "testCapSeconds": 200,
+ "splits": {
+  "zygos-ui-part1": {
+   "base": "zygos-ui",
+   "testMatch": "zygos[\\\\/]zygos-[a-h][^\\\\/]*\\.ui\\.spec\\.ts"
+  },
+  "zygos-ui-part2": {
+   "base": "zygos-ui",
+   "testMatch": "zygos[\\\\/]zygos-[i-z][^\\\\/]*\\.ui\\.spec\\.ts"
+  }
+ },
+ "targets": {
+  "staging": [
+   {
+    "seconds": 239,
+    "projects": [
+     "zygos-ui-part2",
+     "kefi-landing-parity",
+     "identity-account"
+    ]
+   },
+   {
+    "seconds": 238,
+    "projects": [
+     "zygos-api",
+     "questioner-marketing",
+     "questioner-templates"
+    ]
+   },
+   {
+    "seconds": 236,
+    "projects": [
+     "zygos-ui-part1",
+     "kefi-registration-approval",
+     "ichnos-api",
+     "prod-gate"
+    ]
+   },
+   {
+    "seconds": 238,
+    "projects": [
+     "smoke",
+     "identity-auth",
+     "agora-ui",
+     "cross-product-isolation",
+     "i18n-fleet",
+     "questioner-active",
+     "logging",
+     "questioner-answers",
+     "questioner-public",
+     "agora-api",
+     "content-api",
+     "health",
+     "monitoring",
+     "online-menus-custom-domain",
+     "a11y-public",
+     "billing-pricing",
+     "billing-subscription",
+     "content-upload",
+     "diagnostics",
+     "erevna-login-methods",
+     "ichnos-ui",
+     "katalogos-login-methods",
+     "kefi-access-links",
+     "kefi-attendee-export",
+     "kefi-crew-lifecycle",
+     "kefi-door-checkin",
+     "kefi-ledger-pnl",
+     "kefi-mark-paid",
+     "kefi-organizer-access-link-regression",
+     "kefi-public-registration",
+     "menu-styling",
+     "notifications-alerts",
+     "notifications-infra"
+    ]
+   },
+   {
+    "seconds": 70,
+    "projects": [
+     "notifications-nav",
+     "notifications-screen",
+     "online-menus-crud",
+     "online-menus-editor-categories",
+     "online-menus-editor-uploads",
+     "online-menus-public-preview",
+     "online-menus-public-viewer",
+     "sec2-logout",
+     "showcase-components",
+     "showcase-forms",
+     "showcase-visual",
+     "tenant-themes",
+     "theme-components",
+     "theme-settings"
+    ]
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "aml-api",
+     "aml-ui",
+     "digital-kin-api",
+     "digital-kin-ui"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "kefi-access-link-dead-vs-forbidden",
+     "kefi-access-link-expiry",
+     "kefi-crew-commissions-pricing",
+     "kefi-crew-link-states"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "kefi-crew-payout",
+     "kefi-email-delivery",
+     "kefi-landing-health",
+     "kefi-landing-people"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "kefi-message-template-defaults",
+     "kefi-message-templates",
+     "kefi-message-templates-crud",
+     "kefi-organizer-checkin"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "kefi-organizer-mobile",
+     "kefi-organizer-tabs",
+     "kefi-print-affordance",
+     "kefi-registration-notifications"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "kefi-registration-notifications-iphone-375",
+     "kefi-registration-notifications-iphone-390",
+     "kefi-registration-notifications-validation",
+     "kefi-ubb-mobile"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "kefi-ubb-pass-numbers",
+     "kefi-ubb-payment-to-ticket",
+     "kefi-ubb-price-parity",
+     "kefi-ubb-ticket-surface"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "kefi-ubb-tiered-pricing",
+     "logging-stress",
+     "metrics-contract",
+     "mobile-gates-agora-floor"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "mobile-gates-agora-pixel5",
+     "mobile-gates-digital-kin-floor",
+     "mobile-gates-digital-kin-pixel5",
+     "mobile-gates-erevna-floor"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "mobile-gates-erevna-pixel5",
+     "mobile-gates-ichnos-floor",
+     "mobile-gates-ichnos-pixel5",
+     "mobile-gates-katalogos-floor"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "mobile-gates-katalogos-pixel5",
+     "mobile-gates-kefi-floor",
+     "mobile-gates-kefi-pixel5",
+     "mobile-gates-nextgame-floor"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "mobile-gates-nextgame-pixel5",
+     "mobile-gates-poueni-floor",
+     "mobile-gates-poueni-pixel5",
+     "mobile-gates-zygos-floor"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "mobile-gates-zygos-pixel5",
+     "modb-api",
+     "nextgame",
+     "notifications-stress"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "security-fleet",
+     "selida-account",
+     "selida-api",
+     "ubb-picker-ipad-mini"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "ubb-picker-iphone-375",
+     "ubb-picker-iphone-390",
+     "ubb-picker-resilience-ipad-mini",
+     "ubb-picker-resilience-iphone-375"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "ubb-picker-resilience-iphone-390",
+     "ubb-promoters-ipad-mini",
+     "ubb-promoters-iphone-375",
+     "ubb-promoters-iphone-390"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "ubb-ticket-ipad-mini",
+     "ubb-ticket-iphone-375",
+     "ubb-ticket-iphone-390",
+     "ubb-ticket-privacy-375"
+    ],
+    "estimated": true
+   }
+  ],
+  "prod": [
+   {
+    "seconds": 240,
+    "projects": [
+     "erevna-login-methods",
+     "online-menus-public-viewer",
+     "content-api"
+    ]
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "katalogos-login-methods",
+     "kefi-otp-login",
+     "agora-api"
+    ]
+   },
+   {
+    "seconds": 239,
+    "projects": [
+     "kefi-lifecycle",
+     "online-menus-editor-uploads"
+    ]
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "sec2-logout",
+     "online-menus-editor-categories"
+    ]
+   },
+   {
+    "seconds": 239,
+    "projects": [
+     "zygos-ui-part2",
+     "online-menus-public-preview"
+    ]
+   },
+   {
+    "seconds": 238,
+    "projects": [
+     "kefi-free-publish",
+     "online-menus-crud"
+    ]
+   },
+   {
+    "seconds": 238,
+    "projects": [
+     "kefi-poster-passes-render",
+     "kefi-email-lifecycle"
+    ]
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "zygos-api",
+     "identity-auth",
+     "ichnos-api"
+    ]
+   },
+   {
+    "seconds": 239,
+    "projects": [
+     "zygos-ui-part1",
+     "prod-gate",
+     "a11y-public"
+    ]
+   },
+   {
+    "seconds": 239,
+    "projects": [
+     "questioner-templates",
+     "kefi-pro-gates-ui",
+     "kefi-passkey",
+     "kefi-device-pin"
+    ]
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "kefi-landing-parity",
+     "kefi-reset-revokes-devices",
+     "kefi-qr-checkin",
+     "kefi-pro-gates",
+     "smoke",
+     "questioner-marketing"
+    ]
+   },
+   {
+    "seconds": 237,
+    "projects": [
+     "questioner-security",
+     "logging",
+     "questioner-active",
+     "cross-product-isolation",
+     "i18n-fleet",
+     "menu-styling",
+     "monitoring",
+     "health",
+     "identity-account",
+     "questioner-answers",
+     "questioner-public",
+     "theme-settings",
+     "diagnostics",
+     "online-menus-custom-domain",
+     "agora-ui",
+     "billing-pricing",
+     "billing-subscription",
+     "content-upload",
+     "ichnos-ui",
+     "kefi-access-links",
+     "kefi-attendee-export",
+     "kefi-crew-lifecycle",
+     "kefi-door-checkin",
+     "kefi-ledger-pnl",
+     "kefi-mark-paid",
+     "kefi-organizer-access-link-regression",
+     "kefi-public-registration",
+     "kefi-registration-approval",
+     "notifications-alerts",
+     "notifications-infra"
+    ]
+   },
+   {
+    "seconds": 35,
+    "projects": [
+     "notifications-nav",
+     "notifications-screen",
+     "showcase-components",
+     "showcase-forms",
+     "showcase-visual",
+     "tenant-themes",
+     "theme-components"
+    ]
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "aml-api",
+     "aml-ui",
+     "digital-kin-api",
+     "digital-kin-ui"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "kefi-access-link-dead-vs-forbidden",
+     "kefi-access-link-expiry",
+     "kefi-crew-commissions-pricing",
+     "kefi-crew-link-states"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "kefi-crew-payout",
+     "kefi-email-delivery",
+     "kefi-landing-health",
+     "kefi-landing-people"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "kefi-message-template-defaults",
+     "kefi-message-templates",
+     "kefi-message-templates-crud",
+     "kefi-organizer-checkin"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "kefi-organizer-mobile",
+     "kefi-organizer-tabs",
+     "kefi-print-affordance",
+     "kefi-registration-notifications"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "kefi-registration-notifications-iphone-375",
+     "kefi-registration-notifications-iphone-390",
+     "kefi-registration-notifications-validation",
+     "kefi-ubb-mobile"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "kefi-ubb-pass-numbers",
+     "kefi-ubb-payment-to-ticket",
+     "kefi-ubb-price-parity",
+     "kefi-ubb-ticket-surface"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "kefi-ubb-tiered-pricing",
+     "logging-stress",
+     "metrics-contract",
+     "mobile-gates-agora-floor"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "mobile-gates-agora-pixel5",
+     "mobile-gates-digital-kin-floor",
+     "mobile-gates-digital-kin-pixel5",
+     "mobile-gates-erevna-floor"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "mobile-gates-erevna-pixel5",
+     "mobile-gates-ichnos-floor",
+     "mobile-gates-ichnos-pixel5",
+     "mobile-gates-katalogos-floor"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "mobile-gates-katalogos-pixel5",
+     "mobile-gates-kefi-floor",
+     "mobile-gates-kefi-pixel5",
+     "mobile-gates-nextgame-floor"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "mobile-gates-nextgame-pixel5",
+     "mobile-gates-poueni-floor",
+     "mobile-gates-poueni-pixel5",
+     "mobile-gates-zygos-floor"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "mobile-gates-zygos-pixel5",
+     "modb-api",
+     "nextgame",
+     "notifications-stress"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "security-fleet",
+     "selida-account",
+     "selida-api",
+     "ubb-picker-ipad-mini"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "ubb-picker-iphone-375",
+     "ubb-picker-iphone-390",
+     "ubb-picker-resilience-ipad-mini",
+     "ubb-picker-resilience-iphone-375"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "ubb-picker-resilience-iphone-390",
+     "ubb-promoters-ipad-mini",
+     "ubb-promoters-iphone-375",
+     "ubb-promoters-iphone-390"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 240,
+    "projects": [
+     "ubb-ticket-ipad-mini",
+     "ubb-ticket-iphone-375",
+     "ubb-ticket-iphone-390",
+     "ubb-ticket-privacy-375"
+    ],
+    "estimated": true
+   }
+  ],
+  "poueni": [
+   {
+    "seconds": 240,
+    "projects": [
+     "poueni-device-pin",
+     "poueni-canary-cleanup",
+     "poueni-live-map",
+     "poueni-passkey"
+    ]
+   },
+   {
+    "seconds": 129,
+    "projects": [
+     "poueni-password-reset",
+     "poueni-gdpr"
+    ]
+   }
+  ]
+ },
+ "source": {
+  "staging": [
+   "2026-09-18T06:38",
+   "2026-09-19T06:48",
+   "2026-09-21T06:48",
+   "2026-09-22T06:56",
+   "2026-09-23T06:53",
+   "2026-09-24T05:55",
+   "2026-09-24T19:14"
+  ],
+  "prod": [
+   "2026-09-18T05:44",
+   "2026-09-19T05:49",
+   "2026-09-20T05:50",
+   "2026-09-21T05:44",
+   "2026-09-22T05:51",
+   "2026-09-23T05:56",
+   "2026-09-23T22:55"
+  ]
+ }
+}

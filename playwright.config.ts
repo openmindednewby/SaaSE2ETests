@@ -2,6 +2,11 @@ import { defineConfig } from '@playwright/test';
 import { loadE2EEnv } from './fixtures/env-loader.js';
 import { chromiumHostResolverRules, installHostOverride } from './fixtures/host-override.js';
 import { buildProjects } from './playwright.projects.js';
+import {
+  applyScheduledMode,
+  isScheduled,
+  SCHEDULED_GLOBAL_TIMEOUT_MS,
+} from './playwright.scheduled.js';
 
 // Load environment-specific config based on E2E_TARGET (default: 'local')
 loadE2EEnv();
@@ -9,7 +14,10 @@ loadE2EEnv();
 // Build the project list AFTER loadE2EEnv() — buildProjects() reads
 // EREVNA_BASE_URL to set the per-project baseURL override for questioner
 // chunks, and that env var is only populated by the load above.
-const projects = buildProjects();
+// Scheduled runs (E2E_SCHEDULED / E2E_GROUP_INDEX): one ≤240 s group, quarantine excluded,
+// per-test cap 200 s — see playwright.scheduled.ts (TEST-5MIN-1a). Identity otherwise.
+const projects = applyScheduledMode(buildProjects());
+const scheduled = isScheduled();
 
 // Install Node-side DNS override if E2E_HOST_OVERRIDE_IP is set. This config
 // module is re-evaluated in each worker process, so the patch applies to all
@@ -67,7 +75,10 @@ export default defineConfig({
   // 1 retry in CI (was 2): the in-cluster nightly runs the full suite serially;
   // a 2nd retry on every failure roughly tripled wall time on the red portion
   // of the suite. 1 retry still absorbs transient network/timing flakes.
-  retries: process.env.CI ? 1 : 0,
+  // Scheduled runs: 0 (owner Q3, TEST-5MIN-1) — a retry-green is a flake to triage, not a pass.
+  retries: scheduled ? 0 : process.env.CI ? 1 : 0,
+  // Scheduled runs stop themselves at 270 s so the report uploads before the 330 s pod deadline.
+  globalTimeout: scheduled ? SCHEDULED_GLOBAL_TIMEOUT_MS : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: [
     // open:'never' — the default ('on-failure' outside CI) serves the report and blocks the process
@@ -79,7 +90,8 @@ export default defineConfig({
 
   use: {
     baseURL: BASE_URL,
-    trace: 'on-first-retry',
+    // on-first-retry never fires with retries 0, so scheduled runs keep the trace of every failure.
+    trace: scheduled ? 'retain-on-failure' : 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     ignoreHTTPSErrors: true,
