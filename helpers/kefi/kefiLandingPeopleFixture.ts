@@ -23,6 +23,8 @@ import {
   deleteEphemeralUser,
   type EphemeralKefiUser,
 } from './kefiKeycloakAdmin.js';
+import { completeOnboarding, forceOnboardingPlan } from './kefiOnboardingApi.js';
+import { getKefiUrls } from './kefiUrls.js';
 
 const EVENT_DAYS_AHEAD = 90;
 const PASS = { passCode: 'FULL', passLabel: 'Full Pass', priceEur: 0 } as const;
@@ -63,6 +65,14 @@ async function addUser(
   });
 }
 
+/** Wizard Finish over the API, keeping the tenant on `pro` (the completion handler re-maps the plan). */
+async function finishOnboardingAsPro(admin: KefiAdminClient, tenant: ApiTenantHandle): Promise<void> {
+  const { apiUrl } = getKefiUrls();
+  const bearer = await admin.getTenantOwnerBearer({ email: tenant.ownerCreds.ownerEmail, password: tenant.ownerCreds.ownerPassword });
+  await forceOnboardingPlan({ apiUrl, bearer, code: 'pro' });
+  await completeOnboarding({ apiUrl, bearer });
+}
+
 export async function provisionLandingPeopleFixture(
   admin: KefiAdminClient,
 ): Promise<LandingPeopleFixture> {
@@ -73,6 +83,9 @@ export async function provisionLandingPeopleFixture(
   for (const t of [tenantA, tenantB]) {
     if (!t.slug.startsWith('e2c-')) throw new Error(`[kefiLandingPeopleFixture] refusing non-canary tenant '${t.slug}'`);
   }
+  // AC-07 publishes tenant A: finish its onboarding like a real organizer's wizard
+  // would, or kefi-api's discovery list omits it and the publish build drops it (T20).
+  await finishOnboardingAsPro(admin, tenantA);
   const organizerA = await addUser(tenantA, 'organizer', 'Organizer');
   const nonOrganizerA = await addUser(tenantA, 'ambassador', 'Ambassador');
   const organizerB = await addUser(tenantB, 'organizer', 'OrganizerB');
