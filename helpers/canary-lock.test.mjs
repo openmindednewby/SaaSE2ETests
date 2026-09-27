@@ -2,11 +2,19 @@
 // Run: node --test helpers/canary-lock.test.mjs   (Node >= 22.18 strips the .ts types natively)
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { _internals, decideOnHeldLock, lockTtlMs } from './canary-lock.ts';
+import {
+  INDEXED_LOCK_TTL_MS,
+  INDEXED_MAX_WAIT_MS,
+  LOCK_TTL_MS,
+  decideOnHeldLock,
+  deletePreconditionBody,
+  lockTtlMs,
+  parseLockJson,
+  resolveTakeover,
+} from './canary-lock-policy.ts';
 
 const T0 = Date.parse('2026-09-27T08:00:00Z');
 const at = (ms) => new Date(T0 + ms).toISOString();
-const { LOCK_TTL_MS, INDEXED_LOCK_TTL_MS, INDEXED_MAX_WAIT_MS } = _internals;
 
 test('an indexed pod writes the short TTL, any other run the 30 min one', () => {
   assert.equal(lockTtlMs({ E2E_GROUP_INDEX: '3' }), INDEXED_LOCK_TTL_MS);
@@ -43,4 +51,54 @@ test('a non-indexed acquirer never waits, and a garbage startedAt is reclaimed',
   assert.equal(d.action, 'refuse');
   assert.deepEqual(decideOnHeldLock('not-a-date', undefined, T0, true), { action: 'reclaim' });
   assert.deepEqual(decideOnHeldLock(at(0), 'abc', T0 + LOCK_TTL_MS, true), { action: 'reclaim' });
+});
+
+// --- compare-and-delete race (code review, TEST-5MIN-1b) ---
+const soonStale = { runId: 'A', startedAt: at(0), ttlMs: String(INDEXED_LOCK_TTL_MS), uid: 'u-A', resourceVersion: '7' };
+const freshLong = { runId: 'B', startedAt: at(INDEXED_LOCK_TTL_MS - 5_000), ttlMs: String(LOCK_TTL_MS), uid: 'u-B', resourceVersion: '9' };
+
+function scripted(reads) {
+  let clock = T0 + INDEXED_LOCK_TTL_MS - 10_000;
+  const sleeps = [];
+  const queue = [...reads];
+  return {
+    read: () => queue.shift() ?? null,
+    now: () => clock,
+    sleep: (ms) => { sleeps.push(ms); clock += ms; },
+    sleeps,
+  };
+}
+
+test('RACE: holder released during the wait and a fresh 30 min lock was taken -> refuse, never reclaim', () => {
+  const s = scripted([soonStale, freshLong]);
+  const plan = resolveTakeover(s.read, s.now, s.sleep, true);
+  assert.deepEqual(s.sleeps, [10_000]);
+  assert.equal(plan.action, 'refuse');
+  assert.equal(plan.held.runId, 'B');
+});
+
+test('after the wait the SAME stale lock is reclaimed, carrying its uid/resourceVersion', () => {
+  const s = scripted([soonStale, soonStale]);
+  const plan = resolveTakeover(s.read, s.now, s.sleep, true);
+  assert.equal(plan.action, 'reclaim');
+  assert.equal(plan.held.resourceVersion, '7');
+});
+
+test('lock gone after the wait -> create; at most one wait', () => {
+  assert.deepEqual(resolveTakeover(scripted([soonStale]).read, scripted([]).now, () => {}, true), { action: 'create' });
+  const s = scripted([soonStale, { ...soonStale, runId: 'C', startedAt: at(20_000) }]);
+  const plan = resolveTakeover(s.read, s.now, s.sleep, true);
+  assert.equal(s.sleeps.length, 1);
+  assert.equal(plan.action, 'refuse');
+});
+
+test('the delete is conditional on exactly the lock judged stale', () => {
+  const body = JSON.parse(deletePreconditionBody(soonStale));
+  assert.deepEqual(body, { kind: 'DeleteOptions', apiVersion: 'v1', preconditions: { uid: 'u-A', resourceVersion: '7' } });
+});
+
+test('parseLockJson reads data + metadata from kubectl -o json', () => {
+  const cm = { metadata: { uid: 'u', resourceVersion: '3' }, data: { runId: 'r', startedAt: at(0), runner: 'h', ttlMs: '330000' } };
+  assert.deepEqual(parseLockJson(JSON.stringify(cm)), { runId: 'r', startedAt: at(0), runner: 'h', ttlMs: '330000', uid: 'u', resourceVersion: '3' });
+  assert.equal(parseLockJson(''), null);
 });

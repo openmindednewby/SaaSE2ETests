@@ -37,46 +37,20 @@
 import { spawnSync } from 'node:child_process';
 import * as os from 'node:os';
 
-const LOCK_TTL_MS = 30 * 60 * 1000; // 30 min — long runs (Tilt, chunked nightly) and locks without ttlMs.
-/**
- * Indexed runs (TEST-5MIN-1b "Indexed Jobs per target", one group per pod): the pod's
- * activeDeadlineSeconds is 330 s and `startedAt` is written after the pod started, so a holder
- * older than 330 s is dead. Without this a pod killed before its teardown blocked the next ~6
- * groups of the Job for 30 min.
- */
-const INDEXED_LOCK_TTL_MS = 330_000;
-/** An indexed acquirer waits (instead of failing its group) when the held lock expires this soon. */
-const INDEXED_MAX_WAIT_MS = 60_000;
+import {
+  deletePreconditionBody,
+  type HeldLock,
+  INDEXED_LOCK_TTL_MS,
+  INDEXED_MAX_WAIT_MS,
+  LOCK_TTL_MS,
+  lockTtlMs,
+  parseLockJson,
+  resolveTakeover,
+} from './canary-lock-policy.js';
+
+export * from './canary-lock-policy.js';
+
 const DEFAULT_NAMESPACE = 'dloizides';
-
-/** TTL this run writes into its lock: short for an Indexed-Job pod, 30 min otherwise. */
-export function lockTtlMs(env: NodeJS.ProcessEnv = process.env): number {
-  return env.E2E_GROUP_INDEX ? INDEXED_LOCK_TTL_MS : LOCK_TTL_MS;
-}
-
-export type LockDecision = { action: 'reclaim' } | { action: 'wait'; ms: number } | { action: 'refuse'; ageMs: number };
-
-/**
- * What to do about an existing lock. The HOLDER's own ttlMs decides staleness (a short indexed
- * acquirer must never reclaim a long chunked run's lock); locks written before ttlMs existed get
- * the 30 min default.
- */
-export function decideOnHeldLock(
-  startedAt: string | undefined,
-  heldTtlMs: string | undefined,
-  nowMs: number,
-  acquirerIndexed: boolean,
-): LockDecision {
-  const startedMs = Date.parse(startedAt ?? '');
-  if (Number.isNaN(startedMs)) return { action: 'reclaim' };
-  const parsedTtl = Number(heldTtlMs);
-  const ttl = Number.isFinite(parsedTtl) && parsedTtl > 0 ? parsedTtl : LOCK_TTL_MS;
-  const ageMs = nowMs - startedMs;
-  const remaining = ttl - ageMs;
-  if (remaining <= 0) return { action: 'reclaim' };
-  if (acquirerIndexed && remaining <= INDEXED_MAX_WAIT_MS) return { action: 'wait', ms: remaining };
-  return { action: 'refuse', ageMs };
-}
 
 /** Synchronous sleep — acquireCanaryLock is sync (called from globalSetup). */
 function sleepSync(ms: number): void {
@@ -151,7 +125,7 @@ export function acquireCanaryLock(runId: string): void {
   // 1. Read any existing lock.
   const get = runKubectl(k, [
     'get', 'configmap', name, '-n', ns,
-    '-o', 'jsonpath={.data.startedAt}{"\\n"}{.data.runId}{"\\n"}{.data.runner}{"\\n"}{.data.ttlMs}',
+    '-o', 'json',
   ]);
 
   if (get.spawnFailed) {
@@ -165,33 +139,55 @@ export function acquireCanaryLock(runId: string): void {
   }
 
   if (get.ok && get.stdout.length > 0) {
-    // Lock exists. stdout = "startedAt\nrunId\nrunner".
-    const [startedAt, heldRunId, heldRunner, heldTtl] = get.stdout.split('\n');
-    const decision = decideOnHeldLock(startedAt, heldTtl, Date.now(), Boolean(process.env.E2E_GROUP_INDEX));
+    // Lock exists. Re-reads after a wait go through the same parser; a re-read error refuses.
+    const reread = (): HeldLock | null => {
+      const r = runKubectl(k, ['get', 'configmap', name, '-n', ns, '-o', 'json']);
+      if (r.ok) return parseLockJson(r.stdout);
+      if (/not\s*found/i.test(r.stderr)) return null;
+      throw new Error(`[canary-lock] REFUSING TO START — lock re-read failed: ${r.stderr}\n`);
+    };
+    let first = true;
+    const read = (): HeldLock | null => {
+      if (!first) return reread();
+      first = false;
+      return parseLockJson(get.stdout);
+    };
+    const plan = resolveTakeover(read, Date.now, ms => {
+      process.stdout.write(`[canary-lock] held lock expires in ${ms} ms — waiting, then re-reading it.\n`);
+      sleepSync(ms);
+    }, Boolean(process.env.E2E_GROUP_INDEX));
 
-    if (decision.action === 'wait') {
-      process.stdout.write(`[canary-lock] held lock expires in ${decision.ms} ms — waiting, then reclaiming.\n`);
-      sleepSync(decision.ms);
-    } else if (decision.action === 'refuse') {
-      const ageMin = Math.round(decision.ageMs / 60_000);
+    if (plan.action === 'refuse') {
+      const ageMin = Math.round(plan.ageMs / 60_000);
       throw new Error(
         `[canary-lock] REFUSING TO START — a canary run is already in progress against ` +
           `'${process.env.E2E_TARGET}'.\n` +
           `  lock     = ${name} (namespace ${ns})\n` +
-          `  held by  = ${heldRunner ?? '(unknown)'} runId=${heldRunId ?? '(unknown)'}\n` +
-          `  started  = ${startedAt} (~${ageMin} min ago)\n` +
+          `  held by  = ${plan.held.runner ?? '(unknown)'} runId=${plan.held.runId ?? '(unknown)'}\n` +
+          `  started  = ${plan.held.startedAt} (~${ageMin} min ago)\n` +
           `  Wait for it to finish, or if it is genuinely stuck delete the lock:\n` +
           `    kubectl delete configmap ${name} -n ${ns}\n`,
       );
     }
 
-    // Stale lock — abandoned run. Reclaim it.
-    process.stdout.write(
-      `[canary-lock] found a STALE lock (started ${startedAt}, ttlMs=${heldTtl || LOCK_TTL_MS}) — reclaiming.\n`,
-    );
-    const del = runKubectl(k, ['delete', 'configmap', name, '-n', ns, '--ignore-not-found']);
-    if (!del.ok) {
-      process.stderr.write(`[canary-lock] WARN: failed to delete stale lock: ${del.stderr}\n`);
+    if (plan.action === 'reclaim') {
+      // Stale lock — abandoned run. COMPARE-AND-DELETE: the uid + resourceVersion precondition
+      // makes the API server refuse (409) if the lock changed since we read it, so a fresh lock
+      // another run took meanwhile is never deleted.
+      process.stdout.write(
+        `[canary-lock] found a STALE lock (runId=${plan.held.runId}, started ${plan.held.startedAt}, ` +
+          `ttlMs=${plan.held.ttlMs || LOCK_TTL_MS}) — reclaiming.\n`,
+      );
+      const del = runKubectl(
+        k,
+        ['delete', '--raw', `/api/v1/namespaces/${ns}/configmaps/${name}`, '-f', '-'],
+        deletePreconditionBody(plan.held),
+      );
+      if (!del.ok && !/not\s*found/i.test(del.stderr))
+        throw new Error(
+          `[canary-lock] REFUSING TO START — could not compare-and-delete the stale lock ` +
+            `(it changed since it was read, or the delete failed): ${del.stderr}\n`,
+        );
     }
   } else if (!get.ok && !/not\s*found/i.test(get.stderr)) {
     // get failed for a reason other than "the ConfigMap doesn't exist"
