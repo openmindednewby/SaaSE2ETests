@@ -1,6 +1,6 @@
 /**
  * Scheduled-run mode — TEST-5MIN-1a "Quarantine + no retries + ≤240 s groups"
- * (BaseClient/docs/Tasks/IN_PROGRESS/TEST-5MIN-1-test-runs-under-5-minutes.md, owner decisions Q1-Q4).
+ * (BaseClient/docs/Tasks/IN_PROGRESS/e2etests/TEST-5MIN-1-test-runs-under-5-minutes/TEST-5MIN-1-test-runs-under-5-minutes.md, owner decisions Q1-Q4).
  *
  * Every scheduled (CronJob / Indexed Job) run is ONE pod of ≤ 300 s. This module turns the full
  * project list into what that pod runs:

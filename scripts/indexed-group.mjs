@@ -1,6 +1,6 @@
 /**
  * Indexed-Job group resolution — TEST-5MIN-1b "Indexed Jobs per target"
- * (BaseClient/docs/Tasks/IN_PROGRESS/TEST-5MIN-1-test-runs-under-5-minutes.md).
+ * (BaseClient/docs/Tasks/IN_PROGRESS/e2etests/TEST-5MIN-1-test-runs-under-5-minutes/TEST-5MIN-1-test-runs-under-5-minutes.md).
  *
  * A k8s Indexed Job sets JOB_COMPLETION_INDEX on every pod. This module maps it to one group of
  * scheduled/scheduled-groups.json for a target. Pure (no fs, no process) so it is unit-tested in
