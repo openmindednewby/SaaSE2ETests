@@ -36,7 +36,7 @@ import {
   teardownLandingPeopleFixture,
   type LandingPeopleFixture,
 } from '../../helpers/kefi/kefiLandingPeopleFixture.js';
-import { tenantSubdomainUrl } from '../../helpers/kefi/kefiUrls.js';
+import { tenantPathUrl } from '../../helpers/kefi/kefiUrls.js';
 import { isRemoteTarget } from '../../helpers/target.js';
 
 const PUBLISH_TEST_TIMEOUT_MS = 600_000;
@@ -165,7 +165,9 @@ test.describe('KEFI-PEOPLE-1 organizer people editor — landing-config PUT', ()
 
   // Given a person saved with an uploaded photo (KEFI_LANDING_UPLOAD_PATH),
   // When POST publish and wait for Succeeded (admin.publishLanding + poll),
-  // Then the live tenant HTML (tenantSubdomainUrl(slug)) contains the person's name and photo URL.
+  // Then the live tenant HTML (tenantPathUrl(slug) = app.kefi.dloizides.com/t/<slug>/, owner
+  // decision in the spec doc, BaseClient 531e0c0: an admin-provisioned tenant has no subdomain
+  // Ingress) contains the person's name and photo URL.
   test('AC-07 after publish the live tenant site shows the person with the uploaded photo', { tag: '@publish' }, async ({ request, browser }) => {
     test.setTimeout(PUBLISH_TEST_TIMEOUT_MS);
     const { tenantA, organizerA } = must();
@@ -187,7 +189,7 @@ test.describe('KEFI-PEOPLE-1 organizer people editor — landing-config PUT', ()
     expect(done.status, 'publish job should succeed').toBe('Succeeded');
 
     await expect(async () => {
-      const html = await (await request.get(`${tenantSubdomainUrl(tenantA.slug)}/?cb=${Date.now()}`)).text();
+      const html = await (await request.get(`${tenantPathUrl(tenantA.slug)}?cb=${Date.now()}`)).text();
       expect(html, 'live tenant HTML should contain the person name').toContain(name);
       expect(html, 'live tenant HTML should contain the uploaded photo URL').toContain(url);
     }).toPass({ timeout: 120_000 });

@@ -52,6 +52,16 @@ export function getKefiUrls(): KefiUrls {
 }
 
 /** Public landing host for `{slug}.kefi.dloizides.com` (Phase C use). */
+/**
+ * The published tenant page under the kefi-web host: `<KEFI_WEB_URL>/t/<slug>/`. Every
+ * published tenant is built into this path; a per-tenant subdomain additionally needs its
+ * own Ingress + cert, which only signup-provisioned tenants get (KEFI-PEOPLE-1 AC-07).
+ */
+export function tenantPathUrl(slug: string): string {
+  const { webUrl } = getKefiUrls();
+  return `${webUrl.replace(/\/+$/, '')}/t/${encodeURIComponent(slug)}/`;
+}
+
 export function tenantSubdomainUrl(slug: string): string {
   const { marketingUrl } = getKefiUrls();
   // KEFI_MARKETING_URL is e.g. https://kefi.dloizides.com — the per-tenant
