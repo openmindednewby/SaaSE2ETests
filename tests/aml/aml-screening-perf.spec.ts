@@ -20,6 +20,8 @@
 //
 // ADVERSE MEDIA IS OBSERVED, NOT ASSUMED: every row records the served adverseMediaStatus; the ON test
 // fails unless every sample reports 'Ok', the OFF test fails if any does.
+// ZERO-HIT NAMES are 'Unavailable' ("index coverage incomplete", am-coverage-reason.ts), not 'Ok' (Q20).
+// Warm-ups accept only that reason; the zero-hit test pins it, never 'Ok'.
 //
 // NOT COVERED: the request is hand-assembled, so this tests the server path only, never the aml-v2
 // client's request shape; client times include WAN RTT from the E2E host; totalMs is the server's own
@@ -30,6 +32,15 @@ import { setTimeout as pause } from 'node:timers/promises';
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { AML_API_KEY, AML_API_URL, amlReachable } from './aml-helpers.js';
 import { surfaceOnKeyOrSkip } from './am-hit-helpers.js';
+import {
+  AM_UNAVAILABLE,
+  COVERAGE_INCOMPLETE,
+  ZERO_HIT_SUBJECTS,
+  expectWarmUpReason,
+  reasonFor,
+  zeroHitLine,
+  type ScreenBody,
+} from './am-coverage-reason.js';
 import { quantile } from './fuzzy-measure.js';
 
 const SCREEN_PATH = '/v1/screenings/check';
@@ -70,7 +81,7 @@ const SUBJECTS: readonly string[] = [
   'Ramzan Kadyrov',
   'Eleni Papadopoulou',
 ];
-const WARM_UP_SUBJECT = 'Warm Up Subject';
+const [WARM_UP_SUBJECT] = ZERO_HIT_SUBJECTS;
 
 interface Sample {
   readonly subject: string;
@@ -79,6 +90,8 @@ interface Sample {
   readonly serverMs: number | null;
   readonly status: number;
   readonly adverseMediaStatus: string;
+  /** For 'Unavailable' only: COVERAGE_INCOMPLETE, or what the response shows instead. */
+  readonly unavailableReason: string | null;
   readonly retried: boolean;
 }
 
@@ -88,11 +101,6 @@ interface Run {
   readonly adverseMedia: boolean;
   readonly apiKey: string;
   readonly label: string;
-}
-
-interface ScreenBody {
-  adverseMediaStatus?: string | null;
-  diagnostics?: { totalMs?: number } | null;
 }
 
 /** The samples ARE the deliverable, so they go to the run log. */
@@ -120,18 +128,21 @@ async function timeOne(request: APIRequestContext, subject: string, run: Run): P
     const status = res.status();
     const body = status === CREATED ? ((await res.json()) as ScreenBody) : null;
     const total = body?.diagnostics?.totalMs;
+    const amStatus = body?.adverseMediaStatus?.trim() || '(none)';
     return {
       subject,
       clientMs,
       serverMs: typeof total === 'number' ? total : null,
       status,
-      adverseMediaStatus: body?.adverseMediaStatus?.trim() || '(none)',
+      adverseMediaStatus: amStatus,
+      unavailableReason: reasonFor(body, amStatus),
       retryAfter: res.headers()['retry-after'],
     };
   } catch (error) {
     const clientMs = Math.round(performance.now() - started);
     const [reason] = (error as Error).message.split(/\r?\n/);
-    return { subject, clientMs, serverMs: null, status: NO_RESPONSE, adverseMediaStatus: `(no response: ${reason})` };
+    const adverseMediaStatus = `(no response: ${reason})`;
+    return { subject, clientMs, serverMs: null, status: NO_RESPONSE, adverseMediaStatus, unavailableReason: null };
   }
 }
 
@@ -151,14 +162,16 @@ function describeSample(sample: Sample): string {
       ? 'server n/a'
       : `server ${sample.serverMs} ms, client-server ${sample.clientMs - sample.serverMs} ms`;
   const retried = sample.retried ? ' (after one 429 retry)' : '';
-  return `${sample.subject}: client ${sample.clientMs} ms, ${server}, HTTP ${sample.status} am=${sample.adverseMediaStatus}${retried}`;
+  const why = sample.unavailableReason ? ` (${sample.unavailableReason})` : '';
+  return `${sample.subject}: client ${sample.clientMs} ms, ${server}, HTTP ${sample.status} am=${sample.adverseMediaStatus}${why}${retried}`;
 }
 
 /** Untimed warm-ups on the same context; the first one's client time is the cold-request annotation. */
 async function warmUp(request: APIRequestContext, run: Run): Promise<void> {
   for (let index = 1; index <= WARM_UPS; index += 1) {
     const sample = await screen(request, WARM_UP_SUBJECT, run);
-    report(`${run.label} warm-up #${index} (not gated) ${describeSample(sample)}`);
+    report(`${run.label} warm-up #${index} (timing not gated) ${describeSample(sample)}`);
+    expectWarmUpReason(sample.adverseMediaStatus, sample.unavailableReason, `${run.label} warm-up #${index}`);
     if (index === 1)
       test.info().annotations.push({
         type: 'screen-perf-cold',
@@ -263,5 +276,23 @@ test.describe('SCREEN-PERF-1 screening latency on staging @aml-api', () => {
       .map(sample => `${sample.subject}=${sample.adverseMediaStatus}`);
     expect(skipped, `adverseMedia:true was sent but the stage did not report '${AM_RAN}'`).toEqual([]);
     expectWithinCeilings(p95, { server: SERVER_P95_AM_MS, client: CLIENT_P95_AM_MS }, label);
+  });
+
+  test('SCREEN-PERF-1 zero-hit: a name with no articles is Unavailable (index coverage incomplete), never Ok', async ({
+    request,
+  }) => {
+    // 'Ok' here is a false clean pass over a window short of the retention start. Revisit when the backfill reaches it.
+    const run: Run = { adverseMedia: true, apiKey: surfaceOnKeyOrSkip(), label: 'AM ZERO-HIT' };
+    const lines: string[] = [];
+    for (const subject of ZERO_HIT_SUBJECTS) {
+      const sample = await screen(request, subject, run);
+      report(`${run.label} ${describeSample(sample)}`);
+      lines.push(zeroHitLine(subject, sample.status, sample.adverseMediaStatus, sample.unavailableReason));
+      await pause(SAMPLE_SPACING_MS);
+    }
+    expect(
+      lines,
+      `zero-hit names must report ${AM_UNAVAILABLE} with "${COVERAGE_INCOMPLETE}", never '${AM_RAN}' (a false clean pass)`,
+    ).toEqual(ZERO_HIT_SUBJECTS.map(subject => zeroHitLine(subject, CREATED, AM_UNAVAILABLE, COVERAGE_INCOMPLETE)));
   });
 });
