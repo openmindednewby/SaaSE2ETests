@@ -44,6 +44,7 @@ import {
   type OrganizerTabKey,
 } from '../../pages/kefi/KefiOrganizerTabsPage.js';
 import { isRemoteTarget } from '../../helpers/target.js';
+import { bffLogin, proofOrganizer } from '../../helpers/kefi/kefiBrowserLogin.js';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -57,42 +58,6 @@ const MENU_TRIGGER = 'organizer-menu';
 const SUBPIXEL = 1;
 /** Narrow-phone secondary viewport (item 6). */
 const NARROW = { width: 360, height: 740 };
-
-/** Resolve the proof organizer credentials (sanctioned test org by default). */
-function proofOrganizer(): { username: string; password: string } {
-  return {
-    username: process.env.KEFI_PROOF_ORG_USERNAME ?? process.env.KEFI_TEST_USERNAME ?? '',
-    password: process.env.KEFI_PROOF_ORG_PASSWORD ?? process.env.KEFI_TEST_PASSWORD ?? '',
-  };
-}
-
-/**
- * Same-origin `/bff/login` POST — identical to what the SPA password tab sends,
- * with no form interaction. Sets the `__Host-bff-kefi` session cookie. Throws
- * with the status + body so a bad credential is unmistakable.
- */
-async function bffLogin(page: Page, creds: { username: string; password: string }): Promise<void> {
-  const result = await page.evaluate(async (c: { username: string; password: string }) => {
-    const res = await fetch('/bff/login', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json', 'X-BFF-Csrf': '1' },
-      body: JSON.stringify({ username: c.username, password: c.password }),
-    });
-    let body = '';
-    try {
-      body = await res.text();
-    } catch {
-      // no body
-    }
-    return { status: res.status, body };
-  }, creds);
-  if (result.status !== 200) {
-    throw new Error(
-      `bffLogin: POST /bff/login → ${result.status} for '${creds.username}': ${result.body.slice(0, 200)}`,
-    );
-  }
-}
 
 /** Horizontal document overflow in px (positive ⇒ the page scrolls sideways). */
 function overflowPx(page: Page): Promise<number> {

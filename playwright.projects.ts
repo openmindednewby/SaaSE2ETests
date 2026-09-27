@@ -842,6 +842,24 @@ export function buildProjects(): ProjectConfig {
       use: EVENT_OPS_MOBILE,
     },
     {
+      // KEFI-LANDING-NAV-1 "Landing editor menu item" + KEFI-LIVE-LINK-1 "View live
+      // site after save": authenticated READ-ONLY sighting of /organizer ->
+      // /organizer/landing -> Back, at the 360x640 floor descriptor and at 1280x800.
+      // One sign-in per project (sanctioned test organizer, env creds only).
+      name: 'kefi-landing-sighting-360',
+      workers: 1,
+      timeout: 180_000,
+      testMatch: /kefi-mobile-review\/kefi-landing-sighting\.spec\.ts/,
+      use: { ...MOBILE_FLOOR, navigationTimeout: 45_000, actionTimeout: 15_000 },
+    },
+    {
+      name: 'kefi-landing-sighting-1280',
+      workers: 1,
+      timeout: 180_000,
+      testMatch: /kefi-mobile-review\/kefi-landing-sighting\.spec\.ts/,
+      use: { ...CHROME, viewport: { width: 1280, height: 800 }, navigationTimeout: 45_000, actionTimeout: 15_000 },
+    },
+    {
       // Kefi ORGANIZER dashboard at PHONE width — the collapsed section-menu
       // (shared ui-layout Tabs below 768dp → single caret trigger) + card-stacked
       // DataTables (shared ui-tables below 640dp), inline passes pricing, the door
