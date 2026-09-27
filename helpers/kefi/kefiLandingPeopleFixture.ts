@@ -69,6 +69,10 @@ export async function provisionLandingPeopleFixture(
   const tenantInput = { admin, eventDaysAhead: EVENT_DAYS_AHEAD, eventStatus: 'Published', ...PASS } as const;
   const tenantA = await provisionApiTenantWithEvent(tenantInput);
   const tenantB = await provisionApiTenantWithEvent(tenantInput);
+  // Runs against PROD (owner decision, KEFI-PEOPLE-1): refuse anything but a throwaway canary.
+  for (const t of [tenantA, tenantB]) {
+    if (!t.slug.startsWith('e2c-')) throw new Error(`[kefiLandingPeopleFixture] refusing non-canary tenant '${t.slug}'`);
+  }
   const organizerA = await addUser(tenantA, 'organizer', 'Organizer');
   const nonOrganizerA = await addUser(tenantA, 'ambassador', 'Ambassador');
   const organizerB = await addUser(tenantB, 'organizer', 'OrganizerB');

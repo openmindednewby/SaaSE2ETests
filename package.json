@@ -103,6 +103,8 @@
     "test:kefi-free-publish": "cross-env SHELL=/bin/bash playwright test tests/kefi --project=kefi-free-publish",
     "test:kefi-free-publish:staging": "cross-env SHELL=/bin/bash E2E_TARGET=staging playwright test tests/kefi --project=kefi-free-publish",
     "test:kefi-free-publish:prod": "cross-env SHELL=/bin/bash E2E_TARGET=prod playwright test tests/kefi --project=kefi-free-publish",
+    "test:kefi-landing-people:prod": "cross-env SHELL=/bin/bash E2E_TARGET=prod playwright test tests/kefi --project=kefi-landing-people --grep-invert @publish",
+    "test:kefi-landing-people:publish": "cross-env SHELL=/bin/bash E2E_TARGET=prod playwright test tests/kefi --project=kefi-landing-people --grep @publish",
     "test:kefi-email-lifecycle": "cross-env SHELL=/bin/bash playwright test tests/kefi --project=kefi-email-lifecycle",
     "test:kefi-email-lifecycle:staging": "cross-env SHELL=/bin/bash E2E_TARGET=staging playwright test tests/kefi --project=kefi-email-lifecycle",
     "test:kefi-email-lifecycle:prod": "cross-env SHELL=/bin/bash E2E_TARGET=prod playwright test tests/kefi --project=kefi-email-lifecycle",
