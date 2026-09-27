@@ -112,7 +112,7 @@ export default defineConfig({
   },
 
   // Canary lifecycle wiring (Phase 2 — see
-  // BaseClient/docs/Tasks/IN_PROGRESS/phase-2-e2e-lifecycle-wiring.md).
+  // BaseClient/docs/Tasks/COMPLETED/phase-2-e2e-lifecycle-wiring.md).
   // For staging/prod targets we mint a per-invocation run UUID, prefix every
   // created entity name with `e2ec-{runId8}-`, and sweep all 6 services'
   // /api/v1/internal/canary-cleanup endpoints in teardown. For local target

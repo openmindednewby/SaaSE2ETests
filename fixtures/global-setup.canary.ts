@@ -2,7 +2,7 @@
  * Canary global-setup — runs when `E2E_TARGET in {staging, prod}` (wired up
  * by `playwright.config.ts`).
  *
- * Responsibilities (see `BaseClient/docs/Tasks/IN_PROGRESS/phase-2-canary-infrastructure.md`
+ * Responsibilities (see `BaseClient/docs/Tasks/COMPLETED/phase-2-canary-infrastructure.md`
  * "E2E side" section + `phase-2-e2e-lifecycle-wiring.md`):
  *
  *   1. Generate a per-invocation run UUID and expose it via process.env so

@@ -1,7 +1,7 @@
 /**
  * Canary run lock — the leader-election ConfigMap from the parent design's
  * "Concurrent-run handling" section (Phase 4 of the e2e-multi-environment
- * effort, see `BaseClient/docs/Tasks/IN_PROGRESS/phase-4-staging-k8s-job.md`).
+ * effort, see `BaseClient/docs/Tasks/COMPLETED/phase-4-staging-k8s-job.md`).
  *
  * WHY
  * Two simultaneous canary runs against the same environment use different

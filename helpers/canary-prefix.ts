@@ -1,6 +1,6 @@
 /**
  * Canary-prefix helpers — the E2E side of the Phase 2 canary infrastructure
- * (see `BaseClient/docs/Tasks/IN_PROGRESS/phase-2-canary-infrastructure.md`).
+ * (see `BaseClient/docs/Tasks/COMPLETED/phase-2-canary-infrastructure.md`).
  *
  * When running against staging/prod, the canary `global-setup.canary.ts` sets
  * the following env vars at process start:

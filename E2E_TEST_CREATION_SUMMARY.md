@@ -71,7 +71,7 @@ Created comprehensive E2E test suite for the Online Menu Management feature, cov
    - TestIds reference
    - Future enhancement ideas
 
-6. **BaseClient/docs/Tasks/IN_PROGRESS/e2e-tests-online-menu-management.md**
+6. **BaseClient/docs/Tasks/COMPLETED/e2e-tests-online-menu-management.md**
    - Task tracking document
    - Implementation plan
    - Success criteria

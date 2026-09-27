@@ -95,7 +95,7 @@ test.describe('Cross-Realm Rejection — the wall holds @cross-product-isolation
   // (`["OnlineMenu", "questioner"]`), so on every non-Development environment
   // a legacy `OnlineMenu` token is now correctly rejected with 401.
   //
-  // The product split (see BaseClient/docs/Tasks/IN_PROGRESS/product-split-roadmap.md)
+  // The product split (see BaseClient/docs/Tasks/COMPLETED/product-split-roadmap.md)
   // is deliberately retiring the legacy `OnlineMenu` realm. A spec asserting
   // legacy cross-realm acceptance is testing behaviour we are removing on
   // purpose — keeping it would be a false regression signal on staging+prod.

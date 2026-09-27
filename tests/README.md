@@ -104,7 +104,7 @@ E2E_TARGET=prod npx playwright test tests/cross-product-isolation --workers=1
 
 ## Known-failing tests (currently skipped with `@known-bug-*` tags)
 
-See **`BaseClient/docs/Tasks/IN_PROGRESS/online-menus-e2e-known-failures-2026-05-17.md`** for the tracking doc — 10 specs in 4 tiers, hypotheses + how to re-enable.
+See **`BaseClient/docs/Tasks/COMPLETED/online-menus-e2e-known-failures-2026-05-17.md`** for the tracking doc — 10 specs in 4 tiers, hypotheses + how to re-enable.
 
 Find them in code:
 ```bash

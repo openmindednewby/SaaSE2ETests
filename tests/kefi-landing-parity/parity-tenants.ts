@@ -6,7 +6,7 @@
  * LandingConfigJson). The suite asserts the kefi render matches the
  * standalone within the configured tolerances.
  *
- * See `BaseClient/docs/Tasks/IN_PROGRESS/kefi-landing-parity-triage-2026-05-27.md`
+ * See `BaseClient/docs/Tasks/COMPLETED/_archived-2026-09-27/kefi-landing-parity-triage-2026-05-27.md`
  * for the rationale + initial gap list. Each `expectedDifferences` entry
  * here is a KNOWN gap with a planned fix — the harness records the gap
  * rather than silently passing.
