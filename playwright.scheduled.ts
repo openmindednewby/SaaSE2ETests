@@ -7,6 +7,8 @@
  *   - E2E_GROUP_INDEX=<n>   keep only group n of scheduled/scheduled-groups.json for the target
  *                           (+ the projects those depend on). Maps 1:1 to a k8s Indexed Job's
  *                           JOB_COMPLETION_INDEX. Setting it implies scheduled mode.
+ *   - E2E_GROUP_INDEX=plant only the planted 400 s control (scheduled/plant, TEST-5MIN-1b), which
+ *                           is in no numbered group; its slow test also needs E2E_PLANT_SLOW=1.
  *   - E2E_GROUP_TARGET      staging | prod | poueni (defaults to E2E_TARGET).
  *   - E2E_SCHEDULED=1       retries 0, per-test cap 200 s, global run limit 270 s, quarantined
  *                           tests excluded. Also implied by E2E_GROUP_INDEX.
@@ -24,6 +26,14 @@ export const SCHEDULED_TEST_TIMEOUT_MS = 200_000;
 export const SCHEDULED_GLOBAL_TIMEOUT_MS = 270_000;
 
 const SCHEDULED_DIR = path.join(__dirname, 'scheduled');
+
+/** Keep in sync with PLANT_INDEX / PLANT_PROJECT in scripts/indexed-group.mjs. */
+export const PLANT_GROUP_INDEX = 'plant';
+const PLANT_PROJECT: Project = {
+  name: 'scheduled-plant-slow',
+  testDir: path.join(SCHEDULED_DIR, 'plant'),
+  testMatch: /plant-slow\.spec\.ts$/,
+};
 
 interface QuarantineEntry {
   file: string;
@@ -97,6 +107,7 @@ function materialiseSplits(all: Project[], groups: GroupFile): Project[] {
 function selectGroup(all: Project[]): Project[] {
   const index = env('E2E_GROUP_INDEX');
   if (index === undefined) return all;
+  if (index === PLANT_GROUP_INDEX) return [PLANT_PROJECT];
   const groups = readJson<GroupFile>('scheduled-groups.json');
   const target = groupTarget();
   const list = groups.targets[target];

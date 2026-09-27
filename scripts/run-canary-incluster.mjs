@@ -3,7 +3,17 @@
  * K8s Job (`personalServerNotes/k8s/playwright-e2e/job.yml.tpl`) and the
  * nightly CronJobs.
  *
- * TWO MODES, gated on E2E_SUITE:
+ * THREE MODES. INDEXED wins when an index is set; otherwise gated on E2E_SUITE:
+ *
+ *   • INDEXED  (JOB_COMPLETION_INDEX or E2E_GROUP_INDEX set — TEST-5MIN-1b "Indexed Jobs per
+ *     target", one k8s Indexed Job per target). The index names ONE group of
+ *     scheduled/scheduled-groups.json (scripts/indexed-group.mjs); E2E_GROUP_INDEX overrides
+ *     JOB_COMPLETION_INDEX (E2E_GROUP_INDEX=plant = the planted 400 s control). ONE
+ *     `playwright test` process runs the group + its setup deps; the config stops it at 270 s
+ *     (globalTimeout) and a runner hard-kill at E2E_INDEXED_KILL_MS (default 300 s) is the
+ *     backstop, so the report is uploaded before the 330 s pod deadline either way. S3 key:
+ *     <group target>/g<NN>-<runId>/. Summary email only on red unless E2E_NOTIFY_ALWAYS=1
+ *     (22-30 pods a night would otherwise mail 22-30 times).
  *
  *   • CHUNKED  (E2E_SUITE = "tests" or unset — the nightly full-suite run)
  *     Runs the setup projects ONCE, then each chunk-project as its OWN
@@ -37,6 +47,7 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { indexedReportPrefix, isIndexedRun, PLANT_INDEX, resolveIndexedGroup } from './indexed-group.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const E2E_ROOT = path.resolve(SCRIPT_DIR, '..');
@@ -44,6 +55,9 @@ const RESULTS_JSON = path.join(E2E_ROOT, 'reports', 'results.json');
 const CHUNKS_DIR = path.join(E2E_ROOT, 'reports', 'chunks');
 const HTML_REPORT_DIR = path.join(E2E_ROOT, 'reports', 'html');
 const TRACES_DIR = path.join(E2E_ROOT, 'test-results');
+const GROUPS_JSON = path.join(E2E_ROOT, 'scheduled', 'scheduled-groups.json');
+/** Backstop only: Playwright's own globalTimeout (270 s) should end the run first. */
+const DEFAULT_INDEXED_KILL_MS = 300_000;
 
 function log(msg) {
   process.stdout.write(`[canary-runner] ${msg}\n`);
@@ -65,6 +79,56 @@ function runPlaywrightSingle(suite) {
   log(`npx ${args.join(' ')}`);
   const result = spawnSync('npx', args, { cwd: E2E_ROOT, stdio: 'inherit', env: process.env });
   return result.status === null ? 1 : result.status;
+}
+
+// ---------------------------------------------------------------------------
+// INDEXED mode — one group, one process (TEST-5MIN-1b).
+// ---------------------------------------------------------------------------
+function runPlaywrightIndexed(group) {
+  // Fresh reports: a stale results.json / html from an earlier process must never be uploaded
+  // as this group's result.
+  fs.rmSync(RESULTS_JSON, { force: true });
+  fs.rmSync(HTML_REPORT_DIR, { recursive: true, force: true });
+  const killMs = Number(process.env.E2E_INDEXED_KILL_MS) || DEFAULT_INDEXED_KILL_MS;
+  const args = ['playwright', 'test'];
+  log(`[${group.target} ${group.label}] npx ${args.join(' ')} — projects: ${group.projects.join(', ')}` +
+    `${group.estimated ? ' (estimated duration)' : ''}; hard kill at ${killMs} ms`);
+  const r = spawnSync('npx', args, {
+    cwd: E2E_ROOT,
+    stdio: 'inherit',
+    timeout: killMs,
+    // SIGTERM, not SIGKILL: Playwright gets a chance to run globalTeardown and release the
+    // canary-run lock (30 min TTL) — a hard kill would block the next groups of the Job.
+    killSignal: 'SIGTERM',
+    env: {
+      ...process.env,
+      E2E_GROUP_INDEX: String(group.index),
+      E2E_GROUP_TARGET: group.target,
+      E2E_SCHEDULED: '1',
+    },
+  });
+  if (r.error && r.error.code === 'ETIMEDOUT')
+    log(`FAIL: playwright did not stop by itself within ${killMs} ms — killed; uploading what exists.`);
+  return r.status === null ? 1 : r.status;
+}
+
+/** INDEXED mode summary: results.json + the fields a cut run needs to be read correctly. */
+function summarizeIndexed(group, exitCode) {
+  const summary = summarizeSingle();
+  summary.perSuite = summary.perSuite.map((s) => ({ ...s, title: `${group.target} ${group.label}` }));
+  summary.group = { target: group.target, index: group.index, projects: group.projects, estimated: group.estimated };
+  summary.exitCode = exitCode;
+  summary.errors = [];
+  try {
+    const raw = JSON.parse(fs.readFileSync(RESULTS_JSON, 'utf8'));
+    // Playwright records the globalTimeout cut as a top-level error; interrupted tests are not
+    // "unexpected", so without this a cut run could read as 0 failed.
+    summary.errors = (raw.errors ?? []).map((e) => String(e.message ?? '').slice(0, 300));
+  } catch { /* summarizeSingle already logged the missing report */ }
+  summary.timedOut = summary.errors.some((m) => /timed out waiting/i.test(m));
+  // A non-zero exit with zero counted failures (cut, crash, leak gate) is still red.
+  summary.runFailed = exitCode !== 0;
+  return summary;
 }
 
 // ---------------------------------------------------------------------------
@@ -237,14 +301,16 @@ function fmtDuration(ms) {
   return m > 0 ? `${m}m ${s}s` : `${s}s`;
 }
 
-function uploadToS3(runId, target, summary) {
+const isRed = (summary) => summary.failed > 0 || summary.runFailed === true;
+
+function uploadToS3(runId, target, summary, prefixKey = `${target}/${runId}`) {
   const endpoint = process.env.S3_ENDPOINT;
   const bucket = process.env.S3_BUCKET ?? 'e2e-canary-results';
   if (!endpoint) {
     log('WARN: S3_ENDPOINT unset — skipping report upload.');
     return null;
   }
-  const prefix = `s3://${bucket}/${target}/${runId}`;
+  const prefix = `s3://${bucket}/${prefixKey}`;
   const awsBase = ['--endpoint-url', endpoint];
 
   spawnSync('aws', ['s3', 'mb', `s3://${bucket}`, ...awsBase], { encoding: 'utf8' });
@@ -256,7 +322,7 @@ function uploadToS3(runId, target, summary) {
     runId,
     target,
     finishedAt: new Date().toISOString(),
-    status: summary.failed > 0 ? 'FAIL' : 'PASS',
+    status: isRed(summary) ? 'FAIL' : 'PASS',
     total: summary.total,
     passed: summary.passed,
     failed: summary.failed,
@@ -265,7 +331,10 @@ function uploadToS3(runId, target, summary) {
     durationMs: summary.durationMs,
     suite: process.env.E2E_SUITE ?? 'tests',
     perSuite: summary.perSuite,
-    reportPath: `${target}/${runId}/report/index.html`,
+    ...(summary.group ? {
+      group: summary.group, exitCode: summary.exitCode, timedOut: summary.timedOut, errors: summary.errors,
+    } : {}),
+    reportPath: `${prefixKey}/report/index.html`,
   };
   const summaryFile = path.join(E2E_ROOT, 'reports', 'summary.json');
   try {
@@ -278,6 +347,8 @@ function uploadToS3(runId, target, summary) {
   for (const [src, dst, recursive] of [
     [HTML_REPORT_DIR, 'report', true],
     [CHUNKS_DIR, 'chunks', true],
+    // Indexed runs write one results.json; chunked runs aggregate under chunks/.
+    ...(summary.group ? [[RESULTS_JSON, 'results.json', false]] : []),
     [TRACES_DIR, 'traces', true],
     [summaryFile, 'summary.json', false],
   ]) {
@@ -301,7 +372,11 @@ function buildMarkdown(summary, runId, target, reportPath) {
   lines.push(`# E2E Canary — ${target}`);
   lines.push('');
   lines.push(`- **Run ID**: \`${runId}\``);
-  lines.push(`- **Result**: ${summary.failed > 0 ? 'FAIL' : 'PASS'} — ` +
+  if (summary.group) {
+    lines.push(`- **Group**: ${summary.group.target} #${summary.group.index} — ${summary.group.projects.join(', ')}` +
+      `${summary.timedOut ? ' — **cut by the 270 s globalTimeout**' : ''}`);
+  }
+  lines.push(`- **Result**: ${isRed(summary) ? 'FAIL' : 'PASS'} — ` +
     `${summary.passed}/${summary.total} passed, ${summary.failed} failed, ` +
     `${summary.skipped} skipped${summary.flaky ? `, ${summary.flaky} flaky` : ''}`);
   lines.push(`- **Duration**: ${fmtDuration(summary.durationMs)}`);
@@ -335,8 +410,9 @@ async function postSummary(summary, runId, target, reportPath) {
     log('WARN: NOTIFY_SUMMARY_URL or SMOKE_SHARED_SECRET unset — skipping summary email.');
     return;
   }
-  const overallStatus = summary.failed > 0 ? 'FAIL' : 'PASS';
-  const subject = `[E2E Canary] ${target} ${summary.passed}/${summary.total} ` +
+  const overallStatus = isRed(summary) ? 'FAIL' : 'PASS';
+  const groupTag = summary.group ? ` g${summary.group.index}` : '';
+  const subject = `[E2E Canary] ${target}${groupTag} ${summary.passed}/${summary.total} ` +
     `(${fmtDuration(summary.durationMs)})`;
   const body = {
     service: 'e2e-canary',
@@ -372,6 +448,7 @@ async function main() {
   // otherwise scope the registry to its own canary runId, so the final sweep
   // would read only its own file and see nothing the chunks declared.
   process.env.E2E_CANARY_REGISTRY_KEY = runId.slice(0, 8);
+  if (isIndexedRun(process.env)) return runIndexed(target, runId);
   const chunked = suite === 'tests' || suite === '';
 
   log(`target=${target} runId=${runId} mode=${chunked ? 'chunked' : 'single'} suite=${suite}`);
@@ -426,6 +503,29 @@ async function main() {
 
   // Non-zero if anything failed — pass/fail visible in `kubectl get jobs`.
   process.exit(failed ? 1 : 0);
+}
+
+/** INDEXED mode entry — one group per pod, exit non-zero on red. */
+async function runIndexed(target, runId) {
+  let group;
+  try {
+    group = resolveIndexedGroup(process.env, JSON.parse(fs.readFileSync(GROUPS_JSON, 'utf8')));
+  } catch (e) {
+    log(`FATAL: indexed mode: ${e instanceof Error ? e.message : e}`);
+    process.exit(1);
+  }
+  if (group.index === PLANT_INDEX && process.env.E2E_PLANT_SLOW !== '1')
+    log('WARN: E2E_GROUP_INDEX=plant without E2E_PLANT_SLOW=1 — the planted test will skip.');
+  log(`target=${target} group=${group.target}/${group.label} runId=${runId} mode=indexed`);
+  const exitCode = runPlaywrightIndexed(group);
+  log(`playwright exited with code ${exitCode}`);
+  const summary = summarizeIndexed(group, exitCode);
+  log(`GROUP ${group.target} ${group.label}: ${summary.passed} passed, ${summary.failed} failed, ` +
+    `${summary.skipped} skipped${summary.timedOut ? ' — CUT by globalTimeout' : ''}`);
+  const reportPath = uploadToS3(runId, target, summary, indexedReportPrefix(group, runId));
+  if (isRed(summary) || process.env.E2E_NOTIFY_ALWAYS === '1')
+    await postSummary(summary, runId, group.target, reportPath);
+  process.exit(isRed(summary) ? 1 : 0);
 }
 
 main().catch((e) => {
