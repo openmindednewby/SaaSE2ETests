@@ -122,6 +122,10 @@ test.describe('Kefi organizer landing editor sighting (read-only)', () => {
     // ONE context per project, built from the project's own device settings, and ONE
     // sign-in: repeat password grants against a live prod organizer risk a lockout.
     context = await browser.newContext({ ...testInfo.project.use, ignoreHTTPSErrors: true });
+    // A hand-built context does not inherit the project's action/navigation timeouts.
+    const { actionTimeout, navigationTimeout } = testInfo.project.use;
+    if (actionTimeout) context.setDefaultTimeout(actionTimeout);
+    if (navigationTimeout) context.setDefaultNavigationTimeout(navigationTimeout);
     page = await context.newPage();
     await page.goto(`${webUrl}/login`, { waitUntil: 'domcontentloaded', timeout: NAV_TIMEOUT });
     await bffLogin(page, creds);
