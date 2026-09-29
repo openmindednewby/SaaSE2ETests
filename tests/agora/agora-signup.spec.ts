@@ -22,7 +22,8 @@ import {
 
 import type { APIRequestContext } from '@playwright/test';
 
-const HTTP_CREATED = 201;
+// Bff.AspNetCore returns 200 (not tenant-api's 201) once EstablishSessionOnRegister has set the session cookie.
+const HTTP_REGISTERED_WITH_SESSION = 200;
 const HTTP_OK = 200;
 const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
@@ -68,7 +69,7 @@ test.describe('AGORA-LAUNCH-1 self-serve signup @agora-api @agora-signup', () =>
   });
 
   test('AL1-AC1 register creates the merchant, signs them in, and leaves onboarding pending', async () => {
-    expect(regStatus, `POST /bff/register -> ${regStatus}: ${regText.slice(0, 300)}`).toBe(HTTP_CREATED);
+    expect(regStatus, `POST /bff/register -> ${regStatus}: ${regText.slice(0, 300)}`).toBe(HTTP_REGISTERED_WITH_SESSION);
 
     // BffAuthClient.register (auth-client extractUser) accepts ONLY `{ user }`; anything else makes
     // the app throw "register: BFF response missing user" although the account now exists.
@@ -101,7 +102,7 @@ test.describe('AGORA-LAUNCH-1 self-serve signup @agora-api @agora-signup', () =>
   });
 
   test('AL1-AC2 re-registering the same email is a 409 with typed errorCode', async () => {
-    expect(regStatus, `precondition: the first register must have created the account; got ${regStatus}: ${regText.slice(0, 120)}`).toBe(HTTP_CREATED);
+    expect(regStatus, `precondition: the first register must have created the account; got ${regStatus}: ${regText.slice(0, 120)}`).toBe(HTTP_REGISTERED_WITH_SESSION);
     const dupeCtx = await playwrightRequest.newContext({ baseURL: AGORA_WEB_URL ?? '', ignoreHTTPSErrors: true });
     try {
       const dupe = await postBffRegister(dupeCtx, { ...signup, tenantName: `${signup.tenantName} Two` });
@@ -119,7 +120,7 @@ test.describe('AGORA-LAUNCH-1 self-serve signup @agora-api @agora-signup', () =>
     // agora-web has no verify-email route (registerRequest.ts), so a Keycloak "Verify Email"
     // required action would make ROPC answer 400 "Account is not fully set up" and lock every
     // new merchant out after their first session ends. A fresh context = a returning merchant.
-    expect(regStatus, `precondition: the register must have created the account; got ${regStatus}: ${regText.slice(0, 120)}`).toBe(HTTP_CREATED);
+    expect(regStatus, `precondition: the register must have created the account; got ${regStatus}: ${regText.slice(0, 120)}`).toBe(HTTP_REGISTERED_WITH_SESSION);
     const loginCtx = await playwrightRequest.newContext({ baseURL: AGORA_WEB_URL ?? '', ignoreHTTPSErrors: true });
     try {
       const login = await postBffLogin(loginCtx, signup.email, signup.password);
