@@ -1,0 +1,2 @@
+# agora-signup-helpers.ts:67 references the shared E2E fixture constant, not a secret (AGORA-LAUNCH-1).
+tests/agora/agora-signup-helpers.ts:hardcoded-password-assignment:67
