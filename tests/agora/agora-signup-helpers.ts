@@ -6,6 +6,9 @@
 //   derives `username` from the email (lower-cased, `[^a-z0-9._-]` -> `_`) and keeps the empty
 //   `website` honeypot; `bffAuthClient.register` (@dloizides/auth-client BffAuthClient.postRaw)
 //   then POSTs it as JSON to same-origin `/bff/register` with `X-BFF-Csrf: 1` and cookies.
+//   agora-web/src/auth/registerRequest.ts (`registerShop`, 2937f7c) adds `verifyUrlTemplate`:
+//   the window origin + `/login` + a token query param holding the `{token}` placeholder;
+//   bff-agora 400s a register without it.
 //
 // 🔴 This helper HAND-ASSEMBLES that request. It tests the BFF + tenant-api contract; it can never
 // observe a defect in the app's own client shape (a renamed field, a dropped header). That seam is
@@ -22,6 +25,8 @@ import type { APIRequestContext, APIResponse } from '@playwright/test';
 /** Same-origin BFF paths the agora-web SPA calls. */
 export const BFF_REGISTER = '/bff/register';
 export const BFF_ME = '/bff/me';
+/** @dloizides/auth-client BffAuthClient ENDPOINTS.login — the BFF runs ROPC against Keycloak. */
+export const BFF_LOGIN = '/bff/login';
 /** The app's onboarding probe: `getShop()` -> 404 means "no shop yet, run the wizard". */
 export const BFF_SHOP = '/bff/api/agora/api/v1/shop';
 
@@ -45,6 +50,16 @@ export interface AgoraRegisterBody {
   password: string;
   tenantName: string;
   website: string;
+  /** agora-web `buildVerifyUrlTemplate()`: the link the verification email carries. */
+  verifyUrlTemplate: string;
+}
+
+/** agora-web registerRequest.ts TOKEN_PLACEHOLDER — the backend substitutes the real token. */
+const TOKEN_PLACEHOLDER = '{token}';
+
+/** Mirrors agora-web `buildVerifyUrlTemplate(origin)` exactly (placeholder kept literal). */
+export function agoraVerifyUrlTemplate(origin: string): string {
+  return `${origin}/login?token=${TOKEN_PLACEHOLDER}`;
 }
 
 let signupSeq = 0;
@@ -67,6 +82,7 @@ export function uniqueAgoraSignup(): AgoraRegisterBody {
     password: AGORA_SIGNUP_PASSWORD,
     tenantName: `${slug} Shop`,
     website: '',
+    verifyUrlTemplate: agoraVerifyUrlTemplate(AGORA_WEB_URL ?? ''),
   };
 }
 
@@ -79,6 +95,15 @@ export function postBffRegister(ctx: APIRequestContext, body: AgoraRegisterBody)
   return ctx.post(BFF_REGISTER, {
     headers: { 'Content-Type': 'application/json', 'X-BFF-Csrf': '1', Origin: AGORA_WEB_URL ?? '' },
     data: body,
+    timeout: REGISTER_TIMEOUT_MS,
+  });
+}
+
+/** POST /bff/login `{ username, password }` (BffLoginRequest) with the same CSRF + Origin headers. */
+export function postBffLogin(ctx: APIRequestContext, username: string, password: string): Promise<APIResponse> {
+  return ctx.post(BFF_LOGIN, {
+    headers: { 'Content-Type': 'application/json', 'X-BFF-Csrf': '1', Origin: AGORA_WEB_URL ?? '' },
+    data: { username, password },
     timeout: REGISTER_TIMEOUT_MS,
   });
 }
