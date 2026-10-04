@@ -99,6 +99,10 @@ test.describe('Kefi organizer pass edit (KEFI-ATTENDEE-PASS-EDIT-1)', () => {
   });
 
   test('AC-04 @api price lock with tierLabel sets priceTierLabel; without it the label is the amount', async () => {
+    test.info().annotations.push({
+      type: 'canary',
+      description: `canaryId=${handle?.ctx.canaryId} tenantId=${handle?.tenantId} eventId=${eventId()}`,
+    });
     const labelled = await addAttendee(CLASS.code, `Lock${uniqueTag()}`);
     const lock = await client.lockPrice(bearer, eventId(), labelled.externalId, {
       lockedPriceEur: LOCKED_EUR,
@@ -126,7 +130,8 @@ test.describe('Kefi organizer pass edit (KEFI-ATTENDEE-PASS-EDIT-1)', () => {
   });
 
   test('AC-05 @api a pass change swaps the ticket-code prefix and keeps name, number and token', async () => {
-    const before = await addAttendee(FULL.code, `Swap${uniqueTag()}`);
+    // The create response carries no ticketToken; the baseline is the stored row.
+    const before = await readAttendee((await addAttendee(FULL.code, `Swap${uniqueTag()}`)).externalId);
     const oldRef = before.paymentReference ?? '';
     expect(oldRef.startsWith(`${FULL.code}-`), `a FULL attendee gets a FULL- code (got "${oldRef}")`).toBe(true);
 
@@ -155,6 +160,7 @@ test.describe('Kefi organizer pass edit (KEFI-ATTENDEE-PASS-EDIT-1)', () => {
     const imported = await client.importEventGraph(await admin.getBearer(), handle.tenantId, graph);
     expect(imported.status, 'the platform import rebuilds the event with its Guest rows').toBe(HTTP_CREATED);
     const ev = imported.data.eventExternalId;
+    test.info().annotations.push({ type: 'importedEvent', description: `importedEventId=${ev}` });
 
     const dup = await client.createAttendee(bearer, ev, { name: 'Dup', surname: `Guest${tag}`, passCode: FULL.code });
     expect(dup.status, 'the same-name attendee is added before conversion').toBe(HTTP_CREATED);
