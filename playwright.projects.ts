@@ -738,6 +738,15 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      // Kefi organizer pass edit: price-lock tierLabel, ticket-code prefix swap on a
+      // pass change, Guest -> comp conversion idempotency. Pure @api on a canary tenant.
+      name: 'kefi-attendee-pass-edit',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-attendee-pass-edit\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       // Kefi organizer dashboard / P&L (#276 gap #4) — seeds genuinely-paid
       // attendees via the import path (RecordPayment moves gross/net) and asserts
       // the P&L numbers + the Draft-event safe-zeros case. Pure @api → 300s budget.
