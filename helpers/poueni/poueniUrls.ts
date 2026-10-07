@@ -23,7 +23,7 @@ export interface PoueniUrls {
 const PROD: PoueniUrls = {
   marketingUrl: 'https://poueni.dloizides.com',
   dashboardUrl: 'https://app.poueni.dloizides.com',
-  apiUrl: 'https://poueni.staging.dloizides.com',
+  apiUrl: 'https://api.poueni.dloizides.com',
 };
 
 const STAGING: PoueniUrls = {
