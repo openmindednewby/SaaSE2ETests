@@ -268,94 +268,139 @@
   ],
   "prod": [
    {
-    "seconds": 240,
+    "seconds": 180,
     "projects": [
-     "erevna-login-methods",
-     "online-menus-public-viewer",
-     "content-api"
+     "erevna-login-methods"
     ]
    },
    {
-    "seconds": 240,
+    "seconds": 175,
     "projects": [
-     "katalogos-login-methods",
+     "online-menus-public-viewer",
+     "content-api",
      "kefi-otp-login",
      "agora-api"
     ]
    },
    {
-    "seconds": 239,
+    "seconds": 210,
     "projects": [
-     "kefi-lifecycle",
-     "online-menus-editor-uploads"
+     "katalogos-login-methods"
     ]
    },
    {
-    "seconds": 240,
+    "seconds": 195,
     "projects": [
-     "sec2-logout",
-     "online-menus-editor-categories"
+     "kefi-lifecycle"
     ]
    },
    {
-    "seconds": 239,
+    "seconds": 60,
     "projects": [
-     "zygos-ui-part2",
-     "online-menus-public-preview"
-    ]
-   },
-   {
-    "seconds": 238,
-    "projects": [
-     "kefi-free-publish",
+     "online-menus-editor-uploads",
      "online-menus-crud"
     ]
    },
    {
-    "seconds": 238,
+    "seconds": 135,
     "projects": [
-     "kefi-poster-passes-render",
+     "sec2-logout"
+    ]
+   },
+   {
+    "seconds": 125,
+    "projects": [
+     "online-menus-editor-categories",
+     "a11y-public"
+    ]
+   },
+   {
+    "seconds": 120,
+    "projects": [
+     "zygos-ui-part2"
+    ]
+   },
+   {
+    "seconds": 120,
+    "projects": [
+     "online-menus-public-preview"
+    ]
+   },
+   {
+    "seconds": 195,
+    "projects": [
+     "kefi-free-publish"
+    ]
+   },
+   {
+    "seconds": 120,
+    "projects": [
+     "kefi-poster-passes-render"
+    ]
+   },
+   {
+    "seconds": 120,
+    "projects": [
      "kefi-email-lifecycle"
     ]
    },
    {
-    "seconds": 240,
+    "seconds": 120,
     "projects": [
-     "zygos-api",
+     "zygos-api"
+    ]
+   },
+   {
+    "seconds": 120,
+    "projects": [
      "identity-auth",
      "ichnos-api"
     ]
    },
    {
-    "seconds": 239,
+    "seconds": 150,
     "projects": [
-     "zygos-ui-part1",
-     "prod-gate",
-     "a11y-public"
+     "zygos-ui-part1"
     ]
    },
    {
-    "seconds": 239,
+    "seconds": 190,
+    "projects": [
+     "prod-gate"
+    ]
+   },
+   {
+    "seconds": 120,
     "projects": [
      "questioner-templates",
-     "kefi-pro-gates-ui",
+     "kefi-pro-gates-ui"
+    ]
+   },
+   {
+    "seconds": 120,
+    "projects": [
      "kefi-passkey",
      "kefi-device-pin"
     ]
    },
    {
-    "seconds": 240,
+    "seconds": 160,
     "projects": [
      "kefi-landing-parity",
+     "kefi-qr-checkin"
+    ]
+   },
+   {
+    "seconds": 140,
+    "projects": [
      "kefi-reset-revokes-devices",
-     "kefi-qr-checkin",
      "kefi-pro-gates",
      "smoke",
      "questioner-marketing"
     ]
    },
    {
-    "seconds": 237,
+    "seconds": 100,
     "projects": [
      "questioner-security",
      "logging",
@@ -366,7 +411,12 @@
      "monitoring",
      "health",
      "identity-account",
-     "questioner-answers",
+     "questioner-answers"
+    ]
+   },
+   {
+    "seconds": 100,
+    "projects": [
      "questioner-public",
      "theme-settings",
      "diagnostics",
@@ -376,7 +426,12 @@
      "billing-subscription",
      "content-upload",
      "ichnos-ui",
-     "kefi-access-links",
+     "kefi-access-links"
+    ]
+   },
+   {
+    "seconds": 100,
+    "projects": [
      "kefi-attendee-export",
      "kefi-crew-lifecycle",
      "kefi-door-checkin",
@@ -390,7 +445,7 @@
     ]
    },
    {
-    "seconds": 35,
+    "seconds": 140,
     "projects": [
      "notifications-nav",
      "notifications-screen",
@@ -402,118 +457,58 @@
     ]
    },
    {
-    "seconds": 240,
+    "seconds": 125,
     "projects": [
      "aml-api",
      "aml-ui",
      "digital-kin-api",
-     "digital-kin-ui"
-    ],
-    "estimated": true
-   },
-   {
-    "seconds": 240,
-    "projects": [
+     "digital-kin-ui",
      "kefi-access-link-dead-vs-forbidden",
      "kefi-access-link-expiry",
      "kefi-crew-commissions-pricing",
-     "kefi-crew-link-states"
-    ],
-    "estimated": true
-   },
-   {
-    "seconds": 240,
-    "projects": [
+     "kefi-crew-link-states",
      "kefi-crew-payout",
      "kefi-email-delivery",
      "kefi-landing-health",
-     "kefi-landing-people"
-    ],
-    "estimated": true
-   },
-   {
-    "seconds": 240,
-    "projects": [
+     "kefi-landing-people",
      "kefi-message-template-defaults",
      "kefi-message-templates",
      "kefi-message-templates-crud",
-     "kefi-organizer-checkin"
-    ],
-    "estimated": true
-   },
-   {
-    "seconds": 240,
-    "projects": [
+     "kefi-organizer-checkin",
      "kefi-organizer-mobile",
      "kefi-organizer-tabs",
      "kefi-print-affordance",
-     "kefi-registration-notifications"
-    ],
-    "estimated": true
-   },
-   {
-    "seconds": 240,
-    "projects": [
+     "kefi-registration-notifications",
      "kefi-registration-notifications-iphone-375",
      "kefi-registration-notifications-iphone-390",
      "kefi-registration-notifications-validation",
-     "kefi-ubb-mobile"
-    ],
-    "estimated": true
-   },
-   {
-    "seconds": 240,
-    "projects": [
+     "kefi-ubb-mobile",
      "kefi-ubb-pass-numbers",
      "kefi-ubb-payment-to-ticket",
      "kefi-ubb-price-parity",
-     "kefi-ubb-ticket-surface"
+     "kefi-ubb-ticket-surface",
+     "mobile-gates-zygos-pixel5",
+     "modb-api",
+     "nextgame",
+     "notifications-stress",
+     "ubb-picker-resilience-iphone-390",
+     "ubb-promoters-ipad-mini",
+     "ubb-promoters-iphone-375",
+     "ubb-promoters-iphone-390",
+     "ubb-ticket-ipad-mini",
+     "ubb-ticket-iphone-375",
+     "ubb-ticket-iphone-390",
+     "ubb-ticket-privacy-375"
     ],
     "estimated": true
    },
    {
-    "seconds": 240,
-    "projects": [
-     "kefi-ubb-tiered-pricing",
-     "logging-stress",
-     "metrics-contract",
-     "mobile-gates-agora-floor"
-    ],
-    "estimated": true
-   },
-   {
-    "seconds": 240,
+    "seconds": 145,
     "projects": [
      "mobile-gates-agora-pixel5",
      "mobile-gates-digital-kin-floor",
      "mobile-gates-digital-kin-pixel5",
-     "mobile-gates-erevna-floor"
-    ],
-    "estimated": true
-   },
-   {
-    "seconds": 240,
-    "projects": [
-     "mobile-gates-erevna-pixel5",
-     "mobile-gates-ichnos-floor",
-     "mobile-gates-ichnos-pixel5",
-     "mobile-gates-katalogos-floor"
-    ],
-    "estimated": true
-   },
-   {
-    "seconds": 240,
-    "projects": [
-     "mobile-gates-katalogos-pixel5",
-     "mobile-gates-kefi-floor",
-     "mobile-gates-kefi-pixel5",
-     "mobile-gates-nextgame-floor"
-    ],
-    "estimated": true
-   },
-   {
-    "seconds": 240,
-    "projects": [
+     "mobile-gates-erevna-floor",
      "mobile-gates-nextgame-pixel5",
      "mobile-gates-poueni-floor",
      "mobile-gates-poueni-pixel5",
@@ -522,28 +517,12 @@
     "estimated": true
    },
    {
-    "seconds": 240,
+    "seconds": 135,
     "projects": [
-     "mobile-gates-zygos-pixel5",
-     "modb-api",
-     "nextgame",
-     "notifications-stress"
-    ],
-    "estimated": true
-   },
-   {
-    "seconds": 240,
-    "projects": [
-     "security-fleet",
-     "selida-account",
-     "selida-api",
-     "ubb-picker-ipad-mini"
-    ],
-    "estimated": true
-   },
-   {
-    "seconds": 240,
-    "projects": [
+     "mobile-gates-erevna-pixel5",
+     "mobile-gates-ichnos-floor",
+     "mobile-gates-ichnos-pixel5",
+     "mobile-gates-katalogos-floor",
      "ubb-picker-iphone-375",
      "ubb-picker-iphone-390",
      "ubb-picker-resilience-ipad-mini",
@@ -552,22 +531,32 @@
     "estimated": true
    },
    {
-    "seconds": 240,
+    "seconds": 145,
     "projects": [
-     "ubb-picker-resilience-iphone-390",
-     "ubb-promoters-ipad-mini",
-     "ubb-promoters-iphone-375",
-     "ubb-promoters-iphone-390"
+     "mobile-gates-katalogos-pixel5",
+     "mobile-gates-kefi-floor",
+     "mobile-gates-kefi-pixel5",
+     "mobile-gates-nextgame-floor",
+     "security-fleet",
+     "selida-account",
+     "selida-api",
+     "ubb-picker-ipad-mini"
     ],
     "estimated": true
    },
    {
-    "seconds": 240,
+    "seconds": 180,
     "projects": [
-     "ubb-ticket-ipad-mini",
-     "ubb-ticket-iphone-375",
-     "ubb-ticket-iphone-390",
-     "ubb-ticket-privacy-375"
+     "logging-stress"
+    ],
+    "estimated": true
+   },
+   {
+    "seconds": 70,
+    "projects": [
+     "kefi-ubb-tiered-pricing",
+     "metrics-contract",
+     "mobile-gates-agora-floor"
     ],
     "estimated": true
    }

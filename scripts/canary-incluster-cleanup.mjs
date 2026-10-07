@@ -35,6 +35,7 @@
  *   CANARY_CLEANUP_DRY_RUN      "true" → report only
  */
 import { spawnSync } from 'node:child_process';
+import { chunkKeys, deletePayload, parseDeleteResult } from './s3-delete-batches.mjs';
 
 const DRY_RUN = (process.env.CANARY_CLEANUP_DRY_RUN ?? '').toLowerCase() === 'true';
 const LOCK_TTL_MS = 30 * 60 * 1000;
@@ -222,11 +223,17 @@ function s3Retention() {
     return;
   }
   let removed = 0;
-  for (const key of keys) {
-    const rm = spawnSync('aws', ['s3', 'rm', `s3://${bucket}/${key}`, '--only-show-errors', ...awsBase],
-      { encoding: 'utf8', timeout: 60_000 });
-    if (rm.status === 0) removed += 1;
-    else warn(`failed to delete s3://${bucket}/${key}: ${(rm.stderr ?? '').trim()}`);
+  for (const batch of chunkKeys(keys)) {
+    const rm = spawnSync('aws', ['s3api', 'delete-objects', '--bucket', bucket, ...awsBase,
+      '--delete', deletePayload(batch), '--output', 'json'],
+      { encoding: 'utf8', timeout: 120_000 });
+    if (rm.status !== 0) {
+      warn(`delete-objects failed for a batch of ${batch.length}: ${(rm.stderr || rm.error?.message || '').toString().trim()}`);
+      continue;
+    }
+    const result = parseDeleteResult(rm.stdout, batch.length);
+    removed += result.deleted;
+    for (const e of result.errors.slice(0, 20)) warn(`failed to delete s3://${bucket}/${e}`);
   }
   log(`SeaweedFS retention: deleted ${removed}/${keys.length} object(s).`);
 }
