@@ -1,7 +1,9 @@
 // Run: node --test scripts/s3-delete-batches.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chunkKeys, deletePayload, parseDeleteResult, S3_DELETE_BATCH_MAX } from './s3-delete-batches.mjs';
+import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { chunkKeys, deleteArgsViaFile, deletePayload, parseDeleteResult, S3_DELETE_BATCH_MAX } from './s3-delete-batches.mjs';
 
 const keys = (n) => Array.from({ length: n }, (_, i) => `run-${i}/report.json`);
 
@@ -30,4 +32,18 @@ test('empty quiet output counts every key as deleted; Errors are subtracted and 
   assert.deepEqual(parseDeleteResult('', 1000), { deleted: 1000, errors: [] });
   const out = JSON.stringify({ Errors: [{ Key: 'x', Code: 'AccessDenied', Message: 'no' }] });
   assert.deepEqual(parseDeleteResult(out, 5), { deleted: 4, errors: ['x: AccessDenied no'] });
+});
+
+test('a full 1000-key batch reaches the CLI as a short file:// argument, not the JSON itself', () => {
+  const batch = keys(S3_DELETE_BATCH_MAX).map((k) => `${k}/${'x'.repeat(120)}`);
+  const payload = deleteArgsViaFile(batch);
+  try {
+    assert.match(payload.arg, /^file:\/\//, 'aws reads the payload from a file URL');
+    assert.ok(payload.arg.length < 512, `argv entry is ${payload.arg.length} chars; the JSON is ${deletePayload(batch).length}`);
+    assert.equal(fileURLToPath(payload.arg), payload.file, 'the URL resolves to the written file');
+    assert.deepEqual(JSON.parse(readFileSync(payload.file, 'utf8')).Objects.length, S3_DELETE_BATCH_MAX);
+  } finally {
+    payload.cleanup();
+  }
+  assert.equal(existsSync(payload.file), false, 'cleanup removes the temp payload');
 });

@@ -35,7 +35,7 @@
  *   CANARY_CLEANUP_DRY_RUN      "true" → report only
  */
 import { spawnSync } from 'node:child_process';
-import { chunkKeys, deletePayload, parseDeleteResult } from './s3-delete-batches.mjs';
+import { chunkKeys, deleteArgsViaFile, parseDeleteResult } from './s3-delete-batches.mjs';
 
 const DRY_RUN = (process.env.CANARY_CLEANUP_DRY_RUN ?? '').toLowerCase() === 'true';
 const LOCK_TTL_MS = 30 * 60 * 1000;
@@ -224,9 +224,11 @@ function s3Retention() {
   }
   let removed = 0;
   for (const batch of chunkKeys(keys)) {
+    const payload = deleteArgsViaFile(batch);
     const rm = spawnSync('aws', ['s3api', 'delete-objects', '--bucket', bucket, ...awsBase,
-      '--delete', deletePayload(batch), '--output', 'json'],
+      '--delete', payload.arg, '--output', 'json'],
       { encoding: 'utf8', timeout: 120_000 });
+    payload.cleanup();
     if (rm.status !== 0) {
       warn(`delete-objects failed for a batch of ${batch.length}: ${(rm.stderr || rm.error?.message || '').toString().trim()}`);
       continue;
