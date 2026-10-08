@@ -556,6 +556,20 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      name: 'kefi-inline-pay-reference-mobile',
+      workers: 1,
+      timeout: 120_000,
+      testMatch: /kefi\/kefi-inline-pay-reference\.spec\.ts/,
+      use: EVENT_OPS_MOBILE,
+    },
+    {
+      name: 'kefi-inline-pay-reference-desktop',
+      workers: 1,
+      timeout: 120_000,
+      testMatch: /kefi\/kefi-inline-pay-reference\.spec\.ts/,
+      use: EVENT_OPS_BROWSER,
+    },
+    {
       // Kefi QR ticket render + door check-in (KEFI-1 gap) — signs up a canary
       // tenant (signup + IMAP verify + wizard), seeds a Published event, then
       // proves the attendee-ticket path through the real surfaces: register
