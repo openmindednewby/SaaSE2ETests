@@ -12,7 +12,11 @@ const TENANT_SLUG = 'csdf';
 const REGISTRANT_EMAIL = 'e2e-kefi-bot@dloizides.com';
 const REGISTRANT_NAME = 'Ayşe';
 const REGISTRANT_SURNAME = 'Yılmaz';
-const REGISTRANT_PHONE = '+35799000000';
+const PHONE_PREFIX = '+357990';
+const RUN_TAG_MODULO = 1000;
+const RUN_TAG_DIGITS = 3;
+const MS_PER_MINUTE = 60_000;
+const RUN_TAG = String(Math.floor(Date.now() / MS_PER_MINUTE) % RUN_TAG_MODULO).padStart(RUN_TAG_DIGITS, '0');
 const PASS_CODE = 'FULL';
 const EXPECTED_NAME_SEGMENT = 'AYSE-YILMAZ';
 const REFERENCE_PATTERN = /^FULL-AYSE-YILMAZ-[A-HJ-NP-Z2-9]{4}$/;
@@ -73,10 +77,16 @@ async function chooseOption(page: Page, inputSelector: string): Promise<void> {
   await expect(page.locator(inputSelector), `${inputSelector} is selected`).toBeChecked();
 }
 
-async function fillForm(page: Page): Promise<void> {
+function phoneFor(rail: Rail, testInfo: TestInfo): string {
+  const device = testInfo.project.name.endsWith('mobile') ? '1' : '2';
+  const railDigit = rail === Rail.Revolut ? '1' : '2';
+  return `${PHONE_PREFIX}${RUN_TAG}${device}${railDigit}`;
+}
+
+async function fillForm(page: Page, phone: string): Promise<void> {
   await page.locator('#sr-name').fill(REGISTRANT_NAME);
   await page.locator('#sr-surname').fill(REGISTRANT_SURNAME);
-  await page.locator('#sr-phone').fill(REGISTRANT_PHONE);
+  await page.locator('#sr-phone').fill(phone);
   await page.locator('#sr-email').fill(REGISTRANT_EMAIL);
   await chooseOption(page, `input[name="passCode"][value="${PASS_CODE}"]`);
   await chooseOption(page, '#sr-gender-0');
@@ -121,9 +131,10 @@ for (const rail of [Rail.Revolut, Rail.Bank]) {
       page,
     }, testInfo) => {
       const created: CreatedRow[] = [];
+      const phone = phoneFor(rail, testInfo);
       try {
         await openForm(page);
-        await fillForm(page);
+        await fillForm(page, phone);
 
         const preview = await pickRail(page, rail);
 
@@ -138,7 +149,7 @@ for (const rail of [Rail.Revolut, Rail.Bank]) {
 
         await page.goto(SITE_URL);
         await expect(page.locator('#sr-name'), 'the form renders after reload').toBeVisible();
-        await fillForm(page);
+        await fillForm(page, phone);
         const afterReload = await pickRail(page, rail);
         expect(afterReload.slice(-SUFFIX_LENGTH), 'reload keeps the suffix the payer may already have used').toBe(
           preview.slice(-SUFFIX_LENGTH),
