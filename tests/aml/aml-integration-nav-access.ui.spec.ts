@@ -14,6 +14,8 @@ const HTTP_OK = 200;
 const SHELL = 'authed-shell';
 const INTEGRATION_NAV = 'integration';
 const NO_ACCESS = 'operator-route-no-access';
+const NAV_TOGGLE = 'navbar-toggle';
+const NAV_OVERFLOW = 'navbar-overflow';
 
 const { defaultBrowserType: desktopBrowser, ...DESKTOP_1280 } = devices['Desktop Chrome'];
 void desktopBrowser;
@@ -40,10 +42,14 @@ async function signIn(page: Page, email: string, password: string, returnPath: s
 
 async function openNav(page: Page): Promise<void> {
   await expect(page.getByTestId(`${SHELL}-content`)).toBeVisible({ timeout: LOAD_TIMEOUT_MS });
-  const toggle = page.getByTestId(`${SHELL}-menu-toggle`);
-  if (!(await toggle.isVisible())) return;
-  await toggle.click();
-  await expect(page.getByTestId(`${SHELL}-drawer`), 'the mobile nav drawer did not open').toBeVisible();
+  const toggle = page.getByTestId(NAV_TOGGLE);
+  if (await toggle.isVisible()) {
+    await toggle.click();
+    await expect(toggle, 'the mobile nav menu did not open').toHaveAttribute('aria-expanded', 'true');
+    return;
+  }
+  const overflow = page.getByTestId(NAV_OVERFLOW);
+  if (await overflow.isVisible()) await overflow.click();
 }
 
 for (const viewport of VIEWPORTS) {
