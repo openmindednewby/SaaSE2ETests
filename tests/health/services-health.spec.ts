@@ -5,6 +5,7 @@ import { setTimeout as delay } from 'timers/promises';
 type Service = {
   name: string;
   baseUrl: string;
+  prodOnly?: boolean;
 };
 
 function resolveBaseUrl(envVar: string, fallback: string) {
@@ -62,10 +63,12 @@ async function waitForHealthy(
 
 const services: Service[] = [
   { name: 'IdentityService', baseUrl: resolveBaseUrl('IDENTITY_API_URL', 'http://localhost:5002') },
-  { name: 'QuestionerService', baseUrl: resolveBaseUrl('QUESTIONER_API_URL', 'https://localhost:5004') },
-  { name: 'OnlineMenuService', baseUrl: resolveBaseUrl('ONLINEMENU_API_URL', 'https://localhost:5006') },
-  { name: 'ContentService', baseUrl: resolveBaseUrl('CONTENT_API_URL', 'http://localhost:5009') },
+  { name: 'QuestionerService', baseUrl: resolveBaseUrl('QUESTIONER_API_URL', 'https://localhost:5004'), prodOnly: true },
+  { name: 'OnlineMenuService', baseUrl: resolveBaseUrl('ONLINEMENU_API_URL', 'https://localhost:5006'), prodOnly: true },
+  { name: 'ContentService', baseUrl: resolveBaseUrl('CONTENT_API_URL', 'http://localhost:5009'), prodOnly: true },
 ];
+
+const onStaging = process.env.E2E_TARGET === 'staging';
 
 const probes = [
   { name: 'startup', path: '/health/start' },
@@ -77,6 +80,7 @@ test.describe('Service Probes @health', () => {
   for (const service of services) {
     for (const probe of probes) {
       test(`${service.name} ${probe.name}`, async ({ request }) => {
+        test.skip(onStaging && service.prodOnly === true, 'D-STGMEM-2: runs on prod only since 2026-10-06');
         const baseUrls = candidateBaseUrls(service.baseUrl);
         const urls = baseUrls.map(b => `${b}${probe.path}`);
         const { response: res, url } = await waitForHealthy(request, urls, 30_000);
