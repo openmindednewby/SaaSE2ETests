@@ -48,6 +48,7 @@ interface CleanupServiceConfig {
   envVar: string;
   /** Realm header to attach (only IdentityService needs this — keep optional for others). */
   realm?: string;
+  prodOnly?: boolean;
 }
 
 const SERVICES: ReadonlyArray<CleanupServiceConfig> = [
@@ -57,9 +58,9 @@ const SERVICES: ReadonlyArray<CleanupServiceConfig> = [
   { name: 'IdentityService', envVar: 'IDENTITY_API_URL', realm: process.env.IDENTITY_REALM ?? 'OnlineMenu' },
   { name: 'PaymentService', envVar: 'PAYMENT_API_URL' },
   { name: 'NotificationService', envVar: 'NOTIFICATION_SERVICE_URL' },
-  { name: 'OnlineMenuService', envVar: 'ONLINEMENU_API_URL' },
-  { name: 'QuestionerService', envVar: 'QUESTIONER_API_URL' },
-  { name: 'ContentService', envVar: 'CONTENT_API_URL' },
+  { name: 'OnlineMenuService', envVar: 'ONLINEMENU_API_URL', prodOnly: true },
+  { name: 'QuestionerService', envVar: 'QUESTIONER_API_URL', prodOnly: true },
+  { name: 'ContentService', envVar: 'CONTENT_API_URL', prodOnly: true },
 ];
 
 function normalizeBaseUrl(rawUrl: string): string {
@@ -162,6 +163,7 @@ export async function runCanaryCleanup(
   // ordered log output. The volume is 6 calls; latency is not a concern here.
   let successCount = 0;
   let failCount = 0;
+  let skipCount = 0;
   // A missing superUser JWT disables the six legacy slices ONLY. The Kefi
   // sweeps below authenticate through KefiAdminClient / the fixture-tenant
   // credentials, so leak detection must NOT be skipped with them — that early
@@ -176,6 +178,12 @@ export async function runCanaryCleanup(
     );
   }
   for (const [service, token] of legacySlices) {
+    if (target === 'staging' && service.prodOnly === true) {
+      skipCount += 1;
+      process.stdout.write(`  [skip] ${service.name.padEnd(20)} D-STGMEM-2: runs on prod only since 2026-10-06
+`);
+      continue;
+    }
     const result = await cleanupOneService(service, runId, token);
     if (result.ok) {
       successCount += 1;
@@ -193,7 +201,7 @@ export async function runCanaryCleanup(
   process.stdout.write(
     [
       '',
-      `  summary: ${successCount} ok, ${failCount} failed (+ Kefi: ${leakedKefiCanaries.length} canaries, ${leakedEventOps.length} fixture rows leaked)`,
+      `  summary: ${successCount} ok, ${skipCount} skipped, ${failCount} failed (+ Kefi: ${leakedKefiCanaries.length} canaries, ${leakedEventOps.length} fixture rows leaked)`,
       failCount > 0
         ? '  orphan-cleanup CronJob will sweep any leaked e2ec-* records on the next weekly run.'
         : '  all services cleaned successfully.',
