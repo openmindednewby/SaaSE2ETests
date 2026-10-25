@@ -771,6 +771,15 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      // Kefi organizer events list: the slug and start-time InlineFieldRows share one
+      // top edge and height at desktop and stack on a phone (FORM-ALIGN-1). @ui, one login per test.
+      name: 'kefi-organizer-events',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi-organizer-events\/.*\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       // Kefi role-surface render smoke (#276 gap #5) — dj / media / ambassador /
       // audit dashboards each render for their role without tripping the error
       // boundary. @ui: a fresh browser context per role user (master-admin
