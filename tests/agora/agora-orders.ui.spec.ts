@@ -11,6 +11,8 @@
 import { expect, test } from '@playwright/test';
 import { AgoraAdminPage } from '../../pages/agora/AgoraAdminPage.js';
 import { AGORA_WEB_URL, MERCHANT_A } from './agora-ui-helpers.js';
+import { AgoraApi } from './agora-client.js';
+import { getAgoraToken } from './agora-helpers.js';
 import { FAKE_WEBHOOK_SECRET, NO_STRIPE_KEY_REASON, agoraStripeTestKeys } from './agora-stripe.js';
 
 /** Passes the card's client-side shape check (Save stays disabled otherwise) but is no real key, so Stripe rejects it server-side. */
@@ -40,7 +42,8 @@ const ES06_FRONTEND_NOT_DEPLOYED =
  * an unset key skips instantly instead of hanging the hook for the full 30s per-test cap while
  * login + the ES-06 deploy probe run for a test that can never execute.
  */
-const FLAGSHIP_TITLE = '🔴 FLAGSHIP: connecting Stripe re-enables publish WITHOUT a page reload';
+const FLAGSHIP_TITLE =
+  '🔴 FLAGSHIP: connecting Stripe in the card shows connected without a reload, and Clear disconnects it';
 
 test.describe('Agora ES-06 orders + Stripe settings @agora-ui @ui', () => {
   let admin: AgoraAdminPage;
@@ -110,33 +113,46 @@ test.describe('Agora ES-06 orders + Stripe settings @agora-ui @ui', () => {
     // surfaces inline without changing publishability, which the content gate now owns.)
   });
 
-  test(FLAGSHIP_TITLE, async () => {
-    // The beforeEach already fast-skipped this test when no key is wired (see FLAGSHIP_TITLE), so
-    // reaching here means a real key is present. Re-read it for the fill() calls; the `!` is safe.
+  test(FLAGSHIP_TITLE, async ({ playwright }) => {
     const keys = agoraStripeTestKeys();
     test.skip(!keys, NO_STRIPE_KEY_REASON);
-
+    const { secret, webhook } = keys as { secret: string; webhook: string };
+    const notConnectedLabel = 'Not connected';
+    const connectedLabel = 'Connected · live';
+    const secretLast4 = secret.slice(-4);
+    const ctx = await playwright.request.newContext({ ignoreHTTPSErrors: true });
+    const token = await getAgoraToken(MERCHANT_A);
+    expect(token, 'merchant A must mint an agora token').toBeTruthy();
+    const api = new AgoraApi(ctx, token as string);
+    const paymentsEnabled = async (): Promise<boolean> =>
+      ((await (await api.getStripe()).json()) as { paymentsEnabled: boolean }).paymentsEnabled;
+    expect((await api.disconnectStripe()).ok(), 'start from a disconnected shop').toBe(true);
+    await admin.page.goto(AGORA_WEB_URL as string);
     await admin.navSettings.click();
-    await expect(admin.settingsScreen).toBeVisible();
     await expect(admin.stripeCard).toBeVisible();
 
-    // Pre-condition: publish is blocked before we connect.
-    await expect(admin.publishToggle).toBeDisabled();
+    await expect(admin.stripeState).toHaveText(notConnectedLabel);
+    await expect(admin.publishToggle, 'browse-only: publish does not wait for Stripe').toBeEnabled();
+    expect(await paymentsEnabled()).toBe(false);
 
-    await admin.stripeSecretInput.fill(keys!.secret);
-    await admin.stripeWebhookSecretInput.fill(keys!.webhook);
+    await admin.stripeSecretInput.fill(secret);
+    await admin.stripeWebhookSecretInput.fill(webhook);
+    await expect(admin.stripePaymentsSwitch).toHaveAttribute('aria-checked', 'false');
     await admin.stripePaymentsSwitch.click();
     await admin.stripeSaveButton.click();
 
-    // 🔴 THE UNVERIFIED CLAIM: saving invalidates queryKeys.shop(), so the publish toggle must flip
-    // from disabled to enabled and the blocked notice must disappear — with NO page.reload().
     await expect(admin.stripeSaveError, 'a real key must not error').toBeHidden();
-    await expect(admin.publishToggle, 'publish re-enables live on connect').toBeEnabled();
-    await expect(admin.publishBlockedNotice).toBeHidden();
+    await expect(admin.stripeState, 'the card flips to connected with no reload').toHaveText(connectedLabel);
+    await expect(admin.stripeKeyLast4).toContainText(secretLast4);
+    await expect(admin.publishToggle).toBeEnabled();
+    expect(await paymentsEnabled()).toBe(true);
 
-    // Clean up so re-runs start from the blocked state again.
     await admin.stripeDisconnectButton.click();
     await admin.stripeDisconnectConfirm.click();
-    await expect(admin.publishToggle).toBeDisabled();
+
+    await expect(admin.stripeState).toHaveText(notConnectedLabel);
+    await expect(admin.publishToggle).toBeEnabled();
+    expect(await paymentsEnabled()).toBe(false);
+    await ctx.dispose();
   });
 });

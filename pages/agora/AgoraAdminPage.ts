@@ -71,6 +71,8 @@ export class AgoraAdminPage {
 
   // Settings → Payments (Stripe connection)
   readonly stripeCard: Locator;
+  readonly stripeState: Locator;
+  readonly stripeKeyLast4: Locator;
   readonly stripeSecretInput: Locator;
   readonly stripeWebhookSecretInput: Locator;
   readonly stripePaymentsSwitch: Locator;
@@ -133,6 +135,8 @@ export class AgoraAdminPage {
     this.publishBlockedNotice = page.getByTestId('shop-publish-blocked');
 
     this.stripeCard = page.getByTestId('stripe-card');
+    this.stripeState = page.getByTestId('stripe-card-state');
+    this.stripeKeyLast4 = page.getByTestId('stripe-card-key-last4');
     this.stripeSecretInput = page.getByTestId('stripe-card-secret-key');
     this.stripeWebhookSecretInput = page.getByTestId('stripe-card-webhook-secret');
     this.stripePaymentsSwitch = page.getByTestId('stripe-card-payments-switch');
