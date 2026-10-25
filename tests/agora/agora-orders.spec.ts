@@ -60,7 +60,7 @@ test.describe('Agora orders + Stripe connection @agora-api', () => {
   });
 
   // ------------------------------------------------------- stripe connection status
-  test('the shop reports NOT-connected, NOT-publishable, with a webhook URL to paste', async () => {
+  test('the shop reports NOT-connected yet publishable browse-only, with a webhook URL to paste', async () => {
     const res = await api.getStripe();
     expect(res.status(), await res.text()).toBe(OK);
     const conn = (await res.json()) as {
@@ -70,10 +70,10 @@ test.describe('Agora orders + Stripe connection @agora-api', () => {
       webhookUrl: string;
       secretKeyLast4: string | null;
     };
-    // Neither secret stored yet → nothing to be paid with → cannot go live.
+    // Neither secret stored yet → nothing to be paid with, but a browse-only shop may still publish.
     expect(conn.configured, 'no Stripe stored yet').toBe(false);
     expect(conn.paymentsEnabled).toBe(false);
-    expect(conn.canPublish, 'a shop with no Stripe must not be publishable').toBe(false);
+    expect(conn.canPublish, 'publishing is not gated on Stripe (browse-only shop)').toBe(true);
     // The merchant is handed the exact URL to register in their own Stripe — the difference between
     // a 2-minute setup and a support ticket. It embeds THIS shop's id (per-merchant webhook secret).
     expect(conn.webhookUrl, 'webhook URL present').toMatch(/\/api\/v1\/webhooks\/stripe\/[0-9a-f-]{36}$/i);
@@ -129,9 +129,9 @@ test.describe('Agora orders + Stripe connection @agora-api', () => {
     expect(fieldError?.reason, 'reason explains the sk_ shape').toContain("sk_");
 
     // And the connection state did NOT change — a rejected key must never half-connect a shop.
-    const after = (await (await api.getStripe()).json()) as { configured: boolean; canPublish: boolean };
+    const after = (await (await api.getStripe()).json()) as { configured: boolean; paymentsEnabled: boolean };
     expect(after.configured, 'a rejected key must not connect the shop').toBe(false);
-    expect(after.canPublish).toBe(false);
+    expect(after.paymentsEnabled, 'a rejected key must not enable payments').toBe(false);
   });
 
   test('PUT /shop/stripe with a well-formed but BOGUS key is rejected by the Stripe probe', async () => {

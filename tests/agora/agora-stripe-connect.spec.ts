@@ -23,7 +23,8 @@ const OK = 200;
 const PRODUCT_PRICE = 12.34;
 const PRODUCT_STOCK = 25;
 /** Pickup on the wire, so the flow needs no shipping address. */
-const FULFILMENT_PICKUP = 0;
+const FULFILMENT_PICKUP = 1;
+const SHIPPING_FLAT_FEE = 0;
 
 test.describe('🔴 Agora ES-06 flagship: connect Stripe → publish → Paid order → fulfil @agora-api', () => {
   const keys = agoraStripeTestKeys();
@@ -107,6 +108,9 @@ test.describe('🔴 Agora ES-06 flagship: connect Stripe → publish → Paid or
     const product = (await productRes.json()) as { externalId: string; variants: { externalId: string }[] };
     createdProducts.push(product.externalId);
     const variantId = product.variants[0].externalId;
+
+    const pickup = await api.updateShipping(SHIPPING_FLAT_FEE, true);
+    expect(pickup.status(), await pickup.text()).toBe(OK);
 
     // ── 4. checkout as a stranger → a Pending order + a real Stripe session ──
     const checkout = await api.checkout({

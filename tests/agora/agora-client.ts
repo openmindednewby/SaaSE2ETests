@@ -65,7 +65,7 @@ export interface CheckoutItemBody {
   quantity: number;
 }
 
-/** `POST /checkout` — anonymous. `fulfilment`: 0 = Pickup, 1 = Delivery on the wire. */
+/** `POST /checkout` — anonymous. `fulfilment`: 0 = Delivery, 1 = Pickup on the wire. */
 export interface CheckoutBody {
   shopSlug: string;
   items: CheckoutItemBody[];
