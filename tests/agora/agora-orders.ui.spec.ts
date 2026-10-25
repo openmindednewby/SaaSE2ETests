@@ -5,13 +5,16 @@
 // browser:
 //   - the orders screen mounts (empty state or grid) — the "never opened in a browser" bug class;
 //   - the Stripe settings card renders, reports NOT-connected, and the publish button is inert;
-//   - a rejected key is surfaced INLINE (RFC7807 → stripe-save-error), not swallowed;
+//   - a rejected key is surfaced INLINE (RFC7807 → stripe-card-error), not swallowed;
 //   - 🔴 the FLAGSHIP live-flip: connecting Stripe re-enables publish WITHOUT a reload (gated on a
 //     real Stripe TEST key; skips-with-reason when absent).
 import { expect, test } from '@playwright/test';
 import { AgoraAdminPage } from '../../pages/agora/AgoraAdminPage.js';
 import { AGORA_WEB_URL, MERCHANT_A } from './agora-ui-helpers.js';
 import { FAKE_WEBHOOK_SECRET, NO_STRIPE_KEY_REASON, agoraStripeTestKeys } from './agora-stripe.js';
+
+/** Passes the card's client-side shape check (Save stays disabled otherwise) but is no real key, so Stripe rejects it server-side. */
+const SHAPE_VALID_FAKE_SECRET_KEY = 'sk_test_' + 'e2enotarealkey'.repeat(2);
 
 /** How long to wait for the ES-06 nav item before concluding the frontend is not deployed. */
 const DEPLOY_PROBE_TIMEOUT_MS = 8_000;
@@ -92,10 +95,11 @@ test.describe('Agora ES-06 orders + Stripe settings @agora-ui @ui', () => {
     await expect(admin.settingsScreen).toBeVisible();
     await expect(admin.stripeCard).toBeVisible();
 
-    // A malformed key — deterministic, no Stripe account needed. The backend refuses it (400) and
-    // the form must show the reason inline rather than swallow it into a silent no-op. Both secrets
-    // are filled because a first-time connect needs both (Save is disabled otherwise).
-    await admin.stripeSecretInput.fill('not-a-real-key');
+    // A well-shaped but fake key — no Stripe account needed. The card blocks Save on a malformed
+    // shape, so the key must pass the client check; the backend's Stripe probe then refuses it (400)
+    // and the form must show the reason inline rather than swallow it into a silent no-op. Both
+    // secrets are filled because a first-time connect needs both (Save is disabled otherwise).
+    await admin.stripeSecretInput.fill(SHAPE_VALID_FAKE_SECRET_KEY);
     await admin.stripeWebhookSecretInput.fill(FAKE_WEBHOOK_SECRET);
     await expect(admin.stripeSaveButton).toBeEnabled();
     await admin.stripeSaveButton.click();
@@ -132,6 +136,7 @@ test.describe('Agora ES-06 orders + Stripe settings @agora-ui @ui', () => {
 
     // Clean up so re-runs start from the blocked state again.
     await admin.stripeDisconnectButton.click();
+    await admin.stripeDisconnectConfirm.click();
     await expect(admin.publishToggle).toBeDisabled();
   });
 });

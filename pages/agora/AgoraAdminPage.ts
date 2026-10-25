@@ -77,6 +77,7 @@ export class AgoraAdminPage {
   readonly stripeSaveButton: Locator;
   readonly stripeSaveError: Locator;
   readonly stripeDisconnectButton: Locator;
+  readonly stripeDisconnectConfirm: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -132,12 +133,13 @@ export class AgoraAdminPage {
     this.publishBlockedNotice = page.getByTestId('shop-publish-blocked');
 
     this.stripeCard = page.getByTestId('stripe-card');
-    this.stripeSecretInput = page.getByTestId('stripe-secret-input');
-    this.stripeWebhookSecretInput = page.getByTestId('stripe-webhook-secret-input');
-    this.stripePaymentsSwitch = page.getByTestId('stripe-payments-switch');
-    this.stripeSaveButton = page.getByTestId('stripe-save-button');
-    this.stripeSaveError = page.getByTestId('stripe-save-error');
-    this.stripeDisconnectButton = page.getByTestId('stripe-disconnect-button');
+    this.stripeSecretInput = page.getByTestId('stripe-card-secret-key');
+    this.stripeWebhookSecretInput = page.getByTestId('stripe-card-webhook-secret');
+    this.stripePaymentsSwitch = page.getByTestId('stripe-card-payments-switch');
+    this.stripeSaveButton = page.getByTestId('stripe-card-save');
+    this.stripeSaveError = page.getByTestId('stripe-card-error');
+    this.stripeDisconnectButton = page.getByTestId('stripe-card-clear');
+    this.stripeDisconnectConfirm = page.getByTestId('confirm-dialog').getByTestId('confirm-button');
   }
 
   /** Log in through the REAL BFF form (ROPC server-side; no token ever reaches the browser). */
