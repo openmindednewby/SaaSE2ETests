@@ -41,7 +41,6 @@ async function expectStacked(field: Locator, action: Locator): Promise<void> {
 }
 
 test.describe('Kefi organizer events: inline field rows (FORM-ALIGN-1)', () => {
-  test.fixme(true, 'until kefi-web-comp-resend deploys: the InlineFieldRow slug and start-time rows are not live yet');
   test.skip(!isRemoteTarget(), 'Drives the deployed kefi-web organizer surface');
   test.skip(!fixtureTenantAvailable(), FIXTURE_TENANT_SKIP_REASON);
 
