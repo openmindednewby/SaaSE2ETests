@@ -21,6 +21,8 @@ const LOGO_SIZE_PX = 320;
 const LOGO_NAME = 'bgremove-privacy-logo.png';
 const LOCAL_SCHEMES = ['blob:', 'data:'];
 const MODEL_PATH = '/bg-removal/';
+const PREVIEW_PATH = '/bff/landing-preview';
+const LOGO_URL_SET = /"logoUrl":"[^"]+"/;
 
 interface RecordedRequest {
   method: string;
@@ -121,6 +123,11 @@ async function pickGeneratedLogo(page: Page): Promise<void> {
     return canvas.toDataURL('image/png').split(',')[1];
   }, LOGO_SIZE_PX);
   const chooser = page.waitForEvent('filechooser');
+  const previewWithLogo = page.waitForResponse(
+    (r) => r.url().endsWith(PREVIEW_PATH) && LOGO_URL_SET.test(r.request().postData() ?? ''),
+    { timeout: VISIBLE_TIMEOUT_MS },
+  );
   await page.getByTestId('landing-palette-upload').click();
   await (await chooser).setFiles({ name: LOGO_NAME, mimeType: 'image/png', buffer: Buffer.from(png, 'base64') });
+  await previewWithLogo;
 }
