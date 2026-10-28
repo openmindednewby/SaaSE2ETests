@@ -33,7 +33,12 @@
       "lang": null,
       "text": {
         "en": {
-          "section.past.subtitle": "Every edition, saved in one place. Come back after the 16th for photos and recap."
+          "section.past.subtitle": "Every edition, saved in one place. Come back after the 16th for photos and recap.",
+          "venue.directions": "Get Directions",
+          "engine.social.title": "Follow Us",
+          "engine.social.sub": "Live updates on Instagram · RSVP on Facebook.",
+          "engine.social.eventLabel": "The Event",
+          "engine.social.organizerLabel": "The Organizer · Jimmy"
         }
       },
       "layout": [
@@ -98,7 +103,7 @@
         "iconUrl": null,
         "name": "Kizomba Union CY",
         "tagline": "Urban Kiz · Kizomba · Tarraxo",
-        "edition": "2nd Edition",
+        "edition": "2nd Edition · 24 April 2027",
         "heroImageUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-main.png",
         "logoUrl": "https://kizombaunioncy.dloizides.com/assets/logo/lockup.png",
         "primaryColor": "#3a81a8",
@@ -211,7 +216,7 @@
           "key": "teachers",
           "eyebrow": "The Line-Up",
           "title": "Teachers",
-          "subtitle": "Seven local acts across Urban Kiz, Kizomba, Lady's Styling & Tarraxo.",
+          "subtitle": "Seven local acts across Urban Kiz, Kizomba, Lady's Styling & Tarraxo. Teachers get all-day access plus the bar.",
           "performers": [
             {
               "photoPosition": null,
@@ -572,8 +577,8 @@
       },
       "party": {
         "eyebrow": "After Dark",
-        "title": "The Party",
-        "subtitle": "Party includes 2 rooms · 3 DJs · 2 drinks",
+        "title": "Party includes · 2 rooms · 3 DJs · 2 drinks",
+        "subtitle": "Pick your flavour — join the full day or drop in for just the party.",
         "rooms": [
           {
             "id": "room-fuego",
@@ -662,7 +667,7 @@
         "eyebrowOpen": "Reserve Your Spot",
         "eyebrowClosed": "Pay at the Door",
         "title": "Book & Pay",
-        "subOpen": "Message or call Jimmy to reserve your pass, then send payment via Revolut.",
+        "subOpen": "Message or call Jimmy to reserve your pass, then send payment via Revolut or pay cash at the door.",
         "subClosed": "Online Revolut payments are closed. Message Jimmy to confirm your pass, then pay cash at the door.",
         "contactHeading": "Contact the Organizer",
         "contactPhone": "+357 96 650 527",
