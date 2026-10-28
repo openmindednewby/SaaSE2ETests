@@ -43,7 +43,58 @@
     "config": {
       "lang": null,
       "text": null,
-      "layout": null,
+      "layout": [
+        {
+          "key": "about",
+          "anchor": "mission",
+          "visible": true
+        },
+        {
+          "key": "teachers",
+          "visible": true
+        },
+        {
+          "key": "schedule",
+          "anchor": "classes",
+          "visible": true
+        },
+        {
+          "key": "prices",
+          "visible": true
+        },
+        {
+          "key": "register",
+          "visible": true
+        },
+        {
+          "key": "book",
+          "visible": true
+        },
+        {
+          "key": "ambassadors",
+          "visible": true
+        },
+        {
+          "key": "media",
+          "visible": true
+        },
+        {
+          "key": "venue",
+          "visible": true
+        },
+        {
+          "key": "posters",
+          "visible": true
+        },
+        {
+          "key": "past",
+          "visible": true
+        },
+        {
+          "key": "social",
+          "visible": true
+        }
+      ],
       "paymentContactMessage": null,
       "paymentTermsLabel": null,
       "branding": {
@@ -72,7 +123,7 @@
         "hideBrand": null
       },
       "eventDetails": {
-        "factRowStyle": null,
+        "factRowStyle": "classesPartyLocation",
         "dateLabel": "24 April 2027",
         "classesTime": "16:00 – 20:25",
         "partyTime": "21:30 – Late",
