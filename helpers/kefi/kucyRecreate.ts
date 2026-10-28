@@ -12,11 +12,11 @@ interface Poster { title: string; imageUrl: string; downloadUrl: string }
 interface Link { label: string; url: string }
 
 export interface KucyConfig {
-  branding: { name: string; collapsedWordmark?: boolean | null; tagline: string; edition: string; logoUrl: string; navLogoUrl: string;
+  branding: { name: string; collapsedWordmark?: boolean | null; tagline: string; edition: string; logoUrl: string; navLogoUrl?: string | null;
     heroImageUrl: string; primaryColor: string; accentColor: string };
-  eventDetails: { classesTime: string; partyTime: string; locationLabel: string; description: string;
+  eventDetails: { factRowStyle?: string | null; classesTime: string; partyTime: string; locationLabel: string; description: string;
     heading: string; stats: Array<{ value: string; label: string }> };
-  venue: { name: string; address: string };
+  venue: { name: string; city?: string | null; address: string };
   register: { secondaryLabel: string; secondaryUrl: string };
   sections: Array<{ key: string; title: string; body: string }>;
   performerGroups: Group[];
@@ -27,14 +27,26 @@ export interface KucyConfig {
   addOns: Array<Named & { price: string; description: string }>;
   book: { title: string; contactPhone: string; revolut: { url: string }; reference: { code: string } };
   posters: Poster[];
-  footer: { text: string; links: Link[] };
+  footer: { text: string; links: Link[] } | null;
 }
 
 export interface KucyRecreateData { landing: SavedLandingDto; config: KucyConfig; navAnchors: string[]; unsourced: Json[] }
 
-export interface MatrixRow { id: string; scenario: string; expected: string[] }
+export interface MatrixRow { id: string; scenario: string; expected: string[]; sourceGap?: string }
 
 const DATA_FILE = join(__dirname, 'data', 'kucy-recreate.json');
+const LANDING_SOURCE = join(
+  process.env.KEFI_LANDINGS_DIR ?? join(__dirname, '..', '..', '..', 'kefi-landings'),
+  'docs', 'tenants', 'kizombaunioncy', 'landing-config.json',
+);
+
+export function loadLandingSource(): { path: string; landing: SavedLandingDto | null } {
+  try {
+    return { path: LANDING_SOURCE, landing: JSON.parse(readFileSync(LANDING_SOURCE, 'utf-8')) as SavedLandingDto };
+  } catch {
+    return { path: LANDING_SOURCE, landing: null };
+  }
+}
 
 export function loadKucyRecreate(): KucyRecreateData {
   const raw = JSON.parse(readFileSync(DATA_FILE, 'utf-8')) as {
@@ -67,6 +79,11 @@ const section = (c: KucyConfig, key: string): { title: string; body: string } =>
   if (!found) throw new Error(`kucy-recreate has no section ${key}`);
   return found;
 };
+const heroLocation = (c: KucyConfig): string => {
+  if (c.eventDetails.factRowStyle !== 'classesPartyLocation') return c.eventDetails.locationLabel;
+  const parts = [c.venue.name, c.venue.city ?? ''].filter((p) => p.length > 0);
+  return parts.length > 0 ? parts.join(' · ') : c.eventDetails.locationLabel;
+};
 const names = (items: readonly Named[]): string[] => items.map((i) => i.name);
 const wordmark = (name: string, collapsed: boolean | null | undefined): string => {
   const words = name.split(/\s+/).filter((w) => w.length > 0);
@@ -83,12 +100,13 @@ export function matrixRows(data: KucyRecreateData): MatrixRow[] {
   const e = c.eventDetails;
   const teachers = group(c, 'teachers').performers;
   return [
-    { id: 'CM-01', scenario: 'nav logo and anchor links', expected: [b.navLogoUrl, ...data.navAnchors.map((a) => `href="#${a}"`)] },
+    { id: 'CM-01', scenario: 'nav logo and anchor links', sourceGap: b.navLogoUrl ? undefined : 'branding.navLogoUrl is null',
+      expected: [...(b.navLogoUrl ? [b.navLogoUrl] : []), ...data.navAnchors.map((a) => `href="#${a}"`)] },
     { id: 'CM-02', scenario: 'collapsed wordmark', expected: [wordmark(b.name, b.collapsedWordmark)] },
     { id: 'CM-03', scenario: 'hero lockup image', expected: [b.logoUrl] },
     { id: 'CM-04', scenario: 'hero edition pill', expected: [b.edition] },
     { id: 'CM-05', scenario: 'hero styles line', expected: [b.tagline] },
-    { id: 'CM-06', scenario: 'hero classes, party and location meta', expected: [e.classesTime, e.partyTime, e.locationLabel] },
+    { id: 'CM-06', scenario: 'hero classes, party and location meta', expected: [e.classesTime, e.partyTime, heroLocation(c)] },
     { id: 'CM-08', scenario: 'hero secondary CTA', expected: [c.register.secondaryLabel, `href="${c.register.secondaryUrl}"`] },
     { id: 'CM-10', scenario: 'mission heading and stat pillars', expected: [e.heading, ...e.stats.flatMap((s) => [s.value, s.label])] },
     { id: 'CM-11', scenario: 'teachers grid names and photos', expected: [...names(teachers), ...teachers.map((p) => p.photoUrl ?? '')] },
@@ -104,11 +122,12 @@ export function matrixRows(data: KucyRecreateData): MatrixRow[] {
     { id: 'CM-34', scenario: 'pro video add-on card', expected: c.addOns.map((a) => a.description) },
     { id: 'CM-35', scenario: 'venue card', expected: [c.venue.name, c.venue.address] },
     { id: 'CM-37', scenario: 'posters with view and download', expected: c.posters.flatMap((p) => [p.title, p.imageUrl, p.downloadUrl]) },
-    { id: 'CM-38', scenario: 'past editions untruncated', expected: [section(c, 'past').title, section(c, 'past').body] },
+    { id: 'CM-38', scenario: 'past editions untruncated', expected: [section(c, 'past').title, ...section(c, 'past').body.split('\n')] },
     { id: 'CM-39', scenario: 'social links', expected: c.socialLinks.map((l) => l.url) },
-    { id: 'CM-40', scenario: 'footer organizer copy and links', expected: [c.footer.text, ...c.footer.links.map((l) => l.url)] },
+    { id: 'CM-40', scenario: 'footer organizer copy and links', expected: c.footer ? [c.footer.text, ...c.footer.links.map((l) => l.url)] : [],
+      sourceGap: c.footer ? undefined : 'footer is null' },
     { id: 'CM-43', scenario: 'palette primary and accent', expected: [b.primaryColor, b.accentColor] },
-    { id: 'CM-50', scenario: 'SEO description', expected: [`content="${e.description}"`] },
+    { id: 'CM-50', scenario: 'SEO description', expected: [`name="description" content="${b.tagline}"`] },
     { id: 'CM-51', scenario: 'og:image poster', expected: [b.heroImageUrl] },
   ];
 }

@@ -1,29 +1,18 @@
 {
   "source": {
-    "base": "kefi-landings/docs/tenants/kizombaunioncy/landing-config.json (applied 2026-10-28)",
-    "copiedFrom": {
-      "branding.navLogoUrl": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:304",
-      "branding.collapsedWordmark": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:303",
-      "register.secondaryLabel/secondaryUrl": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:332",
-      "passes": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:560-570",
-      "addOns": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:572,879-885",
-      "sections[media].addOnId": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:879",
-      "book": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:665-718",
-      "posters": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:922-958",
-      "footer": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:336-337,1000-1032",
-      "performerGroups[ambassadors].subtitle": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:726 (D-KUCY-19 1st-edition copy)",
-      "sections[past].body": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:967 (D-KUCY-19 1st-edition copy)"
-    }
+    "base": "kefi-landings/docs/tenants/kizombaunioncy/landing-config.json",
+    "rule": "landing is a byte-for-byte JSON copy of base; the guard test in kucy-recreate-api.spec.ts fails when they diverge"
   },
   "rendered": {
-    "navAnchors": ["book", "posters", "mission", "classes"],
+    "navAnchors": [
+      "book",
+      "posters",
+      "mission",
+      "classes"
+    ],
     "why": "section ids kefi-landings assigns to the KUCY sections; the landing DTO has no field for them"
   },
   "unsourced": [
-    {
-      "field": "passes[].id",
-      "why": "static tiers have no codes; PARTY/FULL/CLASS taken from book.reference.code"
-    },
     {
       "field": "book.contact email line",
       "why": "no DTO field for the obfuscated email line (static kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:693)"
@@ -42,7 +31,11 @@
     "template": "kucy",
     "config": {
       "lang": null,
-      "text": null,
+      "text": {
+        "en": {
+          "section.past.subtitle": "Every edition, saved in one place. Come back after the 16th for photos and recap."
+        }
+      },
       "layout": [
         {
           "key": "about",
@@ -98,10 +91,10 @@
       "paymentContactMessage": null,
       "paymentTermsLabel": null,
       "branding": {
-        "collapsedWordmark": true,
+        "collapsedWordmark": null,
         "heroGlow": null,
         "embers": null,
-        "navLogoUrl": "https://kizombaunioncy.dloizides.com/assets/logo/logo-nav.png",
+        "navLogoUrl": null,
         "iconUrl": null,
         "name": "Kizomba Union CY",
         "tagline": "Urban Kiz · Kizomba · Tarraxo",
@@ -166,20 +159,50 @@
       "sections": [
         {
           "hideFromNav": null,
-          "key": "media",
-          "eyebrow": "Capture the Night",
-          "title": "Photo & Video",
-          "body": "Official photographer and videographer cover the event. Want a personal recording? Book the optional Pro Video add-on — one song filmed and edited, delivered after the night.",
+          "key": "prices",
+          "eyebrow": null,
+          "title": null,
+          "body": null,
           "links": null,
-          "addOnId": "PROVIDEO"
+          "addOnId": "pro-video"
         },
         {
           "hideFromNav": null,
           "key": "past",
           "eyebrow": "Archive",
           "title": "Past Editions",
-          "body": "🎵 This is the 1st Edition — check back after 16 May 2026 for the recap.",
+          "body": "Browse past editions\n🎵 This is the 1st Edition — check back after 16 May 2026 for the recap.",
           "links": null,
+          "addOnId": null
+        },
+        {
+          "hideFromNav": null,
+          "key": "social",
+          "eyebrow": null,
+          "title": null,
+          "body": "Hi, I’m Jimmy — an urban kiz teacher in Cyprus. Kizomba Union CY is my attempt to bring the local scene together: every teacher, every ambassador, every dancer who supports the kizomba / urban-kiz community in Cyprus, all in one room for one night.",
+          "links": [
+            {
+              "label": "Jimmy on Facebook",
+              "url": "https://www.facebook.com/jimmys.loizides/"
+            },
+            {
+              "label": "Jimmy on Instagram",
+              "url": "https://www.instagram.com/jimmy_walkerll/"
+            },
+            {
+              "label": "Jimmy on YouTube",
+              "url": "https://www.youtube.com/@JimmyWalkll"
+            },
+            {
+              "label": "Bailemos Dance School Nicosia",
+              "url": "https://www.facebook.com/bailemos.nicosia"
+            },
+            {
+              "label": "DANCEpiration Larnaka",
+              "url": "https://www.facebook.com/profile.php?id=100063692103577"
+            }
+          ],
           "addOnId": null
         }
       ],
@@ -216,7 +239,20 @@
               "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/jimmy-ismini.png",
               "instagramHandle": "@jimmy_walkerll",
               "instagramUrl": "https://www.instagram.com/jimmy_walkerll/",
-              "socials": null
+              "socials": [
+                {
+                  "id": "instagram-jimmy",
+                  "kind": "instagram",
+                  "label": "@jimmy_walkerll",
+                  "url": "https://www.instagram.com/jimmy_walkerll/"
+                },
+                {
+                  "id": "instagram-ismini",
+                  "kind": "instagram",
+                  "label": "@isminikarkaletsou",
+                  "url": "https://www.instagram.com/isminikarkaletsou/"
+                }
+              ]
             },
             {
               "photoPosition": null,
@@ -378,7 +414,20 @@
               "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/constantinos-christina.png",
               "instagramHandle": "@constantinos_bailemos",
               "instagramUrl": "https://www.instagram.com/constantinos_bailemos/",
-              "socials": null
+              "socials": [
+                {
+                  "id": "instagram-constantinos",
+                  "kind": "instagram",
+                  "label": "@constantinos_bailemos",
+                  "url": "https://www.instagram.com/constantinos_bailemos/"
+                },
+                {
+                  "id": "instagram-christina",
+                  "kind": "instagram",
+                  "label": "@christinaaa_ky",
+                  "url": "https://www.instagram.com/christinaaa_ky/"
+                }
+              ]
             },
             {
               "photoPosition": null,
@@ -414,7 +463,7 @@
           "key": "media",
           "eyebrow": "Capture the Night",
           "title": "Photo & Video Crew",
-          "subtitle": "The official photographer and videographer covering the event.",
+          "subtitle": "Official photographer + videographer covering the event. Want a personal recording? Book Oscar for a one-song pro video — €15 add-on.",
           "performers": [
             {
               "photoPosition": null,
@@ -552,58 +601,57 @@
           "kind": "facebook",
           "label": "Kizomba Union CY Facebook event",
           "url": "https://www.facebook.com/events/1526139312215218/"
+        },
+        {
+          "id": "whatsapp",
+          "kind": "whatsapp",
+          "label": "Message Jimmy on WhatsApp",
+          "url": "https://wa.me/35796650527"
         }
       ],
       "passes": [
         {
-          "id": "PARTY",
+          "id": "party",
           "name": "Party Pass",
           "price": "€15",
-          "description": "Party only",
-          "featured": null,
-          "badge": null,
-          "soldOut": false
+          "description": "Party only"
         },
         {
-          "id": "FULL",
+          "id": "full",
           "name": "Full Pass",
           "price": "€30",
           "description": "All classes + Party",
           "featured": true,
-          "badge": "Best Value",
-          "soldOut": false
+          "badge": "Best Value"
         },
         {
-          "id": "CLASS",
+          "id": "class",
           "name": "Class Pass",
           "price": "€20",
-          "description": "All classes",
-          "featured": null,
-          "badge": null,
-          "soldOut": false
+          "description": "All classes"
         }
       ],
       "posters": [
         {
-          "id": "main",
+          "id": "poster-main",
           "title": "Main Poster",
           "imageUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-main.png?v=7",
           "downloadUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-main.png?v=7"
         },
         {
-          "id": "classes",
+          "id": "poster-classes",
           "title": "Classes Schedule",
           "imageUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-classes.png?v=5",
           "downloadUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-classes.png?v=5"
         },
         {
-          "id": "prices",
+          "id": "poster-prices",
           "title": "Prices",
           "imageUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-prices.png?v=4",
           "downloadUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-prices.png?v=4"
         },
         {
-          "id": "provideo",
+          "id": "poster-provideo",
           "title": "Pro Video — €15",
           "imageUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-provideo.png?v=1",
           "downloadUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-provideo.png?v=1"
@@ -617,7 +665,7 @@
         "subOpen": "Message or call Jimmy to reserve your pass, then send payment via Revolut.",
         "subClosed": "Online Revolut payments are closed. Message Jimmy to confirm your pass, then pay cash at the door.",
         "contactHeading": "Contact the Organizer",
-        "contactPhone": "+35796650527",
+        "contactPhone": "+357 96 650 527",
         "revolut": {
           "heading": "Pay via Revolut",
           "qrImg": "https://kizombaunioncy.dloizides.com/assets/revolut-qr.png",
@@ -643,43 +691,25 @@
       },
       "addOns": [
         {
-          "id": "PROVIDEO",
+          "id": "pro-video",
           "name": "Pro Video",
           "price": "€15",
           "priceEur": 15,
-          "description": "Oscar films you for one song during the night and edits the clip. The event organizer sends you the final video after the event. Add it to any pass.",
-          "badge": "Optional add-on",
-          "imageUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-provideo.png?v=1"
+          "description": "Oscar films and edits one song of you dancing; the event organizer sends you the final video after the event.",
+          "badge": null,
+          "imageUrl": null
         }
       ],
-      "footer": {
-        "text": "© 2026 Kizomba Union CY · Organized by Jimmy Loizides · Nicosia, Cyprus",
-        "links": [
-          {
-            "label": "Jimmy on Facebook",
-            "url": "https://www.facebook.com/jimmys.loizides/"
-          },
-          {
-            "label": "Jimmy on Instagram",
-            "url": "https://www.instagram.com/jimmy_walkerll/"
-          },
-          {
-            "label": "Jimmy on YouTube",
-            "url": "https://www.youtube.com/@JimmyWalkll"
-          },
-          {
-            "label": "Bailemos Dance School Nicosia",
-            "url": "https://www.facebook.com/bailemos.nicosia"
-          },
-          {
-            "label": "DANCEpiration Larnaka",
-            "url": "https://www.facebook.com/profile.php?id=100063692103577"
-          }
-        ]
-      },
+      "footer": null,
       "theme": null,
       "analytics": null,
-      "structuredData": null,
+      "structuredData": {
+        "organizerName": "Jimmy Loizides",
+        "organizerUrl": null,
+        "startDate": null,
+        "endDate": null,
+        "currency": null
+      },
       "pwa": null,
       "schemaVersion": 1
     }
