@@ -10,7 +10,9 @@
       "sections[media].addOnId": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:879",
       "book": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:665-718",
       "posters": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:922-958",
-      "footer": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:336-337,1000-1032"
+      "footer": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:336-337,1000-1032",
+      "performerGroups[ambassadors].subtitle": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:726 (D-KUCY-19 1st-edition copy)",
+      "sections[past].body": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:967 (D-KUCY-19 1st-edition copy)"
     }
   },
   "rendered": {
@@ -18,14 +20,6 @@
     "why": "section ids kefi-landings assigns to the KUCY sections; the landing DTO has no field for them"
   },
   "unsourced": [
-    {
-      "field": "performerGroups[ambassadors].subtitle",
-      "why": "static copy says '1st Edition'; 2nd-edition wording not in any source (B6, owner supplies)"
-    },
-    {
-      "field": "sections[past].body",
-      "why": "static copy is the 1st-edition text; 2nd-edition wording not in any source (B6, owner supplies)"
-    },
     {
       "field": "passes[].id",
       "why": "static tiers have no codes; PARTY/FULL/CLASS taken from book.reference.code"
@@ -133,7 +127,7 @@
           "key": "past",
           "eyebrow": "Archive",
           "title": "Past Editions",
-          "body": "This is the 1st Edition — every future edition will be saved here. Check back after 16 May 2026 for photos and the recap.",
+          "body": "🎵 This is the 1st Edition — check back after 16 May 2026 for the recap.",
           "links": null,
           "addOnId": null
         }
