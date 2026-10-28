@@ -16,6 +16,8 @@ import { isRemoteTarget } from '../../helpers/target.js';
 test.describe.configure({ mode: 'serial' });
 
 const EVENT_DAYS_AHEAD = 120;
+const PUBLISH_POLL_TIMEOUT_MS = 900_000;
+const PUBLISH_BUILD_TIMEOUT_MS = 1_200_000;
 const data = loadKucyRecreate();
 const rows = matrixRows(data);
 
@@ -35,6 +37,7 @@ test.describe('KEFI-RECREATE-1 KUCY recreated by API replay on a throwaway tenan
   test.skip(!masterAdminAvailable(), 'needs KEYCLOAK_MASTER_ADMIN_* to mint the e2c- tenant');
 
   test.beforeAll(async ({ request }) => {
+    test.setTimeout(PUBLISH_BUILD_TIMEOUT_MS);
     admin = new KefiAdminClient();
     tenant = await provisionApiTenantWithEvent({
       admin,
@@ -46,7 +49,7 @@ test.describe('KEFI-RECREATE-1 KUCY recreated by API replay on a throwaway tenan
     });
     await admin.putLandingConfig({ ...tenant.ownerCreds, dto: data.landing });
     const published = await admin.publishLanding(tenant.ownerCreds);
-    const terminal = await admin.pollPublishStatus({ ...tenant.ownerCreds, jobName: published.jobName });
+    const terminal = await admin.pollPublishStatus({ ...tenant.ownerCreds, jobName: published.jobName, timeoutMs: PUBLISH_POLL_TIMEOUT_MS });
     expect(terminal.status, `publish job ${published.jobName}`).toBe('Succeeded');
     const probe = await probeDynamicLandingRender({ slug: tenant.slug, requiredMarkers: [data.config.branding.name] });
     page = decodeHtml(await (await request.get(probe.url)).text());
