@@ -5,10 +5,12 @@ import { test, expect, type Page, type TestInfo } from '@playwright/test';
 
 import { KefiAdminClient } from '../../helpers/kefi/kefiAdminClient.js';
 import { KefiAttendeeDeleteClient } from '../../helpers/kefi/kefiAttendeeDeleteClient.js';
+import { assertNotCustomerTenant } from '../../helpers/kefi/kefiFixtureTenant.js';
 import { isRemoteTarget } from '../../helpers/target.js';
 
-const SITE_URL = process.env.KEFI_CSDF_SITE_URL ?? 'https://csdf.kefi.dloizides.com';
-const TENANT_SLUG = 'csdf';
+const TENANT_SLUG = process.env.KEFI_IPAY_TENANT_SLUG ?? 'e2e-ipay';
+assertNotCustomerTenant(TENANT_SLUG);
+const SITE_URL = process.env.KEFI_IPAY_SITE_URL ?? `https://app.kefi.dloizides.com/t/${TENANT_SLUG}`;
 const REGISTRANT_EMAIL = 'e2e-kefi-bot@dloizides.com';
 const REGISTRANT_NAME = 'Ayşe';
 const REGISTRANT_SURNAME = 'Yılmaz';
@@ -45,14 +47,14 @@ interface CreatedRow {
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value || value.trim() === '')
-    throw new Error(`${name} is unset: the CSDF organiser login is needed to delete the test attendee`);
+    throw new Error(`${name} is unset: the e2e-ipay organiser login is needed to delete the test attendee`);
   return value;
 }
 
 async function organiserBearer(): Promise<string> {
   return new KefiAdminClient().getTenantOwnerBearer({
-    email: requireEnv('CSDF_KEFI_ORGANIZER_EMAIL'),
-    password: requireEnv('CSDF_KEFI_ORGANIZER_PASSWORD'),
+    email: requireEnv('KEFI_IPAY_ORGANIZER_USERNAME'),
+    password: requireEnv('KEFI_IPAY_ORGANIZER_PASSWORD'),
   });
 }
 
@@ -125,7 +127,7 @@ async function submit(page: Page): Promise<{ status: number; body: RegisterBody 
 
 for (const rail of [Rail.Revolut, Rail.Bank]) {
   test.describe(`INLINE-PAY-4 payment reference, ${rail}`, () => {
-    test.skip(!isRemoteTarget(), 'drives the deployed CSDF landing');
+    test.skip(!isRemoteTarget(), 'drives the deployed e2e-ipay landing');
 
     test(`AC-FLOW-1 ${rail} rail with a Turkish name, previews FULL-AYSE-YILMAZ-XXXX that survives reload and equals the registered reference`, async ({
       page,
