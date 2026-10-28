@@ -9,7 +9,9 @@
  *   3. a fully-set-up tenant-owner user (KC master-admin) the spec ROPCs as,
  *   4. an event (owner POST /admin/events — a backoffice tenant has none), and
  *   5. a pass on that event (seed-canary-event ensures code/label/price on the
- *      tenant's CURRENT event — it requires an existing event, hence step 4).
+ *      tenant's CURRENT event — it requires an existing event, hence step 4), and
+ *   6. a finished onboarding (owner POST /admin/onboarding/complete, the wizard's
+ *      Finish), or the published-tenant list omits the tenant like no real signup.
  *
  * Master-admin-only: `createTenantOwnerUser` needs `KEYCLOAK_MASTER_ADMIN_*`,
  * which only staging carries. Callers guard with `masterAdminAvailable()` and
@@ -21,6 +23,8 @@ import type { KefiAdminClient } from './kefiAdminClient.js';
 import { KefiBackofficeClient } from './kefiBackofficeClient.js';
 import { KefiEventClient } from './kefiEventClient.js';
 import { KefiLifecycleClient } from './kefiLifecycleClient.js';
+import { completeOnboarding, forceOnboardingPlan } from './kefiOnboardingApi.js';
+import { getKefiUrls } from './kefiUrls.js';
 import { createTenantOwnerUser, deleteEphemeralUser } from './kefiKeycloakAdmin.js';
 import { newCanaryContext, type KefiCanaryContext } from './kefiCanaryIds.js';
 import { cleanupKefiCanary } from './kefiTeardown.js';
@@ -100,6 +104,12 @@ export async function provisionApiTenantWithEvent(input: {
   if (!seeded.found) {
     throw new Error(`[kefiApiTenant] seed-canary-event did not find tenant ${slug}`);
   }
+
+  // The completion handler re-maps the subscription from the state's plan, so pin it to pro first.
+  const { apiUrl } = getKefiUrls();
+  const bearer = await admin.getTenantOwnerBearer({ email: ctx.email, password: ctx.password });
+  await forceOnboardingPlan({ apiUrl, bearer, code: 'pro' });
+  await completeOnboarding({ apiUrl, bearer });
 
   return {
     ctx,
