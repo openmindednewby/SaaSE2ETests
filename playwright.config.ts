@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test';
 import { loadE2EEnv } from './fixtures/env-loader.js';
 import { chromiumHostResolverRules, installHostOverride } from './fixtures/host-override.js';
+import { installRealTenantWriteGuard } from './fixtures/real-tenant-guard.js';
 import { buildProjects } from './playwright.projects.js';
 import {
   applyScheduledMode,
@@ -24,6 +25,7 @@ const scheduled = isScheduled();
 // `APIRequestContext` + axios + fetch traffic inside specs, not just to
 // globalSetup. Idempotent — calling twice in the same process is a no-op.
 installHostOverride();
+installRealTenantWriteGuard();
 
 // Build Chromium `--host-resolver-rules` arg from the same env vars. Empty
 // string when no override is configured — caller should skip the arg.

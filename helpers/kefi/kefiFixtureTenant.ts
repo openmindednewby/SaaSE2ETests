@@ -39,7 +39,11 @@
  * rather than failing. See `E2ETests/docs/kefi-event-ops-e2e.md`.
  */
 
+import { PROTECTED_TENANT_SLUGS } from '../../fixtures/real-tenant-guard.js';
+
 import { tenantSubdomainUrl } from './kefiUrls.js';
+
+export { PROTECTED_TENANT_SLUGS };
 
 /** The resolved fixture tenant coordinates. */
 export interface KefiFixtureTenant {
@@ -93,17 +97,6 @@ export const FIXTURE_TENANT_SKIP_REASON =
  * `E2E`/`@example.invalid` rows would wreck a live sales demo, which is a
  * different failure with the same cause — so the guard covers it too.
  */
-export const PROTECTED_TENANT_SLUGS: readonly string[] = [
-  'ubb',
-  'csdf',
-  'ubs',
-  'kucy',
-  'kizomba-union-cy',
-  'united-by-salsa',
-  'unitedbybachata',
-  'demo',
-];
-
 /**
  * Refuse to run against a customer tenant. Throws — deliberately NOT a skip.
  *
