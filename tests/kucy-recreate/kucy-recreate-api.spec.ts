@@ -17,7 +17,7 @@ test.describe.configure({ mode: 'serial' });
 
 const EVENT_DAYS_AHEAD = 120;
 const data = loadKucyRecreate();
-const rows = matrixRows(data.config);
+const rows = matrixRows(data);
 
 let admin: KefiAdminClient;
 let tenant: ApiTenantHandle | undefined;

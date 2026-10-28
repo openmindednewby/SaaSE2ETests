@@ -13,6 +13,10 @@
       "footer": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:336-337,1000-1032"
     }
   },
+  "rendered": {
+    "navAnchors": ["book", "posters", "mission", "classes"],
+    "why": "section ids kefi-landings assigns to the KUCY sections; the landing DTO has no field for them"
+  },
   "unsourced": [
     {
       "field": "performerGroups[ambassadors].subtitle",
