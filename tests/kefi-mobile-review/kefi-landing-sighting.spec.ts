@@ -15,12 +15,6 @@
  * click besides navigation is "Open live site", which opens the PUBLIC landing
  * in a new tab; the popup URL is read and the tab is closed.
  *
- * ── KNOWN FAILURE ───────────────────────────────────────────────────────────
- * `organizer-tab-landing` measures 40-42.4px tall (shared `@dloizides/ui-layout`
- * Tabs). Its ≥44 check is its own test, marked `test.fail` against
- * KEFI-HITBOX-1 "Header and pro-gate hit boxes". When the package fix lands the
- * test turns "unexpectedly passed" — remove the marker then.
- *
  * Run: `--project=kefi-landing-sighting-360` / `--project=kefi-landing-sighting-1280`.
  */
 
@@ -187,7 +181,6 @@ test.describe('Kefi organizer landing editor sighting (read-only)', () => {
   });
 
   test('@ui KEFI-LANDING-NAV-1: organizer-tab-landing hit box is at least 44x44', async () => {
-    test.fail(true, 'KNOWN FAILURE: KEFI-HITBOX-1 "Header and pro-gate hit boxes" (shared @dloizides/ui-layout Tabs row is 40-42.4px)');
     await openDashboard();
     await revealLandingTab();
     expectMinHitBox(await measure(page, LANDING_TAB));

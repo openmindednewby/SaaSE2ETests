@@ -141,6 +141,10 @@ async function gotoLandingEditor(page: Page): Promise<void> {
   await expect(page.getByTestId('landing-editor-surface')).toBeVisible({ timeout: VISIBLE_TIMEOUT_MS });
 }
 
+async function openSection(page: Page, sectionKey: 'hero' | 'settings'): Promise<void> {
+  await page.getByTestId(`landing-builder-section-${sectionKey}`).click();
+}
+
 /**
  * The landing editor shows three `ProGateCard` locks for a Free tenant — custom
  * domain, attendee payments, and the remove-Kefi-branding toggle — each with a
@@ -148,20 +152,21 @@ async function gotoLandingEditor(page: Page): Promise<void> {
  */
 async function expectFreePlanLocksRender(page: Page): Promise<void> {
   await gotoLandingEditor(page);
+  await openSection(page, 'settings');
 
   await expect(page.getByTestId('custom-domain-pro-gate')).toBeVisible({ timeout: VISIBLE_TIMEOUT_MS });
   await expect(page.getByTestId('custom-domain-pro-gate-upgrade')).toBeVisible();
   await expect(page.getByTestId('payment-options-pro-gate')).toBeVisible();
   await expect(page.getByTestId('payment-options-pro-gate-upgrade')).toBeVisible();
+  await expect(page.getByTestId('custom-domain-card')).toHaveCount(0);
+  await expect(page.getByTestId('payment-options-card')).toHaveCount(0);
+
+  await openSection(page, 'hero');
   await expect(
     page.getByTestId('landing-form-branding-hidebrand-gate'),
     'remove-Kefi-branding toggle is locked for Free',
-  ).toBeVisible();
+  ).toBeVisible({ timeout: VISIBLE_TIMEOUT_MS });
   await expect(page.getByTestId('landing-form-branding-hidebrand-gate-upgrade')).toBeVisible();
-
-  // The real Pro-only forms must NOT be present while locked.
-  await expect(page.getByTestId('custom-domain-card')).toHaveCount(0);
-  await expect(page.getByTestId('payment-options-card')).toHaveCount(0);
 }
 
 /** The events surface shows the multi-event lock (Free tenant already owns its 1 event). */
@@ -175,6 +180,7 @@ async function expectMultiEventLockRenders(page: Page): Promise<void> {
 /** Clicking a lock's upgrade CTA navigates to /organizer/pricing. */
 async function expectUpgradeCtaRoutesToPricing(page: Page): Promise<void> {
   await gotoLandingEditor(page);
+  await openSection(page, 'settings');
   await page.getByTestId('custom-domain-pro-gate-upgrade').click();
   await page.waitForURL(/\/organizer\/pricing\/?(\?.*)?$/, { timeout: VISIBLE_TIMEOUT_MS });
 }
@@ -199,6 +205,7 @@ async function grantProPlan(backoffice: KefiBackofficeClient, ctx: KefiCanaryCon
  */
 async function expectProFormsRenderAfterGrant(page: Page): Promise<void> {
   await gotoLandingEditor(page);
+  await openSection(page, 'settings');
   await expect(
     page.getByTestId('custom-domain-card'),
     'real custom-domain form renders once Pro is granted',

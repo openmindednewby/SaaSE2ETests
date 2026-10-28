@@ -105,6 +105,8 @@ async function pickGeneratedLogo(page: Page): Promise<void> {
   const { webUrl } = getKefiUrls();
   await page.goto(`${webUrl}/organizer/landing`);
   await expect(page.getByTestId('landing-editor-surface')).toBeVisible({ timeout: VISIBLE_TIMEOUT_MS });
+  await page.getByTestId('landing-builder-section-hero').click();
+  await expect(page.getByTestId('landing-palette-upload'), 'the Hero section shows the palette card').toBeVisible({ timeout: VISIBLE_TIMEOUT_MS });
   const png = await page.evaluate((size: number) => {
     const canvas = document.createElement('canvas');
     canvas.width = size;
