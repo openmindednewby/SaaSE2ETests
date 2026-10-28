@@ -645,7 +645,7 @@ export function buildProjects(): ProjectConfig {
       name: 'kefi-pro-gates-ui',
       workers: 1,
       timeout: 600_000,
-      testMatch: /kefi\/kefi-pro-gates-ui\.spec\.ts/,
+      testMatch: /(kefi\/kefi-pro-gates-ui|kefi-privacy\/kefi-bgremove-privacy)\.spec\.ts/,
       use: CHROME,
     },
     {
