@@ -27,7 +27,6 @@ import {
   draftLanding,
   groupByKey,
   makeTestImages,
-  publicLanding,
   putLandingPatch,
   uploadImage,
   type Person,
@@ -89,9 +88,9 @@ test.describe('KEFI-PEOPLE-1 organizer people editor — landing-config PUT', ()
 
   // Given a group with 3 people,
   // When the organizer PUTs them reordered, one edited, one deleted,
-  // Then the public API has the same order and edits, and the deleted person is gone.
-  test('AC-02 organizer edits, deletes and reorders people and the public order matches', async ({ request }) => {
-    const { tenantA, organizerA } = must();
+  // Then the saved draft has the same order and edits, and the deleted person is gone.
+  test('AC-02 organizer edits, deletes and reorders people and the saved draft order matches', async ({ request }) => {
+    const { organizerA } = must();
     const bearer = await bearerFor(admin, organizerA);
     const three: Person[] = [
       { id: 'p1', name: 'One Ac02' },
@@ -105,16 +104,16 @@ test.describe('KEFI-PEOPLE-1 organizer people editor — landing-config PUT', ()
     const put = await putLandingPatch(request, bearer, { performerGroups: [{ key: 'teachers', title: 'Teachers', performers: edited }] });
     expect(put.status(), `reorder/edit/delete PUT should be 200: ${await put.text()}`).toBe(200);
 
-    const got = groupByKey(await publicLanding(request, tenantA.slug), 'teachers')?.performers ?? [];
-    expect(got.map((p) => p.id), 'public order should be p3, p1 with p2 deleted').toEqual(['p3', 'p1']);
-    expect(got[1], 'the edit to p1 should be public').toMatchObject({ name: 'One Ac02 Edited', topic: 'Kizomba' });
+    const got = groupByKey(await draftLanding(request, bearer), 'teachers')?.performers ?? [];
+    expect(got.map((p) => p.id), 'saved draft order should be p3, p1 with p2 deleted').toEqual(['p3', 'p1']);
+    expect(got[1], 'the edit to p1 should be in the saved draft').toMatchObject({ name: 'One Ac02 Edited', topic: 'Kizomba' });
   });
 
   // Given an organizer,
   // When PUT with a new group (e.g. "Ambassadors"), a renamed group and a removed group,
-  // Then the public API reflects all three.
+  // Then the saved draft reflects all three.
   test('AC-03 organizer adds, renames and removes a group', async ({ request }) => {
-    const { tenantA, organizerA } = must();
+    const { organizerA } = must();
     const bearer = await bearerFor(admin, organizerA);
     const one = (id: string): Person[] => [{ id, name: `Person ${id}` }];
     const seed = await putLandingPatch(request, bearer, {
@@ -135,7 +134,7 @@ test.describe('KEFI-PEOPLE-1 organizer people editor — landing-config PUT', ()
     });
     expect(put.status(), `group add/rename/remove PUT should be 200: ${await put.text()}`).toBe(200);
 
-    const landing = await publicLanding(request, tenantA.slug);
+    const landing = await draftLanding(request, bearer);
     expect(landing.performerGroups?.map((g) => g.key), 'media removed, ambassadors added').toEqual(['teachers', 'djs', 'ambassadors']);
     expect(groupByKey(landing, 'teachers')?.title, 'teachers renamed to Artists').toBe('Artists');
     expect(groupByKey(landing, 'ambassadors')?.performers.map((p) => p.id), 'new group carries its person').toEqual(['a1']);
@@ -143,9 +142,9 @@ test.describe('KEFI-PEOPLE-1 organizer people editor — landing-config PUT', ()
 
   // Given a person,
   // When PUT photoPosition inside the bounds (x,y within ±60, scale 0.5–3), then outside them,
-  // Then inside round-trips through the public API; outside returns 400 from the validator.
+  // Then inside round-trips through the saved draft; outside returns 400 from the validator.
   test('AC-05 photoPosition inside the bounds round-trips, outside them is rejected with 400', async ({ request }) => {
-    const { tenantA, organizerA } = must();
+    const { organizerA } = must();
     const bearer = await bearerFor(admin, organizerA);
     const withPos = (photoPosition: { x: number; y: number; scale: number }): Parameters<typeof putLandingPatch>[2] => ({
       performerGroups: [{ key: 'teachers', title: 'Teachers', performers: [{ id: 'framed', name: 'Framed Ac05', photoPosition }] }],
@@ -153,14 +152,14 @@ test.describe('KEFI-PEOPLE-1 organizer people editor — landing-config PUT', ()
     const inside = { x: -60, y: 35, scale: 2.5 };
     const ok = await putLandingPatch(request, bearer, withPos(inside));
     expect(ok.status(), `in-bounds PUT should be 200: ${await ok.text()}`).toBe(200);
-    const got = groupByKey(await publicLanding(request, tenantA.slug), 'teachers')?.performers[0];
+    const got = groupByKey(await draftLanding(request, bearer), 'teachers')?.performers[0];
     expect(got?.photoPosition, 'in-bounds photoPosition should round-trip').toEqual(inside);
 
     for (const outside of [{ x: 61, y: 0, scale: 1 }, { x: 0, y: -61, scale: 1 }, { x: 0, y: 0, scale: 3.5 }, { x: 0, y: 0, scale: 0.4 }]) {
       const bad = await putLandingPatch(request, bearer, withPos(outside));
       expect(bad.status(), `out-of-bounds ${JSON.stringify(outside)} should be 400`).toBe(400);
     }
-    const after = groupByKey(await publicLanding(request, tenantA.slug), 'teachers')?.performers[0];
+    const after = groupByKey(await draftLanding(request, bearer), 'teachers')?.performers[0];
     expect(after?.photoPosition, 'a rejected PUT must not change the saved framing').toEqual(inside);
   });
 
@@ -198,18 +197,20 @@ test.describe('KEFI-PEOPLE-1 organizer people editor — landing-config PUT', ()
 
   // Given the non-organizer of tenant A, and the organizer of tenant B,
   // When each PUTs people,
-  // Then the non-organizer gets 403, and tenant B's write never changes tenant A's public people.
+  // Then the non-organizer gets 403, and tenant B's write never changes tenant A's saved people.
   test('AC-09 a non-organizer or another tenant\'s organizer cannot write tenant A\'s people', async ({ request }) => {
-    const { tenantA, tenantB, nonOrganizerA, organizerB } = must();
-    const before = (await publicLanding(request, tenantA.slug)).performerGroups;
+    const { organizerA, nonOrganizerA, organizerB } = must();
+    const bearerA = await bearerFor(admin, organizerA);
+    const bearerB = await bearerFor(admin, organizerB);
+    const before = (await draftLanding(request, bearerA)).performerGroups;
     const intrusion = { performerGroups: [{ key: 'teachers', title: 'Hijacked', performers: [{ id: 'x', name: 'Intruder Ac09' }] }] };
 
     const denied = await putLandingPatch(request, await bearerFor(admin, nonOrganizerA), intrusion);
     expect(denied.status(), 'a non-organizer (ambassador) PUT must be 403').toBe(403);
 
-    const other = await putLandingPatch(request, await bearerFor(admin, organizerB), intrusion);
+    const other = await putLandingPatch(request, bearerB, intrusion);
     expect(other.status(), `tenant B organizer writes its OWN tenant: ${await other.text()}`).toBe(200);
-    expect(groupByKey(await publicLanding(request, tenantB.slug), 'teachers')?.title, 'the write landed on tenant B').toBe('Hijacked');
-    expect((await publicLanding(request, tenantA.slug)).performerGroups, 'tenant A people must be unchanged').toEqual(before);
+    expect(groupByKey(await draftLanding(request, bearerB), 'teachers')?.title, 'the write landed on tenant B').toBe('Hijacked');
+    expect((await draftLanding(request, bearerA)).performerGroups, 'tenant A people must be unchanged').toEqual(before);
   });
 });

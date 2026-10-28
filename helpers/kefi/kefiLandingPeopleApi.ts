@@ -59,7 +59,7 @@ export async function putLandingPatch(
   patch: Partial<PublicLanding>,
 ): Promise<APIResponse> {
   const saved = await savedLanding(request, bearer);
-  const config = { ...((saved.config as Json | undefined) ?? {}), ...patch };
+  const config = { ...((saved.landing as Json | null | undefined) ?? {}), ...patch };
   const body: Json = { config };
   if (saved.schemaVersion !== undefined) body.schemaVersion = saved.schemaVersion;
   if (saved.template !== undefined) body.template = saved.template;
