@@ -94,7 +94,7 @@
         "collapsedWordmark": null,
         "heroGlow": null,
         "embers": null,
-        "navLogoUrl": null,
+        "navLogoUrl": "https://kizombaunioncy.dloizides.com/assets/logo/logo-nav.png",
         "iconUrl": null,
         "name": "Kizomba Union CY",
         "tagline": "Urban Kiz · Kizomba · Tarraxo",
@@ -700,7 +700,10 @@
           "imageUrl": null
         }
       ],
-      "footer": null,
+      "footer": {
+        "text": "© 2026 Kizomba Union CY · Organized by Jimmy Loizides · Nicosia, Cyprus",
+        "links": []
+      },
       "theme": null,
       "analytics": null,
       "structuredData": {
