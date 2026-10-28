@@ -76,6 +76,16 @@ export async function publicLanding(request: APIRequestContext, slug: string): P
   return body.landing ?? {};
 }
 
+/** The caller tenant's saved draft: the `landing` object of the editor's own GET admin read. */
+export async function draftLanding(request: APIRequestContext, bearer: string): Promise<PublicLanding> {
+  const resp = await request.get(api(KEFI_LANDING_CONFIG_PATH), { headers: auth(bearer) });
+  if (resp.status() !== 200) {
+    throw new Error(`draft GET ${KEFI_LANDING_CONFIG_PATH} expected 200, got ${resp.status()}: ${await resp.text()}`);
+  }
+  const body = (await resp.json()) as { landing?: PublicLanding | null };
+  return body.landing ?? {};
+}
+
 /** Multipart POST to the Kefi landing-image upload endpoint. */
 export function uploadImage(request: APIRequestContext, bearer: string, file: ImageFile): Promise<APIResponse> {
   return request.post(api(KEFI_LANDING_UPLOAD_PATH), { headers: auth(bearer), multipart: { file } });

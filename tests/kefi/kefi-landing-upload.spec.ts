@@ -20,9 +20,9 @@ import { KefiAdminClient } from '../../helpers/kefi/kefiAdminClient.js';
 import { masterAdminAvailable } from '../../helpers/kefi/kefiKeycloakAdmin.js';
 import {
   bearerFor,
+  draftLanding,
   makeTestImages,
   pngKeepsAlpha,
-  publicLanding,
   putLandingPatch,
   uploadImage,
   type ImageFile,
@@ -92,7 +92,7 @@ test.describe('KEFI-PEOPLE-1 organizer people editor — landing image upload', 
   // When it is uploaded to KEFI_LANDING_UPLOAD_PATH and posters are PUT reordered,
   // Then the poster imageUrl is the uploaded URL and the public API order matches.
   test('AC-06 organizer uploads a poster flier and reorders posters', async ({ request }) => {
-    const { tenantA, organizerA } = must();
+    const { organizerA } = must();
     const bearer = await bearerFor(admin, organizerA);
     const urls: string[] = [];
     for (let i = 0; i < 2; i++) {
@@ -108,8 +108,8 @@ test.describe('KEFI-PEOPLE-1 organizer people editor — landing image upload', 
     const reordered = await putLandingPatch(request, bearer, { posters: [posterB, posterA] });
     expect(reordered.status(), `reordered posters PUT should be 200: ${await reordered.text()}`).toBe(200);
 
-    const posters = (await publicLanding(request, tenantA.slug)).posters ?? [];
-    expect(posters.map((p) => p.id), 'public poster order should match the reorder').toEqual(['poster-b', 'poster-a']);
+    const posters = (await draftLanding(request, bearer)).posters ?? [];
+    expect(posters.map((p) => p.id), 'saved draft poster order should match the reorder').toEqual(['poster-b', 'poster-a']);
     expect(posters.map((p) => p.imageUrl), 'poster imageUrl should be the uploaded URL').toEqual([urls[1], urls[0]]);
     const served = await request.get(urls[0]);
     expect(served.headers()['content-type'], 'the flier URL should serve an image').toMatch(/^image\//);

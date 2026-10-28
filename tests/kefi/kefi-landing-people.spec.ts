@@ -24,6 +24,7 @@ import { KefiAdminClient } from '../../helpers/kefi/kefiAdminClient.js';
 import { masterAdminAvailable } from '../../helpers/kefi/kefiKeycloakAdmin.js';
 import {
   bearerFor,
+  draftLanding,
   groupByKey,
   makeTestImages,
   publicLanding,
@@ -67,8 +68,8 @@ test.describe('KEFI-PEOPLE-1 organizer people editor — landing-config PUT', ()
   // Given an organizer token and tenant A with a group,
   // When PUT KEFI_LANDING_CONFIG_PATH with a new person (name, role, topic, socials),
   // Then GET publicTenantPath(slug) returns that person with those fields.
-  test('AC-01 organizer adds a person to a group and the public API returns it', async ({ request }) => {
-    const { tenantA, organizerA } = must();
+  test('AC-01 organizer adds a person to a group and the saved draft returns it', async ({ request }) => {
+    const { organizerA } = must();
     const bearer = await bearerFor(admin, organizerA);
     const person: Person = {
       id: 'ac01-maria',
@@ -80,10 +81,10 @@ test.describe('KEFI-PEOPLE-1 organizer people editor — landing-config PUT', ()
     const put = await putLandingPatch(request, bearer, { performerGroups: [{ key: 'teachers', title: 'Teachers', performers: [person] }] });
     expect(put.status(), `organizer PUT should be 200: ${await put.text()}`).toBe(200);
 
-    const got = groupByKey(await publicLanding(request, tenantA.slug), 'teachers')?.performers ?? [];
-    expect(got.map((p) => p.id), 'public API should list exactly the new person').toEqual(['ac01-maria']);
-    expect(got[0], 'public person should carry name, role and topic').toMatchObject({ name: person.name, role: person.role, topic: person.topic });
-    expect(got[0].socials, 'public person should carry the social link').toEqual([expect.objectContaining({ kind: 'instagram', url: 'https://instagram.com/maria.ac01' })]);
+    const got = groupByKey(await draftLanding(request, bearer), 'teachers')?.performers ?? [];
+    expect(got.map((p) => p.id), 'saved draft should list exactly the new person').toEqual(['ac01-maria']);
+    expect(got[0], 'draft person should carry name, role and topic').toMatchObject({ name: person.name, role: person.role, topic: person.topic });
+    expect(got[0].socials, 'draft person should carry the social link').toEqual([expect.objectContaining({ kind: 'instagram', url: 'https://instagram.com/maria.ac01' })]);
   });
 
   // Given a group with 3 people,
