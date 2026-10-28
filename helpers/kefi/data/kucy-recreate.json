@@ -1,0 +1,638 @@
+{
+  "source": {
+    "base": "kefi-landings/docs/tenants/kizombaunioncy/landing-config.json (applied 2026-10-28)",
+    "copiedFrom": {
+      "branding.navLogoUrl": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:304",
+      "branding.collapsedWordmark": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:303",
+      "register.secondaryLabel/secondaryUrl": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:332",
+      "passes": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:560-570",
+      "addOns": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:572,879-885",
+      "sections[media].addOnId": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:879",
+      "book": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:665-718",
+      "posters": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:922-958",
+      "footer": "kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:336-337,1000-1032"
+    }
+  },
+  "unsourced": [
+    {
+      "field": "performerGroups[ambassadors].subtitle",
+      "why": "static copy says '1st Edition'; 2nd-edition wording not in any source (B6, owner supplies)"
+    },
+    {
+      "field": "sections[past].body",
+      "why": "static copy is the 1st-edition text; 2nd-edition wording not in any source (B6, owner supplies)"
+    },
+    {
+      "field": "passes[].id",
+      "why": "static tiers have no codes; PARTY/FULL/CLASS taken from book.reference.code"
+    },
+    {
+      "field": "book.contact email line",
+      "why": "no DTO field for the obfuscated email line (static kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:693)"
+    },
+    {
+      "field": "organizer bio + photo ('Hi, I'm Jimmy')",
+      "why": "no DTO field; footer carries the organizer links only (kefi-landings/src/templates/template-1/data/kizomba-union-cy.ts:980-984)"
+    },
+    {
+      "field": "prices partyIncludes RSVP/Bailemos links",
+      "why": "no DTO field on passes (matrix row 16, engine-lacks)"
+    }
+  ],
+  "landing": {
+    "schemaVersion": 1,
+    "template": "kucy",
+    "config": {
+      "lang": null,
+      "text": null,
+      "layout": null,
+      "paymentContactMessage": null,
+      "paymentTermsLabel": null,
+      "branding": {
+        "collapsedWordmark": true,
+        "heroGlow": null,
+        "embers": null,
+        "navLogoUrl": "https://kizombaunioncy.dloizides.com/assets/logo/logo-nav.png",
+        "iconUrl": null,
+        "name": "Kizomba Union CY",
+        "tagline": "Urban Kiz · Kizomba · Tarraxo",
+        "edition": "2nd Edition",
+        "heroImageUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-main.png",
+        "logoUrl": "https://kizombaunioncy.dloizides.com/assets/logo/lockup.png",
+        "primaryColor": "#3a81a8",
+        "accentColor": "#c96a3d",
+        "backgroundColors": [
+          "#2f79a3",
+          "#3a81a8",
+          "#6ba3c2",
+          "#a7c4d2",
+          "#dbc396",
+          "#e8a070",
+          "#c96a3d",
+          "#a84a22"
+        ],
+        "hideBrand": null
+      },
+      "eventDetails": {
+        "factRowStyle": null,
+        "dateLabel": "24 April 2027",
+        "classesTime": "16:00 – 20:25",
+        "partyTime": "21:30 – Late",
+        "locationLabel": "Nicosia, CY",
+        "description": "Kizomba Union CY brings together local artists and dancers from all across Cyprus — one afternoon of workshops, one night of social dancing, one community on the floor.",
+        "eyebrow": "Our Purpose",
+        "heading": "Uniting Cyprus Kizomba",
+        "stats": [
+          {
+            "value": "7",
+            "label": "Workshops · 4h"
+          },
+          {
+            "value": "9",
+            "label": "Local Teachers"
+          },
+          {
+            "value": "2",
+            "label": "Rooms · 3 DJs"
+          },
+          {
+            "value": "1",
+            "label": "Island"
+          }
+        ]
+      },
+      "venue": {
+        "name": "Bailemos Dance School",
+        "city": "Nicosia · Cyprus",
+        "address": "Bailemos Dance School Nicosia, Vathylaka 1, Strovolos 2033, Cyprus",
+        "mapUrl": "https://www.google.com/maps/dir/?api=1&destination=Bailemos+Dance+School+Nicosia%2C+Vathylaka+1%2C+Strovolos+2033%2C+Cyprus"
+      },
+      "register": {
+        "secondaryLabel": "Meet the Teachers",
+        "secondaryUrl": "#teachers",
+        "label": "Get a Pass",
+        "url": "#register",
+        "note": "Reserve your spot in seconds — we'll confirm by WhatsApp and send payment instructions."
+      },
+      "sections": [
+        {
+          "hideFromNav": null,
+          "key": "media",
+          "eyebrow": "Capture the Night",
+          "title": "Photo & Video",
+          "body": "Official photographer and videographer cover the event. Want a personal recording? Book the optional Pro Video add-on — one song filmed and edited, delivered after the night.",
+          "links": null,
+          "addOnId": "PROVIDEO"
+        },
+        {
+          "hideFromNav": null,
+          "key": "past",
+          "eyebrow": "Archive",
+          "title": "Past Editions",
+          "body": "This is the 1st Edition — every future edition will be saved here. Check back after 16 May 2026 for photos and the recap.",
+          "links": null,
+          "addOnId": null
+        }
+      ],
+      "performerGroups": [
+        {
+          "key": "teachers",
+          "eyebrow": "The Line-Up",
+          "title": "Teachers",
+          "subtitle": "Seven local acts across Urban Kiz, Kizomba, Lady's Styling & Tarraxo.",
+          "performers": [
+            {
+              "photoPosition": null,
+              "id": "manuel",
+              "name": "Manuel",
+              "topic": "Kizomba Tricks",
+              "role": null,
+              "bio": null,
+              "room": "Room Fuego",
+              "level": "Inter / Adv",
+              "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/manuel.png",
+              "instagramHandle": "@kiz_ango",
+              "instagramUrl": "https://www.instagram.com/kiz_ango/",
+              "socials": null
+            },
+            {
+              "photoPosition": null,
+              "id": "jimmy-ismini",
+              "name": "Jimmy & Ismini",
+              "topic": "Kizomba First Steps",
+              "role": null,
+              "bio": null,
+              "room": "Room Fuego",
+              "level": "Beginners",
+              "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/jimmy-ismini.png",
+              "instagramHandle": "@jimmy_walkerll",
+              "instagramUrl": "https://www.instagram.com/jimmy_walkerll/",
+              "socials": null
+            },
+            {
+              "photoPosition": null,
+              "id": "eleni-nouka",
+              "name": "Eleni Nouka",
+              "topic": "Lady's Styling",
+              "role": null,
+              "bio": null,
+              "room": "Room Fuego",
+              "level": "Open Level",
+              "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/eleni-nouka.png",
+              "instagramHandle": "@eleni_nouka",
+              "instagramUrl": "https://www.instagram.com/eleni_nouka/",
+              "socials": null
+            },
+            {
+              "photoPosition": null,
+              "id": "marios-klara",
+              "name": "Marios & Klara",
+              "topic": "Urban Kiz Sequence",
+              "role": null,
+              "bio": null,
+              "room": "Room Garden",
+              "level": "Inter / Adv",
+              "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/marios-klara.png",
+              "instagramHandle": "@kizz_amor_km",
+              "instagramUrl": "https://www.instagram.com/kizz_amor_km/",
+              "socials": null
+            },
+            {
+              "photoPosition": null,
+              "id": "petros-anastasiou",
+              "name": "Petros Anastasiou",
+              "topic": "Kizomba Sequence",
+              "role": null,
+              "bio": null,
+              "room": "Room Fuego",
+              "level": "Inter / Adv",
+              "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/petros-anastasiou.png",
+              "instagramHandle": "@petros.anastasiou",
+              "instagramUrl": "https://www.instagram.com/petros.anastasiou/",
+              "socials": null
+            },
+            {
+              "photoPosition": null,
+              "id": "aymana",
+              "name": "Aymana",
+              "topic": "Tarraxo Basics",
+              "role": null,
+              "bio": null,
+              "room": "Room Garden",
+              "level": "Open Level",
+              "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/aymana.png",
+              "instagramHandle": "@aymana.gs",
+              "instagramUrl": "https://www.instagram.com/aymana.gs/",
+              "socials": null
+            },
+            {
+              "photoPosition": null,
+              "id": "andria-avraam",
+              "name": "Andria Avraam",
+              "topic": "Kizomba Sensual Style",
+              "role": null,
+              "bio": null,
+              "room": "Room Paraiso",
+              "level": "Open Level",
+              "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/andria-avraam.png",
+              "instagramHandle": "@andriadance",
+              "instagramUrl": "https://www.instagram.com/andriadance/",
+              "socials": null
+            }
+          ]
+        },
+        {
+          "key": "ambassadors",
+          "eyebrow": "Community",
+          "title": "Ambassadors",
+          "subtitle": "The Cyprus dancers helping us build this 1st Edition. Say hi when you catch them on the social floor.",
+          "performers": [
+            {
+              "photoPosition": null,
+              "id": "daniel-rafaela",
+              "name": "Daniel & Rafaela",
+              "topic": null,
+              "role": null,
+              "bio": null,
+              "room": null,
+              "level": null,
+              "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/daniel-rafaela.png",
+              "instagramHandle": "@daniel_rafaella",
+              "instagramUrl": "https://www.instagram.com/daniel_rafaella/",
+              "socials": null
+            },
+            {
+              "photoPosition": null,
+              "id": "vasillis-marina",
+              "name": "Vasillis & Marina",
+              "topic": null,
+              "role": null,
+              "bio": null,
+              "room": null,
+              "level": null,
+              "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/vasillis-marina.png",
+              "instagramHandle": "@danceislandcy",
+              "instagramUrl": "https://www.instagram.com/danceislandcy/",
+              "socials": null
+            },
+            {
+              "photoPosition": null,
+              "id": "eleonora",
+              "name": "Eleonora",
+              "topic": null,
+              "role": null,
+              "bio": null,
+              "room": null,
+              "level": null,
+              "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/eleonora.png",
+              "instagramHandle": "@eleleven_",
+              "instagramUrl": "https://www.instagram.com/eleleven_/",
+              "socials": null
+            },
+            {
+              "photoPosition": null,
+              "id": "sofia-andreadou",
+              "name": "Sofia Andreadou",
+              "topic": null,
+              "role": null,
+              "bio": null,
+              "room": null,
+              "level": null,
+              "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/sofia-andreadou.png",
+              "instagramHandle": "@sofia4u",
+              "instagramUrl": "https://www.instagram.com/sofia4u/",
+              "socials": null
+            },
+            {
+              "photoPosition": null,
+              "id": "eugene",
+              "name": "Kizomba Club Cy (Eugen)",
+              "topic": null,
+              "role": null,
+              "bio": null,
+              "room": null,
+              "level": null,
+              "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/eugene.png",
+              "instagramHandle": "@kizomba_cy",
+              "instagramUrl": "https://www.instagram.com/kizomba_cy/",
+              "socials": null
+            },
+            {
+              "photoPosition": null,
+              "id": "constantinos-christina",
+              "name": "Constantinos & Christina",
+              "topic": null,
+              "role": null,
+              "bio": null,
+              "room": null,
+              "level": null,
+              "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/constantinos-christina.png",
+              "instagramHandle": "@constantinos_bailemos",
+              "instagramUrl": "https://www.instagram.com/constantinos_bailemos/",
+              "socials": null
+            },
+            {
+              "photoPosition": null,
+              "id": "aytunc",
+              "name": "Aytunc",
+              "topic": null,
+              "role": null,
+              "bio": null,
+              "room": null,
+              "level": null,
+              "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/aytunc.png",
+              "instagramHandle": "@aytunc.bachakizz",
+              "instagramUrl": "https://www.instagram.com/aytunc.bachakizz/",
+              "socials": null
+            },
+            {
+              "photoPosition": null,
+              "id": "petros-c-petrou",
+              "name": "Petros C. Petrou",
+              "topic": null,
+              "role": null,
+              "bio": null,
+              "room": null,
+              "level": null,
+              "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/petros-c-petrou.png",
+              "instagramHandle": "@pcpetrou",
+              "instagramUrl": "https://www.instagram.com/pcpetrou/",
+              "socials": null
+            }
+          ]
+        },
+        {
+          "key": "media",
+          "eyebrow": "Capture the Night",
+          "title": "Photo & Video Crew",
+          "subtitle": "The official photographer and videographer covering the event.",
+          "performers": [
+            {
+              "photoPosition": null,
+              "id": "oscar-figueras",
+              "name": "Oscar Figueras",
+              "topic": null,
+              "role": "Videographer",
+              "bio": null,
+              "room": null,
+              "level": null,
+              "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/oscar-figueras.png",
+              "instagramHandle": "@oscar.dancenation",
+              "instagramUrl": "https://www.instagram.com/oscar.dancenation/",
+              "socials": null
+            },
+            {
+              "photoPosition": null,
+              "id": "anastasia-chemodanova",
+              "name": "Anastasia Chemodanova",
+              "topic": null,
+              "role": "Photographer",
+              "bio": null,
+              "room": null,
+              "level": null,
+              "photoUrl": "https://kizombaunioncy.dloizides.com/assets/people/anastasia-chemodanova.png",
+              "instagramHandle": "@chenasta",
+              "instagramUrl": "https://www.instagram.com/chenasta/",
+              "socials": null
+            }
+          ]
+        }
+      ],
+      "schedule": {
+        "navLabel": null,
+        "eyebrow": "Schedule",
+        "title": "Classes",
+        "subtitle": "Four hours wall-clock — seven classes in total thanks to parallel sessions across three rooms (Fuego, Paraiso, Garden). From beginners to advanced.",
+        "slots": [
+          {
+            "id": "slot-1",
+            "time": "16:00 – 16:55",
+            "classes": [
+              {
+                "teacher": "Jimmy & Ismini",
+                "topic": "Kizomba First Steps",
+                "room": "Room Fuego",
+                "level": "Beginners"
+              }
+            ]
+          },
+          {
+            "id": "slot-2",
+            "time": "17:10 – 18:05",
+            "classes": [
+              {
+                "teacher": "Manuel",
+                "topic": "Kizomba Tricks",
+                "room": "Room Fuego",
+                "level": "Inter / Advanced"
+              },
+              {
+                "teacher": "Andria Avraam",
+                "topic": "Kizomba Sensual Style",
+                "room": "Room Paraiso",
+                "level": "Open Level"
+              }
+            ]
+          },
+          {
+            "id": "slot-3",
+            "time": "18:20 – 19:15",
+            "classes": [
+              {
+                "teacher": "Eleni Nouka",
+                "topic": "Lady's Styling",
+                "room": "Room Fuego",
+                "level": "Open Level"
+              },
+              {
+                "teacher": "Marios & Klara",
+                "topic": "Urban Kiz Sequence",
+                "room": "Room Garden",
+                "level": "Inter / Advanced"
+              }
+            ]
+          },
+          {
+            "id": "slot-4",
+            "time": "19:30 – 20:25",
+            "classes": [
+              {
+                "teacher": "Petros Anastasiou",
+                "topic": "Kizomba Sequence",
+                "room": "Room Fuego",
+                "level": "Inter / Advanced"
+              },
+              {
+                "teacher": "Aymana",
+                "topic": "Tarraxo Basics",
+                "room": "Room Garden",
+                "level": "Open Level"
+              }
+            ]
+          }
+        ]
+      },
+      "party": {
+        "eyebrow": "After Dark",
+        "title": "The Party",
+        "subtitle": "Party includes 2 rooms · 3 DJs · 2 drinks",
+        "rooms": [
+          {
+            "id": "room-fuego",
+            "name": "Room Fuego",
+            "music": "Salsa & Bachata",
+            "dj": "DJ LP"
+          },
+          {
+            "id": "room-garden",
+            "name": "Room Garden",
+            "music": "Urban Kiz & Kizomba",
+            "dj": "DJ Daniel · DJ Aleksei"
+          }
+        ]
+      },
+      "socialLinks": [
+        {
+          "id": "instagram",
+          "kind": "instagram",
+          "label": "Kizomba Union CY on Instagram",
+          "url": "https://www.instagram.com/kizombaunioncy/"
+        },
+        {
+          "id": "facebook",
+          "kind": "facebook",
+          "label": "Kizomba Union CY Facebook event",
+          "url": "https://www.facebook.com/events/1526139312215218/"
+        }
+      ],
+      "passes": [
+        {
+          "id": "PARTY",
+          "name": "Party Pass",
+          "price": "€15",
+          "description": "Party only",
+          "featured": null,
+          "badge": null,
+          "soldOut": false
+        },
+        {
+          "id": "FULL",
+          "name": "Full Pass",
+          "price": "€30",
+          "description": "All classes + Party",
+          "featured": true,
+          "badge": "Best Value",
+          "soldOut": false
+        },
+        {
+          "id": "CLASS",
+          "name": "Class Pass",
+          "price": "€20",
+          "description": "All classes",
+          "featured": null,
+          "badge": null,
+          "soldOut": false
+        }
+      ],
+      "posters": [
+        {
+          "id": "main",
+          "title": "Main Poster",
+          "imageUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-main.png?v=7",
+          "downloadUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-main.png?v=7"
+        },
+        {
+          "id": "classes",
+          "title": "Classes Schedule",
+          "imageUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-classes.png?v=5",
+          "downloadUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-classes.png?v=5"
+        },
+        {
+          "id": "prices",
+          "title": "Prices",
+          "imageUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-prices.png?v=4",
+          "downloadUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-prices.png?v=4"
+        },
+        {
+          "id": "provideo",
+          "title": "Pro Video — €15",
+          "imageUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-provideo.png?v=1",
+          "downloadUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-provideo.png?v=1"
+        }
+      ],
+      "registration": null,
+      "book": {
+        "eyebrowOpen": "Reserve Your Spot",
+        "eyebrowClosed": "Pay at the Door",
+        "title": "Book & Pay",
+        "subOpen": "Message or call Jimmy to reserve your pass, then send payment via Revolut.",
+        "subClosed": "Online Revolut payments are closed. Message Jimmy to confirm your pass, then pay cash at the door.",
+        "contactHeading": "Contact the Organizer",
+        "contactPhone": "+35796650527",
+        "revolut": {
+          "heading": "Pay via Revolut",
+          "qrImg": "https://kizombaunioncy.dloizides.com/assets/revolut-qr.png",
+          "qrAlt": "Revolut QR code for revolut.me/demetreiis",
+          "url": "https://revolut.me/demetreiis",
+          "urlLabel": "Open revolut.me/demetreiis",
+          "methodLabel": null
+        },
+        "bankTransfer": null,
+        "reference": {
+          "label": "Payment Reference",
+          "code": "KUCY · Name Surname · FULL / CLASS / PARTY",
+          "noteHtml": "When you send the payment, please use this reference so we can match your pass. Example: <strong>KUCY Maria Papadopoulou FULL</strong> for a €30 full pass, or <strong>KUCY Andreas Georgiou PARTY</strong> for the €15 party ticket."
+        },
+        "closed": {
+          "eyebrow": "Online Revolut payments closed",
+          "title": "Pay cash at the door 💳",
+          "bodyHtml": "Online Revolut transfers are no longer being processed. Message Jimmy above to confirm your pass, then pay cash directly at the door on the night.",
+          "meta": "Doors open from 15:30 · Cash only at the door"
+        },
+        "payNotifyLabel": null,
+        "payNotifyMessageTemplate": null
+      },
+      "addOns": [
+        {
+          "id": "PROVIDEO",
+          "name": "Pro Video",
+          "price": "€15",
+          "priceEur": 15,
+          "description": "Oscar films you for one song during the night and edits the clip. The event organizer sends you the final video after the event. Add it to any pass.",
+          "badge": "Optional add-on",
+          "imageUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-provideo.png?v=1"
+        }
+      ],
+      "footer": {
+        "text": "© 2026 Kizomba Union CY · Organized by Jimmy Loizides · Nicosia, Cyprus",
+        "links": [
+          {
+            "label": "Jimmy on Facebook",
+            "url": "https://www.facebook.com/jimmys.loizides/"
+          },
+          {
+            "label": "Jimmy on Instagram",
+            "url": "https://www.instagram.com/jimmy_walkerll/"
+          },
+          {
+            "label": "Jimmy on YouTube",
+            "url": "https://www.youtube.com/@JimmyWalkll"
+          },
+          {
+            "label": "Bailemos Dance School Nicosia",
+            "url": "https://www.facebook.com/bailemos.nicosia"
+          },
+          {
+            "label": "DANCEpiration Larnaka",
+            "url": "https://www.facebook.com/profile.php?id=100063692103577"
+          }
+        ]
+      },
+      "theme": null,
+      "analytics": null,
+      "structuredData": null,
+      "pwa": null,
+      "schemaVersion": 1
+    }
+  }
+}

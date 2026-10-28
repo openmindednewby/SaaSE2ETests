@@ -503,7 +503,7 @@ export function buildProjects(): ProjectConfig {
       name: 'kefi-free-publish',
       workers: 1,
       timeout: 600_000,
-      testMatch: /kefi\/kefi-free-publish\.spec\.ts/,
+      testMatch: /(kefi\/kefi-free-publish|kucy-recreate\/kucy-recreate-api)\.spec\.ts/,
       use: CHROME,
     },
     {
