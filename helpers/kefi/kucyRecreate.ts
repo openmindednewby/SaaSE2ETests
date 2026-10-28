@@ -80,9 +80,8 @@ const section = (c: KucyConfig, key: string): { title: string; body: string } =>
   return found;
 };
 const heroLocation = (c: KucyConfig): string => {
-  if (c.eventDetails.factRowStyle !== 'classesPartyLocation') return c.eventDetails.locationLabel;
-  const parts = [c.venue.name, c.venue.city ?? ''].filter((p) => p.length > 0);
-  return parts.length > 0 ? parts.join(' · ') : c.eventDetails.locationLabel;
+  if (c.eventDetails.locationLabel.trim() !== '') return c.eventDetails.locationLabel;
+  return [c.venue.name, c.venue.city ?? ''].filter((p) => p.length > 0).join(' · ');
 };
 const names = (items: readonly Named[]): string[] => items.map((i) => i.name);
 const wordmark = (name: string, collapsed: boolean | null | undefined): string => {
