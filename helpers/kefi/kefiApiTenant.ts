@@ -105,7 +105,6 @@ export async function provisionApiTenantWithEvent(input: {
     throw new Error(`[kefiApiTenant] seed-canary-event did not find tenant ${slug}`);
   }
 
-  // The completion handler re-maps the subscription from the state's plan, so pin it to pro first.
   const { apiUrl } = getKefiUrls();
   const bearer = await admin.getTenantOwnerBearer({ email: ctx.email, password: ctx.password });
   await forceOnboardingPlan({ apiUrl, bearer, code: 'pro' });
