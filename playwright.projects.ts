@@ -797,7 +797,7 @@ export function buildProjects(): ProjectConfig {
       name: 'kefi-landing-people',
       workers: 1,
       timeout: 600_000,
-      testMatch: /kefi\/kefi-landing-(people|upload)\.spec\.ts/,
+      testMatch: /kefi\/kefi-landing-(people|upload|editor-action-parity)\.spec\.ts/,
       use: CHROME,
     },
     {

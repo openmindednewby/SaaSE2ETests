@@ -180,6 +180,12 @@ export async function createTenantUserWithRole(input: {
   return { userId, username: input.email, password: input.password };
 }
 
+/** Add one more realm role to an existing kefi-realm user, e.g. a two-dashboard organizer + tenant-owner. */
+export async function addRealmRole(userId: string, roleName: string): Promise<void> {
+  const { kcUrl, kcRealm } = getKefiUrls();
+  await assignRealmRole({ kcUrl, kcRealm, adminToken: await mintMasterAdminToken() }, userId, roleName);
+}
+
 /** POST the owner user record; returns its KC id (parsed from the Location header). */
 async function createOwnerUserRecord(
   ctx: KcAdminCtx,
