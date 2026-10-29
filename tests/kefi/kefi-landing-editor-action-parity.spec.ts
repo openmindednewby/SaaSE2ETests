@@ -20,6 +20,7 @@ const DEVICES = [
 ] as const;
 const EDITOR_PATH = '/organizer/landing';
 const SHELL_TIMEOUT = 45_000;
+const MENU_OPEN_TIMEOUT = 3_000;
 const CANARY_PREFIX = 'e2c-';
 const STUB_PUBLISH = { status: 'Enqueued', enqueuedAtUtc: '2026-10-29T00:00:00Z', message: 'Stubbed by the parity spec' };
 
@@ -84,8 +85,10 @@ test.describe('KEFI-EDITOR-HEADER-1 landing editor action parity', () => {
         const count = await triggers.count();
         for (let i = 0; i < count; i += 1) {
           await triggers.nth(i).click();
-          if (await target.isVisible()) return target;
+          const opened = await target.waitFor({ state: 'visible', timeout: MENU_OPEN_TIMEOUT }).then(() => true, () => false);
+          if (opened) return target;
           await page.keyboard.press('Escape');
+          await expect(target, `${what} is not left on screen by a closing menu`).toBeHidden();
         }
         await expect(target, `${what} is on screen or behind a menu / popover trigger`).toBeVisible();
         return target;
