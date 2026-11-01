@@ -6,7 +6,7 @@
  *
  * The in-cluster complement to the dev-PC `scripts/canary-orphan-cleanup.ps1`
  * Tilt resource — runs weekly inside the cluster so cleanup happens even when
- * the dev PC is off. Three jobs:
+ * the dev PC is off. Four jobs:
  *
  *   1. STALE LOCK RELEASE — delete `canary-run-lock-{target}` if its
  *      `startedAt` is older than 30 min (a Job SIGKILL'd before its teardown
@@ -18,6 +18,9 @@
  *      cleanup endpoints never got to.
  *   3. SEAWEEDFS RETENTION — delete `s3://${S3_BUCKET}/` objects older than
  *      S3_RETENTION_DAYS (default 30). ~9 GB steady-state at 2 runs/day.
+ *   4. KEFI e2c-* PUBLISHED TENANT SWEEP — a canary tenant a dead run left on
+ *      GET /api/v1/t is rebuilt into every kefi-landings publish. Skipped while
+ *      the run lock is fresh; a missing variable or a failed id reds the Job.
  *
  * DRY RUN: set CANARY_CLEANUP_DRY_RUN=true to log what WOULD be deleted
  * without deleting. The CronJob runs it for real (no dry-run env set).
@@ -33,8 +36,14 @@
  *   S3_ENDPOINT / S3_BUCKET / AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY
  *   S3_RETENTION_DAYS           default 30
  *   CANARY_CLEANUP_DRY_RUN      "true" → report only
+ *   KEFI_API_URL / KEFI_KC_URL / KEFI_KC_REALM / KEFI_BFF_CLIENT_ID  from .env.{target} unless set
+ *   KEFI_BFF_CLIENT_SECRET / KEFI_PLATFORM_ADMIN_USERNAME / KEFI_PLATFORM_ADMIN_PASSWORD
  */
 import { spawnSync } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
+import { kefiSweepEnvGaps, mintKefiPlatformBearer, sweepPublishedKefiCanaries } from './kefi-canary-sweep.mjs';
 import { chunkKeys, deleteArgsViaFile, parseDeleteResult } from './s3-delete-batches.mjs';
 
 const DRY_RUN = (process.env.CANARY_CLEANUP_DRY_RUN ?? '').toLowerCase() === 'true';
@@ -67,15 +76,16 @@ function releaseStaleLock() {
   );
   if (get.error) {
     warn(`kubectl unavailable (${get.error.message}) — skipping stale-lock check.`);
-    return;
+    return true;
   }
   if (get.status !== 0) {
     if (/not\s*found/i.test(get.stderr ?? '')) {
       log(`no lock ${name} held — nothing to release.`);
     } else {
       warn(`could not read lock ${name}: ${(get.stderr ?? '').trim()}`);
+      return true;
     }
-    return;
+    return false;
   }
 
   const startedAt = (get.stdout ?? '').trim();
@@ -83,11 +93,11 @@ function releaseStaleLock() {
   const ageMs = Number.isNaN(startedMs) ? Number.POSITIVE_INFINITY : Date.now() - startedMs;
   if (ageMs < LOCK_TTL_MS) {
     log(`lock ${name} is fresh (started ${startedAt}, ~${Math.round(ageMs / 60_000)} min ago) — leaving it.`);
-    return;
+    return true;
   }
 
   log(`lock ${name} is STALE (started ${startedAt}) — ${DRY_RUN ? 'WOULD release' : 'releasing'}.`);
-  if (DRY_RUN) return;
+  if (DRY_RUN) return false;
   const del = spawnSync(
     k.bin,
     [...k.args, 'delete', 'configmap', name, '-n', ns, '--ignore-not-found'],
@@ -95,6 +105,7 @@ function releaseStaleLock() {
   );
   if (del.status !== 0) warn(`failed to release stale lock: ${(del.stderr ?? '').trim()}`);
   else log(`released stale lock ${name}.`);
+  return false;
 }
 
 // ── 2. Keycloak e2ec-* user sweep ────────────────────────────────────────
@@ -240,11 +251,38 @@ function s3Retention() {
   log(`SeaweedFS retention: deleted ${removed}/${keys.length} object(s).`);
 }
 
+async function kefiCanarySweep(runMayBeActive) {
+  if (runMayBeActive) {
+    warn('run lock is fresh or unreadable — skipping Kefi canary sweep.');
+    return;
+  }
+  const target = process.env.E2E_TARGET ?? 'staging';
+  dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', `.env.${target}`) });
+  const gaps = kefiSweepEnvGaps(process.env);
+  if (gaps.length > 0) {
+    warn(`Kefi canary sweep cannot run, unset: ${gaps.join(', ')}`);
+    process.exitCode = 1;
+    return;
+  }
+  const result = await sweepPublishedKefiCanaries({
+    apiUrl: process.env.KEFI_API_URL,
+    getBearer: () => mintKefiPlatformBearer(process.env),
+    dryRun: DRY_RUN,
+    log,
+  });
+  log(`Kefi sweep: ${DRY_RUN ? 'would delete' : 'deleted'} ${DRY_RUN ? result.canaries.join(' ') : result.swept.length}`);
+  if (result.failed.length > 0) {
+    warn(`Kefi sweep failed for: ${result.failed.join(' ')}`);
+    process.exitCode = 1;
+  }
+}
+
 async function main() {
   log(`starting${DRY_RUN ? ' (DRY RUN)' : ''} — target=${process.env.E2E_TARGET ?? 'staging'}`);
-  releaseStaleLock();
+  const runMayBeActive = releaseStaleLock();
   await keycloakSweep();
   s3Retention();
+  await kefiCanarySweep(runMayBeActive);
   log('done.');
 }
 
