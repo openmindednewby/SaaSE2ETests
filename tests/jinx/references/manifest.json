@@ -1,0 +1,438 @@
+{
+  "sourceRepo": "apps/jinx-bead-patterns",
+  "sourceCommit": "f2b313e",
+  "rows": [
+    {
+      "ac": "AC-UI-logo-mobile",
+      "screen": "logo",
+      "viewport": {
+        "width": 360,
+        "height": 640
+      },
+      "option": "Strand",
+      "references": [
+        {
+          "kind": "pick-page-capture",
+          "file": "references/logo-phone-step1.png",
+          "sha256": "670c33ac75db3575566c553e1e087efec997e08a289ea8c3e72898abea474e48",
+          "source": "apps/jinx-bead-patterns/docs/design/logo/frames/phone-step1.png",
+          "width": 1080,
+          "height": 1920,
+          "deviceScaleFactor": 3.0
+        }
+      ],
+      "note": "Owner pick page capture: carries question chrome and the name Ismini, so only the mark region can be compared."
+    },
+    {
+      "ac": "AC-UI-logo-desktop",
+      "screen": "logo",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "option": "Strand",
+      "references": [
+        {
+          "kind": "pick-page-capture",
+          "file": "references/logo-desktop-step2.png",
+          "sha256": "5c41a27aba0c53d6978489fe95d3e778a0f1ab0b5984f3910337093e3b8ec4ba",
+          "source": "apps/jinx-bead-patterns/docs/design/logo/frames/desktop-step2.png",
+          "width": 1280,
+          "height": 800,
+          "deviceScaleFactor": 1.0
+        }
+      ],
+      "note": "Owner pick page capture: carries question chrome and the name Ismini, so only the mark region can be compared."
+    },
+    {
+      "ac": "AC-UI-palette-mobile",
+      "screen": "palette",
+      "viewport": {
+        "width": 360,
+        "height": 640
+      },
+      "option": "B",
+      "references": [
+        {
+          "kind": "foundation-frame",
+          "file": "references/foundation-checker-light-mobile.png",
+          "sha256": "6a7e71353c89e228b0e1aa945a3111a571f16f715d370ac05c1b592c1703d3fb",
+          "source": "apps/jinx-bead-patterns/docs/design/foundation/frames/checker-light-mobile.png",
+          "width": 720,
+          "height": 1280,
+          "deviceScaleFactor": 2.0
+        }
+      ],
+      "note": "Palette B is ColorChecker; light mode frame."
+    },
+    {
+      "ac": "AC-UI-palette-desktop",
+      "screen": "palette",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "option": "B",
+      "references": [
+        {
+          "kind": "foundation-frame",
+          "file": "references/foundation-checker-light-desktop.png",
+          "sha256": "ed1b0bb70deb13c7719402a07ce1cad369fc879eb4702d1a2776aa8bc53a5893",
+          "source": "apps/jinx-bead-patterns/docs/design/foundation/frames/checker-light-desktop.png",
+          "width": 1280,
+          "height": 800,
+          "deviceScaleFactor": 1.0
+        }
+      ],
+      "note": "Palette B is ColorChecker; light mode frame."
+    },
+    {
+      "ac": "AC-UI-browse-mobile",
+      "screen": "browse",
+      "viewport": {
+        "width": 360,
+        "height": 640
+      },
+      "option": "B Chart grid",
+      "references": [
+        {
+          "kind": "fold",
+          "file": "references/screens-browse-mobile-B-fold.png",
+          "sha256": "f1d49d369e55b63791032a467263c46ad5c496cf5ff6cdf609a99194d60e0972",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/browse-mobile-B-fold.png",
+          "width": 720,
+          "height": 1280,
+          "deviceScaleFactor": 2.0
+        },
+        {
+          "kind": "full",
+          "file": "references/screens-browse-mobile-B-full.png",
+          "sha256": "ec027bbecc62fdf29490b9604f4f781cda5f90f59cacdb9eacb54574d275d7b8",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/browse-mobile-B-full.png",
+          "width": 720,
+          "height": 2954,
+          "deviceScaleFactor": 2.0
+        }
+      ]
+    },
+    {
+      "ac": "AC-UI-browse-desktop",
+      "screen": "browse",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "option": "C Colour wall",
+      "references": [
+        {
+          "kind": "fold",
+          "file": "references/screens-browse-desktop-C-fold.png",
+          "sha256": "6175627487c1eed0a8ae6d956777c67bedba1434999bdada015c157840645301",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/browse-desktop-C-fold.png",
+          "width": 1920,
+          "height": 1200,
+          "deviceScaleFactor": 1.5
+        },
+        {
+          "kind": "full",
+          "file": "references/screens-browse-desktop-C-full.png",
+          "sha256": "5f07e7483459829545b9f2b46a2ba5a6a963bb0430b4fb1103832523d1869751",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/browse-desktop-C-full.png",
+          "width": 1920,
+          "height": 1200,
+          "deviceScaleFactor": 1.5
+        }
+      ]
+    },
+    {
+      "ac": "AC-UI-detail-mobile",
+      "screen": "detail",
+      "viewport": {
+        "width": 360,
+        "height": 640
+      },
+      "option": "A Chart first",
+      "references": [
+        {
+          "kind": "fold",
+          "file": "references/screens-detail-mobile-A-fold.png",
+          "sha256": "d128089439cb976283be81b4307daa70a70689f90ebc482a7a60343a4a2e51ca",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/detail-mobile-A-fold.png",
+          "width": 720,
+          "height": 1280,
+          "deviceScaleFactor": 2.0
+        },
+        {
+          "kind": "full",
+          "file": "references/screens-detail-mobile-A-full.png",
+          "sha256": "1a77c9ad3c407d14b1036023f04711d282a032e7d8ba5f73f1c7f0d122ccc26c",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/detail-mobile-A-full.png",
+          "width": 720,
+          "height": 4344,
+          "deviceScaleFactor": 2.0
+        }
+      ]
+    },
+    {
+      "ac": "AC-UI-detail-desktop",
+      "screen": "detail",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "option": "B Fixed chart",
+      "references": [
+        {
+          "kind": "fold",
+          "file": "references/screens-detail-desktop-B-fold.png",
+          "sha256": "75e98869ddc54b6fca8f58bbf75db16ce44b236dc476c8850a6d09ab8e7228e5",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/detail-desktop-B-fold.png",
+          "width": 1920,
+          "height": 1200,
+          "deviceScaleFactor": 1.5
+        },
+        {
+          "kind": "full",
+          "file": "references/screens-detail-desktop-B-full.png",
+          "sha256": "16146c74d78db84d9ef53bb79dd8f61378db5709635bff4882650a4ae7754c89",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/detail-desktop-B-full.png",
+          "width": 1920,
+          "height": 2364,
+          "deviceScaleFactor": 1.5
+        }
+      ]
+    },
+    {
+      "ac": "AC-UI-tracker-mobile",
+      "screen": "tracker",
+      "viewport": {
+        "width": 360,
+        "height": 640
+      },
+      "option": "A Chart above",
+      "references": [
+        {
+          "kind": "fold",
+          "file": "references/screens-tracker-mobile-A-fold.png",
+          "sha256": "b7e2bd99b5e618c6c0c83f24965b933339787986d9038354ac82084acfa37fa3",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/tracker-mobile-A-fold.png",
+          "width": 720,
+          "height": 1280,
+          "deviceScaleFactor": 2.0
+        },
+        {
+          "kind": "full",
+          "file": "references/screens-tracker-mobile-A-full.png",
+          "sha256": "b7e2bd99b5e618c6c0c83f24965b933339787986d9038354ac82084acfa37fa3",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/tracker-mobile-A-full.png",
+          "width": 720,
+          "height": 1280,
+          "deviceScaleFactor": 2.0
+        }
+      ]
+    },
+    {
+      "ac": "AC-UI-tracker-desktop",
+      "screen": "tracker",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "option": "A Chart left",
+      "references": [
+        {
+          "kind": "fold",
+          "file": "references/screens-tracker-desktop-A-fold.png",
+          "sha256": "0f5e98345ca82c0a737d50e9dbee806974f34f9e657df30545a888037bc5d0b6",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/tracker-desktop-A-fold.png",
+          "width": 1920,
+          "height": 1200,
+          "deviceScaleFactor": 1.5
+        },
+        {
+          "kind": "full",
+          "file": "references/screens-tracker-desktop-A-full.png",
+          "sha256": "0f5e98345ca82c0a737d50e9dbee806974f34f9e657df30545a888037bc5d0b6",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/tracker-desktop-A-full.png",
+          "width": 1920,
+          "height": 1200,
+          "deviceScaleFactor": 1.5
+        }
+      ]
+    },
+    {
+      "ac": "AC-UI-generator-mobile",
+      "screen": "generator",
+      "viewport": {
+        "width": 360,
+        "height": 640
+      },
+      "option": "B Chart on top",
+      "references": [
+        {
+          "kind": "fold",
+          "file": "references/screens-generator-mobile-B-fold.png",
+          "sha256": "0088a098efb23fd326fac9cd7634bca46d1c1bd50a2bc2a9c2e7bc1edd477c7d",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/generator-mobile-B-fold.png",
+          "width": 720,
+          "height": 1280,
+          "deviceScaleFactor": 2.0
+        },
+        {
+          "kind": "full",
+          "file": "references/screens-generator-mobile-B-full.png",
+          "sha256": "099139f443044161911119d53a5addf656615a362d50a36c983b203a71e09ffc",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/generator-mobile-B-full.png",
+          "width": 720,
+          "height": 1838,
+          "deviceScaleFactor": 2.0
+        }
+      ]
+    },
+    {
+      "ac": "AC-UI-generator-desktop",
+      "screen": "generator",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "option": "A Form left",
+      "references": [
+        {
+          "kind": "fold",
+          "file": "references/screens-generator-desktop-A-fold.png",
+          "sha256": "aca464d9608c57e73894a8de11ec64905e798cb61c79a42a53aedee852791d10",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/generator-desktop-A-fold.png",
+          "width": 1920,
+          "height": 1200,
+          "deviceScaleFactor": 1.5
+        },
+        {
+          "kind": "full",
+          "file": "references/screens-generator-desktop-A-full.png",
+          "sha256": "aca464d9608c57e73894a8de11ec64905e798cb61c79a42a53aedee852791d10",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/generator-desktop-A-full.png",
+          "width": 1920,
+          "height": 1200,
+          "deviceScaleFactor": 1.5
+        }
+      ]
+    },
+    {
+      "ac": "AC-UI-advice-mobile",
+      "screen": "advice",
+      "viewport": {
+        "width": 360,
+        "height": 640
+      },
+      "option": "B Picture first",
+      "references": [
+        {
+          "kind": "fold",
+          "file": "references/screens-colour-mobile-B-fold.png",
+          "sha256": "814df75d7b9e124450251918a755b7e809075dbb0d910b63bef3c06640cd002f",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/colour-mobile-B-fold.png",
+          "width": 720,
+          "height": 1280,
+          "deviceScaleFactor": 2.0
+        },
+        {
+          "kind": "full",
+          "file": "references/screens-colour-mobile-B-full.png",
+          "sha256": "de77b0d526dd07e7942bf98f241749db063a6d151526672396200b2091791ebb",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/colour-mobile-B-full.png",
+          "width": 720,
+          "height": 2266,
+          "deviceScaleFactor": 2.0
+        }
+      ]
+    },
+    {
+      "ac": "AC-UI-advice-desktop",
+      "screen": "advice",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "option": "B Big picture",
+      "references": [
+        {
+          "kind": "fold",
+          "file": "references/screens-colour-desktop-B-fold.png",
+          "sha256": "76e82fc98a30ef569435b5213886190ac1fb294059823d110d6f299d47843f42",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/colour-desktop-B-fold.png",
+          "width": 1920,
+          "height": 1200,
+          "deviceScaleFactor": 1.5
+        },
+        {
+          "kind": "full",
+          "file": "references/screens-colour-desktop-B-full.png",
+          "sha256": "9d88427a780f41571b3505908ba9a160eafb43464e16794670dab27ad822fdff",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/colour-desktop-B-full.png",
+          "width": 1920,
+          "height": 1281,
+          "deviceScaleFactor": 1.5
+        }
+      ]
+    },
+    {
+      "ac": "AC-UI-publish-mobile",
+      "screen": "publish",
+      "viewport": {
+        "width": 360,
+        "height": 640
+      },
+      "option": "B Preview first",
+      "references": [
+        {
+          "kind": "fold",
+          "file": "references/screens-publish-mobile-B-fold.png",
+          "sha256": "f3303a28fb98acd0904cc86f33e625287e0e778ae91b91b2fead312bf9eb308b",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/publish-mobile-B-fold.png",
+          "width": 720,
+          "height": 1280,
+          "deviceScaleFactor": 2.0
+        },
+        {
+          "kind": "full",
+          "file": "references/screens-publish-mobile-B-full.png",
+          "sha256": "6894b38fce100ef0d0f84bcae78e9f88d96304ee908d9dff6febceff37e38761",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/publish-mobile-B-full.png",
+          "width": 720,
+          "height": 1956,
+          "deviceScaleFactor": 2.0
+        }
+      ]
+    },
+    {
+      "ac": "AC-UI-publish-desktop",
+      "screen": "publish",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "option": "B Preview left",
+      "references": [
+        {
+          "kind": "fold",
+          "file": "references/screens-publish-desktop-B-fold.png",
+          "sha256": "0a6b1f513b2c705e0f68323eb1ff64f5e20e007dbb28c74eca7dcbe50478031e",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/publish-desktop-B-fold.png",
+          "width": 1920,
+          "height": 1200,
+          "deviceScaleFactor": 1.5
+        },
+        {
+          "kind": "full",
+          "file": "references/screens-publish-desktop-B-full.png",
+          "sha256": "0a6b1f513b2c705e0f68323eb1ff64f5e20e007dbb28c74eca7dcbe50478031e",
+          "source": "apps/jinx-bead-patterns/docs/design/screens/frames/publish-desktop-B-full.png",
+          "width": 1920,
+          "height": 1200,
+          "deviceScaleFactor": 1.5
+        }
+      ]
+    }
+  ]
+}

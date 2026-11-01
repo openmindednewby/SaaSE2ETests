@@ -3,6 +3,7 @@ import { loadE2EEnv } from './fixtures/env-loader.js';
 import { chromiumHostResolverRules, installHostOverride } from './fixtures/host-override.js';
 import { installRealTenantWriteGuard } from './fixtures/real-tenant-guard.js';
 import { buildProjects } from './playwright.projects.js';
+import { buildJinxProjects } from './playwright.projects.jinx.js';
 import {
   applyScheduledMode,
   isScheduled,
@@ -17,7 +18,7 @@ loadE2EEnv();
 // chunks, and that env var is only populated by the load above.
 // Scheduled runs (E2E_SCHEDULED / E2E_GROUP_INDEX): one ≤240 s group, quarantine excluded,
 // per-test cap 200 s — see playwright.scheduled.ts (TEST-5MIN-1a). Identity otherwise.
-const projects = applyScheduledMode(buildProjects());
+const projects = applyScheduledMode([...buildProjects(), ...buildJinxProjects()]);
 const scheduled = isScheduled();
 
 // Install Node-side DNS override if E2E_HOST_OVERRIDE_IP is set. This config
