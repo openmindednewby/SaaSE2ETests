@@ -5,6 +5,8 @@
  */
 
 import { type Locator, type Page, expect } from '@playwright/test';
+import { KefiAdminClient } from '../../helpers/kefi/kefiAdminClient.js';
+import { authorizeCanarySignup } from '../../helpers/kefi/kefiCanarySignupAuth.js';
 import { getKefiUrls } from '../../helpers/kefi/kefiUrls.js';
 
 export class KefiMarketingPage {
@@ -52,6 +54,7 @@ export class KefiMarketingPage {
     password: string;
     tenantName: string;
   }): Promise<void> {
+    await authorizeCanarySignup(this.page, input.tenantName, () => new KefiAdminClient().getBearer());
     await this.fillSignupForm(input);
     await Promise.all([
       this.page.waitForURL(/\/signup-success\/?$/),
