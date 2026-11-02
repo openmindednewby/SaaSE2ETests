@@ -16,7 +16,7 @@
 
 import { type Locator, type Page, expect } from '@playwright/test';
 
-const PAGE_AGE_ABOVE_FORM_FLOOR_MS = 2500;
+const PAGE_AGE_ABOVE_FORM_FLOOR_MS = 3500;
 
 export class KefiPublicRegisterPage {
   readonly page: Page;
