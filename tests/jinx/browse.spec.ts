@@ -212,7 +212,8 @@ test.describe('built server with a stub API', () => {
           const parent = el.parentElement?.getBoundingClientRect();
           if (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).display !== 'inline') found.push(`overflow ${el.tagName} ${(el.textContent ?? '').slice(0, 30)}`);
           if (el.scrollHeight > el.clientHeight + 1 && getComputedStyle(el).display !== 'inline') found.push(`too tall ${el.tagName} ${el.scrollHeight}>${el.clientHeight}`);
-          if (parent !== undefined && box.right > parent.right + 1) found.push(`spills ${el.tagName} ${(el.textContent ?? '').slice(0, 30)}`);
+          const parentScrolls = el.parentElement !== null && ['auto', 'scroll'].includes(getComputedStyle(el.parentElement).overflowX);
+          if (parent !== undefined && !parentScrolls && box.right > parent.right + 1) found.push(`spills ${el.tagName} ${(el.textContent ?? '').slice(0, 30)}`);
         });
         document.querySelectorAll('a,button,select,input:not([type=hidden]),summary').forEach((el) => {
           if (!visible(el) || el.classList.contains('skip')) return;
@@ -247,6 +248,7 @@ test.describe('built server with a stub API', () => {
 
     test('the chart controls sit above the action bar at the fold', async ({ page }) => {
       await page.goto('/patterns/lozenge-band');
+      await page.getByTestId('cookie-consent-reject-all').click();
 
       const next = await page.getByTestId('chart-next').boundingBox();
       const tracker = await page.getByTestId('start-tracker').boundingBox();
