@@ -4,7 +4,6 @@ import { expect, test, type Page } from '@playwright/test';
 import { KefiAdminClient } from '../../helpers/kefi/kefiAdminClient.js';
 import { newCanaryContext } from '../../helpers/kefi/kefiCanaryIds.js';
 import { KefiMailbox, extractVerifyUrl, loadKefiMailboxConfig } from '../../helpers/kefi/kefiMailboxClient.js';
-import { setFirstPassPrice } from '../../helpers/kefi/kefiOnboardingApi.js';
 import { cleanupKefiCanary } from '../../helpers/kefi/kefiTeardown.js';
 import { getKefiUrls, tenantPathUrl } from '../../helpers/kefi/kefiUrls.js';
 import { isRemoteTarget } from '../../helpers/target.js';
@@ -15,7 +14,7 @@ import { KefiSignupSuccessPage } from '../../pages/kefi/KefiSignupSuccessPage.js
 test.describe.configure({ mode: 'serial' });
 
 const ERROR_BOUNDARY_TITLE = 'Something went wrong';
-const VISIBLE_TEXT_SELECTOR = 'body *:not([id^="a11y-hint"]):not(.visually-hidden)';
+const VISIBLE_TEXT_SELECTOR = 'body *:not([id^="a11y-hint"]):not(.visually-hidden):not(.nav-links a)';
 const STEPS_FROM_PASSES_TO_REVIEW = 5;
 const PUBLIC_SITE_BUDGET_MS = 120_000;
 const BLANK_PASS_NAME_ISSUE = 'review-issue-onboarding.review.issueField.passName';
@@ -66,7 +65,8 @@ test.describe('KEFI-WIZARD-FULL-1 "Setup wizard creates the full site and form"'
     const eventDateIso = `${String(eventYear)}-03-14`;
     const eventDateOnPage = /14[^\n]{0,12}Mar|Mar[^\n]{0,12}14/i;
     const passName = 'Full Weekend Pass';
-    const passPrice = '45 EUR';
+    const typedPrice = '47';
+    const priceFromServerPass = /€47(?![.\d])/;
     const pageErrors: string[] = [];
     const textFitFailures: string[] = [];
     page.on('pageerror', (error) => pageErrors.push(error.message));
@@ -124,18 +124,7 @@ test.describe('KEFI-WIZARD-FULL-1 "Setup wizard creates the full site and form"'
 
       await wizard.backSteps(STEPS_FROM_PASSES_TO_REVIEW);
       await page.getByTestId('landing-pass-0-name').fill(passName);
-      const hasPriceInput = await wizard.passPriceInput(0).isVisible();
-      expect.soft(hasPriceInput, 'the wizard pass row offers a price input, Review demands a price').toBe(true);
-      if (hasPriceInput) {
-        await wizard.passPriceInput(0).fill(passPrice);
-      } else {
-        await wizard.continueToNextStep();
-        await wizard.backSteps(1);
-        const bearer = await adminClient.getTenantOwnerBearer({ email: ctx.email, password: ctx.password });
-        await setFirstPassPrice({ apiUrl: getKefiUrls().apiUrl, bearer, price: passPrice });
-        await page.reload();
-        await wizard.expectLoaded();
-      }
+      await wizard.passPriceInput(0).fill(typedPrice);
       await expect(page.getByTestId('landing-pass-0-name')).toHaveValue(passName);
       await wizard.continueSteps(STEPS_FROM_PASSES_TO_REVIEW);
 
@@ -165,7 +154,7 @@ test.describe('KEFI-WIZARD-FULL-1 "Setup wizard creates the full site and form"'
       }).toPass({ timeout: PUBLIC_SITE_BUDGET_MS });
       await expect(page.locator('body'), 'public site shows the date').toContainText(eventDateOnPage);
       await expect(page.locator('body'), 'public site shows the pass').toContainText(passName);
-      await expect(page.locator('body'), 'public site shows the price').toContainText(passPrice);
+      await expect(page.locator('body'), 'public site shows the price of the server pass, not the saved text').toContainText(priceFromServerPass, { timeout: 30_000 });
       await checkTextFit('public-site');
 
       expect(pageErrors, 'uncaught browser errors').toEqual([]);

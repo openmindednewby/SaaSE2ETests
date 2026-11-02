@@ -108,9 +108,9 @@ export class KefiOnboardingWizardPage {
     }
   }
 
-  /** The price box of pass row `index`, found by its accessible name. */
+  /** The price box of pass row `index`. */
   passPriceInput(index: number): Locator {
-    return this.page.getByTestId(`landing-pass-${index}`).getByRole('textbox', { name: /price/i });
+    return this.page.getByTestId(`landing-pass-${index}-price`);
   }
 
   /**
