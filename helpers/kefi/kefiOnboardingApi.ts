@@ -76,3 +76,19 @@ export async function completeOnboarding(input: { apiUrl: string; bearer: string
     );
   }
 }
+
+export async function setFirstPassPrice(input: { apiUrl: string; bearer: string; price: string }): Promise<void> {
+  const http = onboardingHttp(input.apiUrl);
+  const headers = { Authorization: `Bearer ${input.bearer}` };
+  const current = await http.get('/api/v1/admin/onboarding', { headers });
+  const state = current.data?.state ?? {};
+  const [first, ...rest] = state.site?.passes ?? [];
+  if (first === undefined) {
+    throw new Error(`[kefiOnboardingApi] saved onboarding state has no pass row: ${JSON.stringify(state.site ?? null)}`);
+  }
+  const site = { ...state.site, passes: [{ ...first, price: input.price }, ...rest] };
+  const resp = await http.put('/api/v1/admin/onboarding', { step: current.data?.step, state: { ...state, site } }, { headers });
+  if (resp.status !== 200) {
+    throw new Error(`[kefiOnboardingApi] put pass price expected 200, got ${resp.status}: ${JSON.stringify(resp.data)}`);
+  }
+}
