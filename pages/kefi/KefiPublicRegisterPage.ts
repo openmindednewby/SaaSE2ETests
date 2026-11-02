@@ -16,6 +16,8 @@
 
 import { type Locator, type Page, expect } from '@playwright/test';
 
+const PAGE_AGE_ABOVE_FORM_FLOOR_MS = 2500;
+
 export class KefiPublicRegisterPage {
   readonly page: Page;
   readonly form: Locator;
@@ -135,6 +137,7 @@ export class KefiPublicRegisterPage {
         response.url().includes(`/t/${slug}/register`) && response.request().method() === 'POST',
       { timeout: 30_000 },
     );
+    await this.page.waitForFunction((minAgeMs) => performance.now() > minAgeMs, PAGE_AGE_ABOVE_FORM_FLOOR_MS);
     await this.submitButton.click();
     const response = await responsePromise;
     return response.status();
@@ -156,6 +159,7 @@ export class KefiPublicRegisterPage {
         response.url().includes(`/t/${slug}/register`) && response.request().method() === 'POST',
       { timeout: 30_000 },
     );
+    await this.page.waitForFunction((minAgeMs) => performance.now() > minAgeMs, PAGE_AGE_ABOVE_FORM_FLOOR_MS);
     await this.submitButton.click();
     const response = await responsePromise;
 
