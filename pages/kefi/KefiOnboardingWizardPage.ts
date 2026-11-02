@@ -2,12 +2,11 @@
  * Page Object for the Kefi onboarding wizard (`/organizer/onboarding`, served
  * by kefi-web's OnboardingGate).
  *
- * M1 fast path — 4 steps: event-basics → template-choice → landing-copy →
- * review/finish. Logo/palette, schedule/teachers, payment and plan moved to
- * post-live dashboard cards, so the wizard no longer collects them. The plan
- * (which the publish Pro-gate needs) is injected into the persisted onboarding
+ * 12 steps: event-basics, template-choice, landing-copy, the 8 optional site steps
+ * (about, people, schedule, passes, registration, venue, media, settings), review.
+ * The plan (which the publish Pro-gate needs) is injected into the persisted onboarding
  * state via the API between `fillFastPath` and `finishFromReview` — see
- * `KefiAdminClient.setOnboardingPlan`.
+ * `forceOnboardingPlan`.
  *
  * The wizard auto-saves on a 400ms debounce, so the POM lets the debounce land
  * (plus the PUT round-trip) before clicking Continue — otherwise the Finish
@@ -31,6 +30,9 @@ const AUTOSAVE_SETTLE_MS = 1200;
  * Cold first-load callers pass their own, larger budget.
  */
 const WIZARD_LOAD_TIMEOUT_MS = 30_000;
+
+/** About, people, schedule, passes, registration, venue, media, settings. */
+const OPTIONAL_SITE_STEPS = 8;
 
 export class KefiOnboardingWizardPage {
   readonly page: Page;
@@ -92,6 +94,25 @@ export class KefiOnboardingWizardPage {
     await this.continueButton.click();
   }
 
+  /** Press Continue `count` times, one step each. */
+  async continueSteps(count: number): Promise<void> {
+    for (let step = 0; step < count; step += 1) {
+      await this.continueToNextStep();
+    }
+  }
+
+  /** Press Back `count` times, one step each. */
+  async backSteps(count: number): Promise<void> {
+    for (let step = 0; step < count; step += 1) {
+      await this.backButton.click();
+    }
+  }
+
+  /** The price box of pass row `index`. */
+  passPriceInput(index: number): Locator {
+    return this.page.getByTestId(`landing-pass-${index}-price`);
+  }
+
   /**
    * Fill the 3 form steps with minimal canary content and advance to the
    * final review step. Does NOT finish — the caller injects the plan via the
@@ -127,7 +148,10 @@ export class KefiOnboardingWizardPage {
     );
     await this.continueToNextStep();
 
-    // ── Step 4: review — display-only; settle so the page is interactive. ─
+    // ── Steps 4-11: optional site steps left empty. ─────────────────────
+    await this.continueSteps(OPTIONAL_SITE_STEPS);
+
+    // ── Step 12: review — display-only; settle so the page is interactive. ─
     await expect(this.page.getByTestId('onboarding-step-review')).toBeVisible({ timeout: 10_000 });
     await delay(AUTOSAVE_SETTLE_MS);
   }
