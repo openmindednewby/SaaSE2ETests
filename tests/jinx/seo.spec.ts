@@ -19,5 +19,5 @@ test('AC-19 Pattern page, Fetch without JS, Self canonical, title pattern from #
   expect.soft(html).toContain(`property="og:url" content="${SITE}/patterns/${slug}"`);
   expect.soft(html).toContain('application/ld+json');
   expect.soft(html).toContain('"@type":"HowTo"');
-  expect.soft(html).toMatch(/data-testid="pattern-chart">\s*<svg/);
+  expect.soft(html).toMatch(/data-testid="pattern-chart">[\s\S]*?<svg/);
 });

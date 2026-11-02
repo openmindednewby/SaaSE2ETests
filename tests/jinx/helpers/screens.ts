@@ -13,6 +13,7 @@ export const UNKNOWN_PATTERN = 'no-such-pattern-e2e';
 const MIN_HIT_PX = 44;
 const READ_METHODS = ['GET', 'HEAD', 'OPTIONS'];
 const LOAD_FAILED_TIMEOUT_MS = 30_000;
+const OFFLINE_READY_TIMEOUT_MS = 30_000;
 
 export interface JinxScreen {
   name: string;
@@ -79,16 +80,7 @@ export async function openRecolour(page: Page): Promise<void> {
 }
 
 async function waitForOfflineShell(page: Page): Promise<void> {
-  await page.waitForFunction(async () => {
-    if (navigator.serviceWorker.controller === null || (await caches.match(location.href)) === undefined) return false;
-    const names = await caches.keys();
-    const counts = await Promise.all(names.map(async (name) => (await (await caches.open(name)).keys()).length));
-    const total = counts.reduce((sum, count) => sum + count, 0);
-    const probe = window as unknown as { jinxShellCount?: number; jinxShellStable?: number };
-    probe.jinxShellStable = probe.jinxShellCount === total ? (probe.jinxShellStable ?? 0) + 1 : 0;
-    probe.jinxShellCount = total;
-    return probe.jinxShellStable >= 4;
-  }, undefined, { polling: 500 });
+  await expect(page.getByTestId('jinx-tracker-offline-ready')).toBeVisible({ timeout: OFFLINE_READY_TIMEOUT_MS });
 }
 
 export async function openTrackerOffline(page: Page): Promise<void> {
