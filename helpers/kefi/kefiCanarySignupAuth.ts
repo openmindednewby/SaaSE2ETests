@@ -11,6 +11,6 @@ export async function authorizeCanarySignup(
   if (!CANARY_TENANT_NAME.test(tenantName)) return;
   const bearer = await getBearer();
   await page.route(SIGNUP_URL_GLOB, (route) =>
-    route.continue({ headers: { ...route.request().headers(), authorization: `Bearer ${bearer}` } }),
+    route.fallback({ headers: { ...route.request().headers(), authorization: `Bearer ${bearer}` } }),
   );
 }

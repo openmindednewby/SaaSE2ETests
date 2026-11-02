@@ -1,4 +1,3 @@
-// Run: node --test scripts/kefi-canary-sweep.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { canaryIdFromSlug, kefiSweepEnvGaps, sweepPublishedKefiCanaries } from './kefi-canary-sweep.mjs';
@@ -12,19 +11,20 @@ function fakeKefiApi({ slugs, listStatus = 200, tenantsDeletedById = {}, cleanup
     }
     const canaryId = parsed.searchParams.get('canaryId');
     deletes.push({ canaryId, method: init.method, authorization: init.headers?.Authorization });
-    return { status: cleanupStatus, json: async () => ({ tenantsDeleted: tenantsDeletedById[canaryId] ?? 1 }) };
+    return { status: cleanupStatus, json: async () => ({ tenantsDeleted: tenantsDeletedById[canaryId] }) };
   };
   return { fetchImpl, deletes };
 }
 
-function sweepInput(fetchImpl, dryRun = false) {
-  return { apiUrl: 'https://kefi.test', getBearer: async () => 'bearer-1', fetchImpl, dryRun, log: () => {} };
+function sweepInput(fetchImpl, overrides = {}) {
+  return { apiUrl: 'https://kefi.test', getBearer: async () => 'unasserted', fetchImpl, dryRun: false, log: () => {}, ...overrides };
 }
 
 test('KEFI-CANARY-LEAK-1 with a leaked canary beside a customer, sweeps only the canary', async () => {
-  const api = fakeKefiApi({ slugs: ['kizombaunioncy', 'e2c-33b82b03-canary-tenant'] });
+  const api = fakeKefiApi({ slugs: ['kizombaunioncy', 'e2c-33b82b03-canary-tenant'], tenantsDeletedById: { '33b82b03': 1 } });
+  const getBearer = async () => 'bearer-1';
 
-  const result = await sweepPublishedKefiCanaries(sweepInput(api.fetchImpl));
+  const result = await sweepPublishedKefiCanaries(sweepInput(api.fetchImpl, { getBearer }));
 
   assert.deepEqual(api.deletes, [{ canaryId: '33b82b03', method: 'DELETE', authorization: 'Bearer bearer-1' }]);
   assert.deepEqual(result, { published: 2, canaries: ['33b82b03'], swept: ['33b82b03'], failed: [] });
@@ -33,7 +33,7 @@ test('KEFI-CANARY-LEAK-1 with a leaked canary beside a customer, sweeps only the
 test('KEFI-CANARY-LEAK-1 with a dry run, deletes nothing and still names the canary', async () => {
   const api = fakeKefiApi({ slugs: ['e2c-33b82b03-canary-tenant'] });
 
-  const result = await sweepPublishedKefiCanaries(sweepInput(api.fetchImpl, true));
+  const result = await sweepPublishedKefiCanaries(sweepInput(api.fetchImpl, { dryRun: true }));
 
   assert.deepEqual(api.deletes, []);
   assert.deepEqual(result, { published: 1, canaries: ['33b82b03'], swept: [], failed: [] });

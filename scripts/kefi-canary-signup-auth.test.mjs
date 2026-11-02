@@ -1,4 +1,3 @@
-// Run: node --test scripts/kefi-canary-signup-auth.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
