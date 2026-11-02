@@ -33,7 +33,7 @@ export async function holdPosts(page: Page, resource: string, status: number, re
 export async function pretendSignedIn(page: Page): Promise<void> {
   await page.addInitScript((key) => localStorage.setItem(key, '1'), SESSION_HINT_KEY);
   await page.route('**/bff/me', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ sub: 'e2e-jinx-stub', name: 'E2E Jinx', email: 'e2e-jinx@example.com' }) }),
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user: { sub: 'e2e-jinx-stub', name: 'E2E Jinx', email: 'e2e-jinx@example.com' } }) }),
   );
 }
 

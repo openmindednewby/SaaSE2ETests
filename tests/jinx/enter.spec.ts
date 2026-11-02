@@ -4,11 +4,13 @@ import { holdPosts, openPublishForNewChart, pretendSignedIn } from './helpers/li
 import { livePatternSlug } from './helpers/screens';
 import { APP_URL } from './helpers/tracker';
 
+test.use({ serviceWorkers: 'block' });
+
 const REPORTER = 'e2e-enter@example.com';
 const STATEMENT = 'E2E probe, no report is stored';
 const NAME = 'E2E Enter Band';
 const LIVE = 'It is live.';
-const PUBLISHED = { externalId: '00000000-0000-4000-8000-00000000e2e1', slug: 'e2e-enter-band', indexable: false };
+const PUBLISHED = { externalId: '00000000-0000-4000-8000-00000000e2e1', slug: 'e2e-enter-band', indexable: true };
 
 async function fillReport(page: Page, slug: string, email: string): Promise<void> {
   await page.goto(`${APP_URL}/report?id=${slug}`);
