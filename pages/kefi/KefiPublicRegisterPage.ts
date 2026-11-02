@@ -26,6 +26,7 @@ export class KefiPublicRegisterPage {
   readonly phoneInput: Locator;
   readonly emailInput: Locator;
   readonly consentCheckbox: Locator;
+  readonly paymentTermsCheckbox: Locator;
   readonly submitButton: Locator;
   readonly status: Locator;
   readonly successPanel: Locator;
@@ -58,6 +59,7 @@ export class KefiPublicRegisterPage {
     this.phoneInput = page.locator('#sr-phone');
     this.emailInput = page.locator('#sr-email');
     this.consentCheckbox = page.locator('#sr-consent');
+    this.paymentTermsCheckbox = page.locator('#sr-payment-terms');
     this.submitButton = page.locator('#sr-submit');
     this.status = page.locator('#sr-status');
     this.successPanel = page.locator('#self-register-success');
@@ -116,7 +118,9 @@ export class KefiPublicRegisterPage {
     await this.phoneInput.fill(input.phone);
     await this.emailInput.fill(input.email);
     await this.selectPass(input.passCode);
-    if (input.consent) await this.consentCheckbox.check();
+    if (!input.consent) return;
+    await this.consentCheckbox.check();
+    if ((await this.paymentTermsCheckbox.count()) > 0) await this.paymentTermsCheckbox.check();
   }
 
   /** Click the visible pass tile and confirm its hidden radio became selected. */
