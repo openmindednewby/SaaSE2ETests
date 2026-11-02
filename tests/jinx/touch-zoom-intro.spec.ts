@@ -24,6 +24,8 @@ const REPLAY_MS = 90_000;
 const GESTURE_STEPS = 8;
 const STEP_MS = 16;
 const SCROLL_SETTLE_MS = 400;
+const NAV_CONTROLS = 4;
+const CORNER_INSET = 6;
 
 interface Finger {
   x: number;
@@ -82,6 +84,14 @@ const readScroll = (page: Page): Promise<ChartScroll> => page.locator('[data-cha
 }));
 
 const logoAnimationEnds = (page: Page): Promise<number[]> => page.locator('.top .logo').evaluate((el) => el.getAnimations({ subtree: true }).map((animation) => Number(animation.effect?.getComputedTiming().endTime ?? 0)));
+
+const visibleBeadCentres = (page: Page): Promise<Finger[]> => page.locator('[data-chart-window]').evaluate((chart) => {
+  const frame = chart.getBoundingClientRect();
+  return [...chart.querySelectorAll('svg rect')]
+    .map((bead) => bead.getBoundingClientRect())
+    .map((box) => ({ x: box.x + box.width / 2, y: box.y + box.height / 2 }))
+    .filter(({ x, y }) => x >= frame.left && x <= frame.right && y >= frame.top && y <= frame.bottom);
+});
 
 test.describe('D-BEAD-48 phone chart on touch', () => {
   test.use(TOUCH_PHONE);
@@ -170,6 +180,29 @@ test.describe('D-BEAD-48 phone chart on touch', () => {
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   });
 
+  test('D-BEAD-55 Nav row, Open a paged chart, no visible bead centre sits under the zoom button', async ({ page }) => {
+    await openChart(page);
+
+    const box = await page.getByTestId('chart-zoom').boundingBox();
+    const centres = await visibleBeadCentres(page);
+
+    expect(centres.length).toBeGreaterThan(0);
+    if (box === null) throw new Error('zoom button has no box');
+    expect(centres.filter(({ x, y }) => x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height)).toEqual([]);
+  });
+
+  test('D-BEAD-55 Nav row, Zoom in, the row holds its four controls side by side inside the screen', async ({ page }) => {
+    await openChart(page);
+
+    await page.getByTestId('chart-zoom').tap();
+
+    const boxes = await page.locator('.chart-nav > *').evaluateAll((items) => items.map((item) => item.getBoundingClientRect().toJSON() as { left: number; right: number }));
+    expect(boxes).toHaveLength(NAV_CONTROLS);
+    boxes.slice(1).forEach((box, i) => expect(box.left).toBeGreaterThanOrEqual(boxes[i].right));
+    expect(boxes[NAV_CONTROLS - 1].right).toBeLessThanOrEqual(TOUCH_PHONE.viewport.width);
+    await expectTextFits(page, '.chart-nav *');
+  });
+
   test('TEXT-FIT-1 Zoomed chart at 360x640, Walk, expectTextFits passes with no sideways scroll', async ({ page }) => {
     await openChart(page);
 
@@ -191,6 +224,18 @@ test.describe('D-BEAD-48 computer chart stays on hover', () => {
 
     await expect(page.getByTestId('chart-zoom-pane')).toBeVisible();
     expect(await chartWidth(page)).toBeCloseTo(before, 0);
+  });
+
+  test('D-BEAD-55 Computer, Open a paged chart, the zoom button stays in the chart corner and the nav row stays hidden', async ({ page }) => {
+    await openChart(page);
+
+    const plate = await page.getByTestId('pattern-chart').boundingBox();
+    const box = await page.getByTestId('chart-zoom').boundingBox();
+
+    if (plate === null || box === null) throw new Error('plate or zoom button has no box');
+    expect(box.y - plate.y).toBeCloseTo(CORNER_INSET, 0);
+    expect(plate.x + plate.width - (box.x + box.width)).toBeCloseTo(CORNER_INSET, 0);
+    await expect(page.getByTestId('chart-next')).toBeHidden();
   });
 
   test('TEXT-FIT-1 Pinned zoom at 1280x800, Walk, expectTextFits passes and the chart keeps its size', async ({ page }) => {

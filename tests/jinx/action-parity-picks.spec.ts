@@ -21,6 +21,8 @@ async function open(page: Page, path: string): Promise<void> {
 
 const firstBeadFill = (page: Page): Promise<string> => page.locator('.top .logo rect').first().evaluate((el) => getComputedStyle(el).fill);
 
+const logoIntroEnd = (page: Page): Promise<unknown> => page.locator('.top .logo').evaluate((logo) => Promise.all(logo.getAnimations({ subtree: true }).map((animation) => animation.finished.then(() => true))));
+
 test.describe('phone picks', () => {
   test.use(PHONE);
 
@@ -270,6 +272,7 @@ test.describe('round 2 picks, computer', () => {
 
   test('AC-UI-logo-colour Any page, Read the logo, the colour stays with no animation running', async ({ page }) => {
     await page.goto('/browse');
+    await logoIntroEnd(page);
 
     const fill = await firstBeadFill(page);
 
