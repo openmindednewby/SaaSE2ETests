@@ -20,7 +20,7 @@ test('AC-16 Pattern saved, then browser offline, Reload tracker, Tracker works, 
 
   await page.getByTestId('jinx-tracker-next-row').click();
   await expect(page.getByTestId('jinx-tracker-row')).toHaveText('Row 5');
-  await expect(page.getByTestId('jinx-tracker-offline')).toHaveText('Offline, 1 rows to sync');
+  await expect(page.getByTestId('jinx-tracker-offline')).toHaveText('Offline, 1 row to sync');
 
   await page.reload();
   await expect(page.getByTestId('jinx-tracker-row')).toHaveText('Row 5');
