@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const STUB_ONLY = process.env.JINX_SITE_STUB === '1';
 const MATCH_TITLE = process.env.JINX_BROWSE_MATCH ?? 'Lozenge Band';
@@ -9,6 +11,15 @@ const PHONE = { viewport: { width: 360, height: 640 }, hasTouch: true, isMobile:
 const DESKTOP = { viewport: { width: 1280, height: 800 } };
 const WALK = ['/', '/browse', '/browse?q=zzzznothing', '/patterns/lozenge-band', '/patterns/removed-band', '/guides', '/guides/finish-a-bracelet', '/attribution', '/privacy', '/no-such-page'];
 const MIN_HIT = 44;
+const MIN_BEAD_PX = 14;
+const APP_ORIGIN = 'https://jinx-app.dloizides.com';
+const APP_DIR = resolve(__dirname, '../../../apps/jinx-bead-patterns/app');
+const APP_LINK_PAGES = ['/', '/browse', '/browse?q=zzzznothing', '/patterns/lozenge-band', '/guides', '/attribution'];
+
+function appRoutes(): Set<string> {
+  const routeFiles = [...readdirSync(APP_DIR), ...readdirSync(resolve(APP_DIR, '(auth)'))];
+  return new Set(routeFiles.filter((name) => name.endsWith('.tsx') && !name.startsWith('_') && !name.startsWith('+')).map((name) => `/${name.replace('.tsx', '').replace(/^index$/, '')}`));
+}
 
 test('AC-01 Live patterns in 3 stitches, GET /browse?stitch=peyote, Only peyote cards in HTML, without JS', async ({ request }) => {
   const response = await request.get('/browse?stitch=peyote');
@@ -59,7 +70,7 @@ test.describe('built server with a stub API', () => {
     expect(html).toContain('<link rel="canonical" href="https://jinx.dloizides.com/patterns/lozenge-band"');
     expect(html).toContain('property="og:title"');
     expect(html).toContain('"@type":"HowTo"');
-    expect(html).toMatch(/data-testid="pattern-chart"><svg/);
+    expect(html).toMatch(/data-testid="pattern-chart"[\s\S]*?<svg/);
     expect(html).toContain('index,follow');
     expect(html).not.toContain('stub-internal-key');
   });
@@ -153,6 +164,36 @@ test.describe('built server with a stub API', () => {
     expect(stats.withoutKey).toBe(0);
   });
 
+  test('every app link on the site targets a route the app has', async ({ request }) => {
+    const routes = appRoutes();
+    const links: string[] = [];
+
+    for (const path of APP_LINK_PAGES) {
+      const html = await (await request.get(path)).text();
+      links.push(...[...html.matchAll(/href="(https:[^"]*jinx-app[^"]*)"/g)].map((match) => (match[1] ?? '').replaceAll('&amp;', '&')));
+    }
+
+    const dead = links.filter((link) => !routes.has(new URL(link).pathname));
+    const html = await (await request.get('/patterns/lozenge-band')).text();
+    expect(routes.has('/tracker')).toBe(true);
+    expect(links.length).toBeGreaterThan(0);
+    expect(dead).toEqual([]);
+    expect(html).toContain(`href="${APP_ORIGIN}/tracker?id=lozenge-band"`);
+    expect(html).toContain(`href="${APP_ORIGIN}/recolour?id=lozenge-band"`);
+    expect(html).not.toContain('data-testid="report-link"');
+    expect(html).not.toContain('>Colour</a>');
+  });
+
+  test('one row count: caption, all rows and keep going agree with the woven count', async ({ request }) => {
+    const html = await (await request.get('/patterns/lozenge-band')).text();
+
+    expect(html).toContain('Row 1 at the top');
+    expect(html).toContain('12 wide, 80 rows');
+    expect(html).toContain('All 80 rows');
+    expect(html).toContain('to row 80,');
+    expect(html).not.toContain('All 79 rows');
+  });
+
   async function walk(page: Page, label: string): Promise<void> {
     await page.goto('/browse');
     await page.getByRole('button', { name: 'Reject all' }).click();
@@ -170,6 +211,7 @@ test.describe('built server with a stub API', () => {
           const box = el.getBoundingClientRect();
           const parent = el.parentElement?.getBoundingClientRect();
           if (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).display !== 'inline') found.push(`overflow ${el.tagName} ${(el.textContent ?? '').slice(0, 30)}`);
+          if (el.scrollHeight > el.clientHeight + 1 && getComputedStyle(el).display !== 'inline') found.push(`too tall ${el.tagName} ${el.scrollHeight}>${el.clientHeight}`);
           if (parent !== undefined && box.right > parent.right + 1) found.push(`spills ${el.tagName} ${(el.textContent ?? '').slice(0, 30)}`);
         });
         document.querySelectorAll('a,button,select,input:not([type=hidden]),summary').forEach((el) => {
@@ -189,6 +231,48 @@ test.describe('built server with a stub API', () => {
   test.describe('phone 360x640', () => {
     test.use(PHONE);
 
+    test('the pattern chart shows a readable row window with next and previous', async ({ page }) => {
+      await page.goto('/patterns/lozenge-band');
+      await expect(page.getByTestId('chart-window-label')).toHaveText('Rows 1 to 20 of 80');
+      const beadWidth = await page.locator('[data-testid="pattern-chart"] svg rect').first().evaluate((bead) => bead.getBoundingClientRect().width);
+      expect(beadWidth).toBeGreaterThanOrEqual(MIN_BEAD_PX);
+
+      await page.getByTestId('chart-next').click();
+
+      await expect(page.getByTestId('chart-window-label')).toHaveText('Rows 21 to 40 of 80');
+      await page.getByTestId('chart-previous').click();
+      await expect(page.getByTestId('chart-window-label')).toHaveText('Rows 1 to 20 of 80');
+      await expect(page.getByTestId('chart-previous')).toBeDisabled();
+    });
+
+    test('the chart controls sit above the action bar at the fold', async ({ page }) => {
+      await page.goto('/patterns/lozenge-band');
+
+      const next = await page.getByTestId('chart-next').boundingBox();
+      const tracker = await page.getByTestId('start-tracker').boundingBox();
+
+      expect((next?.y ?? 0) + (next?.height ?? 0)).toBeLessThanOrEqual(tracker?.y ?? 0);
+    });
+
+    test('FORM-ALIGN-1 the side-by-side filters share one top edge and height', async ({ page }) => {
+      await page.goto('/browse');
+
+      const stitch = await page.locator('select[name=stitch]').boundingBox();
+      const piece = await page.locator('select[name=piece]').boundingBox();
+
+      expect(Math.abs((stitch?.y ?? 0) - (piece?.y ?? 9))).toBeLessThanOrEqual(1);
+      expect(Math.abs((stitch?.height ?? 0) - (piece?.height ?? 9))).toBeLessThanOrEqual(1);
+    });
+
+    test('the colours come before the word chart', async ({ page }) => {
+      await page.goto('/patterns/lozenge-band');
+
+      const colours = await page.getByTestId('colour-key').boundingBox();
+      const words = await page.getByTestId('word-chart').boundingBox();
+
+      expect(colours?.y ?? 0).toBeLessThan(words?.y ?? 0);
+    });
+
     test('every screen fits with hit boxes of 44 or more', async ({ page }) => {
       await walk(page, 'phone');
     });
@@ -203,6 +287,23 @@ test.describe('built server with a stub API', () => {
 
     test('FOCUS-1 the pattern page focuses Start row tracker', async ({ page }) => {
       await page.goto('/patterns/lozenge-band');
+
+      await expect(page.getByTestId('start-tracker')).toBeFocused();
+    });
+
+    test('pick B: the word chart comes before the colours', async ({ page }) => {
+      await page.goto('/patterns/lozenge-band');
+
+      const colours = await page.getByTestId('colour-key').boundingBox();
+      const words = await page.getByTestId('word-chart').boundingBox();
+
+      expect(words?.y ?? 0).toBeLessThan(colours?.y ?? 0);
+    });
+
+    test('FOCUS-1 rejecting consent leaves focus on the named control', async ({ page }) => {
+      await page.goto('/patterns/lozenge-band');
+
+      await page.getByRole('button', { name: 'Reject all' }).click();
 
       await expect(page.getByTestId('start-tracker')).toBeFocused();
     });
