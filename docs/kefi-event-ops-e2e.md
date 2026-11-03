@@ -73,7 +73,7 @@ safe to write against.
 ```
 KEFI_FIXTURE_TENANT_SLUG=ubb
 KEFI_FIXTURE_EVENT_EXTERNAL_ID=e62a3fe4-88e9-431b-8f9e-2270314049a3
-KEFI_FIXTURE_ORGANIZER_USERNAME=ubb-test@dloizides.com
+KEFI_FIXTURE_ORGANIZER_USERNAME=<ubb-organizer-email>
 ```
 
 `.env.prod.secrets` (gitignored — see `.env.prod.secrets.example`):
