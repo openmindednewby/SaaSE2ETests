@@ -111,7 +111,7 @@ test.describe('Kefi organizer landing editor sighting (read-only)', () => {
 
   test.beforeAll(async ({ browser }, testInfo) => {
     const creds = proofOrganizer();
-    expect(creds.username.length, 'a proof organizer credential is configured (KEFI_PROOF_ORG_* or KEFI_TEST_*)').toBeGreaterThan(0);
+    expect(creds.username.length, 'a proof organizer credential is configured (KEFI_PROOF_ORG_* or KEFI_FIXTURE_ORGANIZER_*)').toBeGreaterThan(0);
     webUrl = getKefiUrls().webUrl;
     // ONE context per project, built from the project's own device settings, and ONE
     // sign-in: repeat password grants against a live prod organizer risk a lockout.

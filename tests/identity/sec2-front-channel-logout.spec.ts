@@ -73,8 +73,8 @@ const APPS: readonly AppUnderTest[] = [
     name: 'kefi',
     baseUrl: process.env.KEFI_WEB_URL ?? '',
     realm: 'kefi',
-    username: process.env.KEFI_TEST_USERNAME ?? '',
-    password: process.env.KEFI_TEST_PASSWORD ?? '',
+    username: process.env.KEFI_FIXTURE_ORGANIZER_USERNAME ?? '',
+    password: process.env.KEFI_FIXTURE_ORGANIZER_PASSWORD ?? '',
     signOutTestId: 'kefi-appheader-signout',
   },
   {

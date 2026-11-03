@@ -25,7 +25,7 @@
  * exact call the SPA's password tab makes, minus the keystrokes. The browser
  * holds only the opaque `__Host-bff-kefi` cookie; no token is injected. Creds
  * come from KEFI_PROOF_ORG_USERNAME / KEFI_PROOF_ORG_PASSWORD, defaulting to the
- * suite's sanctioned prod test organizer (KEFI_TEST_USERNAME / KEFI_TEST_PASSWORD).
+ * `e2e` fixture tenant organizer (KEFI_FIXTURE_ORGANIZER_USERNAME / _PASSWORD).
  *
  * ── PROD SAFETY ─────────────────────────────────────────────────────────────
  * STRICTLY READ-ONLY. Navigates, opens the section menu, switches sections and
@@ -113,7 +113,7 @@ test.describe('Kefi organizer dashboard at phone width', () => {
     const creds = proofOrganizer();
     expect(
       creds.username.length,
-      'a proof organizer credential is configured (KEFI_PROOF_ORG_* or KEFI_TEST_*)',
+      'a proof organizer credential is configured (KEFI_PROOF_ORG_* or KEFI_FIXTURE_ORGANIZER_*)',
     ).toBeGreaterThan(0);
 
     webUrl = getKefiUrls().webUrl;

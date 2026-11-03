@@ -186,7 +186,7 @@ export class KefiAdminClient {
     });
 
     if (resp.status >= 200 && resp.status < 300 && resp.data.access_token) {
-      this.tenantOwnerTokens.set(cacheKey, resp.data.access_token);
+      this.tenantOwnerTokens.set(cacheKey, await (await import('../../fixtures/real-tenant-guard.js')).refuseRealTenantBearer(this.http, resp.data.access_token));
       return resp.data.access_token;
     }
     throw new Error(

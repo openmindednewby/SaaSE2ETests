@@ -16,7 +16,7 @@
  * an Expire action; (5) phone-width caret-menu reachability.
  *
  * AUTH (no form typing): same-origin `POST /bff/login` (ROPC terminated server-
- * side, opaque `__Host-bff-kefi` cookie). Uses the suite's `KEFI_TEST_*` UBS
+ * side, opaque `__Host-bff-kefi` cookie). Uses the suite's `KEFI_FIXTURE_ORGANIZER_*` e2e
  * organizer from `.env.<target>.secrets`; these surfaces are tenant-agnostic.
  *
  * PROD SAFETY — STRICTLY READ-ONLY: opens the accordion + a per-person detail
@@ -32,8 +32,8 @@ import { KefiOrganizerTabsPage } from '../../pages/kefi/KefiOrganizerTabsPage.js
 
 test.describe.configure({ mode: 'serial' });
 
-const USERNAME = process.env.KEFI_TEST_USERNAME ?? '';
-const PASSWORD = process.env.KEFI_TEST_PASSWORD ?? '';
+const USERNAME = process.env.KEFI_FIXTURE_ORGANIZER_USERNAME ?? '';
+const PASSWORD = process.env.KEFI_FIXTURE_ORGANIZER_PASSWORD ?? '';
 const HAVE_CREDS = USERNAME !== '' && PASSWORD !== '';
 
 /** Where the PASS/FAIL evidence screenshots land. */
@@ -87,13 +87,13 @@ async function resolveEventExternalId(page: Page): Promise<string> {
   });
   expect(res.status(), 'the organizer events read-model returned OK').toBe(200);
   const body = (await res.json()) as { events: Array<{ externalId: string; name: string }> };
-  expect(body.events.length, 'the UBS organizer owns at least one event').toBeGreaterThan(0);
+  expect(body.events.length, 'the fixture organizer owns at least one event').toBeGreaterThan(0);
   return body.events[0].externalId;
 }
 
 test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
   test.skip(!isRemoteTarget(), 'Drives the deployed kefi-web organizer surface (E2E_TARGET=prod|staging)');
-  test.skip(!HAVE_CREDS, 'KEFI_TEST_USERNAME/PASSWORD unset in .env.<target>.secrets');
+  test.skip(!HAVE_CREDS, 'KEFI_FIXTURE_ORGANIZER_USERNAME/PASSWORD unset in .env.<target>[.secrets]');
 
   let context: BrowserContext;
   let page: Page;

@@ -7,8 +7,8 @@
  * `kefi-organizer-mobile.spec.ts` on its second use (`kefi-landing-sighting.spec.ts`).
  *
  * Credentials come from env only: KEFI_PROOF_ORG_USERNAME / KEFI_PROOF_ORG_PASSWORD,
- * defaulting to the suite's sanctioned prod test organizer
- * (KEFI_TEST_USERNAME / KEFI_TEST_PASSWORD in `.env.<target>.secrets`).
+ * defaulting to the organizer of the `e2e` fixture tenant
+ * (KEFI_FIXTURE_ORGANIZER_USERNAME / KEFI_FIXTURE_ORGANIZER_PASSWORD).
  */
 
 import type { Page } from '@playwright/test';
@@ -21,11 +21,11 @@ export interface KefiOrganizerCreds {
 const HTTP_OK = 200;
 const BODY_PREVIEW_CHARS = 200;
 
-/** Resolve the proof organizer credentials (sanctioned test organizer by default). */
+/** Resolve the proof organizer credentials (`e2e` fixture tenant organizer by default). */
 export function proofOrganizer(): KefiOrganizerCreds {
   return {
-    username: process.env.KEFI_PROOF_ORG_USERNAME ?? process.env.KEFI_TEST_USERNAME ?? '',
-    password: process.env.KEFI_PROOF_ORG_PASSWORD ?? process.env.KEFI_TEST_PASSWORD ?? '',
+    username: process.env.KEFI_PROOF_ORG_USERNAME ?? process.env.KEFI_FIXTURE_ORGANIZER_USERNAME ?? '',
+    password: process.env.KEFI_PROOF_ORG_PASSWORD ?? process.env.KEFI_FIXTURE_ORGANIZER_PASSWORD ?? '',
   };
 }
 
