@@ -160,7 +160,6 @@ async function submitRegisterForm(page: Page, body: RegisterBody): Promise<APIRe
   await page.getByTestId('jinx-register-email-input').fill(body.email);
   await page.getByTestId('jinx-register-password-input').fill(body.password);
   await page.getByTestId('jinx-register-confirm-password-input').fill(body.password);
-  await page.getByTestId('jinx-register-tenant-name-input').fill(body.tenantName);
   await page.clock.fastForward(FORM_FILL_SECONDS_MS);
 
   return clickSubmitPaced(page);
