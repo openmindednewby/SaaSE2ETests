@@ -98,7 +98,6 @@ test.describe('apps/jinx-bead-patterns/src/api/writeShape.test.ts', () => {
 
   test('AC-32 App client, Publish and favourite through the real client, Write shape pinned by expectJsonWriteShape; no console error on each route', async ({ page }) => {
     test.setTimeout(ACCOUNT_TEST_MS);
-    const routes = ['/', '/make', '/colour', '/saved', '/my-patterns', '/favourites'];
     const errors: string[] = [];
     page.on('console', (message) => {
       if (message.type() === 'error') errors.push(`${page.url()}: ${message.text()}`);
@@ -116,7 +115,18 @@ test.describe('apps/jinx-bead-patterns/src/api/writeShape.test.ts', () => {
 
       expect((await favourited).headers()['content-type']).toMatch(/application\/json/);
       await expect(page.getByTestId(`jinx-favourite-remove-${published.slug}`)).toBeVisible();
-      for (const route of routes) await page.goto(`${APP_URL}${route}`, { waitUntil: 'networkidle' });
+      const screens = [
+        { route: '/', landmark: 'jinx-generator-screen' },
+        { route: '/make', landmark: 'jinx-generator-screen' },
+        { route: '/colour', landmark: 'jinx-advice-screen' },
+        { route: '/saved', landmark: 'jinx-saved-screen' },
+        { route: '/my-patterns', landmark: `jinx-my-open-${published.slug}` },
+        { route: '/favourites', landmark: `jinx-favourite-remove-${published.slug}` },
+      ];
+      for (const { route, landmark } of screens) {
+        await page.goto(`${APP_URL}${route}`);
+        await expect(page.getByTestId(landmark)).toBeVisible();
+      }
       expect(errors).toEqual([]);
     } finally {
       if (externalId !== '') await removeOwnPattern(page.request, externalId);
