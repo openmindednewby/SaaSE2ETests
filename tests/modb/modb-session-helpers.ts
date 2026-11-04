@@ -40,6 +40,8 @@ export interface SessionHandle {
   applicantId: string;
   flowId: string;
   token: string;
+  status: string;
+  creationStatus: string;
 }
 
 /** Forced mock outcome per check type (Module B mock `Scenarios/RequestOutcomes.cs`). */
@@ -149,6 +151,8 @@ export async function createSession(
     applicantId: body.applicantId,
     flowId: body.flowId,
     token: body.access.token,
+    status: body.status,
+    creationStatus: body.creationStatus,
   };
 }
 

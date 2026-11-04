@@ -26,6 +26,7 @@ export interface ScreenRequest {
   mockOutcomes?: Partial<Record<string, MockOutcome>>;
   flowId?: string;
   documentType?: string;
+  externalApplicantId?: string;
 }
 
 export interface ScreenedSubmission {
@@ -37,9 +38,16 @@ export interface ScreenedSubmission {
 /** Creates a session, submits its document step with the given mock controls, and returns the session + request id. */
 export async function screenViaSession(
   request: APIRequestContext,
-  { subject, birthDate, mockOutcomes = { mrz_match: 'passed' }, flowId = MINIMAL_AML_FLOW, documentType }: ScreenRequest = {},
+  {
+    subject,
+    birthDate,
+    mockOutcomes = { mrz_match: 'passed' },
+    flowId = MINIMAL_AML_FLOW,
+    documentType,
+    externalApplicantId = `e2e-modb-${randomUUID()}`,
+  }: ScreenRequest = {},
 ): Promise<ScreenedSubmission> {
-  const session = await createSession(request, flowId, `e2e-modb-${randomUUID()}`);
+  const session = await createSession(request, flowId, externalApplicantId);
   const requestId = await submitDocument(request, session, {
     mockOutcomes,
     documentType,

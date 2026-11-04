@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import {
   AML_CHECK,
@@ -5,6 +6,7 @@ import {
   INTERNAL_TOKEN_ENV,
   assertGatewayReachable,
   clientApiKey,
+  createSession,
   internalToken,
   progressState,
   rowOf,
@@ -132,8 +134,8 @@ test.describe('Module B session outcome of an AML decision @modb-api', () => {
   }) => {
     const subject = 'Viktor Bout';
     const birthDate = '1967-01-13';
-    const flowId = 'standard-kyc';
-    const amlStep = 'aml-screening';
+    const flowId = 'frontend-v1-active-liveness.mrz-match.aml-screening';
+    const expectedSteps = ['document', 'aml-screening', 'liveness'];
     const expectedAmlOutcome = 'failed';
     const expectedStatus = 'COMPLETED';
     const expectedDecision = 'REJECTED';
@@ -143,9 +145,7 @@ test.describe('Module B session outcome of an AML decision @modb-api', () => {
     const { session, aml } = await screenToAmlTerminal(request, { subject, birthDate, flowId });
 
     const { steps } = await sessionConfiguration(request, session);
-    expect(steps.indexOf(amlStep), `${flowId} must keep a step after ${amlStep}: ${steps.join(' > ')}`).toBeLessThan(
-      steps.length - 1,
-    );
+    expect(steps).toEqual(expectedSteps);
     expect(aml.outcome).toBe(expectedAmlOutcome);
     const { body } = await firstReviewedWebhook(request, session.verificationId);
     expect(body.status).toBe(expectedStatus);
@@ -184,16 +184,31 @@ test.describe('Module B session outcome of an AML decision @modb-api', () => {
     expect(webhook.body.reason_codes).toContain(expectedSessionCode);
   });
 
-  test('AC7 with an AML Review, progress is in_review and no verificationReviewed is sent', async ({ request }) => {
+  test('AC7 with an AML Review and a step still open, the applicant shows processing, the session stays PROCESSING undecided, and no verificationReviewed is sent', async ({
+    request,
+  }) => {
     const subject = 'Vladimir Putin';
+    const flowId = 'frontend-v1-active-liveness.mrz-match.aml-screening';
+    const externalApplicantId = `e2e-modb-${randomUUID()}`;
+    const expectedSteps = ['document', 'aml-screening', 'liveness'];
     const expectedAmlOutcome = 'review';
-    const expectedProgress = 'in_review';
+    const expectedProgress = 'processing';
+    const expectedCreationStatus = 'REUSED';
+    const expectedSessionStatus = 'PROCESSING';
     const expectedDeliveries = 0;
 
-    const { session, aml } = await screenToAmlTerminal(request, { subject });
+    const { session, aml } = await screenToAmlTerminal(request, { subject, flowId, externalApplicantId });
 
+    const { steps } = await sessionConfiguration(request, session);
+    expect(steps).toEqual(expectedSteps);
     expect(aml.outcome).toBe(expectedAmlOutcome);
     expect(await progressState(request, session)).toBe(expectedProgress);
+    const reused = await createSession(request, flowId, externalApplicantId);
+    expect(reused.sessionId, 'a session holding a decision is never reused, so another id means it was decided').toBe(
+      session.sessionId,
+    );
+    expect(reused.creationStatus).toBe(expectedCreationStatus);
+    expect(reused.status).toBe(expectedSessionStatus);
     await holdReviewedCount(request, session.verificationId, expectedDeliveries);
   });
 });
