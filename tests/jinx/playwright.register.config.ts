@@ -11,6 +11,7 @@ export default defineConfig({
   testMatch: 'register-journey.spec.ts',
   workers: 1,
   retries: 0,
+  timeout: 480_000,
   reporter: 'line',
   use: { trace: 'retain-on-failure', screenshot: 'only-on-failure' },
 });

@@ -18,12 +18,9 @@ import {
 } from './helpers/test-accounts';
 import { APP_URL } from './helpers/tracker';
 
-const SPEC_TIMEOUT_MS = 480_000;
-const MOBILE = devices['Galaxy S5'];
-const DESKTOP_1280 = { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } };
-
-test.describe.configure({ mode: 'serial' });
-test.setTimeout(SPEC_TIMEOUT_MS);
+const { defaultBrowserType: _mobileEngine, ...MOBILE } = devices['Galaxy S5'];
+const { defaultBrowserType: _desktopEngine, ...DESKTOP } = devices['Desktop Chrome'];
+const DESKTOP_1280 = { ...DESKTOP, viewport: { width: 1280, height: 800 } };
 
 async function disposeAndExpectGone(account: TestAccount, password = account.password): Promise<void> {
   const disposed = await account.dispose();
