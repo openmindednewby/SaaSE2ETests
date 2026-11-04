@@ -13,6 +13,7 @@ import {
   newestMailbox,
   pacedContext,
   signIn,
+  signInDetail,
   type FormJourneyProbes,
   type RegisterBody,
 } from './helpers/test-accounts';
@@ -52,21 +53,21 @@ test('AC-HOST-3 a verified account is deleted through the emailed link, sign-in 
 });
 
 test('AC-HOST-8 an unverified account gets no password grant, returns 401 until the link is used', async () => {
-  let beforeVerify = 0;
+  let beforeVerify = '';
   let body: RegisterBody | undefined;
   const account = await newAccount({
     app: 'jinx',
     baseUrl: APP_URL,
     newContext: hookedContext(async (url, options, send) => {
       if (isRegister(url)) body = options.data as RegisterBody;
-      if (isVerify(url) && body) beforeVerify = await signIn(body.email, body.password);
+      if (isVerify(url) && body) beforeVerify = await signInDetail(body.email, body.password);
       return send();
     }),
   });
 
   const afterVerify = await signIn(account.email, account.password);
 
-  expect(beforeVerify).toBe(401);
+  expect(beforeVerify, beforeVerify).toMatch(/^login=401 /);
   expect(afterVerify).toBe(200);
   await disposeAndExpectGone(account);
 });
@@ -140,7 +141,7 @@ for (const [size, device] of [['360x640', MOBILE], ['1280x800', DESKTOP_1280]] a
       const probes: FormJourneyProbes = {};
       const account = await newAccount({ app: 'jinx', baseUrl: APP_URL, newContext: formContext(page, probes) });
 
-      const me = await page.request.get('/bff/me');
+      const me = await account.context.get('/bff/me');
 
       expect(probes.meBeforeVerify).toBe(401);
       expect(me.status()).toBe(200);

@@ -16,6 +16,7 @@ const LEFTOVER_MAIL_WAIT_MS = 4000;
 const FORM_FILL_SECONDS_MS = 2000;
 const VERIFY_PATH = '/bff/verify-and-login';
 const REGISTER_PATH = '/bff/register';
+const WRITE_HEADERS = { Origin: APP_URL, 'X-BFF-Csrf': '1' };
 
 type PostOptions = NonNullable<Parameters<TestAccountContext['post']>[1]>;
 type PostHook = (url: string, options: PostOptions, send: (next?: PostOptions) => Promise<APIResponse>) => Promise<APIResponse>;
@@ -98,6 +99,17 @@ export async function signIn(username: string, password: string): Promise<number
   }
 }
 
+export async function signInDetail(username: string, password: string): Promise<string> {
+  const context = await apiContext(APP_URL);
+  try {
+    const login = await postPaced(context, '/bff/login', { data: { username, password } });
+    const me = await context.get('/bff/me');
+    return `login=${login.status()} me=${me.status()} body=${(await login.text()).slice(0, 300)}`;
+  } finally {
+    await context.dispose();
+  }
+}
+
 export async function expectSignInGone(username: string, password: string): Promise<void> {
   await expect
     .poll(() => signIn(username, password), {
@@ -106,6 +118,10 @@ export async function expectSignInGone(username: string, password: string): Prom
       timeout: ERASE_TIMEOUT_MS,
     })
     .toBe(HTTP_UNAUTHORIZED);
+}
+
+function absolute(url: string): string {
+  return new URL(url, APP_URL).href;
 }
 
 async function submitRegisterForm(page: Page, body: RegisterBody): Promise<APIResponse> {
@@ -137,17 +153,17 @@ export interface FormJourneyProbes {
 
 export function formContext(page: Page, probes: FormJourneyProbes): () => Promise<TestAccountContext> {
   return async () => ({
-    get: page.request.get.bind(page.request),
+    get: (url, options) => page.request.get(absolute(url), options),
     dispose: async () => undefined,
     post: async (url, options = {}) => {
       if (isRegister(url)) {
         const answered = await submitRegisterForm(page, options.data as RegisterBody);
         await expect(page.getByTestId('jinx-register-check-email')).toBeVisible();
-        probes.meBeforeVerify = (await page.request.get('/bff/me')).status();
+        probes.meBeforeVerify = (await page.request.get(absolute('/bff/me'))).status();
         return answered;
       }
       if (isVerify(url)) return openVerifyLink(page, (options.data as { token: string }).token);
-      return postPaced(page.request, url, options);
+      return postPaced(page.request, absolute(url), { ...options, headers: { ...WRITE_HEADERS, ...options.headers } });
     },
   });
 }
