@@ -10,6 +10,7 @@ const HTTP_UNAUTHORIZED = 401;
 const DEFAULT_RETRY_AFTER_SECONDS = 60;
 const MS_PER_SECOND = 1000;
 const MAX_THROTTLED_ATTEMPTS = 4;
+const AUTH_RATE_WINDOW_MS = 60_000;
 const ERASE_POLL_MS = 20_000;
 const ERASE_TIMEOUT_MS = 180_000;
 const LEFTOVER_MAIL_WAIT_MS = 4000;
@@ -35,10 +36,15 @@ function retryAfterMs(response: APIResponse): number {
   return (Number.isNaN(seconds) ? DEFAULT_RETRY_AFTER_SECONDS : seconds) * MS_PER_SECOND;
 }
 
-export async function postPaced(context: TestAccountContext, url: string, options: PostOptions): Promise<APIResponse> {
+export async function postPaced(
+  context: TestAccountContext,
+  url: string,
+  options: PostOptions,
+  minWaitMs = 0,
+): Promise<APIResponse> {
   let response = await context.post(url, options);
   for (let attempt = 1; attempt < MAX_THROTTLED_ATTEMPTS && response.status() === HTTP_TOO_MANY_REQUESTS; attempt += 1) {
-    await delay(retryAfterMs(response));
+    await delay(Math.max(retryAfterMs(response), minWaitMs));
     response = await context.post(url, options);
   }
   return response;
@@ -110,6 +116,17 @@ export async function signInDetail(username: string, password: string): Promise<
   }
 }
 
+export async function signInTenantId(username: string, password: string): Promise<string> {
+  const context = await apiContext(APP_URL);
+  try {
+    const response = await postPaced(context, '/bff/login', { data: { username, password } });
+    const body = (await response.json().catch(() => ({}))) as { user?: { tenantId?: string } };
+    return body.user?.tenantId ?? '';
+  } finally {
+    await context.dispose();
+  }
+}
+
 export async function expectSignInGone(username: string, password: string): Promise<void> {
   await expect
     .poll(() => signIn(username, password), {
@@ -175,7 +192,8 @@ export function formContext(page: Page, probes: FormJourneyProbes): () => Promis
         return answered;
       }
       if (isVerify(url)) return openVerifyLink(page, (options.data as { token: string }).token);
-      return postPaced(page.request, absolute(url), { ...options, headers: { ...WRITE_HEADERS, ...options.headers } });
+      const paced = { ...options, headers: { ...WRITE_HEADERS, ...options.headers } };
+      return postPaced(page.request, absolute(url), paced, AUTH_RATE_WINDOW_MS);
     },
   });
 }

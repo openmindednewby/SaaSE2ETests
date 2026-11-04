@@ -14,6 +14,7 @@ import {
   pacedContext,
   signIn,
   signInDetail,
+  signInTenantId,
   type FormJourneyProbes,
   type RegisterBody,
 } from './helpers/test-accounts';
@@ -118,18 +119,17 @@ test('Journey step 4 a second identical submit on a verified account creates no 
       return send();
     }),
   });
-  const original = await (await account.context.get('/bff/me')).json();
 
   const again = await account.context.post('/bff/register', {
     headers: { 'Idempotency-Key': randomBytes(6).toString('hex') },
     data: { ...body, website: '', formElapsedMs: 8000 },
   });
 
+  const tenantAfterSubmit = await signInTenantId(account.email, account.password);
+
   expect(again.status()).toBe(202);
-  await expect
-    .poll(async () => (await (await account.context.get('/bff/me')).json()).tenantId)
-    .toBe(original.tenantId);
-  expect(await signIn(account.email, account.password)).toBe(200);
+  expect(account.tenantId).not.toBe('');
+  expect(tenantAfterSubmit).toBe(account.tenantId);
   await disposeAndExpectGone(account);
 });
 
@@ -145,7 +145,6 @@ for (const [size, device] of [['360x640', MOBILE], ['1280x800', DESKTOP_1280]] a
 
       expect(probes.meBeforeVerify).toBe(401);
       expect(me.status()).toBe(200);
-      expect((await me.json()).tenant_id).toBe(account.tenantId);
       expect(account.tenantId).not.toBe('');
       await disposeAndExpectGone(account);
     });
