@@ -4,7 +4,7 @@ import { livePatternSlug } from './helpers/screens';
 
 const LIST_ROW = /data-code="(DB\w+)" data-count="(\d+)"/g;
 const KEY_ROW = /background:(#[0-9A-Fa-f]{6})[^>]*>\w+<\/span><\/td>\s*<td><span class="code">(DB\w+)</g;
-const CHART = /data-testid="pattern-chart">[\s\S]*?<\/svg>/;
+const CHART = /data-testid="pattern-chart"[^>]*>[\s\S]*?<\/svg>/;
 
 test('AC-18 Pattern, Read list, Code + quantity for each colour equal chart counts; Etsy search link; disclosure text present; affiliate tag empty until configured', async ({ request }) => {
   const slug = await livePatternSlug(request);
