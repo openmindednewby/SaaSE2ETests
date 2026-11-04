@@ -150,9 +150,13 @@ async function submitRegisterForm(page: Page, body: RegisterBody): Promise<APIRe
 }
 
 async function openVerifyLink(page: Page, token: string): Promise<APIResponse> {
-  const answered = page.waitForResponse((response) => new URL(response.url()).pathname === VERIFY_PATH);
-  await page.goto(`${APP_URL}/verify-email?token=${encodeURIComponent(token)}`);
-  return (await answered) as unknown as APIResponse;
+  for (let attempt = 1; ; attempt += 1) {
+    const answered = page.waitForResponse((candidate) => new URL(candidate.url()).pathname === VERIFY_PATH);
+    await page.goto(`${APP_URL}/verify-email?token=${encodeURIComponent(token)}`);
+    const response = (await answered) as unknown as APIResponse;
+    if (response.status() !== HTTP_TOO_MANY_REQUESTS || attempt === MAX_THROTTLED_ATTEMPTS) return response;
+    await delay(retryAfterMs(response));
+  }
 }
 
 export interface FormJourneyProbes {

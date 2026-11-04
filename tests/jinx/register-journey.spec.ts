@@ -145,7 +145,7 @@ for (const [size, device] of [['360x640', MOBILE], ['1280x800', DESKTOP_1280]] a
 
       expect(probes.meBeforeVerify).toBe(401);
       expect(me.status()).toBe(200);
-      expect((await me.json()).tenantId).toBe(account.tenantId);
+      expect((await me.json()).tenant_id).toBe(account.tenantId);
       expect(account.tenantId).not.toBe('');
       await disposeAndExpectGone(account);
     });
