@@ -28,7 +28,6 @@ export interface RegisterBody {
   username: string;
   email: string;
   password: string;
-  tenantName: string;
 }
 
 function retryAfterMs(response: APIResponse): number {

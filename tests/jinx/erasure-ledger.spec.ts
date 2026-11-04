@@ -31,15 +31,26 @@ test('AC-ER-9 an account deleted with jinx-api stopped stays open, after a start
       return send();
     }),
   });
-  const api = await signedInApi(account.email, account.password);
-  const published = await publishRandomChart(api, uniqueTitle('erasure'));
-  const favourited = await api.put(`${BFF_API}/me/favourites/${published.externalId}`, { headers: WRITE_HEADERS, data: {} });
-  expect(favourited.ok(), `PUT favourite ${favourited.status()}`).toBe(true);
-  await api.dispose();
-  const userId = patternOwner(published.externalId);
-  const published1AndFavourited1: JinxRows = { patterns: 1, favourites: 1 };
-  expect(jinxRows(userId)).toEqual(published1AndFavourited1);
-  expect(loginEnabled(userId)).toBe('t');
+  const arrange = async (): Promise<string> => {
+    const api = await signedInApi(account.email, account.password);
+    const published = await publishRandomChart(api, uniqueTitle('erasure'));
+    const favourited = await api.put(`${BFF_API}/me/favourites/${published.externalId}`, { headers: WRITE_HEADERS, data: {} });
+    expect(favourited.ok(), `PUT favourite ${favourited.status()}`).toBe(true);
+    await api.dispose();
+    const userId = patternOwner(published.externalId);
+    const published1AndFavourited1: JinxRows = { patterns: 1, favourites: 1 };
+    expect(jinxRows(userId)).toEqual(published1AndFavourited1);
+    expect(loginEnabled(userId)).toBe('t');
+    return userId;
+  };
+  const userId = await arrange().catch(async (error: unknown) => {
+    try {
+      await account.dispose();
+    } finally {
+      startJinxApi();
+    }
+    throw error;
+  });
 
   let whileStopped: { ledger: LedgerState; login: string; rows: JinxRows } | undefined;
   try {
