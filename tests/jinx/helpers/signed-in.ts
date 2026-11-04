@@ -5,7 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { createTestAccount, type TestAccount } from '@dloizides/e2e-helpers';
 import { expect, type APIRequestContext, type APIResponse, type Page } from '@playwright/test';
 
-import { BFF_API, openPublishForNewChart, SESSION_HINT_KEY, WRITE_HEADERS } from './live-api';
+import { BFF_API, SESSION_HINT_KEY, WRITE_HEADERS } from './live-api';
 import { apiContext, expungeLeftoverMail, newestMailbox, pacedContext, postPaced } from './test-accounts';
 import { APP_URL } from './tracker';
 
@@ -75,7 +75,7 @@ export async function publishRandomChart(api: APIRequestContext, title: string):
 }
 
 export async function removeOwnPattern(api: APIRequestContext, externalId: string): Promise<void> {
-  const response = await api.delete(`${BFF_API}/patterns/${externalId}`);
+  const response = await api.delete(`${BFF_API}/patterns/${externalId}`, { headers: WRITE_HEADERS });
   expect.soft(response.status(), `owner delete ${externalId}`).toBe(204);
 }
 
@@ -102,7 +102,10 @@ export async function signInPage(page: Page, username: string, password: string)
 }
 
 export async function publishThroughForm(page: Page, name: string): Promise<Published> {
-  await openPublishForNewChart(page);
+  await page.goto(`${APP_URL}/make`);
+  await page.getByTestId('jinx-generator-shuffle').click();
+  await page.getByTestId('jinx-generator-publish').click();
+  await expect(page.getByTestId('jinx-publish-form')).toBeVisible();
   await page.getByTestId('jinx-publish-rights').click();
   await page.getByTestId('jinx-publish-name').fill(name);
   const answered = page.waitForResponse(

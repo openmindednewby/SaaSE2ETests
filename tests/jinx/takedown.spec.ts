@@ -5,7 +5,7 @@ import { ACCOUNT_TEST_MS, ADMIN_USERNAME, adminPassword, newJinxAccount, pollSit
 
 const UNKNOWN_ID = '00000000-0000-4000-8000-000000000e2e';
 const REMOVED_WITHIN_MS = 60_000;
-const GONE_POLL_MS = 5000;
+const GONE_POLL_MS = 1000;
 
 test('AC-22 Live indexed pattern, Admin removes, Page 410 within 60 s, sitemap row gone, browse row gone', async ({ request }) => {
   test.setTimeout(ACCOUNT_TEST_MS);
@@ -25,6 +25,7 @@ test('AC-22 Live indexed pattern, Admin removes, Page 410 within 60 s, sitemap r
 
     await admin.dispose();
     expect(removal.status()).toBe(204);
+    expect((await request.get(`${BFF_API}/patterns/${published.slug}`)).status()).toBe(410);
     await expect
       .poll(async () => (await request.get(`/patterns/${published.slug}`)).status(), { intervals: [GONE_POLL_MS], timeout: REMOVED_WITHIN_MS })
       .toBe(410);
