@@ -2,11 +2,32 @@ import { expect, test } from '@playwright/test';
 
 import { BFF_API, holdPosts, openPublishForNewChart, pretendSignedIn } from './helpers/live-api';
 import { livePatternSlug } from './helpers/screens';
+import { ACCOUNT_TEST_MS, newJinxAccount, publishThroughForm, removeAccount, removeOwnPattern, signInPage, uniqueTitle } from './helpers/signed-in';
 
 test.use({ serviceWorkers: 'block' });
 
-test('AC-27 Publish form, Open, publish, search, MakeSellCredit preselected; licence on page; licence filter works', async ({ request }) => {
-  expect(false, 'ACCEPTANCE-PENDING: AC-27').toBe(true);
+test('AC-27 Publish form, Open, publish, search, MakeSellCredit preselected; licence on page; licence filter works', async ({ page }) => {
+  test.setTimeout(ACCOUNT_TEST_MS);
+  const name = uniqueTitle('licence');
+  const search = `${BFF_API}/patterns?q=${encodeURIComponent(name)}`;
+  const account = await newJinxAccount();
+  let externalId = '';
+  try {
+    await signInPage(page, account.email, account.password);
+
+    const published = await publishThroughForm(page, name);
+
+    externalId = published.externalId;
+    const found = await (await page.request.get(search)).json();
+    expect(found.items.map((item: { slug: string; licence: string }) => [item.slug, item.licence])).toEqual([[published.slug, 'MakeSellCredit']]);
+    expect((await (await page.request.get(`${search}&licence=MakeSellCredit`)).json()).total).toBe(1);
+    expect((await (await page.request.get(`${search}&licence=PersonalOnly`)).json()).total).toBe(0);
+    await page.goto(`/patterns/${published.slug}`);
+    await expect(page.getByTestId('pattern-licence')).toContainText(/credit/i);
+  } finally {
+    if (externalId !== '') await removeOwnPattern(page.request, externalId);
+    await removeAccount(account);
+  }
 });
 
 test('AC-27 API licence filter, returns only that licence and nothing for an unused one', async ({ request }) => {

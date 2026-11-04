@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 
 import { BFF_API, holdPosts, patternExternalId, WRITE_HEADERS } from './helpers/live-api';
 import { livePatternSlug } from './helpers/screens';
+import { ACCOUNT_TEST_MS, newJinxAccount, publishRandomChart, removeAccount, removeOwnPattern, signedInApi, uniqueTitle } from './helpers/signed-in';
+import { newestMailbox } from './helpers/test-accounts';
 import { APP_URL } from './helpers/tracker';
 
 const UNKNOWN_ID = '00000000-0000-4000-8000-000000000e2e';
@@ -14,8 +16,34 @@ function reportBody(reporterEmail: string): object {
   return { patternId: UNKNOWN_ID, kind: 'Spam', reporterEmail, statement: STATEMENT };
 }
 
-test('AC-21 Reader on a pattern, Follow report link, submit, 202; owner and reporter emailed; rate limited after the limit', async ({ request }) => {
-  expect(false, 'ACCEPTANCE-PENDING: AC-21').toBe(true);
+test('AC-21 Reader on a pattern, Follow report link, submit, 202; owner and reporter emailed; rate limited after the limit', async ({ page }) => {
+  test.setTimeout(ACCOUNT_TEST_MS);
+  const reporter = `e2e-bot+report-${Date.now()}@dloizides.com`;
+  const account = await newJinxAccount();
+  const owner = await signedInApi(account.email, account.password);
+  let externalId = '';
+  try {
+    const published = await publishRandomChart(owner, uniqueTitle('report'));
+    externalId = published.externalId;
+    await page.goto(`/patterns/${published.slug}`);
+    await page.getByTestId('report-pattern').click();
+    await page.getByTestId('jinx-report-email').fill(reporter);
+    await page.getByTestId('jinx-report-statement').fill(STATEMENT);
+    const answered = page.waitForResponse((response) => new URL(response.url()).pathname.endsWith('/reports'));
+
+    await page.getByTestId('jinx-report-submit').click();
+
+    expect((await answered).status()).toBe(202);
+    await expect(page.getByTestId('jinx-report-status')).toContainText(RECEIVED);
+    const mailbox = newestMailbox();
+    const mail = await mailbox.waitForMessageTo(reporter);
+    expect(JSON.stringify(mail)).toContain('We received your report');
+    await mailbox.expungeMessages([mail.uid]);
+  } finally {
+    if (externalId !== '') await removeOwnPattern(owner, externalId);
+    await owner.dispose();
+    await removeAccount(account);
+  }
 });
 
 test('AC-21 report naming an unknown pattern id, returns 404', async ({ request }) => {

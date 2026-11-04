@@ -6,7 +6,7 @@ export const BFF_API = `${APP_URL}/bff/api/jinx/api/v1`;
 export const WRITE_HEADERS = { 'X-BFF-Csrf': '1', Origin: APP_URL };
 
 const API_PATH = '/bff/api/jinx/api/v1';
-const SESSION_HINT_KEY = 'jinx.session.known';
+export const SESSION_HINT_KEY = 'jinx.session.known';
 
 export async function patternExternalId(request: APIRequestContext, slug: string): Promise<string> {
   const response = await request.get(`${BFF_API}/patterns/${slug}`);
