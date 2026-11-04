@@ -14,6 +14,8 @@ import {
 import { screenViaSession } from './modb-session-mock.js';
 
 const MOCK_URL_ENV = 'MODB_MOCK_URL';
+const MOCK_CONTROL_TOKEN_ENV = 'MODB_MOCK_CONTROL_TOKEN';
+const MOCK_CONTROL_TOKEN_HEADER = 'x-mock-control-token';
 const CHECK_COMPLETED_EVENT = 'verificationCheckCompleted';
 const WEBHOOK_TIMEOUT_MS = 60_000;
 const POLL_INTERVALS_MS = [1_000, 2_000, 3_000];
@@ -61,6 +63,7 @@ async function deliveredWebhook(
         const response = await request
           .get(`${mockUrl()}/test/webhooks`, {
             params: { requestId },
+            headers: { [MOCK_CONTROL_TOKEN_HEADER]: process.env[MOCK_CONTROL_TOKEN_ENV] ?? '' },
             timeout: REQUEST_TIMEOUT_MS,
             failOnStatusCode: false,
           })
@@ -104,6 +107,7 @@ test.describe('Module B reason codes on the stored result and the signed webhook
   test.beforeEach(async ({ request }) => {
     expect(clientApiKey(), `${CLIENT_KEY_ENV} is unset: no session can be created`).toBeTruthy();
     expect(internalToken(), `${INTERNAL_TOKEN_ENV} is unset: no check row can be read`).toBeTruthy();
+    expect(process.env[MOCK_CONTROL_TOKEN_ENV], `${MOCK_CONTROL_TOKEN_ENV} is unset: the receiver cannot be read`).toBeTruthy();
     await assertGatewayReachable(request);
   });
 
