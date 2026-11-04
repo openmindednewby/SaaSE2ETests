@@ -2,23 +2,25 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { APP_URL } from './helpers/tracker';
 
-const INTRO_MS = 800;
+const CLASP_MS = 800;
+const INTRO_WITH_COLOUR_MS = 1200;
 const PRESS_MS = 200;
 const SLIDE_MS = 400;
 const SLIDE_TOLERANCE_MS = 150;
 
 interface LogoRecord {
   readonly total: number;
+  readonly colour: boolean;
 }
 
 async function recordLogoAnimations(page: Page): Promise<void> {
   await page.addInitScript(() => {
-    const log: Array<{ total: number }> = [];
+    const log: Array<{ total: number; colour: boolean }> = [];
     Object.assign(window, { logoAnimations: log });
     const original = Element.prototype.animate;
     Element.prototype.animate = function animate(frames, options) {
       if (typeof options === 'object' && this.closest('[data-testid="jinx-logo"]') !== null) {
-        log.push({ total: Number(options.delay ?? 0) + Number(options.duration ?? 0) });
+        log.push({ total: Number(options.delay ?? 0) + Number(options.duration ?? 0), colour: JSON.stringify(frames).includes('"color"') });
       }
       return original.call(this, frames, options);
     };
@@ -28,6 +30,11 @@ async function recordLogoAnimations(page: Page): Promise<void> {
 async function logoEnd(page: Page): Promise<number> {
   const records = await page.evaluate(() => (window as unknown as { logoAnimations: LogoRecord[] }).logoAnimations);
   return Math.max(0, ...records.map((record) => record.total));
+}
+
+async function claspEnd(page: Page): Promise<number> {
+  const records = await page.evaluate(() => (window as unknown as { logoAnimations: LogoRecord[] }).logoAnimations);
+  return Math.max(0, ...records.filter((record) => !record.colour).map((record) => record.total));
 }
 
 async function recordSlide(page: Page): Promise<void> {
@@ -49,11 +56,12 @@ async function slideSamples(page: Page): Promise<Array<{ at: number; x: number }
   return page.evaluate(() => (window as unknown as { slideSamples: Array<{ at: number; x: number }> }).slideSamples);
 }
 
-test('AC-40 App load, Logo plays, 800 ms clasp; press 200 ms; reduced motion = still', async ({ page }) => {
+test('AC-40 App load, Logo plays, 800 ms clasp then colour to 1200 ms; press 200 ms; reduced motion = still', async ({ page }) => {
   await recordLogoAnimations(page);
   await page.goto(`${APP_URL}/make`);
   await expect(page.getByTestId('jinx-logo')).toBeVisible();
-  await expect.poll(() => logoEnd(page)).toBe(INTRO_MS);
+  await expect.poll(() => logoEnd(page)).toBe(INTRO_WITH_COLOUR_MS);
+  expect(await claspEnd(page)).toBe(CLASP_MS);
   await page.evaluate(() => {
     (window as unknown as { logoAnimations: LogoRecord[] }).logoAnimations.length = 0;
   });

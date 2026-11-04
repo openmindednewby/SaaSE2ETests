@@ -37,6 +37,7 @@ interface ChartScroll {
   top: number;
   pageY: number;
   clientHeight: number;
+  maxTop: number;
 }
 
 async function pagedPatternSlug(request: APIRequestContext): Promise<string> {
@@ -81,6 +82,7 @@ const readScroll = (page: Page): Promise<ChartScroll> => page.locator('[data-cha
   top: el.scrollTop,
   pageY: window.scrollY,
   clientHeight: el.clientHeight,
+  maxTop: el.scrollHeight - el.clientHeight,
 }));
 
 const logoAnimationEnds = (page: Page): Promise<number[]> => page.locator('.top .logo').evaluate((el) => el.getAnimations({ subtree: true }).map((animation) => Number(animation.effect?.getComputedTiming().endTime ?? 0)));
@@ -159,8 +161,8 @@ test.describe('D-BEAD-48 phone chart on touch', () => {
 
     await page.getByTestId('chart-next').tap();
 
-    const { top, clientHeight } = await readScroll(page);
-    expect(top).toBeCloseTo(clientHeight * BUTTON_ZOOM, 0);
+    const { top, clientHeight, maxTop } = await readScroll(page);
+    expect(top).toBeCloseTo(Math.min(clientHeight * BUTTON_ZOOM, maxTop), 0);
     await expect(page.getByTestId('chart-previous')).toBeEnabled();
   });
 

@@ -11,6 +11,7 @@ const SCREEN_BY_PATH: Record<string, string> = {
   '/recolour': 'jinx-recolour-screen',
   '/saved': 'jinx-saved-screen',
   '/login': 'jinx-login-page',
+  '/report': 'jinx-report-screen',
 };
 const SOURCES: { name: string; path: (request: APIRequestContext) => Promise<string> }[] = [
   { name: '/browse', path: async () => '/browse' },
