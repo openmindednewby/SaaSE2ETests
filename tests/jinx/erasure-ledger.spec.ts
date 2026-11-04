@@ -31,6 +31,7 @@ test('AC-ER-9 an account deleted with jinx-api stopped stays open, after a start
       return send();
     }),
   });
+  const published1AndFavourited1: JinxRows = { patterns: 1, favourites: 1 };
   const arrange = async (): Promise<string> => {
     const api = await signedInApi(account.email, account.password);
     const published = await publishRandomChart(api, uniqueTitle('erasure'));
@@ -38,7 +39,6 @@ test('AC-ER-9 an account deleted with jinx-api stopped stays open, after a start
     expect(favourited.ok(), `PUT favourite ${favourited.status()}`).toBe(true);
     await api.dispose();
     const userId = patternOwner(published.externalId);
-    const published1AndFavourited1: JinxRows = { patterns: 1, favourites: 1 };
     expect(jinxRows(userId)).toEqual(published1AndFavourited1);
     expect(loginEnabled(userId)).toBe('t');
     return userId;
