@@ -132,7 +132,7 @@ test.describe('Module B session outcome of an AML decision @modb-api', () => {
   test('AC1 with an AML Fail and later steps never submitted, the session completes REJECTED FINAL', async ({
     request,
   }) => {
-    const subject = 'Viktor Bout';
+    const subject = 'Viktor Anatolijevitch Bout';
     const birthDate = '1967-01-13';
     const flowId = 'frontend-v1-active-liveness.mrz-match.aml-screening';
     const expectedSteps = ['document', 'aml-screening', 'liveness'];
@@ -155,7 +155,7 @@ test.describe('Module B session outcome of an AML decision @modb-api', () => {
   });
 
   test('AC2 with an AML Fail on a sanctions match, the session reason codes name AML_SANCTIONS', async ({ request }) => {
-    const subject = 'Viktor Bout';
+    const subject = 'Viktor Anatolijevitch Bout';
     const birthDate = '1967-01-13';
     const expectedStoredCategory = 'SANCTIONS';
     const expectedSessionCode = 'AML_SANCTIONS';
@@ -170,7 +170,7 @@ test.describe('Module B session outcome of an AML decision @modb-api', () => {
   test('AC4 with an AML Fail, the client receives one signed verificationReviewed carrying the codes', async ({
     request,
   }) => {
-    const subject = 'Viktor Bout';
+    const subject = 'Viktor Anatolijevitch Bout';
     const birthDate = '1967-01-13';
     const expectedDeliveries = 1;
     const expectedSessionCode = 'AML_SANCTIONS';
