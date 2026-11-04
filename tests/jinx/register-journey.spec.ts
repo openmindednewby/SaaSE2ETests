@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 
-import { createTestAccount, type TestAccount } from '@dloizides/e2e-helpers';
+import { createTestAccount, type CreateTestAccountOptions, type TestAccount } from '@dloizides/e2e-helpers';
 import { devices, expect, test } from '@playwright/test';
 
 import {
@@ -22,6 +22,18 @@ const { defaultBrowserType: _mobileEngine, ...MOBILE } = devices['Galaxy S5'];
 const { defaultBrowserType: _desktopEngine, ...DESKTOP } = devices['Desktop Chrome'];
 const DESKTOP_1280 = { ...DESKTOP, viewport: { width: 1280, height: 800 } };
 
+const created: TestAccount[] = [];
+
+async function newAccount(options: CreateTestAccountOptions): Promise<TestAccount> {
+  const account = await createTestAccount(options);
+  created.push(account);
+  return account;
+}
+
+test.afterEach(async () => {
+  for (const account of created.splice(0)) await account.dispose();
+});
+
 async function disposeAndExpectGone(account: TestAccount, password = account.password): Promise<void> {
   const disposed = await account.dispose();
   expect(disposed.confirmStatus).toBe(200);
@@ -30,7 +42,7 @@ async function disposeAndExpectGone(account: TestAccount, password = account.pas
 }
 
 test('AC-HOST-3 a verified account is deleted through the emailed link, sign-in returns 401', async () => {
-  const account = await createTestAccount({ app: 'jinx', baseUrl: APP_URL, newContext: pacedContext() });
+  const account = await newAccount({ app: 'jinx', baseUrl: APP_URL, newContext: pacedContext() });
   expect(account.tenantId).not.toBe('');
 
   const disposed = await account.dispose();
@@ -42,7 +54,7 @@ test('AC-HOST-3 a verified account is deleted through the emailed link, sign-in 
 test('AC-HOST-8 an unverified account gets no password grant, returns 401 until the link is used', async () => {
   let beforeVerify = 0;
   let body: RegisterBody | undefined;
-  const account = await createTestAccount({
+  const account = await newAccount({
     app: 'jinx',
     baseUrl: APP_URL,
     newContext: hookedContext(async (url, options, send) => {
@@ -63,7 +75,7 @@ test('AC-HOST-7 a duplicate signup asks for a new password at the link, old pass
   const newPassword = `E2e-${randomBytes(6).toString('hex')}-Bb2`;
   let firstVerifyStatus = 0;
   let firstVerifyCode = '';
-  const account = await createTestAccount({
+  const account = await newAccount({
     app: 'jinx',
     baseUrl: APP_URL,
     mailbox: newestMailbox(),
@@ -97,7 +109,7 @@ test('AC-HOST-3 a tenant with a second user stays after one is deleted, its othe
 
 test('Journey step 4 a second identical submit on a verified account creates no second user, one delete removes the only login', async () => {
   let body: RegisterBody | undefined;
-  const account = await createTestAccount({
+  const account = await newAccount({
     app: 'jinx',
     baseUrl: APP_URL,
     newContext: hookedContext(async (url, options, send) => {
@@ -126,7 +138,7 @@ for (const [size, device] of [['360x640', MOBILE], ['1280x800', DESKTOP_1280]] a
 
     test(`Journey at ${size} the form registers with no session, the link signs in with a tenant, delete returns 401`, async ({ page }) => {
       const probes: FormJourneyProbes = {};
-      const account = await createTestAccount({ app: 'jinx', baseUrl: APP_URL, newContext: formContext(page, probes) });
+      const account = await newAccount({ app: 'jinx', baseUrl: APP_URL, newContext: formContext(page, probes) });
 
       const me = await page.request.get('/bff/me');
 
