@@ -124,6 +124,16 @@ function absolute(url: string): string {
   return new URL(url, APP_URL).href;
 }
 
+async function clickSubmitPaced(page: Page): Promise<APIResponse> {
+  for (let attempt = 1; ; attempt += 1) {
+    const answered = page.waitForResponse((response) => new URL(response.url()).pathname === REGISTER_PATH);
+    await page.getByTestId('jinx-register-submit-button').click();
+    const response = (await answered) as unknown as APIResponse;
+    if (response.status() !== HTTP_TOO_MANY_REQUESTS || attempt === MAX_THROTTLED_ATTEMPTS) return response;
+    await delay(retryAfterMs(response));
+  }
+}
+
 async function submitRegisterForm(page: Page, body: RegisterBody): Promise<APIResponse> {
   await page.clock.install();
   await page.goto(`${APP_URL}/register`);
@@ -136,9 +146,7 @@ async function submitRegisterForm(page: Page, body: RegisterBody): Promise<APIRe
   await page.getByTestId('jinx-register-tenant-name-input').fill(body.tenantName);
   await page.clock.fastForward(FORM_FILL_SECONDS_MS);
 
-  const answered = page.waitForResponse((response) => new URL(response.url()).pathname === REGISTER_PATH);
-  await page.getByTestId('jinx-register-submit-button').click();
-  return (await answered) as unknown as APIResponse;
+  return clickSubmitPaced(page);
 }
 
 async function openVerifyLink(page: Page, token: string): Promise<APIResponse> {
