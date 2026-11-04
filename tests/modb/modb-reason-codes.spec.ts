@@ -40,8 +40,7 @@ interface ReceivedWebhook {
 interface ScreenedSubject {
   aml: CheckRow;
   mrz: CheckRow;
-  amlWebhook: ReceivedWebhook;
-  mrzWebhook: ReceivedWebhook;
+  requestId: string;
 }
 
 function mockUrl(): string {
@@ -91,8 +90,7 @@ async function screenSubject(request: APIRequestContext, subject: string): Promi
   return {
     aml: rowOf(rows, AML_CHECK),
     mrz: rowOf(rows, MRZ_CHECK),
-    amlWebhook: await deliveredWebhook(request, requestId, AML_CHECK),
-    mrzWebhook: await deliveredWebhook(request, requestId, MRZ_CHECK),
+    requestId,
   };
 }
 
@@ -118,11 +116,12 @@ test.describe('Module B reason codes on the stored result and the signed webhook
     const expectedCategory = 'SANCTIONS';
     const expectedReasonCode = 'SANCTIONS_EXACT_NAME';
 
-    const { aml, amlWebhook } = await screenSubject(request, subject);
+    const { aml, requestId } = await screenSubject(request, subject);
 
     expect(aml.status).toBe('completed');
     expect(aml.result?.reason_codes).toContain(expectedCategory);
     expect(aml.result?.reason_code).toBe(expectedReasonCode);
+    const amlWebhook = await deliveredWebhook(request, requestId, AML_CHECK);
     expectSignedFor(amlWebhook, aml);
     expect(amlWebhook.body.reason_codes).toEqual(aml.result?.reason_codes);
     expect(amlWebhook.body.reason_code).toBe(expectedReasonCode);
@@ -136,12 +135,13 @@ test.describe('Module B reason codes on the stored result and the signed webhook
     const absentCategory = 'SANCTIONS';
     const expectedReasonCode = 'PEP_MATCH';
 
-    const { aml, amlWebhook } = await screenSubject(request, subject);
+    const { aml, requestId } = await screenSubject(request, subject);
 
     expect(aml.status).toBe('completed');
     expect(aml.result?.reason_codes).toContain(expectedCategory);
     expect(aml.result?.reason_codes).not.toContain(absentCategory);
     expect(aml.result?.reason_code).toBe(expectedReasonCode);
+    const amlWebhook = await deliveredWebhook(request, requestId, AML_CHECK);
     expectSignedFor(amlWebhook, aml);
     expect(amlWebhook.body.reason_codes).toEqual(aml.result?.reason_codes);
     expect(amlWebhook.body.reason_code).toBe(expectedReasonCode);
@@ -154,11 +154,12 @@ test.describe('Module B reason codes on the stored result and the signed webhook
     const expectedCategories: string[] = [];
     const expectedReasonCode = 'NO_BLOCKING_MATCH';
 
-    const { aml, amlWebhook } = await screenSubject(request, subject);
+    const { aml, requestId } = await screenSubject(request, subject);
 
     expect(aml.status).toBe('completed');
     expect(aml.result?.reason_codes).toEqual(expectedCategories);
     expect(aml.result?.reason_code).toBe(expectedReasonCode);
+    const amlWebhook = await deliveredWebhook(request, requestId, AML_CHECK);
     expectSignedFor(amlWebhook, aml);
     expect(amlWebhook.body.reason_codes).toEqual(expectedCategories);
     expect(amlWebhook.body.reason_code).toBe(expectedReasonCode);
@@ -170,12 +171,13 @@ test.describe('Module B reason codes on the stored result and the signed webhook
     const subject = 'Jane Doe';
     const expectedMrzOutcome = 'passed';
 
-    const { aml, mrz, mrzWebhook } = await screenSubject(request, subject);
+    const { aml, mrz, requestId } = await screenSubject(request, subject);
 
     expect(mrz.request_id).toBe(aml.request_id);
     expect(mrz.outcome).toBe(expectedMrzOutcome);
     expect(mrz.result).not.toHaveProperty('reason_codes');
     expect(mrz.result).not.toHaveProperty('reason_code');
+    const mrzWebhook = await deliveredWebhook(request, requestId, MRZ_CHECK);
     expectSignedFor(mrzWebhook, mrz);
     expect(mrzWebhook.body).not.toHaveProperty('reason_codes');
     expect(mrzWebhook.body).not.toHaveProperty('reason_code');
