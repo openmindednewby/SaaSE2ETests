@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
 
+import { ACCOUNT_TEST_MS, newJinxAccount, publishThroughForm, removeAccount, removeOwnPattern, signInPage, uniqueTitle } from './helpers/signed-in';
+import { APP_URL } from './helpers/tracker';
+
 test.describe('JinxService/tests/SearchPatternsTests.cs', () => {
   test('AC-03 Pattern with colour 310, Filter by colour, Pattern listed; others not', async ({ request }) => {
     expect(false, 'ACCEPTANCE-PENDING: AC-03').toBe(true);
@@ -91,8 +94,34 @@ test.describe('JinxService/tests/FavouritesTests.cs', () => {
 });
 
 test.describe('apps/jinx-bead-patterns/src/api/writeShape.test.ts', () => {
-  test('AC-32 App client, Publish and favourite through the real client, Write shape pinned by expectJsonWriteShape; no console error on each route', async ({ request }) => {
-    expect(false, 'ACCEPTANCE-PENDING: AC-32').toBe(true);
+  test.use({ serviceWorkers: 'block' });
+
+  test('AC-32 App client, Publish and favourite through the real client, Write shape pinned by expectJsonWriteShape; no console error on each route', async ({ page }) => {
+    test.setTimeout(ACCOUNT_TEST_MS);
+    const routes = ['/', '/make', '/colour', '/saved', '/my-patterns', '/favourites'];
+    const errors: string[] = [];
+    page.on('console', (message) => {
+      if (message.type() === 'error') errors.push(`${page.url()}: ${message.text()}`);
+    });
+    page.on('pageerror', (error) => errors.push(`${page.url()}: ${error.message}`));
+    const account = await newJinxAccount();
+    let externalId = '';
+    try {
+      await signInPage(page, account.email, account.password);
+      const published = await publishThroughForm(page, uniqueTitle('client'));
+      externalId = published.externalId;
+      const favourited = page.waitForRequest((request) => request.method() === 'PUT' && request.url().includes('/me/favourites/'));
+
+      await page.goto(`${APP_URL}/favourites?add=${published.slug}`);
+
+      expect((await favourited).headers()['content-type']).toMatch(/application\/json/);
+      await expect(page.getByTestId(`jinx-favourite-remove-${published.slug}`)).toBeVisible();
+      for (const route of routes) await page.goto(`${APP_URL}${route}`, { waitUntil: 'networkidle' });
+      expect(errors).toEqual([]);
+    } finally {
+      if (externalId !== '') await removeOwnPattern(page.request, externalId);
+      await removeAccount(account);
+    }
   });
 });
 
