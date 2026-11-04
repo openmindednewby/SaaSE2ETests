@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type APIRequestContext } from '@playwright/test';
 
 import { BFF_API, WRITE_HEADERS } from './helpers/live-api';
 import { ACCOUNT_TEST_MS, newJinxAccount, pollSitemap, publishRandomChart, removeAccount, removeOwnPattern, signedInApi, uniqueTitle } from './helpers/signed-in';
@@ -9,9 +9,10 @@ test('AC-25 Signed-in user, verified email, Publish, Fetch without JS at once: 2
   test.setTimeout(ACCOUNT_TEST_MS);
   const chartTitle = uniqueTitle('publish');
   const account = await newJinxAccount();
-  const api = await signedInApi(account.email, account.password);
+  let api: APIRequestContext | undefined;
   let externalId = '';
   try {
+    api = await signedInApi(account.email, account.password);
     const published = await publishRandomChart(api, chartTitle);
     externalId = published.externalId;
 
@@ -24,8 +25,8 @@ test('AC-25 Signed-in user, verified email, Publish, Fetch without JS at once: 2
     expect(html).toContain(chartTitle);
     await pollSitemap(request, published.slug, SITEMAP_WITHIN_MS).toBe(true);
   } finally {
-    if (externalId !== '') await removeOwnPattern(api, externalId);
-    await api.dispose();
+    if (api !== undefined && externalId !== '') await removeOwnPattern(api, externalId);
+    await api?.dispose();
     await removeAccount(account);
   }
 });

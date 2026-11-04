@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type APIRequestContext } from '@playwright/test';
 
 import { BFF_API, holdPosts, patternExternalId, WRITE_HEADERS } from './helpers/live-api';
 import { livePatternSlug } from './helpers/screens';
@@ -16,13 +16,14 @@ function reportBody(reporterEmail: string): object {
   return { patternId: UNKNOWN_ID, kind: 'Spam', reporterEmail, statement: STATEMENT };
 }
 
-test('AC-21 Reader on a pattern, Follow report link, submit, 202; owner and reporter emailed; rate limited after the limit', async ({ page }) => {
+test('AC-21 Reader on a pattern, Follow report link, submit, 202; reporter emailed', async ({ page }) => {
   test.setTimeout(ACCOUNT_TEST_MS);
   const reporter = `e2e-bot+report-${Date.now()}@dloizides.com`;
   const account = await newJinxAccount();
-  const owner = await signedInApi(account.email, account.password);
+  let owner: APIRequestContext | undefined;
   let externalId = '';
   try {
+    owner = await signedInApi(account.email, account.password);
     const published = await publishRandomChart(owner, uniqueTitle('report'));
     externalId = published.externalId;
     await page.goto(`/patterns/${published.slug}`);
@@ -40,8 +41,8 @@ test('AC-21 Reader on a pattern, Follow report link, submit, 202; owner and repo
     expect(JSON.stringify(mail)).toContain('We received your report');
     await mailbox.expungeMessages([mail.uid]);
   } finally {
-    if (externalId !== '') await removeOwnPattern(owner, externalId);
-    await owner.dispose();
+    if (owner !== undefined && externalId !== '') await removeOwnPattern(owner, externalId);
+    await owner?.dispose();
     await removeAccount(account);
   }
 });

@@ -12,7 +12,7 @@ test('AC-24 Realm jinx, Sign in, sign out, Session cookie httpOnly, no tokens in
   const account = await newJinxAccount();
   try {
     await page.goto(`${APP_URL}/login`);
-    await page.locator('input').first().fill(account.email);
+    await page.getByTestId('jinx-auth-login-username').fill(account.email);
     await page.locator('input[type="password"]').fill(account.password);
 
     const login = await pressEnterForLogin(page);
@@ -50,7 +50,7 @@ test('AC-24 anonymous account read through the BFF, returns 401', async ({ reque
 test('AC-24 wrong password, Enter, 401 with no session cookie and no token in storage', async ({ page, context }) => {
   const email = `e2e-no-such-user-${Date.now()}@example.com`;
   await page.goto(`${APP_URL}/login`);
-  await page.locator('input').first().fill(email);
+  await page.getByTestId('jinx-auth-login-username').fill(email);
   await page.locator('input[type="password"]').fill('wrong-password-e2e');
   const answer = page.waitForResponse((response) => new URL(response.url()).pathname === '/bff/login');
 

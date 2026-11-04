@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type APIRequestContext } from '@playwright/test';
 
 import { BFF_API, WRITE_HEADERS } from './helpers/live-api';
 import { ACCOUNT_TEST_MS, ADMIN_USERNAME, adminPassword, newJinxAccount, pollSitemap, publishRandomChart, removeAccount, removeOwnPattern, signedInApi, uniqueTitle } from './helpers/signed-in';
@@ -12,9 +12,10 @@ test('AC-22 Live indexed pattern, Admin removes, Page 410 within 60 s, sitemap r
   const chartTitle = uniqueTitle('takedown');
   const browseUrl = `/browse?q=${encodeURIComponent(chartTitle)}`;
   const account = await newJinxAccount();
-  const owner = await signedInApi(account.email, account.password);
+  let owner: APIRequestContext | undefined;
   let externalId = '';
   try {
+    owner = await signedInApi(account.email, account.password);
     const admin = await signedInApi(ADMIN_USERNAME, adminPassword());
     const published = await publishRandomChart(owner, chartTitle);
     externalId = published.externalId;
@@ -32,8 +33,8 @@ test('AC-22 Live indexed pattern, Admin removes, Page 410 within 60 s, sitemap r
     await pollSitemap(request, published.slug, REMOVED_WITHIN_MS).toBe(false);
     expect(await (await request.get(browseUrl)).text()).not.toContain(published.slug);
   } finally {
-    if (externalId !== '') await removeOwnPattern(owner, externalId);
-    await owner.dispose();
+    if (owner !== undefined && externalId !== '') await removeOwnPattern(owner, externalId);
+    await owner?.dispose();
     await removeAccount(account);
   }
 });
