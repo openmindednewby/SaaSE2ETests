@@ -56,10 +56,11 @@ export function fixtureAbsentReason(): string {
 }
 
 /** The multipart field for a free-text or sample name: the last token is the MRZ surname, the rest are given names. */
-export function mockIdentityFields(name: string): Record<string, string> {
+export function mockIdentityFields(name: string, birthDate?: string): Record<string, string> {
   const tokens = name.trim().split(/\s+/);
   const surname = tokens[tokens.length - 1];
-  return { [MOCK_IDENTITY_FIELD]: JSON.stringify({ surname, given_names: tokens.slice(0, -1) }) };
+  const birth = birthDate ? { birth_date: birthDate } : {};
+  return { [MOCK_IDENTITY_FIELD]: JSON.stringify({ surname, given_names: tokens.slice(0, -1), ...birth }) };
 }
 
 /** Order- and case-insensitive name tokens, so "Anna Maria Eriksson" equals "ERIKSSON ANNA MARIA". */

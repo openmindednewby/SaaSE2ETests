@@ -20,6 +20,8 @@ import {
 export interface ScreenRequest {
   /** The name the MRZ mock returns, and therefore the name AML screens. Omitted = the ERIKSSON specimen. */
   subject?: string;
+  /** The YYYY-MM-DD birth date the MRZ mock states for `subject`. Omitted = the MRZ states none. */
+  birthDate?: string;
   /** Forced outcomes for the checks of this step; the document step runs `mrz_match`. */
   mockOutcomes?: Partial<Record<string, MockOutcome>>;
   flowId?: string;
@@ -35,13 +37,13 @@ export interface ScreenedSubmission {
 /** Creates a session, submits its document step with the given mock controls, and returns the session + request id. */
 export async function screenViaSession(
   request: APIRequestContext,
-  { subject, mockOutcomes = { mrz_match: 'passed' }, flowId = MINIMAL_AML_FLOW, documentType }: ScreenRequest = {},
+  { subject, birthDate, mockOutcomes = { mrz_match: 'passed' }, flowId = MINIMAL_AML_FLOW, documentType }: ScreenRequest = {},
 ): Promise<ScreenedSubmission> {
   const session = await createSession(request, flowId, `e2e-modb-${randomUUID()}`);
   const requestId = await submitDocument(request, session, {
     mockOutcomes,
     documentType,
-    extraFields: subject ? mockIdentityFields(subject) : {},
+    extraFields: subject ? mockIdentityFields(subject, birthDate) : {},
   });
   return { session, requestId };
 }
