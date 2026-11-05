@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { livePatternSlug } from './helpers/screens';
 
-const SITE = 'https://jinx.dloizides.com';
+const SITE = 'https://jinxbeadpatterns.dloizides.com';
 const TITLE_PATTERN = /<title>[^<]+: free (peyote|brick|loom) bead pattern \| Jinx Bead Patterns<\/title>/;
 
 test('AC-19 Pattern page, Fetch without JS, Self canonical, title pattern from ## Brand, OG tags, JSON-LD, chart SVG in HTML', async ({ request }) => {

@@ -4,7 +4,7 @@ import { installRealTenantWriteGuard } from '../../fixtures/real-tenant-guard';
 
 installRealTenantWriteGuard();
 
-process.env.JINX_APP_URL ??= 'https://jinx-app.dloizides.com';
+process.env.JINX_APP_URL ??= 'https://jinxbeadpatterns-app.dloizides.com';
 
 export default defineConfig({
   testDir: __dirname,

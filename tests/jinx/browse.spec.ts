@@ -12,7 +12,7 @@ const DESKTOP = { viewport: { width: 1280, height: 800 } };
 const WALK = ['/', '/browse', '/browse?q=zzzznothing', '/patterns/lozenge-band', '/patterns/removed-band', '/guides', '/guides/finish-a-bracelet', '/attribution', '/privacy', '/no-such-page'];
 const MIN_HIT = 44;
 const MIN_BEAD_PX = 14;
-const APP_ORIGIN = 'https://jinx-app.dloizides.com';
+const APP_ORIGIN = 'https://jinxbeadpatterns-app.dloizides.com';
 const APP_DIR = resolve(__dirname, '../../../apps/jinx-bead-patterns/app');
 const APP_LINK_PAGES = ['/', '/browse', '/browse?q=zzzznothing', '/patterns/lozenge-band', '/guides', '/attribution'];
 
@@ -67,7 +67,7 @@ test.describe('built server with a stub API', () => {
     expect(response.status()).toBe(200);
     expect(response.headers()['cache-control']).toBe('no-cache');
     expect(html).toContain('<title>Lozenge Band: free peyote bead pattern | Jinx Bead Patterns</title>');
-    expect(html).toContain('<link rel="canonical" href="https://jinx.dloizides.com/patterns/lozenge-band"');
+    expect(html).toContain('<link rel="canonical" href="https://jinxbeadpatterns.dloizides.com/patterns/lozenge-band"');
     expect(html).toContain('property="og:title"');
     expect(html).toContain('"@type":"HowTo"');
     expect(html).toMatch(/data-testid="pattern-chart"[\s\S]*?<svg/);
@@ -131,11 +131,11 @@ test.describe('built server with a stub API', () => {
     const asset = homeHtml.match(/\/_astro\/[^"']+\.(?:js|css|woff2)/)?.[0] ?? '';
     const assetResponse = await request.get(asset);
 
-    expect(index).toContain('https://jinx.dloizides.com/sitemap-patterns-1.xml');
-    expect(patterns).toContain('https://jinx.dloizides.com/patterns/lozenge-band');
+    expect(index).toContain('https://jinxbeadpatterns.dloizides.com/sitemap-patterns-1.xml');
+    expect(patterns).toContain('https://jinxbeadpatterns.dloizides.com/patterns/lozenge-band');
     expect(patterns).not.toContain('quiet-strip');
-    expect(staticMap).toContain('https://jinx.dloizides.com/guides/finish-a-bracelet');
-    expect(robots).toContain('Sitemap: https://jinx.dloizides.com/sitemap.xml');
+    expect(staticMap).toContain('https://jinxbeadpatterns.dloizides.com/guides/finish-a-bracelet');
+    expect(robots).toContain('Sitemap: https://jinxbeadpatterns.dloizides.com/sitemap.xml');
     expect(home.headers()['cache-control']).toBe('no-cache');
     expect(assetResponse.headers()['cache-control']).toContain('immutable');
     expect(homeHtml).not.toContain('mailto:');

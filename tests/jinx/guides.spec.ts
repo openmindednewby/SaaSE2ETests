@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { GUIDE_SLUGS } from './helpers/screens';
 
-const SITE = 'https://jinx.dloizides.com';
+const SITE = 'https://jinxbeadpatterns.dloizides.com';
 const SITEMAP = '/sitemap-static.xml';
 
 for (const slug of GUIDE_SLUGS) {

@@ -64,7 +64,7 @@ test.describe('NpmPackages/packages/rn-web-hooks/src/useWakeLock.test.ts', () =>
 });
 
 test.describe('personalServerNotes/scripts/check-sitemaps.mjs', () => {
-  test('AC-20 Live jinx.dloizides.com, Run check-sitemaps.mjs, Every <loc> 200, no redirect, no noindex, self canonical; host registered in Tilt seo-sitemaps', async ({ request }) => {
+  test('AC-20 Live jinxbeadpatterns.dloizides.com, Run check-sitemaps.mjs, Every <loc> 200, no redirect, no noindex, self canonical; host registered in Tilt seo-sitemaps', async ({ request }) => {
     expect(false, 'ACCEPTANCE-PENDING: AC-20').toBe(true);
   });
 });
