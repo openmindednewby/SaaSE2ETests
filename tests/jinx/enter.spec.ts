@@ -9,6 +9,7 @@ test.use({ serviceWorkers: 'block' });
 const REPORTER = 'e2e-enter@example.com';
 const STATEMENT = 'E2E probe, no report is stored';
 const NAME = 'E2E Enter Band';
+const RECEIVED = 'Report received';
 const LIVE = 'It is live.';
 const PUBLISHED = { externalId: '00000000-0000-4000-8000-00000000e2e1', slug: 'e2e-enter-band', indexable: true };
 
@@ -38,13 +39,13 @@ test('AC-ENTER-report-email valid form, Enter, posts the same body as the button
   const posts = await holdPosts(page, '/reports', 202, {});
   await fillReport(page, slug, REPORTER);
   await page.getByTestId('jinx-report-submit').click();
-  await expect(page.getByTestId('jinx-report-status')).toBeVisible();
+  await expect(page.getByTestId('jinx-report-status')).toContainText(RECEIVED);
   const byButton = posts[0];
   await fillReport(page, slug, REPORTER);
 
   await page.getByTestId('jinx-report-email').press('Enter');
 
-  await expect(page.getByTestId('jinx-report-status')).toBeVisible();
+  await expect(page.getByTestId('jinx-report-status')).toContainText(RECEIVED);
   expect(posts).toHaveLength(2);
   expect(posts[1]).toEqual(byButton);
 });
