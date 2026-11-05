@@ -1,4 +1,4 @@
-import { expect, type APIRequestContext, type Page } from '@playwright/test';
+import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 
 import { APP_URL, openNewTracker } from './tracker';
 
@@ -73,10 +73,22 @@ export async function openSavedWithPattern(page: Page): Promise<void> {
   await expect(page.locator('[data-testid^="jinx-saved-open-"]').first()).toBeVisible();
 }
 
+async function isStillAcrossTwoFrames(screen: Locator): Promise<boolean> {
+  return screen.evaluate(
+    (el) =>
+      new Promise<boolean>((resolve) => {
+        const left = el.getBoundingClientRect().left;
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve(el.getBoundingClientRect().left === left)));
+      }),
+  );
+}
+
 export async function openRecolour(page: Page): Promise<void> {
   await openSavedWithPattern(page);
   await page.locator('[data-testid^="jinx-saved-recolour-"]').first().click();
-  await expect(page.getByTestId('jinx-recolour-screen')).toBeVisible();
+  const screen = page.getByTestId('jinx-recolour-screen');
+  await expect(screen).toBeVisible();
+  await expect.poll(() => isStillAcrossTwoFrames(screen)).toBe(true);
 }
 
 async function waitForOfflineShell(page: Page): Promise<void> {
