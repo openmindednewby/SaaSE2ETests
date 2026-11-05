@@ -1,7 +1,7 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 
 import { BFF_API, holdPosts, patternExternalId, WRITE_HEADERS } from './helpers/live-api';
-import { livePatternSlug } from './helpers/screens';
+import { livePatternSlug, PHONE } from './helpers/screens';
 import { ACCOUNT_TEST_MS, newJinxAccount, publishRandomChart, removeAccount, removeOwnPattern, signedInApi, uniqueTitle } from './helpers/signed-in';
 import { newestMailbox } from './helpers/test-accounts';
 import { APP_URL } from './helpers/tracker';
@@ -86,6 +86,29 @@ test('AC-21 form submit on a live pattern, posts its real id once and shows rece
 
   await expect(page.getByTestId('jinx-report-status')).toContainText(RECEIVED);
   expect(posts).toEqual([{ patternId, kind: 'Copyright', reporterEmail: REPORTER, statement: STATEMENT }]);
+});
+
+test.describe('AC-21 pressing Send at 360x640', () => {
+  test.use(PHONE);
+
+  test('with a pattern that does not exist, shows why inside the screen', async ({ page }) => {
+    await page.goto(`${APP_URL}/report?id=no-such-pattern-e2e`);
+    await page.getByTestId('jinx-report-email').fill(REPORTER);
+    await page.getByTestId('jinx-report-statement').fill(STATEMENT);
+
+    await page.getByTestId('jinx-report-submit').click();
+
+    await expect(page.getByTestId('jinx-report-status')).toBeInViewport({ ratio: 1 });
+  });
+
+  test('with nothing filled in, moves to the first field that needs fixing', async ({ page }) => {
+    await page.goto(`${APP_URL}/report`);
+
+    await page.getByTestId('jinx-report-submit').click();
+
+    await expect(page.getByTestId('jinx-report-pattern')).toBeFocused();
+    await expect(page.getByTestId('jinx-report-pattern')).toBeInViewport({ ratio: 1 });
+  });
 });
 
 test('AC-21 repeated reports from one client, answer 429 after the limit', async ({ request }) => {
