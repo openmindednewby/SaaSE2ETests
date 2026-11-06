@@ -126,7 +126,6 @@ test.describe('360x640 placement', () => {
   });
 
   test('AC-SHP-5 Shuffle bar at 360x640, scrolled down to Generate chart, stays pinned on screen', async ({ page }) => {
-    test.fail(true, 'D-SHP-3 Q5 C pinned bar: visual-qa 2026-11-06 found the phone bar scrolls away; red until the pinned-bar fix deploys');
     await openMake(page);
     const viewportHeight = PHONE_360.viewport.height;
 
