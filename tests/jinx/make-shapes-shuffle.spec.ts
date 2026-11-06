@@ -72,11 +72,11 @@ for (const viewport of VIEWPORTS) {
       test(`AC-SHP-1 /make family chip ${family} at ${viewport.label}, tapped, shows at least one preset tile`, async ({ page }) => {
         await openMake(page);
         const families = page.getByTestId('jinx-generator-preset-family');
-        const tiles = page.getByTestId('jinx-generator-preset').locator('[data-testid^="jinx-generator-preset-"]:not([data-testid$="-chart"])');
+        const visibleTiles = page.getByTestId('jinx-generator-preset').locator('[data-testid^="jinx-generator-preset-"]:not([data-testid$="-chart"])').filter({ visible: true });
 
         await families.getByText(family, { exact: true }).click();
 
-        await expect(tiles.first(), `no preset tile after tapping ${family}`).toBeVisible();
+        await expect(visibleTiles, `no preset tile after tapping ${family}`).not.toHaveCount(0);
       });
     }
 
