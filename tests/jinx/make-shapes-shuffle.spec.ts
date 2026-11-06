@@ -115,10 +115,13 @@ test.describe('360x640 placement', () => {
   test('AC-SHP-5 Shuffle bar at 360x640, on open, sits above the source tabs', async ({ page }) => {
     await openMake(page);
 
-    const bar = await box(page.getByTestId('jinx-generator-shuffle-bar'), 'Shuffle bar');
-    const tabs = await box(page.getByTestId('jinx-generator-source-motif'), 'Motif tab');
+    const gapAboveTabs = async (): Promise<number> => {
+      const bar = await box(page.getByTestId('jinx-generator-shuffle-bar'), 'Shuffle bar');
+      const tabs = await box(page.getByTestId('jinx-generator-source-motif'), 'Motif tab');
+      return tabs.y - (bar.y + bar.height);
+    };
 
-    expect(bar.y + bar.height, `bar bottom ${bar.y + bar.height} is below the tabs top ${tabs.y}`).toBeLessThanOrEqual(tabs.y);
+    await expect.poll(gapAboveTabs, { message: 'Shuffle bar bottom stays below the Motif tab top' }).toBeGreaterThanOrEqual(0);
   });
 
   test('AC-SHP-5 Shuffle bar at 360x640, scrolled down to Generate chart, stays pinned on screen', async ({ page }) => {
@@ -140,9 +143,12 @@ test.describe('1280x800 placement', () => {
   test('AC-SHP-5 Shuffle bar at 1280x800, on open, sits under the generator form', async ({ page }) => {
     await openMake(page);
 
-    const bar = await box(page.getByTestId('jinx-generator-shuffle-bar'), 'Shuffle bar');
-    const form = await box(page.getByTestId('jinx-generator-form'), 'generator form');
+    const gapUnderForm = async (): Promise<number> => {
+      const bar = await box(page.getByTestId('jinx-generator-shuffle-bar'), 'Shuffle bar');
+      const form = await box(page.getByTestId('jinx-generator-form'), 'generator form');
+      return bar.y - (form.y + form.height);
+    };
 
-    expect(bar.y, `bar top ${bar.y} is above the form bottom ${form.y + form.height}`).toBeGreaterThanOrEqual(form.y + form.height);
+    await expect.poll(gapUnderForm, { message: 'Shuffle bar top stays above the generator form bottom' }).toBeGreaterThanOrEqual(0);
   });
 });
