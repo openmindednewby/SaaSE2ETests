@@ -45,6 +45,7 @@ async function snapshot(page: Page): Promise<FormSnapshot> {
 }
 
 async function box(locator: Locator, name: string): Promise<{ x: number; y: number; width: number; height: number }> {
+  await expect(locator, `${name} is not visible`).toBeVisible();
   const found = await locator.boundingBox();
   expect(found, `${name} has no layout box`).not.toBeNull();
   return found ?? { x: 0, y: 0, width: 0, height: 0 };
