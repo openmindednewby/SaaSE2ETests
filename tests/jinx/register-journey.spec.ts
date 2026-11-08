@@ -1,152 +1,126 @@
-import { randomBytes } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 
-import { createTestAccount, type CreateTestAccountOptions, type TestAccount } from '@dloizides/e2e-helpers';
 import { devices, expect, test } from '@playwright/test';
 
 import {
-  expectSignInGone,
-  expungeLeftoverMail,
-  formContext,
-  hookedContext,
-  isRegister,
-  isVerify,
-  newestMailbox,
-  pacedContext,
-  signIn,
-  signInDetail,
-  signInTenantId,
-  type FormJourneyProbes,
-  type RegisterBody,
-} from './helpers/test-accounts';
+  CodeForm,
+  confirmDeletion,
+  DeleteForm,
+  enterCode,
+  openLogin,
+  OTP_SEND_COOLDOWN_MS,
+  readCode,
+  removeCodeAccount,
+  sendCode,
+  SESSION_COOKIE,
+  signInByCode,
+  uniqueCodeEmail,
+} from './helpers/code-sign-in';
+import { ACCOUNT_TEST_MS } from './helpers/signed-in';
 import { APP_URL } from './helpers/tracker';
 
 const { defaultBrowserType: _mobileEngine, ...MOBILE } = devices['Galaxy S5'];
 const { defaultBrowserType: _desktopEngine, ...DESKTOP } = devices['Desktop Chrome'];
 const DESKTOP_1280 = { ...DESKTOP, viewport: { width: 1280, height: 800 } };
+const PASSWORD_FIELD = 'input[type="password"]';
+const DELETE_REQUEST_ROUTE = '**/bff/account/delete-request';
 
-const created: TestAccount[] = [];
+test.use({ serviceWorkers: 'block' });
 
-async function newAccount(options: CreateTestAccountOptions): Promise<TestAccount> {
-  const account = await createTestAccount(options);
-  created.push(account);
-  return account;
+test('AC-OTP-3 /register, redirects to the code sign-in with no password field', async ({ page }) => {
+  const registerUrl = `${APP_URL}/register`;
+
+  await page.goto(registerUrl);
+
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByTestId(CodeForm.email)).toBeVisible();
+  await expect(page.locator(PASSWORD_FIELD)).toHaveCount(0);
+});
+
+for (const path of ['/login', '/verify-email']) {
+  test(`AC-OTP-3 ${path}, has no password field and no reset link`, async ({ page }) => {
+    const resetLink = page.getByRole('link', { name: /forgot|reset/i });
+
+    await page.goto(`${APP_URL}${path}`);
+
+    await expect(page.locator('body')).not.toBeEmpty();
+    await expect(page.locator(PASSWORD_FIELD)).toHaveCount(0);
+    await expect(resetLink).toHaveCount(0);
+  });
 }
 
-test.afterEach(async () => {
-  for (const account of created.splice(0)) await account.dispose();
+test('AC-OTP-3 the BFF config, offers code sign-in and no password method', async ({ request }) => {
+  const url = `${APP_URL}/bff/config`;
+
+  const response = await request.get(url);
+
+  const { methods } = (await response.json()) as { methods: string[] };
+  expect(methods).toContain('otp');
+  expect(methods).not.toContain('password');
 });
 
-async function disposeAndExpectGone(account: TestAccount, password = account.password): Promise<void> {
-  const disposed = await account.dispose();
-  expect(disposed.confirmStatus).toBe(200);
-  await expectSignInGone(account.email, password);
-  await expungeLeftoverMail(account.email);
-}
-
-test('AC-HOST-3 a verified account is deleted through the emailed link, sign-in returns 401', async () => {
-  const account = await newAccount({ app: 'jinx', baseUrl: APP_URL, newContext: pacedContext() });
-  expect(account.tenantId).not.toBe('');
-
-  const disposed = await account.dispose();
-
-  expect(disposed.confirmStatus).toBe(200);
-  await expectSignInGone(account.email, account.password);
-});
-
-test('AC-HOST-8 an unverified account gets no password grant, returns 401 until the link is used', async () => {
-  let beforeVerify = '';
-  let body: RegisterBody | undefined;
-  const account = await newAccount({
-    app: 'jinx',
-    baseUrl: APP_URL,
-    newContext: hookedContext(async (url, options, send) => {
-      if (isRegister(url)) body = options.data as RegisterBody;
-      if (isVerify(url) && body) beforeVerify = await signInDetail(body.email, body.password);
-      return send();
-    }),
+test('AC-OTP-6 a stale login at delete, goes to a new code and back to delete, where the delete is accepted', async ({ page, context }) => {
+  test.setTimeout(ACCOUNT_TEST_MS);
+  const staleReply = { status: 403, json: { code: 'RECENT_AUTHENTICATION_REQUIRED' } };
+  let stale = true;
+  await page.route(DELETE_REQUEST_ROUTE, async (route) => {
+    if (!stale) {
+      await route.continue();
+      return;
+    }
+    stale = false;
+    await route.fulfill(staleReply);
   });
+  const { email } = await signInByCode(page);
+  await page.goto(`${APP_URL}/delete-account`);
 
-  const afterVerify = await signIn(account.email, account.password);
+  await page.getByTestId(DeleteForm.submit).click();
 
-  expect(beforeVerify, beforeVerify).toMatch(/^login=401 /);
-  expect(afterVerify).toBe(200);
-  await disposeAndExpectGone(account);
-});
-
-test('AC-HOST-7 a duplicate signup asks for a new password at the link, old password returns 401, new returns 200', async () => {
-  const newPassword = `E2e-${randomBytes(6).toString('hex')}-Bb2`;
-  let firstVerifyStatus = 0;
-  let firstVerifyCode = '';
-  const account = await newAccount({
-    app: 'jinx',
-    baseUrl: APP_URL,
-    mailbox: newestMailbox(),
-    newContext: hookedContext(async (url, options, send) => {
-      if (isRegister(url)) {
-        const first = await send();
-        expect(first.status()).toBe(202);
-        return send({ ...options, headers: { 'Idempotency-Key': randomBytes(6).toString('hex') } });
-      }
-      if (!isVerify(url)) return send();
-      const asked = await send();
-      firstVerifyStatus = asked.status();
-      firstVerifyCode = ((await asked.json().catch(() => ({}))) as { code?: string; errorCode?: string }).errorCode ?? '';
-      return send({ ...options, data: { ...(options.data as object), newPassword } });
-    }),
-  });
-
-  const withOldPassword = await signIn(account.email, account.password);
-  const withNewPassword = await signIn(account.email, newPassword);
-
-  expect(firstVerifyStatus).toBe(409);
-  expect(firstVerifyCode).toBe('NEW_PASSWORD_REQUIRED');
-  expect(withOldPassword).toBe(401);
-  expect(withNewPassword).toBe(200);
-  await disposeAndExpectGone(account, newPassword);
-});
-
-test('AC-HOST-3 a tenant with a second user stays after one is deleted, its other user still signs in', () => {
-  test.skip(true, 'No public way to add a second user to a tenant: /users and /team/invite need a bearer token the BFF never proxies');
-});
-
-test('Journey step 4 a second identical submit on a verified account creates no second user, one delete removes the only login', async () => {
-  let body: RegisterBody | undefined;
-  const account = await newAccount({
-    app: 'jinx',
-    baseUrl: APP_URL,
-    newContext: hookedContext(async (url, options, send) => {
-      if (isRegister(url)) body = options.data as RegisterBody;
-      return send();
-    }),
-  });
-
-  const again = await account.context.post('/bff/register', {
-    headers: { 'Idempotency-Key': randomBytes(6).toString('hex') },
-    data: { ...body, website: '', formElapsedMs: 8000 },
-  });
-
-  const tenantAfterSubmit = await signInTenantId(account.email, account.password);
-
-  expect(again.status()).toBe(202);
-  expect(account.tenantId).not.toBe('');
-  expect(tenantAfterSubmit).toBe(account.tenantId);
-  await disposeAndExpectGone(account);
+  await expect(page).toHaveURL(/\/login\?.*delete-account/);
+  await expect.poll(async () => (await context.cookies()).map((cookie) => cookie.name)).not.toContain(SESSION_COOKIE);
+  await delay(OTP_SEND_COOLDOWN_MS);
+  await sendCode(page, email);
+  const verify = await enterCode(page, await readCode(email));
+  expect(verify.status()).toBe(200);
+  await expect(page).toHaveURL(/\/delete-account/);
+  await page.getByTestId(DeleteForm.submit).click();
+  await expect(page.getByTestId(DeleteForm.checkEmail)).toBeVisible();
+  expect(await confirmDeletion(page, email)).toBe(200);
 });
 
 for (const [size, device] of [['360x640', MOBILE], ['1280x800', DESKTOP_1280]] as const) {
-  test.describe(`Acceptance journey at ${size}`, () => {
+  test.describe(`Sign-up journey at ${size}`, () => {
     test.use(device);
 
-    test(`Journey at ${size} the form registers with no session, the link signs in with a tenant, delete returns 401`, async ({ page }) => {
-      const probes: FormJourneyProbes = {};
-      const account = await newAccount({ app: 'jinx', baseUrl: APP_URL, newContext: formContext(page, probes) });
+    test(`AC-OTP-2 at ${size} email is the only field and the first right code creates the account`, async ({ page }) => {
+      test.setTimeout(ACCOUNT_TEST_MS);
+      const email = uniqueCodeEmail();
+      await openLogin(page);
+      const fields = page.getByTestId(CodeForm.form).locator(`input:not([data-testid="${CodeForm.honeypot}"]), textarea, select`);
+      await expect(fields).toHaveCount(1);
+      await sendCode(page, email);
 
-      const me = await account.context.get('/bff/me');
+      const verify = await enterCode(page, await readCode(email));
 
-      expect(probes.meBeforeVerify).toBe(401);
-      expect(me.status()).toBe(200);
-      expect(account.tenantId).not.toBe('');
-      await disposeAndExpectGone(account);
+      expect(verify.status()).toBe(200);
+      try {
+        const me = (await (await page.request.get(`${APP_URL}/bff/me`)).json()) as { user?: { email?: string } };
+        expect(me.user?.email).toBe(email);
+      } finally {
+        await removeCodeAccount(page, email);
+      }
+    });
+
+    test(`AC-OTP-6 at ${size} a fresh login deletes through the form with no password, the emailed link confirms it`, async ({ page }) => {
+      test.setTimeout(ACCOUNT_TEST_MS);
+      const { email } = await signInByCode(page);
+      await page.goto(`${APP_URL}/delete-account`);
+      await expect(page.locator(PASSWORD_FIELD)).toHaveCount(0);
+
+      await page.getByTestId(DeleteForm.submit).click();
+
+      await expect(page.getByTestId(DeleteForm.checkEmail)).toBeVisible();
+      expect(await confirmDeletion(page, email)).toBe(200);
     });
   });
 }

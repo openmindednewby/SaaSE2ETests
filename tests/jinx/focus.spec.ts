@@ -21,7 +21,7 @@ const ROWS: FocusRow[] = [
   { screen: 'Saved, with patterns', open: openSavedWithPattern, control: (page) => page.locator('[data-testid^="jinx-saved-open-"]').first() },
   { screen: 'Saved, empty', open: async (page) => { await page.goto(`${APP_URL}/saved`); }, control: (page) => page.getByTestId('jinx-message-action') },
   { screen: 'Recolour', open: openRecolour, control: (page) => page.getByTestId('jinx-recolour-save') },
-  { screen: 'Register', open: async (page) => { await page.goto(`${APP_URL}/register`); }, control: (page) => page.getByTestId('jinx-register-first-name-input') },
+  { screen: 'Sign-in, opened at /register', open: async (page) => { await page.goto(`${APP_URL}/register`); }, control: (page) => page.getByTestId('jinx-auth-otp-email') },
 ];
 
 for (const row of ROWS) {

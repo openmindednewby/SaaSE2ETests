@@ -1,6 +1,8 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
+import { CodeForm } from './helpers/code-sign-in';
 import { DESKTOP, livePatternSlug, NO_MATCH_QUERY, PHONE, recordWrites, rejectConsent } from './helpers/screens';
+import { APP_URL } from './helpers/tracker';
 
 const VIEWPORTS = [
   { label: '360x640', use: PHONE, wide: false },
@@ -125,6 +127,35 @@ for (const viewport of VIEWPORTS) {
       await expect(page.getByTestId('pattern-licence')).toBeVisible();
       await expectAction(page.locator('.block-rest a[href="/attribution"]'));
       expect(writes).toEqual([]);
+    });
+
+    test(`AC-OTP-1 AC-OTP-3 Sign-in at ${viewport.label}, inventory login rows, one email field and Send code, no password or register link`, async ({ page }) => {
+      const url = `${APP_URL}/login`;
+
+      await page.goto(url);
+
+      await expect(page.getByTestId(CodeForm.form)).toBeVisible();
+      await expect(page.getByTestId(CodeForm.email)).toBeFocused();
+      await expect(page.getByTestId(CodeForm.send)).toBeVisible();
+      await expect(page.locator('input[type="password"]')).toHaveCount(0);
+      await expect(page.getByRole('link', { name: /forgot|reset|register|create account/i })).toHaveCount(0);
+    });
+
+    test(`AC-OTP-9 Sign-in at ${viewport.label}, the Terms and Privacy line sits between the email and Send code, each link opens its page`, async ({ page, context }) => {
+      await page.goto(`${APP_URL}/login`);
+      const email = await page.getByTestId(CodeForm.email).boundingBox();
+      const notice = await page.getByTestId('jinx-login-consent-notice').boundingBox();
+      const send = await page.getByTestId(CodeForm.send).boundingBox();
+
+      const termsOpened = context.waitForEvent('page');
+      await page.getByTestId('jinx-login-terms-link').click();
+      const privacyOpened = context.waitForEvent('page');
+      await page.getByTestId('jinx-login-privacy-link').click();
+
+      expect(email?.y ?? 0).toBeLessThan(notice?.y ?? 0);
+      expect(notice?.y ?? 0).toBeLessThan(send?.y ?? 0);
+      await expect(await termsOpened).toHaveURL(/\/terms$/);
+      await expect(await privacyOpened).toHaveURL(/\/privacy$/);
     });
   });
 }

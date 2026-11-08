@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test';
 
+import { removeCodeAccount, signInByCode } from './helpers/code-sign-in';
 import { BFF_API, holdPosts, openPublishForNewChart, pretendSignedIn } from './helpers/live-api';
 import { livePatternSlug } from './helpers/screens';
-import { ACCOUNT_TEST_MS, newJinxAccount, publishThroughForm, removeAccount, removeOwnPattern, signInPage, uniqueTitle } from './helpers/signed-in';
+import { ACCOUNT_TEST_MS, publishThroughForm, removeOwnPattern, uniqueTitle } from './helpers/signed-in';
 
 test.use({ serviceWorkers: 'block' });
 
@@ -10,11 +11,9 @@ test('AC-27 Publish form, Open, publish, search, MakeSellCredit preselected; lic
   test.setTimeout(ACCOUNT_TEST_MS);
   const name = uniqueTitle('licence');
   const search = `${BFF_API}/patterns?q=${encodeURIComponent(name)}`;
-  const account = await newJinxAccount();
+  const account = await signInByCode(page);
   let externalId = '';
   try {
-    await signInPage(page, account.email, account.password);
-
     const published = await publishThroughForm(page, name);
 
     externalId = published.externalId;
@@ -26,7 +25,7 @@ test('AC-27 Publish form, Open, publish, search, MakeSellCredit preselected; lic
     await expect(page.getByTestId('pattern-licence')).toContainText(/credit/i);
   } finally {
     if (externalId !== '') await removeOwnPattern(page.request, externalId);
-    await removeAccount(account);
+    await removeCodeAccount(page, account.email);
   }
 });
 
