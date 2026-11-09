@@ -68,10 +68,10 @@ for (const worker of ROOT_WORKERS) {
 test('AC-ONE-6 On Make, tap Patterns then Make, stays in one tab on one host', async ({ page, context }) => {
   await page.goto(`${HOST}/make`);
 
-  await page.getByTestId('jinx-nav-patterns').first().click();
-  await page.waitForURL(`${HOST}/browse`);
-  await page.getByRole('navigation').first().getByRole('link', { name: 'Make' }).click();
-  await page.waitForURL(`${HOST}/make`);
+  await page.getByTestId('jinx-nav-patterns').click();
+  await page.waitForURL(`${HOST}/browse`, { waitUntil: 'commit' });
+  await page.getByRole('link', { name: 'Make', exact: true }).locator('visible=true').click();
+  await page.waitForURL(`${HOST}/make`, { waitUntil: 'commit' });
 
   expect(context.pages()).toHaveLength(1);
 });
