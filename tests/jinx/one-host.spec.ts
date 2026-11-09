@@ -10,6 +10,7 @@ const SERVER_PAGES = [
   { path: '/patterns/harbour-lozenge-cuff', mark: '<svg' },
 ];
 const OLD_URLS = ['/make', '/saved?x=1', '/tracker?id=band', '/login', '/manifest.json'];
+const ROOT_WORKERS = ['/photo-worker.js', '/photo-studio-worker.js'];
 const STATUS_OK = 200;
 const STATUS_MOVED = 301;
 const STATUS_NOT_FOUND = 404;
@@ -51,6 +52,15 @@ test('AC-ONE-3 One host, GET the manifests and worker, one manifest opening on /
   expect(worker.status()).toBe(STATUS_OK);
   expect(await worker.text()).toContain('const SHELL_URL = "/make"');
 });
+
+for (const worker of ROOT_WORKERS) {
+  test(`AC-ONE-1 Photo tools on the one host, GET ${worker}, 200 script from the app`, async ({ request }) => {
+    const response = await request.get(`${HOST}${worker}`, { maxRedirects: 0 });
+
+    expect(response.status()).toBe(STATUS_OK);
+    expect(response.headers()['content-type']).toContain('javascript');
+  });
+}
 
 test('AC-ONE-6 On Make, tap Patterns then Make, stays in one tab on one host', async ({ page, context }) => {
   await page.goto(`${HOST}/make`);
