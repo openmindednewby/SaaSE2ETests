@@ -15,9 +15,11 @@ const MIN_BEAD_PX = 14;
 const APP_ORIGIN = '';
 const APP_DIR = resolve(__dirname, '../../../apps/jinx-bead-patterns/app');
 const APP_LINK_PAGES = ['/', '/browse', '/browse?q=zzzznothing', '/patterns/lozenge-band', '/guides', '/attribution'];
+const SITE_PAGE = /^\/(browse|patterns|guides|attribution|privacy|terms)\b/;
+const LINK_BASE = 'https://jinx.invalid';
 
 function appRoutes(): Set<string> {
-  const routeFiles = [...readdirSync(APP_DIR), ...readdirSync(resolve(APP_DIR, '(auth)'))];
+  const routeFiles = [...readdirSync(APP_DIR), ...readdirSync(resolve(APP_DIR, '(auth)')), ...readdirSync(resolve(APP_DIR, '(protected)'))];
   return new Set(routeFiles.filter((name) => name.endsWith('.tsx') && !name.startsWith('_') && !name.startsWith('+')).map((name) => `/${name.replace('.tsx', '').replace(/^index$/, '')}`));
 }
 
@@ -170,18 +172,20 @@ test.describe('built server with a stub API', () => {
 
     for (const path of APP_LINK_PAGES) {
       const html = await (await request.get(path)).text();
-      links.push(...[...html.matchAll(/href="(https:[^"]*jinx-app[^"]*)"/g)].map((match) => (match[1] ?? '').replaceAll('&amp;', '&')));
+      links.push(...[...html.matchAll(/<a\b[^>]*\shref="(\/[^/"][^"]*)"/g)].map((match) => (match[1] ?? '').replaceAll('&amp;', '&')).filter((link) => !SITE_PAGE.test(link)));
     }
 
-    const dead = links.filter((link) => !routes.has(new URL(link).pathname));
+    const dead = links.filter((link) => !routes.has(new URL(link, LINK_BASE).pathname));
     const html = await (await request.get('/patterns/lozenge-band')).text();
+    const pageBody = html.slice(html.indexOf('<main'), html.indexOf('</main>'));
     expect(routes.has('/tracker')).toBe(true);
     expect(links.length).toBeGreaterThan(0);
     expect(dead).toEqual([]);
     expect(html).toContain(`href="${APP_ORIGIN}/tracker?id=lozenge-band"`);
     expect(html).toContain(`href="${APP_ORIGIN}/recolour?id=lozenge-band"`);
     expect(html).not.toContain('data-testid="report-link"');
-    expect(html).not.toContain('>Colour</a>');
+    expect(pageBody).toContain('data-testid="start-tracker"');
+    expect(pageBody).not.toContain('>Colour</a>');
   });
 
   test('one row count: caption, all rows and keep going agree with the woven count', async ({ request }) => {
@@ -205,14 +209,16 @@ test.describe('built server with a stub API', () => {
         const root = document.documentElement;
         if (root.scrollWidth > root.clientWidth) found.push(`horizontal scroll ${root.scrollWidth}`);
         const visible = (el: Element): boolean => { const box = el.getBoundingClientRect(); return box.width > 0 && box.height > 0 && getComputedStyle(el).visibility !== 'hidden'; };
+        const boxParent = (el: Element): Element | null => { let up = el.parentElement; while (up !== null && getComputedStyle(up).display === 'contents') up = up.parentElement; return up; };
         document.querySelectorAll('body *').forEach((el) => {
           const ownText = [...el.childNodes].some((node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? '').trim() !== '');
           if (!ownText || !visible(el) || el.classList.contains('skip') || el.tagName === 'OPTION' || el.tagName === 'SELECT') return;
           const box = el.getBoundingClientRect();
-          const parent = el.parentElement?.getBoundingClientRect();
+          const holder = boxParent(el);
+          const parent = holder?.getBoundingClientRect();
           if (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).display !== 'inline') found.push(`overflow ${el.tagName} ${(el.textContent ?? '').slice(0, 30)}`);
           if (el.scrollHeight > el.clientHeight + 1 && getComputedStyle(el).display !== 'inline') found.push(`too tall ${el.tagName} ${el.scrollHeight}>${el.clientHeight}`);
-          const parentScrolls = el.parentElement !== null && ['auto', 'scroll'].includes(getComputedStyle(el.parentElement).overflowX);
+          const parentScrolls = holder !== null && ['auto', 'scroll'].includes(getComputedStyle(holder).overflowX);
           if (parent !== undefined && !parentScrolls && box.right > parent.right + 1) found.push(`spills ${el.tagName} ${(el.textContent ?? '').slice(0, 30)}`);
         });
         document.querySelectorAll('a,button,select,input:not([type=hidden]),summary').forEach((el) => {
