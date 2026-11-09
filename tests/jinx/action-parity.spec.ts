@@ -62,7 +62,7 @@ for (const viewport of VIEWPORTS) {
       await expect(card.locator('.thumb img')).toBeVisible();
       await expectAction(card.locator('.fav'), /\/favourites\?add=/);
       await expectAction(card.locator('.card-name a'), /^\/patterns\//);
-      await expect(card.locator('.card-meta')).toHaveCount(2);
+      await expect(card.locator('.card-meta')).toHaveCount(3);
       await expect(card.locator('.codes span').first()).toBeVisible();
       await expect(card.locator('.codes .dot').first()).toBeVisible();
       await expect(page.getByTestId('ad-slot')).toBeAttached();
