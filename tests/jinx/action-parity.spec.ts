@@ -120,6 +120,7 @@ for (const viewport of VIEWPORTS) {
       const writes = recordWrites(page);
       const slug = await livePatternSlug(page.request);
       const isOpenPing = (write: string): boolean => write.startsWith('POST ') && write.endsWith(`/patterns/${slug}/opens`);
+      await page.route(`**/patterns/${slug}/opens`, (route) => route.fulfill({ status: 204 }));
       await open(page, `/patterns/${slug}`);
 
       await expect(page.locator('.detail-head h1')).toBeVisible();
