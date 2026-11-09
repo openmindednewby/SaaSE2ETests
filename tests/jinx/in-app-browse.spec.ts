@@ -4,7 +4,8 @@ import { expectTextFits } from '@dloizides/game-e2e';
 import { DESKTOP, PHONE } from './helpers/screens';
 import { APP_URL } from './helpers/tracker';
 
-const VISIBLE_TEXT = 'body *:not(.skip):not(.dlz-consent__sr):not([id^="a11y-hint-"])';
+const RN_WEB_OPACITY_ZERO = '.r-orgf3d';
+const VISIBLE_TEXT = `body *:not(.skip):not(.dlz-consent__sr):not([id^="a11y-hint-"]):not(${RN_WEB_OPACITY_ZERO})`;
 const VIEWPORTS = [
   { label: '360x640', use: PHONE },
   { label: '1280x800', use: DESKTOP },
