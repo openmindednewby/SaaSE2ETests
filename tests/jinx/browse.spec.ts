@@ -226,8 +226,9 @@ test.describe('built server with a stub API', () => {
     test('FORM-ALIGN-1 the side-by-side filters share one top edge and height', async ({ page }) => {
       await page.goto('/browse');
 
-      const stitch = await page.locator('select[name=stitch]').boundingBox();
-      const piece = await page.locator('select[name=piece]').boundingBox();
+      const [stitch, piece] = await page.evaluate(() =>
+        ['stitch', 'piece'].map((name) => document.querySelector(`select[name=${name}]`)?.getBoundingClientRect().toJSON() as DOMRect | undefined),
+      );
 
       expect(Math.abs((stitch?.y ?? 0) - (piece?.y ?? 9))).toBeLessThanOrEqual(1);
       expect(Math.abs((stitch?.height ?? 0) - (piece?.height ?? 9))).toBeLessThanOrEqual(1);
