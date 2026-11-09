@@ -107,9 +107,9 @@ for (const viewport of VIEWPORTS) {
 
       await expectAction(page.locator('.top .logo'), /^\/$/);
       await expectAction(page.locator('.top .who'), /\/login$/);
-      await expectAction(menu.nth(0), /^\/browse$/);
-      await expectAction(menu.nth(1), /\/make$/);
-      await expectAction(menu.nth(2), /\/saved$/);
+      await expectAction(menu.and(page.locator('[href$="/browse"]')), /^\/browse$/);
+      await expectAction(menu.and(page.locator('[href$="/make"]')), /\/make$/);
+      await expectAction(menu.and(page.locator('[href$="/saved"]')), /\/saved$/);
       await expectAction(page.locator('.foot a[href="/guides"]'));
       await expectAction(page.locator('.foot a[href="/attribution"]').first());
       await expectAction(page.locator('.foot a[href="/privacy"]'));
