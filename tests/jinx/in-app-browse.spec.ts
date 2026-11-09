@@ -47,6 +47,25 @@ async function tapPatterns(page: Page): Promise<void> {
   }).toPass({ timeout: SCREEN_TIMEOUT_MS });
 }
 
+async function pickStitchThenPieceAndClose(page: Page, stitch: string, piece: string): Promise<void> {
+  await shown(page, 'browse-filters-open').click();
+  await shown(page, `browse-stitch-${stitch}`).click();
+  await expect(page).toHaveURL(`${APP_URL}/browse?stitch=${stitch}`);
+  await shown(page, `browse-piece-${piece}`).click();
+  await expect(page).toHaveURL(`${APP_URL}/browse?stitch=${stitch}&piece=${piece}`);
+  await shown(page, 'browse-show-results').click();
+  await expect(page.getByTestId('browse-filter-sheet').locator('visible=true')).toHaveCount(0);
+}
+
+async function innerScrollOverflow(panel: Locator): Promise<number> {
+  return panel.evaluate((element) => {
+    for (let node = element.parentElement; node !== null; node = node.parentElement) {
+      if (/auto|scroll/.test(getComputedStyle(node).overflowY)) return node.scrollHeight - node.clientHeight;
+    }
+    throw new Error('The filter sheet has no scrolling body around its filters');
+  });
+}
+
 for (const viewport of VIEWPORTS) {
   test.describe(viewport.label, () => {
     test.use(viewport.use);
@@ -58,6 +77,7 @@ for (const viewport of VIEWPORTS) {
 
       await expect(shown(page, 'pattern-card')).toBeVisible({ timeout: SCREEN_TIMEOUT_MS });
       await expect(page).toHaveURL(`${APP_URL}/browse`);
+      await expect(shown(page, 'ad-slot')).toBeVisible();
       expect(loads).toEqual([]);
       await expectTextFits(page, VISIBLE_TEXT);
     });
@@ -71,12 +91,86 @@ for (const viewport of VIEWPORTS) {
 
       await expect(shown(page, 'jinx-pattern-screen')).toBeVisible({ timeout: SCREEN_TIMEOUT_MS });
       await expect(shown(page, 'pattern-chart')).toBeVisible({ timeout: SCREEN_TIMEOUT_MS });
+      await expect(shown(page, 'ad-slot')).toBeVisible();
       await expect(page).toHaveURL(new RegExp(`^${APP_URL}/patterns/[a-z0-9-]+$`));
       expect(loads).toEqual([]);
       await expectTextFits(page, VISIBLE_TEXT);
     });
   });
 }
+
+test.describe('360x640 filter sheet and Back', () => {
+  test.use(PHONE);
+
+  test('AC-UI-2 With a stitch then a piece picked and the sheet closed, Back once, the piece goes and the stitch stays with no document load', async ({ page }) => {
+    const stitch = 'peyote';
+    const piece = 'bracelet';
+    const oneFilterLabel = 'Filters (1)';
+    const loads = await enterApp(page);
+    await tapPatterns(page);
+    await pickStitchThenPieceAndClose(page, stitch, piece);
+
+    await page.goBack();
+
+    await expect(page).toHaveURL(`${APP_URL}/browse?stitch=${stitch}`);
+    await expect(shown(page, 'browse-filters-open')).toHaveText(oneFilterLabel);
+    await expect(page.getByTestId('browse-filter-sheet').locator('visible=true')).toHaveCount(0);
+    expect(loads).toEqual([]);
+  });
+
+  test('AC-UI-2 With a stitch then a piece picked and the sheet closed, Back twice, both filters are gone with no document load', async ({ page }) => {
+    const stitch = 'peyote';
+    const piece = 'bracelet';
+    const noFilterLabel = 'Filters';
+    const loads = await enterApp(page);
+    await tapPatterns(page);
+    await pickStitchThenPieceAndClose(page, stitch, piece);
+
+    await page.goBack();
+    await page.goBack();
+
+    await expect(page).toHaveURL(`${APP_URL}/browse`);
+    await expect(shown(page, 'browse-filters-open')).toHaveText(noFilterLabel);
+    await expect(page.getByTestId('browse-filter-sheet').locator('visible=true')).toHaveCount(0);
+    expect(loads).toEqual([]);
+  });
+
+  test('AC-UI-1 On in-app Browse at 360x640, open the filter sheet, Show patterns is in the viewport and the sheet body has no inner scroll', async ({ page }) => {
+    const noOverflowPx = 0;
+    await enterApp(page);
+    await tapPatterns(page);
+
+    await shown(page, 'browse-filters-open').click();
+
+    const sheet = shown(page, 'browse-filter-sheet');
+    await expect(sheet.getByTestId('browse-show-results')).toBeInViewport({ ratio: 1 });
+    await expect(sheet.getByTestId('browse-colour-wall')).toBeInViewport({ ratio: 1 });
+    await expect.poll(() => innerScrollOverflow(sheet.getByTestId('browse-filters')), { message: 'filter sheet body overflow in px' }).toBeLessThanOrEqual(noOverflowPx);
+  });
+});
+
+test.describe('1280x800 tray keyboard', () => {
+  test.use(DESKTOP);
+
+  test('AC-UI-6 On in-app Browse at 1280x800 with the tray focused, ArrowRight twice, ArrowLeft, Enter, focus walks the tray and Enter picks White with no document load', async ({ page }) => {
+    const firstPill = 'browse-tray-best';
+    const walkedToPill = 'browse-tray-white';
+    const loads = await enterApp(page);
+    await tapPatterns(page);
+    await expect(shown(page, 'pattern-card')).toBeVisible({ timeout: SCREEN_TIMEOUT_MS });
+    await shown(page, firstPill).focus();
+
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('Enter');
+
+    await expect(shown(page, walkedToPill)).toBeFocused();
+    await expect(shown(page, walkedToPill)).toHaveAttribute('aria-pressed', 'true');
+    await expect(shown(page, firstPill)).toHaveAttribute('aria-pressed', 'false');
+    expect(loads).toEqual([]);
+  });
+});
 
 test.describe('360x640 filters', () => {
   test.use(PHONE);
