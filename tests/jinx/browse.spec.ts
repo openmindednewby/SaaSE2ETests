@@ -12,7 +12,7 @@ const DESKTOP = { viewport: { width: 1280, height: 800 } };
 const WALK = ['/', '/browse', '/browse?q=zzzznothing', '/patterns/lozenge-band', '/patterns/removed-band', '/guides', '/guides/finish-a-bracelet', '/attribution', '/privacy', '/no-such-page'];
 const MIN_HIT = 44;
 const MIN_BEAD_PX = 14;
-const APP_ORIGIN = 'https://jinxbeadpatterns-app.dloizides.com';
+const APP_ORIGIN = '';
 const APP_DIR = resolve(__dirname, '../../../apps/jinx-bead-patterns/app');
 const APP_LINK_PAGES = ['/', '/browse', '/browse?q=zzzznothing', '/patterns/lozenge-band', '/guides', '/attribution'];
 
