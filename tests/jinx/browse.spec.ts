@@ -1,21 +1,19 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
 import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+
+import { walk } from './helpers/walk';
 
 const STUB_ONLY = process.env.JINX_SITE_STUB === '1';
 const MATCH_TITLE = process.env.JINX_BROWSE_MATCH ?? (STUB_ONLY ? 'Lozenge Band' : 'Harbour Lozenge Cuff');
 const CARD = /data-testid="pattern-card"/g;
-const SHOT_DIR = process.env.JINX_SHOT_DIR;
 const PHONE = { viewport: { width: 360, height: 640 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 };
 const DESKTOP = { viewport: { width: 1280, height: 800 } };
-const WALK = ['/', '/browse', '/browse?q=zzzznothing', '/patterns/lozenge-band', '/patterns/removed-band', '/guides', '/guides/finish-a-bracelet', '/attribution', '/privacy', '/no-such-page'];
-const MIN_HIT = 44;
 const MIN_BEAD_PX = 14;
 const APP_ORIGIN = '';
 const APP_DIR = resolve(__dirname, '../../../apps/jinx-bead-patterns/app');
 const APP_LINK_PAGES = ['/', '/browse', '/browse?q=zzzznothing', '/patterns/lozenge-band', '/guides', '/attribution'];
-const SITE_PAGE = /^\/(browse|patterns|guides|attribution|privacy|terms)\b/;
+const SITE_PAGE = /^\/(browse|patterns|guides|attribution|privacy|terms)(?:[/?#]|$)/;
 const LINK_BASE = 'https://jinx.invalid';
 
 function appRoutes(): Set<string> {
@@ -197,43 +195,6 @@ test.describe('built server with a stub API', () => {
     expect(html).toContain('to row 80,');
     expect(html).not.toContain('All 79 rows');
   });
-
-  async function walk(page: Page, label: string): Promise<void> {
-    await page.goto('/browse');
-    await page.getByRole('button', { name: 'Reject all' }).click();
-    for (const path of WALK) {
-      await page.goto(path, { waitUntil: 'load' });
-      await page.evaluate(() => document.querySelectorAll<HTMLImageElement>('img').forEach((image) => { image.loading = 'eager'; }));
-      const problems = await page.evaluate((minHit) => {
-        const found: string[] = [];
-        const root = document.documentElement;
-        if (root.scrollWidth > root.clientWidth) found.push(`horizontal scroll ${root.scrollWidth}`);
-        const visible = (el: Element): boolean => { const box = el.getBoundingClientRect(); return box.width > 0 && box.height > 0 && getComputedStyle(el).visibility !== 'hidden'; };
-        const boxParent = (el: Element): Element | null => { let up = el.parentElement; while (up !== null && getComputedStyle(up).display === 'contents') up = up.parentElement; return up; };
-        document.querySelectorAll('body *').forEach((el) => {
-          const ownText = [...el.childNodes].some((node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? '').trim() !== '');
-          if (!ownText || !visible(el) || el.classList.contains('skip') || el.tagName === 'OPTION' || el.tagName === 'SELECT') return;
-          const box = el.getBoundingClientRect();
-          const holder = boxParent(el);
-          const parent = holder?.getBoundingClientRect();
-          if (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).display !== 'inline') found.push(`overflow ${el.tagName} ${(el.textContent ?? '').slice(0, 30)}`);
-          if (el.scrollHeight > el.clientHeight + 1 && getComputedStyle(el).display !== 'inline') found.push(`too tall ${el.tagName} ${el.scrollHeight}>${el.clientHeight}`);
-          const parentScrolls = holder !== null && ['auto', 'scroll'].includes(getComputedStyle(holder).overflowX);
-          if (parent !== undefined && !parentScrolls && box.right > parent.right + 1) found.push(`spills ${el.tagName} ${(el.textContent ?? '').slice(0, 30)}`);
-        });
-        document.querySelectorAll('a,button,select,input:not([type=hidden]),summary').forEach((el) => {
-          if (!visible(el) || el.classList.contains('skip')) return;
-          const box = el.getBoundingClientRect();
-          if (box.width < minHit || box.height < minHit) found.push(`hit ${el.tagName} ${Math.round(box.width)}x${Math.round(box.height)} ${(el.textContent ?? el.getAttribute('aria-label') ?? '').trim().slice(0, 30)}`);
-        });
-        return found;
-      }, MIN_HIT);
-      if (SHOT_DIR !== undefined) {
-        await page.screenshot({ path: `${SHOT_DIR}/${label}${path.replace(/[^a-z0-9]+/g, '-')}.png`, fullPage: path.includes('lozenge') || path === '/browse' });
-      }
-      expect(problems, `${label} ${path}`).toEqual([]);
-    }
-  }
 
   test.describe('phone 360x640', () => {
     test.use(PHONE);
