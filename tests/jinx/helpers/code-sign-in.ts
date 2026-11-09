@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { BotMailbox, loadBotMailboxConfig, type CapturedEmail } from '@dloizides/e2e-helpers';
-import { expect, type Page, type Response } from '@playwright/test';
+import { expect, type Locator, type Page, type Response } from '@playwright/test';
 
 import { WRITE_HEADERS } from './live-api';
 import { postPaced } from './test-accounts';
@@ -107,9 +107,14 @@ export async function sendCode(page: Page, email: string): Promise<Response> {
   return sent;
 }
 
+async function fillOrResubmitCode(field: Locator, code: string): Promise<void> {
+  if ((await field.inputValue()) === code) await field.press('Enter');
+  else await field.fill(code);
+}
+
 export async function enterCode(page: Page, code: string): Promise<Response> {
-  await page.getByTestId(CodeForm.code).fill(code);
-  return pacedPress(page, '/bff/otp/verify', () => page.getByTestId(CodeForm.verify).click());
+  const field = page.getByTestId(CodeForm.code);
+  return pacedPress(page, '/bff/otp/verify', () => fillOrResubmitCode(field, code));
 }
 
 export async function signInByCode(page: Page, email = uniqueCodeEmail()): Promise<CodeAccount> {

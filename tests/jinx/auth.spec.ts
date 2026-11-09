@@ -187,18 +187,19 @@ test('AC-OTP-7 Enter in the email field sends and Enter in the code field verifi
   const email = 'e2e-bot+jinx-otp-enter@dloizides.com';
   const code = '654321';
   const sends = await stubCodeSends(page);
-  const verifies = await stubCodeVerify(page, 401);
+  const verifies = await stubCodeVerify(page, 429);
   await openLogin(page);
   await page.getByTestId(CodeForm.email).fill(email);
   await page.getByTestId(CodeForm.email).press('Enter');
   await expect(page.getByTestId(CodeForm.code)).toBeVisible();
   await page.getByTestId(CodeForm.code).fill(code);
+  await expect(page.getByTestId(CodeForm.error)).toBeVisible();
 
   await page.getByTestId(CodeForm.code).press('Enter');
 
-  await expect(page.getByTestId(CodeForm.error)).toBeVisible();
+  await expect.poll(() => verifies.length).toBe(2);
   expect(sends[0]).toMatchObject({ identifier: email });
-  expect(verifies[0]).toMatchObject({ username: email, otp: code });
+  expect(verifies[1]).toMatchObject({ username: email, otp: code });
 });
 
 test('AC-OTP-7 Send code and Sign in show the shared loading state while their request is in flight', async ({ page }) => {
@@ -225,7 +226,6 @@ test('AC-OTP-7 Send code and Sign in show the shared loading state while their r
   await expect(page.getByTestId(CodeForm.send).getByRole('progressbar')).toBeVisible();
   releaseSend();
   await page.getByTestId(CodeForm.code).fill(code);
-  await page.getByTestId(CodeForm.verify).click();
   await expect(page.getByTestId(CodeForm.verify)).toHaveAttribute('aria-label', 'Signing you in');
   await expect(page.getByTestId(CodeForm.verify).getByRole('progressbar')).toBeVisible();
   releaseVerify();
