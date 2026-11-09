@@ -15,6 +15,8 @@ const HTTP_NO_CONTENT = 204;
 const TAP_RETRY_MS = 2_000;
 const SCREEN_TIMEOUT_MS = 20_000;
 const LISTING_PATH = '/bff/api/jinx/api/v1/patterns';
+/** RN-web keeps the hint in a visually hidden node inside the button, so it is part of the button's text. */
+const FILTERS_HINT = 'Opens the pattern filters';
 
 test.use({ serviceWorkers: 'block' });
 
@@ -113,7 +115,7 @@ test.describe('360x640 filter sheet and Back', () => {
     await page.goBack();
 
     await expect(page).toHaveURL(`${APP_URL}/browse?stitch=${stitch}`);
-    await expect(shown(page, 'browse-filters-open')).toHaveText(oneFilterLabel);
+    await expect(shown(page, 'browse-filters-open')).toHaveText(`${oneFilterLabel}${FILTERS_HINT}`);
     await expect(page.getByTestId('browse-filter-sheet').locator('visible=true')).toHaveCount(0);
     expect(loads).toEqual([]);
   });
@@ -130,7 +132,7 @@ test.describe('360x640 filter sheet and Back', () => {
     await page.goBack();
 
     await expect(page).toHaveURL(`${APP_URL}/browse`);
-    await expect(shown(page, 'browse-filters-open')).toHaveText(noFilterLabel);
+    await expect(shown(page, 'browse-filters-open')).toHaveText(`${noFilterLabel}${FILTERS_HINT}`);
     await expect(page.getByTestId('browse-filter-sheet').locator('visible=true')).toHaveCount(0);
     expect(loads).toEqual([]);
   });
