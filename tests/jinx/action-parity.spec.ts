@@ -20,6 +20,16 @@ async function expectAction(target: Locator, href?: RegExp): Promise<void> {
   await target.click({ trial: true });
 }
 
+async function openFilterSheet(page: Page): Promise<void> {
+  await page.getByTestId('browse-filters-open').click();
+  await expect(page.getByTestId('browse-filter-sheet')).toBeVisible();
+}
+
+async function closeFilterSheet(page: Page): Promise<void> {
+  await page.getByTestId('browse-filters-close').click();
+  await expect(page.getByTestId('browse-filter-sheet')).toBeHidden();
+}
+
 async function pageOpenedBy(context: BrowserContext, link: Locator): Promise<Page> {
   const opened = context.waitForEvent('page');
   await link.click();
@@ -57,7 +67,9 @@ for (const viewport of VIEWPORTS) {
 
       await expect(page.getByTestId('browse-search-input')).toBeVisible();
       await expect(page.locator('.search-form select')).toHaveCount(3);
+      if (!viewport.wide) await openFilterSheet(page);
       await expectAction(page.locator('.wall a').first(), /^\/browse/);
+      if (!viewport.wide) await closeFilterSheet(page);
       await expect(card.locator('.thumb img')).toHaveAttribute('src', /^\/thumbs\//);
       await expect(card.locator('.thumb img')).toBeVisible();
       await expectAction(card.locator('.fav'), /\/favourites\?add=/);
@@ -75,7 +87,10 @@ for (const viewport of VIEWPORTS) {
       await open(page, '/browse');
 
       if (viewport.wide) await page.locator('.chips a[href*="stitch=peyote"]').click();
-      else await page.locator('select[name="stitch"]').selectOption('peyote');
+      else {
+        await openFilterSheet(page);
+        await page.locator('select[name="stitch"]').selectOption('peyote');
+      }
 
       await expect(page).toHaveURL(/stitch=peyote/);
     });
