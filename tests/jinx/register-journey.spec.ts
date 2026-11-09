@@ -14,6 +14,7 @@ import {
   sendCode,
   SESSION_COOKIE,
   signInByCode,
+  submitDeletionForm,
   uniqueCodeEmail,
 } from './helpers/code-sign-in';
 import { ACCOUNT_TEST_MS } from './helpers/signed-in';
@@ -83,7 +84,7 @@ test('AC-OTP-6 a stale login at delete, goes to a new code and back to delete, w
   const verify = await enterCode(page, await readCode(email));
   expect(verify.status()).toBe(200);
   await expect(page).toHaveURL(/\/delete-account/);
-  await page.getByTestId(DeleteForm.submit).click();
+  await submitDeletionForm(page);
   await expect(page.getByTestId(DeleteForm.checkEmail)).toBeVisible();
   expect(await confirmDeletion(page, email)).toBe(200);
 });
@@ -117,7 +118,7 @@ for (const [size, device] of [['360x640', MOBILE], ['1280x800', DESKTOP_1280]] a
       await page.goto(`${APP_URL}/delete-account`);
       await expect(page.locator(PASSWORD_FIELD)).toHaveCount(0);
 
-      await page.getByTestId(DeleteForm.submit).click();
+      await submitDeletionForm(page);
 
       await expect(page.getByTestId(DeleteForm.checkEmail)).toBeVisible();
       expect(await confirmDeletion(page, email)).toBe(200);

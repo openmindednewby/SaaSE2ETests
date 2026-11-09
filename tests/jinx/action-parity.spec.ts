@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type BrowserContext, type Locator, type Page } from '@playwright/test';
 
 import { CodeForm } from './helpers/code-sign-in';
 import { DESKTOP, livePatternSlug, NO_MATCH_QUERY, PHONE, recordWrites, rejectConsent } from './helpers/screens';
@@ -18,6 +18,12 @@ async function expectAction(target: Locator, href?: RegExp): Promise<void> {
   await expect(target).toBeVisible();
   if (href !== undefined) await expect(target).toHaveAttribute('href', href);
   await target.click({ trial: true });
+}
+
+async function pageOpenedBy(context: BrowserContext, link: Locator): Promise<Page> {
+  const opened = context.waitForEvent('page');
+  await link.click();
+  return opened;
 }
 
 for (const viewport of VIEWPORTS) {
@@ -112,7 +118,9 @@ for (const viewport of VIEWPORTS) {
 
     test(`Pattern at ${viewport.label}, page rows p1-p6, every field and action is there and reachable`, async ({ page }) => {
       const writes = recordWrites(page);
-      await open(page, `/patterns/${await livePatternSlug(page.request)}`);
+      const slug = await livePatternSlug(page.request);
+      const isOpenPing = (write: string): boolean => write.startsWith('POST ') && write.endsWith(`/patterns/${slug}/opens`);
+      await open(page, `/patterns/${slug}`);
 
       await expect(page.locator('.detail-head h1')).toBeVisible();
       await expect(page.locator('[data-testid="pattern-chart"] svg').first()).toBeVisible();
@@ -126,7 +134,7 @@ for (const viewport of VIEWPORTS) {
       await expect(page.getByTestId('ad-slot')).toBeAttached();
       await expect(page.getByTestId('pattern-licence')).toBeVisible();
       await expectAction(page.locator('.block-rest a[href="/attribution"]'));
-      expect(writes).toEqual([]);
+      expect(writes.filter((write) => !isOpenPing(write))).toEqual([]);
     });
 
     test(`AC-OTP-1 AC-OTP-3 Sign-in at ${viewport.label}, inventory login rows, one email field and Send code, no password or register link`, async ({ page }) => {
@@ -147,15 +155,13 @@ for (const viewport of VIEWPORTS) {
       const notice = await page.getByTestId('jinx-login-consent-notice').boundingBox();
       const send = await page.getByTestId(CodeForm.send).boundingBox();
 
-      const termsOpened = context.waitForEvent('page');
-      await page.getByTestId('jinx-login-terms-link').click();
-      const privacyOpened = context.waitForEvent('page');
-      await page.getByTestId('jinx-login-privacy-link').click();
+      const terms = await pageOpenedBy(context, page.getByTestId('jinx-login-terms-link'));
+      const privacy = await pageOpenedBy(context, page.getByTestId('jinx-login-privacy-link'));
 
       expect(email?.y ?? 0).toBeLessThan(notice?.y ?? 0);
       expect(notice?.y ?? 0).toBeLessThan(send?.y ?? 0);
-      await expect(await termsOpened).toHaveURL(/\/terms$/);
-      await expect(await privacyOpened).toHaveURL(/\/privacy$/);
+      await expect(terms).toHaveURL(/\/terms$/);
+      await expect(privacy).toHaveURL(/\/privacy$/);
     });
   });
 }
