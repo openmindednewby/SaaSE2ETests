@@ -32,8 +32,6 @@ const OTP_EMAIL_SUBJECT = 'Your Verification Code';
 const MAILBOX_TIMEOUT_MS = 120_000;
 const AUTH_RATE_WINDOW_MS = 60_000;
 const MAX_PACED_ATTEMPTS = 8;
-const MAX_DELETE_ATTEMPTS = 4;
-const RETRY_MARGIN_MS = 1000;
 const DELETE_REQUEST_PATH = '/bff/account/delete-request';
 const HTTP_ACCEPTED = 202;
 const HTTP_OK = 200;
@@ -81,32 +79,18 @@ export function otherCode(code: string): string {
   return `${code.slice(0, -1)}${String(last)}`;
 }
 
-interface Pacing {
-  attempts: number;
-  waitMs: (limited: Response) => number;
-}
-
-const FULL_WINDOW: Pacing = { attempts: MAX_PACED_ATTEMPTS, waitMs: () => AUTH_RATE_WINDOW_MS };
-const RETRY_AFTER: Pacing = { attempts: MAX_DELETE_ATTEMPTS, waitMs: retryAfterMs };
-
-function retryAfterMs(limited: Response): number {
-  const seconds = Number(limited.headers()['retry-after']);
-  const announced = Number.isFinite(seconds) && seconds > 0;
-  return announced ? Math.min(seconds * MS_PER_SECOND + RETRY_MARGIN_MS, AUTH_RATE_WINDOW_MS) : AUTH_RATE_WINDOW_MS;
-}
-
-async function pacedPress(page: Page, path: string, press: () => Promise<void>, pacing = FULL_WINDOW): Promise<Response> {
+async function pacedPress(page: Page, path: string, press: () => Promise<void>): Promise<Response> {
   for (let attempt = 1; ; attempt += 1) {
     const answered = page.waitForResponse((response) => new URL(response.url()).pathname === path);
     await press();
     const response = await answered;
-    if (response.status() !== HTTP_TOO_MANY_REQUESTS || attempt === pacing.attempts) return response;
-    await delay(pacing.waitMs(response));
+    if (response.status() !== HTTP_TOO_MANY_REQUESTS || attempt === MAX_PACED_ATTEMPTS) return response;
+    await delay(AUTH_RATE_WINDOW_MS);
   }
 }
 
 export async function submitDeletionForm(page: Page): Promise<void> {
-  const answered = await pacedPress(page, DELETE_REQUEST_PATH, () => page.getByTestId(DeleteForm.submit).click(), RETRY_AFTER);
+  const answered = await pacedPress(page, DELETE_REQUEST_PATH, () => page.getByTestId(DeleteForm.submit).click());
   expect(answered.status(), `POST ${DELETE_REQUEST_PATH} from the form`).toBe(HTTP_ACCEPTED);
 }
 

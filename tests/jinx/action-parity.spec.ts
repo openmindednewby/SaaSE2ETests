@@ -60,7 +60,7 @@ for (const viewport of VIEWPORTS) {
       await expectAction(page.locator('.wall a').first(), /^\/browse/);
       await expect(card.locator('.thumb img')).toHaveAttribute('src', /^\/thumbs\//);
       await expect(card.locator('.thumb img')).toBeVisible();
-      await expectAction(card.locator('.fav'), /\/saved\?add=/);
+      await expectAction(card.locator('.fav'), /\/favourites\?add=/);
       await expectAction(card.locator('.card-name a'), /^\/patterns\//);
       await expect(card.locator('.card-meta')).toHaveCount(2);
       await expect(card.locator('.codes span').first()).toBeVisible();
