@@ -4,7 +4,7 @@ import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const STUB_ONLY = process.env.JINX_SITE_STUB === '1';
-const MATCH_TITLE = process.env.JINX_BROWSE_MATCH ?? 'Lozenge Band';
+const MATCH_TITLE = process.env.JINX_BROWSE_MATCH ?? (STUB_ONLY ? 'Lozenge Band' : 'Harbour Lozenge Cuff');
 const CARD = /data-testid="pattern-card"/g;
 const SHOT_DIR = process.env.JINX_SHOT_DIR;
 const PHONE = { viewport: { width: 360, height: 640 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 };
