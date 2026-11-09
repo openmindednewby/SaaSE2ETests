@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
 
+import { removeCodeAccount, signInByCode } from './helpers/code-sign-in';
+import { ACCOUNT_TEST_MS } from './helpers/signed-in';
+
 const HOST = 'https://jinxbeadpatterns.dloizides.com';
 const OLD_HOST = 'https://jinxbeadpatterns-app.dloizides.com';
 const APP_ROUTES = ['/make', '/saved', '/tracker', '/colour', '/recolour', '/report', '/login', '/register', '/verify-email', '/favourites', '/my-patterns', '/publish', '/admin', '/delete-account'];
@@ -71,6 +74,17 @@ test('AC-ONE-6 On Make, tap Patterns then Make, stays in one tab on one host', a
   await page.waitForURL(`${HOST}/make`);
 
   expect(context.pages()).toHaveLength(1);
+});
+
+test('AC-ONE-7 Code sign-in on the one host, open /browse, the server-rendered menu shows the account', async ({ page }) => {
+  test.setTimeout(ACCOUNT_TEST_MS);
+  const account = await signInByCode(page);
+
+  await page.goto(`${HOST}/browse`);
+
+  await expect(page.locator('[data-sign-out]')).toBeVisible();
+  await expect(page.locator('[data-signed-in]:visible')).toHaveCount(1);
+  await removeCodeAccount(page, account.email);
 });
 
 for (const url of OLD_URLS) {
