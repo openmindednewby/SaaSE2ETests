@@ -69,7 +69,7 @@ test('AC-ONE-6 On Make, tap Patterns then Make, stays in one tab on one host', a
   await page.goto(`${HOST}/make`);
 
   await page.getByTestId('jinx-nav-patterns').first().click();
-  await page.waitForURL(`${HOST}/`);
+  await page.waitForURL(`${HOST}/browse`);
   await page.getByRole('navigation').first().getByRole('link', { name: 'Make' }).click();
   await page.waitForURL(`${HOST}/make`);
 
