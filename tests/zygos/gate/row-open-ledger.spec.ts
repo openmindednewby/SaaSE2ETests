@@ -40,7 +40,6 @@ test.beforeAll(async () => {
   const dto = cash;
   cashAccountId = dto.externalId;
   expect(cashAccountId, 'seeded account id').not.toBe('');
-  await session!.dispose();
 });
 
 for (const vp of VIEWPORTS) {
