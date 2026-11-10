@@ -3,6 +3,7 @@ import axios from 'axios';
 import { sharedHttpsAgent } from '../http-agent.js';
 import type { KefiAdminClient } from './kefiAdminClient.js';
 import { newCanaryContext, type KefiCanaryContext } from './kefiCanaryIds.js';
+import { KefiEventClient } from './kefiEventClient.js';
 import { KefiMailbox, extractVerifyUrl, loadKefiMailboxConfig } from './kefiMailboxClient.js';
 import { completeOnboarding } from './kefiOnboardingApi.js';
 import type { OwnerCreds } from './kefiProGatesClient.js';
@@ -14,6 +15,8 @@ const MAILBOX_TIMEOUT_MS = 90_000;
 const MAILBOX_POLL_MS = 2_000;
 const CREATED = 201;
 const FIRST_ERROR_STATUS = 400;
+const EVENT_DAYS_AHEAD = 120;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export interface SignupApiTenant {
   ctx: KefiCanaryContext;
@@ -42,7 +45,14 @@ export async function provisionSignupApiTenant(admin: KefiAdminClient): Promise<
 
   const bearer = await admin.getTenantOwnerBearer({ email: ctx.email, password: ctx.password });
   await completeOnboarding({ apiUrl, bearer });
-  return { ctx, ownerCreds: { ownerEmail: ctx.email, ownerPassword: ctx.password } };
+  const ownerCreds: OwnerCreds = { ownerEmail: ctx.email, ownerPassword: ctx.password };
+  await new KefiEventClient(admin).createMyEvent({
+    ...ownerCreds,
+    name: `${ctx.slugPrefix}Event`,
+    dateIso: new Date(Date.now() + EVENT_DAYS_AHEAD * MS_PER_DAY).toISOString().slice(0, 10),
+    venue: `${ctx.slugPrefix}Venue`,
+  });
+  return { ctx, ownerCreds };
 }
 
 export async function teardownSignupApiTenant(tenant: SignupApiTenant, admin: KefiAdminClient): Promise<void> {
