@@ -8,7 +8,7 @@ import { expectRowAffordances } from './row-open-check.js';
 
 import type { AccountDto } from '../zygos-console-modules.js';
 
-const LEDGER_ROW = '[data-testid="zygos-account-ledger-table"] [role="row"][tabindex="0"]';
+const LEDGER_ROW = '[data-testid="zygos-account-ledger-table-row-0"], [data-testid="zygos-account-ledger-table-row-1"]';
 const JOURNAL_URL = /\/accounting\/journals\//;
 const SEED_AMOUNT = 100;
 
