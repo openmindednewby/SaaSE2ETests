@@ -29,7 +29,7 @@ test.describe('ROW-OPEN-1 ui-showcase tables at 360x640 @finreg-gate', () => {
   test.use(PHONE);
   test('ROW-OPEN-1 DataTable row-open story at 360x640, Enter on Item 01 opens its record', async ({ page }) => {
     await page.goto(SHOWCASE_TABLES);
-    const row = page.locator('[role="button"]').filter({ hasText: 'Item 01' }).first();
+    const row = page.locator('[role="row"][tabindex="0"]').filter({ hasText: 'Item 01' }).first();
 
     await expectRowAffordances(page, row);
 
