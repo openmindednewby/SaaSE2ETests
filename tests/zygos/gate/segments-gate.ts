@@ -18,7 +18,7 @@ export const SEG = {
   tags: 'segment-form-tags',
   count: 'zygos-segment-editor-count',
   members: 'zygos-segment-editor-members',
-  contacts: 'zygos-contacts-screen',
+  detail: 'zygos-segment-detail-screen',
 } as const;
 
 export const LIST_PATH = '/crm/segments';

@@ -15,7 +15,7 @@ for (const vp of VIEWPORTS) {
 
         await card.locator(byPrefix(SEG.open)).first().click();
 
-        await expect(page.locator(id(SEG.contacts))).toBeVisible({ timeout: 20_000 });
+        await expect(page.locator(id(SEG.detail))).toBeVisible({ timeout: 20_000 });
         await expect(page.locator(byPrefix(SEG.rule)).filter({ hasText: GATE_SEGMENT.tags }).first(), 'saved filter chip').toBeVisible();
         await sight(page, 'SEGMENTS-UX-1', `open-${role.label}-${vp.label}`);
       });
