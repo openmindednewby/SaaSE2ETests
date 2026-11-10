@@ -352,6 +352,7 @@ export function buildProjects(): ProjectConfig {
     //
     // ignoreHTTPSErrors is deliberately NOT set: app.finreg.dloizides.com is a real Let's
     // Encrypt host, so a bad cert there is a genuine failure worth seeing.
+    { name: 'finreg-gate', workers: 1, testMatch: /zygos[/\\]gate[/\\].*\.spec\.ts/, use: { baseURL: zygosWebUrl } },
     { name: 'zygos-api', workers: 1, testMatch: /zygos\/zygos-.*(?<!\.ui)\.spec\.ts/ },
     {
       name: 'zygos-ui',
