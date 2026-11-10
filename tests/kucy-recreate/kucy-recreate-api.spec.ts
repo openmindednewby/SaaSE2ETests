@@ -5,19 +5,17 @@ import { join } from 'node:path';
 import { test, expect, type APIRequestContext } from '@playwright/test';
 
 import { KefiAdminClient } from '../../helpers/kefi/kefiAdminClient.js';
-import { masterAdminAvailable } from '../../helpers/kefi/kefiKeycloakAdmin.js';
 import {
-  provisionApiTenantWithEvent,
-  teardownApiTenant,
-  type ApiTenantHandle,
-} from '../../helpers/kefi/kefiApiTenant.js';
+  provisionSignupApiTenant,
+  teardownSignupApiTenant,
+  type SignupApiTenant,
+} from '../../helpers/kefi/kefiSignupApiTenant.js';
 import { probeDynamicLandingRender } from '../../helpers/kefi/kefiDynamicLandingProbe.js';
 import { publicTenantPath } from '../../helpers/kefi/kefiLandingPeopleFixture.js';
 import { getKefiUrls } from '../../helpers/kefi/kefiUrls.js';
-import { decodeHtml, loadKucyRecreate, loadLandingSource, matrixRows, missingFrom } from '../../helpers/kefi/kucyRecreate.js';
+import { KUCY_LIVE_SLUG, decodeHtml, loadKucyRecreate, matrixRows, missingFrom } from '../../helpers/kefi/kucyRecreate.js';
 import { isRemoteTarget } from '../../helpers/target.js';
 
-const EVENT_DAYS_AHEAD = 120;
 const PUBLISH_POLL_TIMEOUT_MS = 900_000;
 const PUBLISH_BUILD_TIMEOUT_MS = 1_200_000;
 const PAGE_FETCH_ATTEMPT_MS = 60_000;
@@ -28,7 +26,7 @@ const data = loadKucyRecreate();
 const rows = matrixRows(data);
 
 let admin: KefiAdminClient;
-let tenant: ApiTenantHandle | undefined;
+let tenant: SignupApiTenant | undefined;
 let page = '';
 let saved: Record<string, unknown[] | object | null> = {};
 let slug = '?';
@@ -49,20 +47,20 @@ async function fetchPublished(request: APIRequestContext, url: string): Promise<
   return decodeHtml(html);
 }
 
-test.describe('KEFI-RECREATE-1 data file landing equals the KUCY tenant landing-config.json', () => {
-  test('CM-SRC kucy-recreate.json landing compared with kefi-landings landing-config.json, is identical', () => {
-    const source = loadLandingSource();
+test.describe('KEFI-RECREATE-1 data file landing equals the live KUCY public config', () => {
+  test.skip(!isRemoteTarget(), 'reads the deployed kefi public API');
 
-    const copy = data.landing;
+  test('CM-SRC kucy-recreate.json landing compared with the anonymous public GET of kizombaunioncy, is identical', async ({ request }) => {
+    const copy = data.landing.config;
 
-    expect(source.landing, `${source.path} readable (set KEFI_LANDINGS_DIR to the kefi-landings clone)`).not.toBeNull();
-    expect(copy, `helpers/kefi/data/kucy-recreate.json landing diverged from ${source.path}`).toEqual(source.landing);
+    const live = await readPublicLanding(request, KUCY_LIVE_SLUG);
+
+    expect(copy, `helpers/kefi/data/kucy-recreate.json diverged from public GET ${publicTenantPath(KUCY_LIVE_SLUG)}`).toEqual(live);
   });
 });
 
 test.describe('KEFI-RECREATE-1 KUCY recreated by API replay on a throwaway tenant', () => {
   test.skip(!isRemoteTarget(), 'runs against a deployed kefi stack');
-  test.skip(!masterAdminAvailable(), 'needs KEYCLOAK_MASTER_ADMIN_* to mint the e2c- tenant');
 
   test.beforeAll(async ({ request }) => {
     test.setTimeout(PUBLISH_BUILD_TIMEOUT_MS);
@@ -71,22 +69,15 @@ test.describe('KEFI-RECREATE-1 KUCY recreated by API replay on a throwaway tenan
       return;
     }
     admin = new KefiAdminClient();
-    tenant = await provisionApiTenantWithEvent({
-      admin,
-      eventDaysAhead: EVENT_DAYS_AHEAD,
-      eventStatus: 'Published',
-      passCode: 'FULL',
-      passLabel: 'Full Pass',
-      priceEur: 30,
-    });
+    tenant = await provisionSignupApiTenant(admin);
     await admin.putLandingConfig({ ...tenant.ownerCreds, dto: data.landing });
     const published = await admin.publishLanding(tenant.ownerCreds);
     const terminal = await admin.pollPublishStatus({ ...tenant.ownerCreds, jobName: published.jobName, timeoutMs: PUBLISH_POLL_TIMEOUT_MS });
     expect(terminal.status, `publish job ${published.jobName}`).toBe('Succeeded');
-    const probe = await probeDynamicLandingRender({ slug: tenant.slug, requiredMarkers: [data.config.branding.name] });
+    slug = published.tenantSlug;
+    const probe = await probeDynamicLandingRender({ slug, requiredMarkers: [data.config.branding.name] });
     page = await fetchPublished(request, probe.url);
-    saved = await readPublicLanding(request, tenant.slug);
-    slug = tenant.slug;
+    saved = await readPublicLanding(request, slug);
     writeFileSync(SNAPSHOT_FILE, JSON.stringify({ page, saved, slug }));
   });
 
@@ -94,9 +85,9 @@ test.describe('KEFI-RECREATE-1 KUCY recreated by API replay on a throwaway tenan
     if (!tenant) return;
     const gone = tenant;
     tenant = undefined;
-    await teardownApiTenant(gone, admin);
-    await expect.poll(async () => (await request.get(`${getKefiUrls().apiUrl}${publicTenantPath(gone.slug)}`)).status(), {
-      message: `public GET ${publicTenantPath(gone.slug)} after teardown`,
+    await teardownSignupApiTenant(gone, admin);
+    await expect.poll(async () => (await request.get(`${getKefiUrls().apiUrl}${publicTenantPath(slug)}`)).status(), {
+      message: `public GET ${publicTenantPath(slug)} after teardown`,
       timeout: TEARDOWN_404_TIMEOUT_MS,
     }).toBe(404);
   });

@@ -35,18 +35,7 @@ export interface KucyRecreateData { landing: SavedLandingDto; config: KucyConfig
 export interface MatrixRow { id: string; scenario: string; expected: string[]; sourceGap?: string }
 
 const DATA_FILE = join(__dirname, 'data', 'kucy-recreate.json');
-const LANDING_SOURCE = join(
-  process.env.KEFI_LANDINGS_DIR ?? join(__dirname, '..', '..', '..', 'kefi-landings'),
-  'docs', 'tenants', 'kizombaunioncy', 'landing-config.json',
-);
-
-export function loadLandingSource(): { path: string; landing: SavedLandingDto | null } {
-  try {
-    return { path: LANDING_SOURCE, landing: JSON.parse(readFileSync(LANDING_SOURCE, 'utf-8')) as SavedLandingDto };
-  } catch {
-    return { path: LANDING_SOURCE, landing: null };
-  }
-}
+export const KUCY_LIVE_SLUG = 'kizombaunioncy';
 
 export function loadKucyRecreate(): KucyRecreateData {
   const raw = JSON.parse(readFileSync(DATA_FILE, 'utf-8')) as {

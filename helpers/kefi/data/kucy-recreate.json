@@ -1,7 +1,7 @@
 {
   "source": {
-    "base": "kefi-landings/docs/tenants/kizombaunioncy/landing-config.json",
-    "rule": "landing is a byte-for-byte JSON copy of base; the guard test in kucy-recreate-api.spec.ts fails when they diverge"
+    "url": "GET /api/v1/t/kizombaunioncy (anonymous)",
+    "fetchedAt": "2026-11-10"
   },
   "rendered": {
     "navAnchors": [
@@ -44,8 +44,8 @@
       "layout": [
         {
           "key": "about",
-          "anchor": "mission",
-          "visible": true
+          "visible": true,
+          "anchor": "mission"
         },
         {
           "key": "teachers",
@@ -53,8 +53,8 @@
         },
         {
           "key": "schedule",
-          "anchor": "classes",
-          "visible": true
+          "visible": true,
+          "anchor": "classes"
         },
         {
           "key": "prices",
@@ -96,6 +96,10 @@
       "paymentContactMessage": null,
       "paymentTermsLabel": null,
       "branding": {
+        "cardHover": "strong",
+        "cardReveal": true,
+        "cardBorder": true,
+        "cardBorderColor": null,
         "collapsedWordmark": null,
         "heroGlow": null,
         "embers": null,
@@ -118,7 +122,8 @@
           "#c96a3d",
           "#a84a22"
         ],
-        "hideBrand": null
+        "hideBrand": null,
+        "shareImageUrl": null
       },
       "eventDetails": {
         "factRowStyle": "classesPartyLocation",
@@ -152,7 +157,8 @@
         "name": "Bailemos Dance School",
         "city": "Nicosia · Cyprus",
         "address": "Bailemos Dance School Nicosia, Vathylaka 1, Strovolos 2033, Cyprus",
-        "mapUrl": "https://www.google.com/maps/dir/?api=1&destination=Bailemos+Dance+School+Nicosia%2C+Vathylaka+1%2C+Strovolos+2033%2C+Cyprus"
+        "mapUrl": "https://www.google.com/maps/dir/?api=1&destination=Bailemos+Dance+School+Nicosia%2C+Vathylaka+1%2C+Strovolos+2033%2C+Cyprus",
+        "secondaryAction": null
       },
       "register": {
         "secondaryLabel": "Meet the Teachers",
@@ -619,7 +625,10 @@
           "id": "party",
           "name": "Party Pass",
           "price": "€15",
-          "description": "Party only"
+          "description": "Party only",
+          "featured": null,
+          "badge": null,
+          "soldOut": false
         },
         {
           "id": "full",
@@ -627,13 +636,17 @@
           "price": "€30",
           "description": "All classes + Party",
           "featured": true,
-          "badge": "Best Value"
+          "badge": "Best Value",
+          "soldOut": false
         },
         {
           "id": "class",
           "name": "Class Pass",
           "price": "€20",
-          "description": "All classes"
+          "description": "All classes",
+          "featured": null,
+          "badge": null,
+          "soldOut": false
         }
       ],
       "posters": [
@@ -662,7 +675,87 @@
           "downloadUrl": "https://kizombaunioncy.dloizides.com/assets/posters/poster-provideo.png?v=1"
         }
       ],
-      "registration": null,
+      "registration": {
+        "latinNamesOnly": null,
+        "requireGender": true,
+        "requireMessagingApp": null,
+        "requireChoice": null,
+        "hidePassNumber": null,
+        "passNumberStart": null,
+        "antiBot": null,
+        "payMethodPicker": null,
+        "inlinePayment": null,
+        "askLevel": true,
+        "askRole": true,
+        "askNotes": true,
+        "levelOptions": [
+          "Beginner",
+          "Improver",
+          "Intermediate",
+          "Advanced"
+        ],
+        "roleOptions": [
+          "Leader",
+          "Follower",
+          "Both"
+        ],
+        "fullNameField": true,
+        "emailOptional": true,
+        "requireLevel": true,
+        "requireRole": true,
+        "askReferral": true,
+        "requireReferral": true,
+        "referralGroups": [
+          {
+            "label": "Teachers",
+            "options": [
+              "Jimmy & Ismini",
+              "Manuel",
+              "Andria Avraam",
+              "Eleni Nouka",
+              "Marios & Klara",
+              "Petros Anastasiou",
+              "Aymana"
+            ]
+          },
+          {
+            "label": "Ambassadors",
+            "options": [
+              "Daniel & Rafaela",
+              "Vasillis & Marina",
+              "Eleonora",
+              "Sofia Andreadou",
+              "Kizomba Club Cy (Eugen)",
+              "Constantinos & Christina",
+              "Aytunc",
+              "Petros C. Petrou"
+            ]
+          },
+          {
+            "label": null,
+            "options": [
+              "None",
+              "Other"
+            ]
+          }
+        ],
+        "showPassPrices": true,
+        "showLiveStats": true,
+        "copy": {
+          "eyebrow": "Sign Up",
+          "title": "Register",
+          "sub": "Reserve your spot in seconds — tell us who you are, your level and which pass you want. We’ll confirm by WhatsApp and send payment instructions.",
+          "buttonLabel": "Send via WhatsApp",
+          "note": "Submitting opens WhatsApp with a pre-filled message to Jimmy. Payment instructions will follow.",
+          "whatsAppUrl": "https://wa.me/35796650527",
+          "closedEyebrow": "Online registration closed",
+          "closedTitle": "See you at the door 🎟️",
+          "closedBody": "Online registration is now closed. Passes are still available — please come early and purchase your ticket directly at the door on the night.",
+          "closedCtaLabel": "Let Jimmy know you're coming",
+          "closedCtaUrl": "https://wa.me/35796650527?text=Hi%20Jimmy%2C%20I%27m%20coming%20to%20Kizomba%20Union%20CY%20tonight%20and%20will%20buy%20my%20pass%20at%20the%20door.",
+          "closedMeta": "Doors open from 15:30 · Classes start 16:00 · Party 21:30 — late"
+        }
+      },
       "book": {
         "eyebrowOpen": "Reserve Your Spot",
         "eyebrowClosed": "Pay at the Door",
@@ -692,7 +785,8 @@
           "meta": "Doors open from 15:30 · Cash only at the door"
         },
         "payNotifyLabel": null,
-        "payNotifyMessageTemplate": null
+        "payNotifyMessageTemplate": null,
+        "contactEmail": null
       },
       "addOns": [
         {
@@ -702,7 +796,8 @@
           "priceEur": 15,
           "description": "Oscar films and edits one song of you dancing; the event organizer sends you the final video after the event.",
           "badge": null,
-          "imageUrl": null
+          "imageUrl": null,
+          "priceNote": null
         }
       ],
       "footer": {
@@ -719,7 +814,11 @@
         "currency": null
       },
       "pwa": null,
-      "schemaVersion": 1
+      "seo": null,
+      "prices": null,
+      "media": null,
+      "postersIntro": null,
+      "socialExtras": null
     }
   }
 }
