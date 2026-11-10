@@ -16,7 +16,7 @@ test.describe('Segment editor live count @finreg-gate', () => {
 
       await page.locator(id(SEG.tags)).fill(NO_MATCH_TAG);
 
-      await expect(count, 'live count after a no-match tag').toContainText(/\b0\b/, { timeout: 10_000 });
+      await expect(count, 'live count after a no-match tag').toHaveText(/contacts\s*0$/, { timeout: 10_000 });
     });
   }
 });
