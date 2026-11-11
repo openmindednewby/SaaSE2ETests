@@ -15,7 +15,7 @@ import {
   sessionFor,
 } from './zygos-master.js';
 
-import type { Locator } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 interface Box {
   readonly kind: string;
@@ -30,6 +30,8 @@ const ALIGN_TOLERANCE_PX = 1;
 const MIN_HIT_PX = 44;
 const SCREEN_TIMEOUT_MS = 30_000;
 const SHOT_DIR = process.env.SIGHTING_DIR ?? path.join('test-results', 'finreg-merchant-row-actions');
+const ROW_COLUMN_COUNT = 5;
+const ROW_MARK = 'data-e2e-merchant-row';
 const SKIP_REASON = 'FinReg console unreachable or demo accounts not published';
 
 const VIEWPORTS = [
@@ -47,6 +49,48 @@ async function measure(actions: Locator, tenantId: string): Promise<Box[]> {
     boxes.push({ kind, top: box.y, height: box.height, width: box.width });
   }
   return boxes;
+}
+
+interface Rect {
+  readonly kind: string;
+  readonly left: number;
+  readonly right: number;
+  readonly top: number;
+  readonly bottom: number;
+}
+
+interface RowGeometry {
+  readonly cell: Rect | null;
+  readonly totalsText: Rect | null;
+  readonly actions: Rect[];
+}
+
+async function rowGeometry(page: Page, tenantId: string): Promise<RowGeometry> {
+  return page.evaluate(
+    ({ kinds, tenant, columns, mark }) => {
+      const toRect = (kind: string, r: DOMRect) => ({ kind, left: r.left, right: r.right, top: r.top, bottom: r.bottom });
+      const actions = kinds.map((kind) => {
+        const host = document.querySelector(`[data-testid="zygos-master-merchant-${kind}-${tenant}"]`)!;
+        return toRect(kind, (host.firstElementChild ?? host).getBoundingClientRect());
+      });
+      let cell: Element | null = document.querySelector(`[data-testid="zygos-master-merchant-open-${tenant}"]`);
+      while (cell && (cell.parentElement?.childElementCount ?? 0) < columns) cell = cell.parentElement;
+      if (!cell?.parentElement || !cell.previousElementSibling) return { cell: null, totalsText: null, actions };
+      cell.parentElement.setAttribute(mark, 'true');
+      const range = document.createRange();
+      range.selectNodeContents(cell.previousElementSibling);
+      return {
+        cell: toRect('actions-cell', cell.getBoundingClientRect()),
+        totalsText: toRect('totals-text', range.getBoundingClientRect()),
+        actions,
+      };
+    },
+    { kinds: [...ACTION_KINDS], tenant: tenantId, columns: ROW_COLUMN_COUNT, mark: ROW_MARK },
+  );
+}
+
+function overlaps(a: Rect, b: Rect): boolean {
+  return a.left < b.right - ALIGN_TOLERANCE_PX && b.left < a.right - ALIGN_TOLERANCE_PX && a.top < b.bottom && b.top < a.bottom;
 }
 
 function spread(values: readonly number[]): number {
@@ -75,10 +119,24 @@ for (const viewport of VIEWPORTS) {
       const report = boxes.map((b) => `${b.kind} top=${b.top.toFixed(1)} h=${b.height.toFixed(1)} w=${b.width.toFixed(1)}`).join('; ');
       test.info().annotations.push({ type: 'measured', description: `${viewport.label}: ${report}` });
       console.log(`measured ${viewport.label}: ${report}`);
-      await actions.screenshot({ path: path.join(SHOT_DIR, `${viewport.label}-row-actions.png`) });
+      const geometry = await rowGeometry(page, tenantId);
+      const row = page.locator(`[${ROW_MARK}]`).first();
+      await (geometry.cell ? row : actions).screenshot({ path: path.join(SHOT_DIR, `${viewport.label}-row-actions.png`) });
       await page.screenshot({ path: path.join(SHOT_DIR, `${viewport.label}-merchants.png`), fullPage: true });
       expect(spread(boxes.map((b) => b.top)), `AC-2 tops differ (one line, one top edge): ${report}`).toBeLessThanOrEqual(ALIGN_TOLERANCE_PX);
       expect(spread(boxes.map((b) => b.height)), `AC-2 heights differ: ${report}`).toBeLessThanOrEqual(ALIGN_TOLERANCE_PX);
+      const geo = JSON.stringify(geometry);
+      test.info().annotations.push({ type: 'geometry', description: `${viewport.label}: ${geo}` });
+      if (geometry.cell) {
+        const cell = geometry.cell;
+        const outside = geometry.actions.filter((a) => a.left < cell.left - ALIGN_TOLERANCE_PX || a.right > cell.right + ALIGN_TOLERANCE_PX).map((a) => a.kind);
+        expect(outside, `AC-5 actions outside the Actions cell: ${geo}`).toEqual([]);
+        const onTotals = geometry.actions.filter((a) => geometry.totalsText && overlaps(a, geometry.totalsText)).map((a) => a.kind);
+        expect(onTotals, `AC-5 actions overlap the Totals text: ${geo}`).toEqual([]);
+      }
+      const byX = [...geometry.actions].sort((a, b) => a.left - b.left);
+      const gaps = byX.slice(1).map((a, i) => a.left - byX[i]!.right);
+      expect(spread(gaps), `AC-5 gaps between actions are not uniform (${gaps.map((g) => g.toFixed(1)).join(', ')}): ${geo}`).toBeLessThanOrEqual(ALIGN_TOLERANCE_PX);
       if (viewport.touch) {
         const small = boxes.filter((b) => b.height < MIN_HIT_PX || b.width < MIN_HIT_PX).map((b) => b.kind);
         expect(small, `AC-3 hit boxes under ${String(MIN_HIT_PX)}x${String(MIN_HIT_PX)}: ${report}`).toEqual([]);
