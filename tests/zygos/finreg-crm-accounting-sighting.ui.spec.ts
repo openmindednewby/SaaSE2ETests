@@ -26,6 +26,7 @@ interface RouteSpec {
   readonly path: string;
   readonly screen: string;
   readonly rowPrefix?: string;
+  readonly rowSuffix?: string;
   readonly recordScreens?: readonly string[];
   readonly createButton?: string;
   readonly createScreen?: string;
@@ -52,7 +53,7 @@ const ROUTES: readonly RouteSpec[] = [
   },
   {
     module: 'crm', name: 'deals', path: '/crm/deals', screen: 'zygos-deals-screen',
-    rowPrefix: 'zygos-deal-card-', recordScreens: [DEAL_RECORD],
+    rowPrefix: 'zygos-deal-card-', rowSuffix: '-title', recordScreens: [DEAL_RECORD],
     createButton: 'zygos-deals-new', createScreen: 'zygos-deal-form-screen',
   },
   {
@@ -150,7 +151,7 @@ async function openList(page: Page, route: RouteSpec): Promise<void> {
 
 async function sightRecord(page: Page, problems: Problems, route: RouteSpec, base: string): Promise<string[]> {
   if (!route.rowPrefix || !route.recordScreens) return [];
-  const row = page.locator(`[data-testid^="${route.rowPrefix}"]`).first();
+  const row = page.locator(`[data-testid^="${route.rowPrefix}"]${route.rowSuffix ? `[data-testid$="${route.rowSuffix}"]` : ''}`).first();
   if ((await row.count()) === 0) {
     test.info().annotations.push({ type: 'not-covered', description: `${route.path}: no record in the list` });
     return [];
