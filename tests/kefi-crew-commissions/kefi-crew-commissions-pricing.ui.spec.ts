@@ -19,13 +19,14 @@
  * side, opaque `__Host-bff-kefi` cookie). Uses the suite's `KEFI_FIXTURE_ORGANIZER_*` e2e
  * organizer from `.env.<target>.secrets`; these surfaces are tenant-agnostic.
  *
- * PROD SAFETY — STRICTLY READ-ONLY: opens the accordion + a per-person detail
- * modal and reads the Copy/Expire controls. NEVER writes: no pass saved, no
- * policy PUT, Copy (which would create a link) and Expire are never pressed.
+ * PROD SAFETY: beforeAll seeds one promoter and one crew row, afterAll deletes
+ * them. Otherwise read-only: no pass saved, no policy PUT, Copy (which would
+ * create a link) and Expire are never pressed.
  */
 
 import { test, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
 
+import { COPY_LINK, CrewRosterSeed, openFirstRowMenu, resolveEventExternalId, ROW_MENU, VIEW_MEMBER } from '../../helpers/kefi/kefiCrewRosterSeed.js';
 import { getKefiUrls } from '../../helpers/kefi/kefiUrls.js';
 import { isRemoteTarget } from '../../helpers/target.js';
 import { KefiOrganizerTabsPage } from '../../pages/kefi/KefiOrganizerTabsPage.js';
@@ -39,8 +40,6 @@ const HAVE_CREDS = USERNAME !== '' && PASSWORD !== '';
 /** Where the PASS/FAIL evidence screenshots land. */
 const SHOT_DIR = 'qa-screenshots/crew-commissions-pricing';
 
-/** The BFF proxy prefix + the organizer events read-model (used to resolve the event). */
-const BFF_EVENTS_PATH = '/bff/api/kefi/api/v1/admin/events';
 
 /** A phone viewport wide enough to trip the shared Tabs collapse (<768dp). */
 const PHONE = { width: 390, height: 844 } as const;
@@ -79,18 +78,6 @@ async function bffLogin(page: Page): Promise<void> {
   await page.goto(webUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
 }
 
-/** Resolve the organizer's first event externalId via the BFF read-model. */
-async function resolveEventExternalId(page: Page): Promise<string> {
-  const { webUrl } = getKefiUrls();
-  const res = await page.request.get(`${webUrl}${BFF_EVENTS_PATH}`, {
-    headers: { 'X-BFF-Csrf': '1' },
-  });
-  expect(res.status(), 'the organizer events read-model returned OK').toBe(200);
-  const body = (await res.json()) as { events: Array<{ externalId: string; name: string }> };
-  expect(body.events.length, 'the fixture organizer owns at least one event').toBeGreaterThan(0);
-  return body.events[0].externalId;
-}
-
 test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
   test.skip(!isRemoteTarget(), 'Drives the deployed kefi-web organizer surface (E2E_TARGET=prod|staging)');
   test.skip(!HAVE_CREDS, 'KEFI_FIXTURE_ORGANIZER_USERNAME/PASSWORD unset in .env.<target>[.secrets]');
@@ -99,18 +86,21 @@ test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
   let page: Page;
   let organizer: KefiOrganizerTabsPage;
   let eventExternalId: string;
+  let roster: CrewRosterSeed | undefined;
 
   test.beforeAll(async ({ browser }: { browser: Browser }) => {
     context = await browser.newContext();
     page = await context.newPage();
     await bffLogin(page);
     eventExternalId = await resolveEventExternalId(page);
+    roster = await CrewRosterSeed.create(page.request, eventExternalId, { email: USERNAME, password: PASSWORD });
     organizer = new KefiOrganizerTabsPage(page);
     await organizer.gotoEvent(eventExternalId);
     await organizer.waitForShell();
   });
 
   test.afterAll(async () => {
+    await roster?.removeAll();
     await context?.close();
   });
 
@@ -132,10 +122,8 @@ test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
 
     await expect(accordion, 'the add-a-ticket-type accordion is present').toBeVisible();
     await expect(toggle, 'the accordion toggle is present').toBeVisible();
-    // Closed by default: the pass form fields are NOT in the DOM until opened.
-    await expect(codeField, 'the pass form is CLOSED by default (no code field rendered)').toHaveCount(
-      0,
-    );
+    // Closed by default: the shared Collapse keeps the form mounted but hidden.
+    await expect(codeField, 'the pass form is CLOSED by default (code field hidden)').toBeHidden();
     await page.screenshot({ path: `${SHOT_DIR}/01a-pricing-accordion-closed.png`, fullPage: true });
 
     // Pressing the toggle OPENS the pass form.
@@ -153,7 +141,7 @@ test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
 
     // Close it again — leave no dirty UI state (nothing was ever submitted).
     await toggle.click();
-    await expect(codeField, 'the pass form closed again after re-pressing the toggle').toHaveCount(0);
+    await expect(codeField, 'the pass form closed again after re-pressing the toggle').toBeHidden();
   });
 
   test('@ui Crew & Commissions tab: label is "Crew & Commissions"; the unified roster renders real rows', async () => {
@@ -176,15 +164,10 @@ test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
       'the roster section carries its title',
     ).toBeVisible();
 
-    // Real rows — the roster read-model returns the tenant's crew (promoters +
-    // crew), so at least one "view" row action must be present.
-    const viewButtons = page.locator('[data-testid^="organizer-crew-roster-view-"]');
-    await expect(
-      viewButtons.first(),
-      'the roster rendered real rows (at least one per-person view action)',
-    ).toBeVisible();
-    const rowCount = await viewButtons.count();
-    expect(rowCount, 'the roster is a non-empty unified list').toBeGreaterThan(0);
+    // Real rows — the roster read-model returns the seeded promoter + crew, each row with its action menu.
+    const rowMenus = page.locator(ROW_MENU);
+    await expect(rowMenus.first(), 'the roster rendered real rows (at least one row action menu)').toBeVisible();
+    expect(await rowMenus.count(), 'the roster is a non-empty unified list').toBeGreaterThan(0);
 
     await page.screenshot({ path: `${SHOT_DIR}/02-crew-roster.png`, fullPage: true });
   });
@@ -221,9 +204,8 @@ test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
     await page.screenshot({ path: `${SHOT_DIR}/03a-commission-policy.png`, fullPage: true });
 
     // A per-person detail — baseline → role → exception → effective breakdown.
-    const firstView = page.locator('[data-testid^="organizer-crew-roster-view-"]').first();
-    await firstView.scrollIntoViewIfNeeded();
-    await firstView.click();
+    await openFirstRowMenu(page);
+    await page.getByText(VIEW_MEMBER, { exact: true }).first().click();
 
     const modal = page.getByTestId('organizer-crew-detail-modal');
     await expect(modal, 'the per-person detail modal opened').toBeVisible();
@@ -248,18 +230,14 @@ test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
     await organizer.selectTab('promoters');
     await organizer.expectActiveTab('promoters');
 
-    // Row-level: the personal-link cell = presence text + a Copy control.
-    const copyButtons = page.locator('[data-testid^="organizer-crew-copy-link-"]');
-    await expect(
-      copyButtons.first(),
-      'a roster row exposes a personal-link Copy control',
-    ).toBeVisible();
+    // Row-level: the row action menu holds the personal-link Copy control.
+    await openFirstRowMenu(page);
+    const copyControl = page.locator('[data-testid^="organizer-crew-copy-link-"]').or(page.getByText(COPY_LINK, { exact: true }));
+    await expect(copyControl.first(), 'a roster row exposes a personal-link Copy control (inline or in its menu)').toBeVisible();
     await page.screenshot({ path: `${SHOT_DIR}/04a-personal-link-row.png`, fullPage: true });
 
     // Per-person detail: the link URL + Copy + an Expire action.
-    const firstView = page.locator('[data-testid^="organizer-crew-roster-view-"]').first();
-    await firstView.scrollIntoViewIfNeeded();
-    await firstView.click();
+    await page.getByText(VIEW_MEMBER, { exact: true }).first().click();
     await expect(page.getByTestId('organizer-crew-detail-modal'), 'the detail modal opened').toBeVisible();
 
     await expect(
@@ -343,7 +321,7 @@ test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
       // the card mounts (with a transient empty state) before the React Query
       // roster settles, so screenshotting on the card alone can catch "0 crew".
       await expect(
-        phone.locator('[data-testid^="organizer-crew-roster-view-"]').first(),
+        phone.locator(ROW_MENU).first(),
         'the roster populated real rows at phone width (same read-model as desktop)',
       ).toBeVisible({ timeout: 20_000 });
       await phone.screenshot({ path: `${SHOT_DIR}/05c-mobile-crew-surface.png`, fullPage: true });
