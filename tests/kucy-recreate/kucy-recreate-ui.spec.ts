@@ -18,6 +18,7 @@ import { KefiSignupSuccessPage } from '../../pages/kefi/KefiSignupSuccessPage.js
 test.describe.configure({ mode: 'serial' });
 
 const EVENT_DATE_ISO = '2027-04-24';
+const SIGNUP_MIN_FILL_MS = 3_500;
 const STEPS_ABOUT_TO_PASSES = 3;
 const STEPS_PASSES_TO_VENUE = 2;
 const STEPS_VENUE_TO_REVIEW = 3;
@@ -46,6 +47,7 @@ async function signUpThroughUi(page: Page): Promise<KefiOnboardingWizardPage> {
     if (resp.url().includes('/public/signup')) void resp.text().then((body) => console.log(`[signup] ${String(resp.status())} ${body.slice(0, 300)}`));
   });
   await marketing.goto();
+  await page.waitForTimeout(SIGNUP_MIN_FILL_MS);
   await marketing.signupAndExpectSuccess({ email: ctx.email, password: ctx.password, tenantName: ctx.tenantName });
   await new KefiSignupSuccessPage(page).expectLoaded();
   const mailbox = new KefiMailbox(loadKefiMailboxConfig(), { timeoutMs: 60_000, pollIntervalMs: 2_000 });
