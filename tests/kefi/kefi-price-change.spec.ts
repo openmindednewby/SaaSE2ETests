@@ -35,6 +35,7 @@ const SWITCH_DELAY_MS = 15_000;
 const SWITCH_WAIT_MS = 90_000;
 const DAY_MS = 24 * HOUR_MS;
 const MAX_PUBLISHES = 2;
+const SERVE_WAIT_MS = 180_000;
 
 test.describe.configure({ mode: 'serial' });
 
@@ -129,18 +130,25 @@ test.describe('KEFI-PRICE-E2E-1 organizer price change reaching the public page'
       const job = await admin.publishLanding(owner());
       await admin.pollPublishStatus({ ...owner(), jobName: job.jobName, timeoutMs: PUBLISH_TIMEOUT_MS });
     };
+    const servedPriceTag = async (expected: string): Promise<string | null> => {
+      let seen: string | null = null;
+      await expect.poll(async () => (seen = await bakedPriceTag(request, tenant.siteUrl, SHARED_TIER_NAME)), {
+        message: `the served page switches to the new build (${expected})`, timeout: SERVE_WAIT_MS,
+      }).toBe(expected).catch(() => undefined);
+      return seen;
+    };
     try {
       await expect.poll(async () => timelinePrice(await getPriceTimeline(request, tenant.slug), SHARED_PASS_CODE), {
         message: 'the window scheduled in the future has started', timeout: SWITCH_WAIT_MS,
       }).toBe(startedPriceEur);
 
       await publish();
-      const bakedAfterStart = await bakedPriceTag(request, tenant.siteUrl, SHARED_TIER_NAME);
+      const bakedAfterStart = await servedPriceTag(`€${startedPriceEur}`);
       await restoreWindow(request, ref, started);
       started = undefined;
       future = await replaceCurrentWindow(request, ref, current, futurePriceEur, utcNowIso(DAY_MS));
       await publish();
-      const bakedBeforeFuture = await bakedPriceTag(request, tenant.siteUrl, SHARED_TIER_NAME);
+      const bakedBeforeFuture = await servedPriceTag(`€${current.priceEur}`);
 
       expect.soft(bakedAfterStart, 'AC-PRICE-3 AC-PRICE-5 a started window is baked by the publish').toBe(`€${startedPriceEur}`);
       expect.soft(bakedBeforeFuture, 'AC-PRICE-4 a window that has not started is not baked').toBe(`€${current.priceEur}`);
