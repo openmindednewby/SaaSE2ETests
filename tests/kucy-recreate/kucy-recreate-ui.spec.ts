@@ -44,7 +44,7 @@ function priceDigits(price: string): string {
 async function signUpThroughUi(page: Page): Promise<KefiOnboardingWizardPage> {
   const marketing = new KefiMarketingPage(page);
   page.on('response', (resp) => {
-    if (resp.url().includes('/public/signup')) void resp.text().then((body) => console.log(`[signup] ${String(resp.status())} ${body.slice(0, 300)}`));
+    if (resp.url().includes('/public/signup')) void resp.text().catch(() => '').then((body) => console.log(`[signup] ${String(resp.status())} ${body.slice(0, 300)}`));
   });
   await marketing.goto();
   await page.waitForTimeout(SIGNUP_MIN_FILL_MS);
