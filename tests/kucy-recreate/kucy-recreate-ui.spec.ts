@@ -89,7 +89,7 @@ async function walkWizard(page: Page, wizard: KefiOnboardingWizardPage, editor: 
   await wizard.continueSteps(STEPS_VENUE_TO_REVIEW);
   await expect(page.getByTestId('onboarding-step-review')).toBeVisible();
   const published = await wizard.finishFromReview();
-  await expect(page, 'Finish lands on the landing editor').toHaveURL(/\/organizer\/landing\/?$/, { timeout: 30_000 });
+  await expect(page, 'Finish lands on the landing editor').toHaveURL(/\/organizer\/landing\/?(\?publish=started)?$/, { timeout: 30_000 });
   return published.tenantSlug ?? '';
 }
 
