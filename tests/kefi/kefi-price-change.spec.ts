@@ -19,6 +19,8 @@ import {
   restoreWindow,
   timelinePrice,
   type PassRef,
+  landingApiPass,
+  servedSample,
   utcNowIso,
   type WindowReplacement,
 } from '../../helpers/kefi/kefiPriceWindowClient.js';
@@ -36,6 +38,7 @@ const SWITCH_WAIT_MS = 90_000;
 const DAY_MS = 24 * HOUR_MS;
 const MAX_PUBLISHES = 2;
 const SERVE_WAIT_MS = 180_000;
+const SERVE_POLL_MS = 15_000;
 
 test.describe.configure({ mode: 'serial' });
 
@@ -121,18 +124,32 @@ test.describe('KEFI-PRICE-E2E-1 organizer price change reaching the public page'
     const current = await currentWindowOf(request, ref);
     const startedPriceEur = current.priceEur + PRICE_STEP_EUR;
     const futurePriceEur = current.priceEur + 2 * PRICE_STEP_EUR;
+    const evidence = (kind: string, data: Record<string, unknown>): void => console.log(`[price-evidence] ${kind} ${JSON.stringify(data)}`);
+    evidence('change', { atUtc: new Date().toISOString(), switchesAtUtc: utcNowIso(SWITCH_DELAY_MS), from: current.priceEur, to: startedPriceEur });
     let started: WindowReplacement | undefined = await replaceCurrentWindow(request, ref, current, startedPriceEur, utcNowIso(SWITCH_DELAY_MS));
     let future: WindowReplacement | undefined;
     let publishes = 0;
     const publish = async (): Promise<void> => {
       publishes += 1;
       expect(publishes, 'at most two publishes per run').toBeLessThanOrEqual(MAX_PUBLISHES);
+      const requestedAtUtc = new Date().toISOString();
       const job = await admin.publishLanding(owner());
-      await admin.pollPublishStatus({ ...owner(), jobName: job.jobName, timeoutMs: PUBLISH_TIMEOUT_MS });
+      const done = await admin.pollPublishStatus({ ...owner(), jobName: job.jobName, timeoutMs: PUBLISH_TIMEOUT_MS });
+      const landing = await landingApiPass(request, tenant.slug, SHARED_PASS_CODE);
+      const served = await servedSample(request, tenant.siteUrl, SHARED_TIER_NAME);
+      evidence('publish', { n: publishes, requestedAtUtc, enqueuedAtUtc: job.enqueuedAtUtc, status: done.status, succeededSeenAtUtc: new Date().toISOString(), landing, served });
     };
     const servedPriceTag = async (expected: string): Promise<string | null> => {
       let seen: string | null = null;
-      await expect.poll(async () => (seen = await bakedPriceTag(request, tenant.siteUrl, SHARED_TIER_NAME)), {
+      let poll = 0;
+      await expect.poll(async () => {
+        const sample = await servedSample(request, tenant.siteUrl, SHARED_TIER_NAME);
+        poll += 1;
+        evidence('poll', { publish: publishes, poll, expected, ...sample });
+        seen = sample.price;
+        return seen;
+      }, {
+        intervals: [SERVE_POLL_MS],
         message: `the served page switches to the new build (${expected})`, timeout: SERVE_WAIT_MS,
       }).toBe(expected).catch(() => undefined);
       return seen;
@@ -146,6 +163,7 @@ test.describe('KEFI-PRICE-E2E-1 organizer price change reaching the public page'
       const bakedAfterStart = await servedPriceTag(`€${startedPriceEur}`);
       await restoreWindow(request, ref, started);
       started = undefined;
+      evidence('change', { atUtc: new Date().toISOString(), restoredTo: current.priceEur, futureFromUtc: utcNowIso(DAY_MS), futurePriceEur });
       future = await replaceCurrentWindow(request, ref, current, futurePriceEur, utcNowIso(DAY_MS));
       await publish();
       const bakedBeforeFuture = await servedPriceTag(`€${current.priceEur}`);
