@@ -26,7 +26,7 @@
 
 import { test, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
 
-import { CrewRosterSeed, resolveEventExternalId } from '../../helpers/kefi/kefiCrewRosterSeed.js';
+import { COPY_LINK, CrewRosterSeed, openFirstRowMenu, resolveEventExternalId, ROW_MENU, VIEW_MEMBER } from '../../helpers/kefi/kefiCrewRosterSeed.js';
 import { getKefiUrls } from '../../helpers/kefi/kefiUrls.js';
 import { isRemoteTarget } from '../../helpers/target.js';
 import { KefiOrganizerTabsPage } from '../../pages/kefi/KefiOrganizerTabsPage.js';
@@ -164,15 +164,10 @@ test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
       'the roster section carries its title',
     ).toBeVisible();
 
-    // Real rows — the roster read-model returns the tenant's crew (promoters +
-    // crew), so at least one "view" row action must be present.
-    const viewButtons = page.locator('[data-testid^="organizer-crew-roster-view-"]');
-    await expect(
-      viewButtons.first(),
-      'the roster rendered real rows (at least one per-person view action)',
-    ).toBeVisible();
-    const rowCount = await viewButtons.count();
-    expect(rowCount, 'the roster is a non-empty unified list').toBeGreaterThan(0);
+    // Real rows — the roster read-model returns the seeded promoter + crew, each row with its action menu.
+    const rowMenus = page.locator(ROW_MENU);
+    await expect(rowMenus.first(), 'the roster rendered real rows (at least one row action menu)').toBeVisible();
+    expect(await rowMenus.count(), 'the roster is a non-empty unified list').toBeGreaterThan(0);
 
     await page.screenshot({ path: `${SHOT_DIR}/02-crew-roster.png`, fullPage: true });
   });
@@ -209,9 +204,8 @@ test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
     await page.screenshot({ path: `${SHOT_DIR}/03a-commission-policy.png`, fullPage: true });
 
     // A per-person detail — baseline → role → exception → effective breakdown.
-    const firstView = page.locator('[data-testid^="organizer-crew-roster-view-"]').first();
-    await firstView.scrollIntoViewIfNeeded();
-    await firstView.click();
+    await openFirstRowMenu(page);
+    await page.getByText(VIEW_MEMBER, { exact: true }).first().click();
 
     const modal = page.getByTestId('organizer-crew-detail-modal');
     await expect(modal, 'the per-person detail modal opened').toBeVisible();
@@ -236,18 +230,13 @@ test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
     await organizer.selectTab('promoters');
     await organizer.expectActiveTab('promoters');
 
-    // Row-level: the personal-link cell = presence text + a Copy control.
-    const copyButtons = page.locator('[data-testid^="organizer-crew-copy-link-"]');
-    await expect(
-      copyButtons.first(),
-      'a roster row exposes a personal-link Copy control',
-    ).toBeVisible();
+    // Row-level: the row action menu holds the personal-link Copy control.
+    await openFirstRowMenu(page);
+    await expect(page.getByText(COPY_LINK, { exact: true }).first(), 'a roster row exposes a personal-link Copy control').toBeVisible();
     await page.screenshot({ path: `${SHOT_DIR}/04a-personal-link-row.png`, fullPage: true });
 
     // Per-person detail: the link URL + Copy + an Expire action.
-    const firstView = page.locator('[data-testid^="organizer-crew-roster-view-"]').first();
-    await firstView.scrollIntoViewIfNeeded();
-    await firstView.click();
+    await page.getByText(VIEW_MEMBER, { exact: true }).first().click();
     await expect(page.getByTestId('organizer-crew-detail-modal'), 'the detail modal opened').toBeVisible();
 
     await expect(
@@ -331,7 +320,7 @@ test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
       // the card mounts (with a transient empty state) before the React Query
       // roster settles, so screenshotting on the card alone can catch "0 crew".
       await expect(
-        phone.locator('[data-testid^="organizer-crew-roster-view-"]').first(),
+        phone.locator(ROW_MENU).first(),
         'the roster populated real rows at phone width (same read-model as desktop)',
       ).toBeVisible({ timeout: 20_000 });
       await phone.screenshot({ path: `${SHOT_DIR}/05c-mobile-crew-surface.png`, fullPage: true });

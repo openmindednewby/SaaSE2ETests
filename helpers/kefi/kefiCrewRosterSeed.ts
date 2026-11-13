@@ -7,6 +7,17 @@ const BFF_EVENTS_PATH = '/bff/api/kefi/api/v1/admin/events';
 const HTTP_CREATED = 201;
 const HTTP_REDIRECT_MIN = 300;
 
+export const ROW_MENU = '[data-testid^="organizer-crew-roster-actions-"][data-testid$="-overflow"]';
+export const VIEW_MEMBER = 'View member';
+export const COPY_LINK = 'Copy personal link';
+
+/** Open the first roster row's action menu, where View member and the personal-link actions live. */
+export async function openFirstRowMenu(page: Page): Promise<void> {
+  const menu = page.locator(ROW_MENU).first();
+  await menu.scrollIntoViewIfNeeded();
+  await menu.click();
+}
+
 /** Resolve the organizer's first event externalId via the BFF read-model. */
 export async function resolveEventExternalId(page: Page): Promise<string> {
   const { webUrl } = getKefiUrls();
