@@ -232,7 +232,8 @@ test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
 
     // Row-level: the row action menu holds the personal-link Copy control.
     await openFirstRowMenu(page);
-    await expect(page.getByText(COPY_LINK, { exact: true }).first(), 'a roster row exposes a personal-link Copy control').toBeVisible();
+    const copyControl = page.locator('[data-testid^="organizer-crew-copy-link-"]').or(page.getByText(COPY_LINK, { exact: true }));
+    await expect(copyControl.first(), 'a roster row exposes a personal-link Copy control (inline or in its menu)').toBeVisible();
     await page.screenshot({ path: `${SHOT_DIR}/04a-personal-link-row.png`, fullPage: true });
 
     // Per-person detail: the link URL + Copy + an Expire action.
