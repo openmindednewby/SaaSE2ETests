@@ -762,6 +762,13 @@ export function buildProjects(): ProjectConfig {
       use: CHROME,
     },
     {
+      name: 'kefi-price-change',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi\/kefi-price-change\.spec\.ts/,
+      use: CHROME,
+    },
+    {
       // Kefi organizer dashboard / P&L (#276 gap #4) — seeds genuinely-paid
       // attendees via the import path (RecordPayment moves gross/net) and asserts
       // the P&L numbers + the Draft-event safe-zeros case. Pure @api → 300s budget.
