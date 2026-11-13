@@ -140,19 +140,15 @@ test.describe('KEFI-PRICE-E2E-1 organizer price change reaching the public page'
       evidence('publish', { n: publishes, requestedAtUtc, enqueuedAtUtc: job.enqueuedAtUtc, status: done.status, succeededSeenAtUtc: new Date().toISOString(), landing, served });
     };
     const servedPriceTag = async (expected: string): Promise<string | null> => {
+      const deadline = Date.now() + SERVE_WAIT_MS;
       let seen: string | null = null;
-      let poll = 0;
-      await expect.poll(async () => {
+      for (let poll = 1; ; poll += 1) {
         const sample = await servedSample(request, tenant.siteUrl, SHARED_TIER_NAME);
-        poll += 1;
         evidence('poll', { publish: publishes, poll, expected, ...sample });
         seen = sample.price;
-        return seen;
-      }, {
-        intervals: [SERVE_POLL_MS],
-        message: `the served page switches to the new build (${expected})`, timeout: SERVE_WAIT_MS,
-      }).toBe(expected).catch(() => undefined);
-      return seen;
+        if (seen === expected || Date.now() + SERVE_POLL_MS > deadline) return seen;
+        await new Promise((resolve) => setTimeout(resolve, SERVE_POLL_MS));
+      }
     };
     try {
       await expect.poll(async () => timelinePrice(await getPriceTimeline(request, tenant.slug), SHARED_PASS_CODE), {
