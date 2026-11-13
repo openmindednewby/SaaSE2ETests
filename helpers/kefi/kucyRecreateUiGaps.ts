@@ -27,7 +27,7 @@ export function fieldGaps(expected: object, actual: object): FieldGap[] {
   const gaps: FieldGap[] = [];
   for (const [path, value] of want) {
     const seen = got.get(path);
-    const samePrice = path.endsWith('.price') && digitsOnly(seen) !== '' && digitsOnly(seen) === digitsOnly(value);
+    const samePrice = path.endsWith('.price') && digitsOnly(seen) !== '' && Number(digitsOnly(seen)) === Number(digitsOnly(value));
     const rowId = /\]\.id$/.test(path);
     if (seen !== value && !samePrice && !rowId) gaps.push({ path, expected: value, actual: seen });
   }
