@@ -1,7 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { KefiAdminClient } from '../../helpers/kefi/kefiAdminClient.js';
-import { newCanaryContext } from '../../helpers/kefi/kefiCanaryIds.js';
+import { newCanaryContext, type KefiCanaryContext } from '../../helpers/kefi/kefiCanaryIds.js';
 import { probeDynamicLandingRender } from '../../helpers/kefi/kefiDynamicLandingProbe.js';
 import { publicTenantPath } from '../../helpers/kefi/kefiLandingPeopleFixture.js';
 import { KefiMailbox, extractVerifyUrl, loadKefiMailboxConfig } from '../../helpers/kefi/kefiMailboxClient.js';
@@ -31,6 +32,7 @@ const data = loadKucyRecreate();
 const c = data.config as unknown as KucyWalkView;
 
 const ctx = newCanaryContext();
+const quickCtx = newCanaryContext();
 const adminClient = new KefiAdminClient();
 const pageErrors: string[] = [];
 const noControl: string[] = [];
@@ -42,25 +44,26 @@ function priceDigits(price: string): string {
   return price.replace(/[^\d.]/g, '');
 }
 
-async function signUpThroughUi(page: Page): Promise<KefiOnboardingWizardPage> {
+async function signUpThroughUi(page: Page, canary: KefiCanaryContext): Promise<KefiOnboardingWizardPage> {
   const marketing = new KefiMarketingPage(page);
   page.on('response', (resp) => {
-    if (resp.url().includes('/public/signup')) void resp.text().catch(() => '').then((body) => console.log(`[signup] ${String(resp.status())} ${body.slice(0, 300)}`));
+    if (resp.url().includes('/public/signup')) void resp.text().catch(() => '').then((body) => test.info().annotations.push({ type: 'signup', description: `${String(resp.status())} ${body.slice(0, 300)}` }));
   });
   await marketing.goto();
-  await page.waitForTimeout(SIGNUP_MIN_FILL_MS);
-  await marketing.signupAndExpectSuccess({ email: ctx.email, password: ctx.password, tenantName: ctx.tenantName });
+  await delay(SIGNUP_MIN_FILL_MS);
+  await marketing.signupAndExpectSuccess({ email: canary.email, password: canary.password, tenantName: canary.tenantName });
   await new KefiSignupSuccessPage(page).expectLoaded();
   const mailbox = new KefiMailbox(loadKefiMailboxConfig(), { timeoutMs: 60_000, pollIntervalMs: 2_000 });
-  const verifyUrl = extractVerifyUrl(await mailbox.waitForMessageTo(ctx.email));
+  const verifyUrl = extractVerifyUrl(await mailbox.waitForMessageTo(canary.email));
   expect(verifyUrl, 'verify URL in the signup mail').not.toBeNull();
   await page.goto(verifyUrl!);
   const wizard = new KefiOnboardingWizardPage(page);
-  await wizard.expectLoaded();
+  await wizard.expectQuickStartLoaded();
   return wizard;
 }
 
-async function walkWizard(page: Page, wizard: KefiOnboardingWizardPage, editor: KefiLandingEditorPage): Promise<void> {
+async function walkWizard(page: Page, wizard: KefiOnboardingWizardPage, editor: KefiLandingEditorPage): Promise<string> {
+  await wizard.openStepByStep();
   await wizard.eventNameInput.fill(c.branding.name);
   await wizard.eventLocationInput.fill(c.eventDetails.locationLabel);
   await wizard.eventDateInput.fill(EVENT_DATE_ISO);
@@ -85,8 +88,9 @@ async function walkWizard(page: Page, wizard: KefiOnboardingWizardPage, editor: 
   await editor.fill('landing-form-venue-name', c.venue.name);
   await wizard.continueSteps(STEPS_VENUE_TO_REVIEW);
   await expect(page.getByTestId('onboarding-step-review')).toBeVisible();
-  await wizard.finishFromReview();
-  await expect(page, 'Finish lands on the organizer home').toHaveURL(/\/organizer\/?$/, { timeout: 30_000 });
+  const published = await wizard.finishFromReview();
+  await expect(page, 'Finish lands on the landing editor').toHaveURL(/\/organizer\/landing\/?$/, { timeout: 30_000 });
+  return published.tenantSlug ?? '';
 }
 
 async function walkStats(editor: KefiLandingEditorPage): Promise<void> {
@@ -141,7 +145,8 @@ test.describe('KEFI-RECREATE-1 KUCY recreated by a UI walk on a throwaway tenant
 
   test.afterAll(async ({ request }) => {
     const swept = await cleanupKefiCanary(ctx.canaryId, { adminClient });
-    test.info().annotations.push({ type: 'canarySwept', description: JSON.stringify(swept) });
+    const quickSwept = await cleanupKefiCanary(quickCtx.canaryId, { adminClient });
+    test.info().annotations.push({ type: 'canarySwept', description: JSON.stringify({ swept, quickSwept }) });
     if (!slug) return;
     await expect.poll(async () => (await request.get(`${getKefiUrls().apiUrl}${publicTenantPath(slug)}`)).status(), {
       message: `public GET ${publicTenantPath(slug)} after cleanup`,
@@ -153,15 +158,16 @@ test.describe('KEFI-RECREATE-1 KUCY recreated by a UI walk on a throwaway tenant
     test.info().annotations.push({ type: 'canaryId', description: ctx.canaryId });
     page.on('pageerror', (error) => pageErrors.push(error.message));
     const editor = new KefiLandingEditorPage(page);
-    await walkWizard(page, await signUpThroughUi(page), editor);
+    slug = await walkWizard(page, await signUpThroughUi(page, ctx), editor);
+    expect(slug, 'Finish publish names an e2c- tenant').toMatch(/^e2c-/);
+    await probeDynamicLandingRender({ slug, requiredMarkers: [c.branding.name], timeoutMs: PUBLISH_RENDER_TIMEOUT_MS });
     await editor.goto(getKefiUrls().webUrl);
     await walkEditor(page, editor);
     await editor.save();
 
     const published = await editor.publish();
 
-    slug = published.tenantSlug ?? '';
-    expect(slug, 'publish names an e2c- tenant').toMatch(/^e2c-/);
+    expect(published.tenantSlug, 'editor publish names the same tenant').toBe(slug);
     const probe = await probeDynamicLandingRender({ slug, requiredMarkers: [c.branding.name], timeoutMs: PUBLISH_RENDER_TIMEOUT_MS });
     html = decodeHtml(await (await request.get(probe.url, { timeout: PAGE_FETCH_MS })).text());
     const landing = await request.get(`${getKefiUrls().apiUrl}${publicTenantPath(slug)}`, { timeout: PAGE_FETCH_MS });
@@ -197,8 +203,18 @@ test.describe('KEFI-RECREATE-1 KUCY recreated by a UI walk on a throwaway tenant
     const unwalked = matrixRows(data).filter((r) => !WALKED_ROWS.has(r.id)).map((r) => ({ id: r.id, missing: missingFrom(html, r.expected).length, of: r.expected.length }));
     const report = { roots: gapRoots(gaps), noControl, unwalked, gaps };
     await test.info().attach('ui-gaps.json', { body: JSON.stringify(report, null, 2), contentType: 'application/json' });
-    console.log(`[UI-GAP] ${JSON.stringify({ roots: report.roots, noControl, unwalked })}`);
-    console.log(`[UI-GAP-PATHS] ${JSON.stringify(gaps.map((g) => g.path))}`);
+    test.info().annotations.push({ type: 'UI-GAP', description: JSON.stringify({ roots: report.roots, noControl, unwalked }) });
     expect(pageErrors, 'uncaught browser errors during the walk').toEqual([]);
+  });
+
+  test('AC-OBQ-1 new organizer fills name, date and template in quick start, lands on the landing editor with the setup guide', async ({ page }) => {
+    test.info().annotations.push({ type: 'canaryId', description: quickCtx.canaryId });
+    const wizard = await signUpThroughUi(page, quickCtx);
+    const quickStart = { name: `${quickCtx.slugPrefix}Quick Night`, dateIso: EVENT_DATE_ISO, templateKey: 'kucy' };
+
+    await wizard.submitQuickStart(quickStart);
+
+    await expect(page, 'quick start lands on the landing editor').toHaveURL(/\/organizer\/landing\/?$/, { timeout: 30_000 });
+    await expect(page.getByTestId('organizer-setup-guide'), 'setup guide beside the editor').toBeVisible({ timeout: 30_000 });
   });
 });

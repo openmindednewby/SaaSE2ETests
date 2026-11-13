@@ -13,7 +13,7 @@
  * click can race the save and the backend complete handler sees partial state.
  */
 
-import { type Locator, type Page, expect } from '@playwright/test';
+import { type Locator, type Page, type Response, expect } from '@playwright/test';
 import { setTimeout as delay } from 'node:timers/promises';
 
 /**
@@ -58,6 +58,11 @@ export class KefiOnboardingWizardPage {
   readonly backButton: Locator;
   readonly banner: Locator;
 
+  // Quick start — the first screen a new tenant sees
+  readonly quickStartForm: Locator;
+  readonly quickStepByStepLink: Locator;
+  readonly quickSubmitButton: Locator;
+
   constructor(page: Page) {
     this.page = page;
 
@@ -75,6 +80,32 @@ export class KefiOnboardingWizardPage {
     this.continueButton = page.getByTestId('onboarding-continue');
     this.backButton = page.getByTestId('onboarding-back');
     this.banner = page.getByTestId('onboarding-banner');
+
+    this.quickStartForm = page.getByTestId('onboarding-quick-start');
+    this.quickStepByStepLink = page.getByTestId('onboarding-quick-step-by-step');
+    this.quickSubmitButton = page.getByTestId('onboarding-quick-submit');
+  }
+
+  /** Wait for the quick start form a new tenant lands on. */
+  async expectQuickStartLoaded(timeoutMs: number = WIZARD_LOAD_TIMEOUT_MS): Promise<void> {
+    await expect(this.quickStartForm).toBeVisible({ timeout: timeoutMs });
+  }
+
+  /** Leave quick start for the step-by-step wizard. */
+  async openStepByStep(): Promise<void> {
+    await this.quickStepByStepLink.click();
+    await this.expectLoaded();
+  }
+
+  /** Fill name, date and template in quick start, submit, and await the server's completion. */
+  async submitQuickStart(input: { name: string; dateIso: string; templateKey: string }): Promise<void> {
+    await this.eventNameInput.fill(input.name);
+    await this.eventDateInput.fill(input.dateIso);
+    await this.page.getByTestId(`landing-template-option-${input.templateKey}`).click();
+    await expect(this.quickSubmitButton).toBeEnabled({ timeout: 10_000 });
+    const completeResponse = this.waitForPost('/admin/onboarding/complete');
+    await this.quickSubmitButton.click();
+    await this.expectOk(await completeResponse, 'complete-onboarding');
   }
 
   /** Wait for the wizard shell to render. */
@@ -157,27 +188,32 @@ export class KefiOnboardingWizardPage {
   }
 
   /**
-   * Click Finish on the review step and await the server's confirmation.
-   *
-   * The wizard's onSuccess fires `router.replace('/organizer')` but the page
-   * bounces back to `/organizer/onboarding` because OnboardingGate's cached
-   * query still has `completed=false` (the invalidate is async, the next fetch
-   * races the redirect). Wait for the actual server confirmation —
-   * POST /admin/onboarding/complete returning 2xx — instead of the URL.
+   * Click Finish on the review step; Finish completes onboarding and then
+   * publishes the site. Await both server confirmations and return the
+   * publish result, so callers never fire a publish of their own over it.
    */
-  async finishFromReview(): Promise<void> {
+  async finishFromReview(): Promise<{ tenantSlug?: string; jobName?: string }> {
     await expect(this.continueButton).toBeEnabled({ timeout: 10_000 });
-    const completeResponse = this.page.waitForResponse(
-      (resp) =>
-        resp.url().includes('/admin/onboarding/complete') &&
-        resp.request().method() === 'POST',
+    const completeResponse = this.waitForPost('/admin/onboarding/complete');
+    const publishResponse = this.waitForPost('/admin/landing-config/publish');
+    await this.continueButton.click();
+    await this.expectOk(await completeResponse, 'complete-onboarding');
+    const published = await publishResponse;
+    await this.expectOk(published, 'Finish publish');
+    return (await published.json()) as { tenantSlug?: string; jobName?: string };
+  }
+
+  private waitForPost(path: string): Promise<Response> {
+    return this.page.waitForResponse(
+      (resp) => resp.url().includes(path) && resp.request().method() === 'POST',
       { timeout: 60_000 },
     );
-    await this.continueButton.click();
-    const resp = await completeResponse;
+  }
+
+  private async expectOk(resp: Response, what: string): Promise<void> {
     if (!resp.ok()) {
       throw new Error(
-        `[KefiOnboardingWizard] complete-onboarding failed: ${String(resp.status())} ${resp.statusText()}`,
+        `[KefiOnboardingWizard] ${what} failed: ${String(resp.status())} ${resp.statusText()}`,
       );
     }
   }
