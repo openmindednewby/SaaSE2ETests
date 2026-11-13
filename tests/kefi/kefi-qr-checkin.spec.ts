@@ -176,7 +176,7 @@ test.describe('Kefi QR ticket render + door check-in (KEFI-1)', () => {
       await page.goto(verifyUrl!, { waitUntil: 'commit' });
 
       const wizard = new KefiOnboardingWizardPage(page);
-      await wizard.expectLoaded(COLD_SPA_LOAD_TIMEOUT_MS);
+      await wizard.openStepByStepFromQuickStart(COLD_SPA_LOAD_TIMEOUT_MS);
       await wizard.fillFastPath({
         canaryPrefix: ctx.slugPrefix,
         eventDateIso: toIsoDate(new Date(Date.now() + CANARY_EVENT_DAYS_AHEAD * MS_PER_DAY)),

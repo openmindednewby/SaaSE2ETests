@@ -116,7 +116,7 @@ test.describe('Kefi tenant lifecycle — full self-serve canary', () => {
       // maps it to Tenant.SubscriptionPlanCode so the publish Pro-gate (step 8)
       // passes, exactly as the old wizard plan step did (no Stripe).
       const wizard = new KefiOnboardingWizardPage(page);
-      await wizard.expectLoaded();
+      await wizard.openStepByStepFromQuickStart();
       const eventDateIso = toIsoDate(new Date(Date.now() + CANARY_EVENT_DAYS_AHEAD * MS_PER_DAY));
       await wizard.fillFastPath({
         canaryPrefix: ctx.slugPrefix,

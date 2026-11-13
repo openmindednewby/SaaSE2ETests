@@ -91,7 +91,7 @@ test.describe('Kefi Phase F — free-tier dynamic publish', () => {
       // landing config on the auto-created event, which is what GET /api/v1/t
       // discovers and the renderer turns into a page.
       const wizard = new KefiOnboardingWizardPage(page);
-      await wizard.expectLoaded();
+      await wizard.openStepByStepFromQuickStart();
       const eventDateIso = toIsoDate(new Date(Date.now() + CANARY_EVENT_DAYS_AHEAD * MS_PER_DAY));
       await wizard.fillFastPath({ canaryPrefix: ctx.slugPrefix, eventDateIso });
       await wizard.finishFromReview();

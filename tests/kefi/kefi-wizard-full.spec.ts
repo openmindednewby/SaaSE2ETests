@@ -30,7 +30,7 @@ async function signUpAndOpenWizard(page: Page, ctx: ReturnType<typeof newCanaryC
   expect(verifyUrl, `verify URL from ${captured.subject}`).not.toBeNull();
   await page.goto(verifyUrl!);
   const wizard = new KefiOnboardingWizardPage(page);
-  await wizard.expectLoaded();
+  await wizard.openStepByStepFromQuickStart();
   return wizard;
 }
 
@@ -133,8 +133,8 @@ test.describe('KEFI-WIZARD-FULL-1 "Setup wizard creates the full site and form"'
       await checkTextFit('review-clean');
       await wizard.finishFromReview();
 
-      await expect(page, 'Finish lands on the organizer home').toHaveURL(/\/organizer\/?$/, { timeout: 30_000 });
-      await expect(page.getByText(ERROR_BOUNDARY_TITLE), 'no error boundary on /organizer').toBeHidden();
+      await expect(page, 'Finish lands on the landing editor').toHaveURL(/\/organizer\/landing\/?$/, { timeout: 30_000 });
+      await expect(page.getByText(ERROR_BOUNDARY_TITLE), 'no error boundary on /organizer/landing').toBeHidden();
       await expect(page.getByTestId('onboarding-wizard'), 'the wizard does not bounce back').toBeHidden();
       await checkTextFit('organizer-home');
 

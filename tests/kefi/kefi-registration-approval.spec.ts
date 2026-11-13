@@ -222,7 +222,7 @@ test.describe('Kefi registration-request submit → approve / reject', () => {
       expect(verifyUrl, 'verify URL').not.toBeNull();
       await page.goto(verifyUrl!);
       const wizard = new KefiOnboardingWizardPage(page);
-      await wizard.expectLoaded();
+      await wizard.openStepByStepFromQuickStart();
       await wizard.fillFastPath({
         canaryPrefix: ctx.slugPrefix,
         eventDateIso: toIsoDate(new Date(Date.now() + EVENT_DAYS_AHEAD * MS_PER_DAY)),

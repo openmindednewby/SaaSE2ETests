@@ -96,7 +96,7 @@ test.describe('Kefi Phase 13 lifecycle emails — confirmation, reminder, unsubs
       await page.goto(verifyUrl!);
 
       const wizard = new KefiOnboardingWizardPage(page);
-      await wizard.expectLoaded();
+      await wizard.openStepByStepFromQuickStart();
       await wizard.fillFastPath({
         canaryPrefix: ctx.slugPrefix,
         eventDateIso: toIsoDate(new Date(Date.now() + CANARY_EVENT_DAYS_AHEAD * MS_PER_DAY)),

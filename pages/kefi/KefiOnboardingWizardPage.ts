@@ -97,6 +97,12 @@ export class KefiOnboardingWizardPage {
     await this.expectLoaded();
   }
 
+  /** Wait for quick start after signup, then leave it for the step-by-step wizard. */
+  async openStepByStepFromQuickStart(timeoutMs: number = WIZARD_LOAD_TIMEOUT_MS): Promise<void> {
+    await this.expectQuickStartLoaded(timeoutMs);
+    await this.openStepByStep();
+  }
+
   /** Fill name, date and template in quick start, submit, and await the server's completion. */
   async submitQuickStart(input: { name: string; dateIso: string; templateKey: string }): Promise<void> {
     await this.eventNameInput.fill(input.name);

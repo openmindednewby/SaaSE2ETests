@@ -127,7 +127,7 @@ async function signUpVerifyAndCompleteFreeWizard(
   await page.goto(verifyUrl!);
 
   const wizard = new KefiOnboardingWizardPage(page);
-  await wizard.expectLoaded();
+  await wizard.openStepByStepFromQuickStart();
   await wizard.fillFastPath({ canaryPrefix: ctx.slugPrefix, eventDateIso: dateAhead(EVENT_DAYS_AHEAD) });
   await wizard.finishFromReview();
 
