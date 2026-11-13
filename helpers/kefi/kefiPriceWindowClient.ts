@@ -141,3 +141,33 @@ export async function bakedPriceTag(request: APIRequestContext, siteUrl: string,
   const match = new RegExp(`class="price-name"[^>]*>${escaped}</div>\\s*<div class="price-tag"[^>]*>([^<]*)<`).exec(html);
   return match ? match[1].trim() : null;
 }
+
+export interface ServedSample {
+  atUtc: string;
+  price: string | null;
+  status: number;
+  cacheControl: string | null;
+  age: string | null;
+  etag: string | null;
+  lastModified: string | null;
+}
+
+/** The served `.price-tag` of `tierName` with the response cache headers, for publish evidence. */
+export async function servedSample(request: APIRequestContext, siteUrl: string, tierName: string): Promise<ServedSample> {
+  const resp = await request.get(`${siteUrl.replace(/\/$/, '')}/?nocache=${Date.now()}`);
+  const html = await resp.text();
+  const escaped = tierName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(`class="price-name"[^>]*>${escaped}</div>\\s*<div class="price-tag"[^>]*>([^<]*)<`).exec(html);
+  const h = resp.headers();
+  return {
+    atUtc: new Date().toISOString(), price: match ? match[1].trim() : null, status: resp.status(),
+    cacheControl: h['cache-control'] ?? null, age: h['age'] ?? null, etag: h['etag'] ?? null, lastModified: h['last-modified'] ?? null,
+  };
+}
+
+/** The pass entry for `code` in the public landing API (`GET /t/{slug}`), raw, for publish evidence. */
+export async function landingApiPass(request: APIRequestContext, slug: string, code: string): Promise<unknown> {
+  const resp = await request.get(`${getKefiUrls().apiUrl}/api/v1/t/${encodeURIComponent(slug)}`);
+  const body = (await resp.json().catch(() => null)) as { passes?: Array<{ code?: string }> } | null;
+  return { status: resp.status(), pass: body?.passes?.find((p) => p.code === code) ?? null };
+}
