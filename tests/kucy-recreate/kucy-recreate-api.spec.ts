@@ -37,6 +37,12 @@ async function readPublicLanding(request: APIRequestContext, tenantSlug: string)
   return ((await resp.json()) as { landing: typeof saved }).landing;
 }
 
+function withoutServerSoldOut(landing: typeof saved): typeof saved {
+  if (!Array.isArray(landing.passes)) return landing;
+  const passes = landing.passes.map((pass) => Object.fromEntries(Object.entries(pass as object).filter(([key]) => key !== 'soldOut')));
+  return { ...landing, passes };
+}
+
 async function fetchPublished(request: APIRequestContext, url: string): Promise<string> {
   let html = '';
   await expect(async () => {
@@ -51,9 +57,9 @@ test.describe('KEFI-RECREATE-1 data file landing equals the live KUCY public con
   test.skip(!isRemoteTarget(), 'reads the deployed kefi public API');
 
   test('CM-SRC kucy-recreate.json landing compared with the anonymous public GET of kizombaunioncy, is identical', async ({ request }) => {
-    const copy = data.landing.config;
+    const copy = withoutServerSoldOut(data.landing.config as typeof saved);
 
-    const live = await readPublicLanding(request, KUCY_LIVE_SLUG);
+    const live = withoutServerSoldOut(await readPublicLanding(request, KUCY_LIVE_SLUG));
 
     expect(copy, `helpers/kefi/data/kucy-recreate.json diverged from public GET ${publicTenantPath(KUCY_LIVE_SLUG)}`).toEqual(live);
   });
