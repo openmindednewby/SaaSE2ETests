@@ -121,7 +121,7 @@ test.describe('Kefi pass status + register option lines (sighting)', () => {
 
     await input.fill(typed);
 
-    const error = page.getByTestId(`${fieldId}-error`);
+    const error = page.getByRole('alert').filter({ hasText: 'line 2' });
     await expect(error, 'no per-line error for an over-long option').toContainText('line 2');
     await expect(error).toContainText(String(MAX_OPTION_LENGTH));
     await error.scrollIntoViewIfNeeded();
