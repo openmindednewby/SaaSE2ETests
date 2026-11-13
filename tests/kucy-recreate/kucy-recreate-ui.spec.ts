@@ -10,6 +10,7 @@ import { getKefiUrls } from '../../helpers/kefi/kefiUrls.js';
 import { decodeHtml, loadKucyRecreate, matrixRows, missingFrom } from '../../helpers/kefi/kucyRecreate.js';
 import { fieldGaps, gapRoots, type KucyWalkView } from '../../helpers/kefi/kucyRecreateUiGaps.js';
 import { isRemoteTarget } from '../../helpers/target.js';
+import { walkBookPay, walkParty, walkPeople, walkSchedule } from '../../helpers/kefi/kucyRecreateUiWalk.js';
 import { KefiLandingEditorPage } from '../../pages/kefi/KefiLandingEditorPage.js';
 import { KefiMarketingPage } from '../../pages/kefi/KefiMarketingPage.js';
 import { KefiOnboardingWizardPage } from '../../pages/kefi/KefiOnboardingWizardPage.js';
@@ -25,7 +26,7 @@ const STEPS_VENUE_TO_REVIEW = 3;
 const PUBLISH_RENDER_TIMEOUT_MS = 900_000;
 const PAGE_FETCH_MS = 60_000;
 const TEARDOWN_404_TIMEOUT_MS = 120_000;
-const WALKED_ROWS = new Set(['CM-03', 'CM-04', 'CM-05', 'CM-08', 'CM-15', 'CM-35', 'CM-37', 'CM-43']);
+const WALKED_ROWS = new Set(['CM-03', 'CM-04', 'CM-05', 'CM-08', 'CM-13', 'CM-14', 'CM-15', 'CM-28', 'CM-29', 'CM-30', 'CM-32', 'CM-33', 'CM-35', 'CM-37', 'CM-43']);
 const data = loadKucyRecreate();
 const c = data.config as unknown as KucyWalkView;
 
@@ -96,7 +97,7 @@ async function walkStats(editor: KefiLandingEditorPage): Promise<void> {
   }
 }
 
-async function walkEditor(editor: KefiLandingEditorPage): Promise<void> {
+async function walkEditor(page: Page, editor: KefiLandingEditorPage): Promise<void> {
   const b = c.branding;
   const e = c.eventDetails;
   await editor.openSection('hero');
@@ -129,6 +130,10 @@ async function walkEditor(editor: KefiLandingEditorPage): Promise<void> {
     await editor.fill(`landing-poster-${String(index)}-imageurl`, poster.imageUrl);
     await editor.fill(`landing-poster-${String(index)}-downloadurl`, poster.downloadUrl);
   }
+  await walkPeople(page, editor, data.landing.config);
+  await walkSchedule(editor, data.landing.config);
+  await walkParty(editor, data.landing.config);
+  await walkBookPay(page, editor, data.landing.config);
 }
 
 test.describe('KEFI-RECREATE-1 KUCY recreated by a UI walk on a throwaway tenant', () => {
@@ -150,7 +155,7 @@ test.describe('KEFI-RECREATE-1 KUCY recreated by a UI walk on a throwaway tenant
     const editor = new KefiLandingEditorPage(page);
     await walkWizard(page, await signUpThroughUi(page), editor);
     await editor.goto(getKefiUrls().webUrl);
-    await walkEditor(editor);
+    await walkEditor(page, editor);
     await editor.save();
 
     const published = await editor.publish();
@@ -193,6 +198,7 @@ test.describe('KEFI-RECREATE-1 KUCY recreated by a UI walk on a throwaway tenant
     const report = { roots: gapRoots(gaps), noControl, unwalked, gaps };
     await test.info().attach('ui-gaps.json', { body: JSON.stringify(report, null, 2), contentType: 'application/json' });
     console.log(`[UI-GAP] ${JSON.stringify({ roots: report.roots, noControl, unwalked })}`);
+    console.log(`[UI-GAP-PATHS] ${JSON.stringify(gaps.map((g) => g.path))}`);
     expect(pageErrors, 'uncaught browser errors during the walk').toEqual([]);
   });
 });
