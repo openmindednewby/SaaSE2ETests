@@ -914,6 +914,20 @@ export function buildProjects(): ProjectConfig {
       use: { ...CHROME, viewport: { width: 1280, height: 800 }, navigationTimeout: 45_000, actionTimeout: 15_000 },
     },
     {
+      name: 'kefi-soldout-landing-360',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi-mobile-review\/kefi-soldout-landing-sighting\.spec\.ts/,
+      use: { ...MOBILE_FLOOR, navigationTimeout: 45_000, actionTimeout: 15_000 },
+    },
+    {
+      name: 'kefi-soldout-landing-1280',
+      workers: 1,
+      timeout: 300_000,
+      testMatch: /kefi-mobile-review\/kefi-soldout-landing-sighting\.spec\.ts/,
+      use: { ...CHROME, viewport: { width: 1280, height: 800 }, navigationTimeout: 45_000, actionTimeout: 15_000 },
+    },
+    {
       // Kefi ORGANIZER dashboard at PHONE width — the collapsed section-menu
       // (shared ui-layout Tabs below 768dp → single caret trigger) + card-stacked
       // DataTables (shared ui-tables below 640dp), inline passes pricing, the door
