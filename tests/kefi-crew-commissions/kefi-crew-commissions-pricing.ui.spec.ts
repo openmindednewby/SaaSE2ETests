@@ -19,13 +19,14 @@
  * side, opaque `__Host-bff-kefi` cookie). Uses the suite's `KEFI_FIXTURE_ORGANIZER_*` e2e
  * organizer from `.env.<target>.secrets`; these surfaces are tenant-agnostic.
  *
- * PROD SAFETY — STRICTLY READ-ONLY: opens the accordion + a per-person detail
- * modal and reads the Copy/Expire controls. NEVER writes: no pass saved, no
- * policy PUT, Copy (which would create a link) and Expire are never pressed.
+ * PROD SAFETY: beforeAll seeds one promoter and one crew row, afterAll deletes
+ * them. Otherwise read-only: no pass saved, no policy PUT, Copy (which would
+ * create a link) and Expire are never pressed.
  */
 
 import { test, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
 
+import { CrewRosterSeed, resolveEventExternalId } from '../../helpers/kefi/kefiCrewRosterSeed.js';
 import { getKefiUrls } from '../../helpers/kefi/kefiUrls.js';
 import { isRemoteTarget } from '../../helpers/target.js';
 import { KefiOrganizerTabsPage } from '../../pages/kefi/KefiOrganizerTabsPage.js';
@@ -39,8 +40,6 @@ const HAVE_CREDS = USERNAME !== '' && PASSWORD !== '';
 /** Where the PASS/FAIL evidence screenshots land. */
 const SHOT_DIR = 'qa-screenshots/crew-commissions-pricing';
 
-/** The BFF proxy prefix + the organizer events read-model (used to resolve the event). */
-const BFF_EVENTS_PATH = '/bff/api/kefi/api/v1/admin/events';
 
 /** A phone viewport wide enough to trip the shared Tabs collapse (<768dp). */
 const PHONE = { width: 390, height: 844 } as const;
@@ -79,18 +78,6 @@ async function bffLogin(page: Page): Promise<void> {
   await page.goto(webUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
 }
 
-/** Resolve the organizer's first event externalId via the BFF read-model. */
-async function resolveEventExternalId(page: Page): Promise<string> {
-  const { webUrl } = getKefiUrls();
-  const res = await page.request.get(`${webUrl}${BFF_EVENTS_PATH}`, {
-    headers: { 'X-BFF-Csrf': '1' },
-  });
-  expect(res.status(), 'the organizer events read-model returned OK').toBe(200);
-  const body = (await res.json()) as { events: Array<{ externalId: string; name: string }> };
-  expect(body.events.length, 'the fixture organizer owns at least one event').toBeGreaterThan(0);
-  return body.events[0].externalId;
-}
-
 test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
   test.skip(!isRemoteTarget(), 'Drives the deployed kefi-web organizer surface (E2E_TARGET=prod|staging)');
   test.skip(!HAVE_CREDS, 'KEFI_FIXTURE_ORGANIZER_USERNAME/PASSWORD unset in .env.<target>[.secrets]');
@@ -99,18 +86,21 @@ test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
   let page: Page;
   let organizer: KefiOrganizerTabsPage;
   let eventExternalId: string;
+  let roster: CrewRosterSeed | undefined;
 
   test.beforeAll(async ({ browser }: { browser: Browser }) => {
     context = await browser.newContext();
     page = await context.newPage();
     await bffLogin(page);
     eventExternalId = await resolveEventExternalId(page);
+    roster = await CrewRosterSeed.create(page.request, eventExternalId, { email: USERNAME, password: PASSWORD });
     organizer = new KefiOrganizerTabsPage(page);
     await organizer.gotoEvent(eventExternalId);
     await organizer.waitForShell();
   });
 
   test.afterAll(async () => {
+    await roster?.removeAll();
     await context?.close();
   });
 
@@ -132,10 +122,8 @@ test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
 
     await expect(accordion, 'the add-a-ticket-type accordion is present').toBeVisible();
     await expect(toggle, 'the accordion toggle is present').toBeVisible();
-    // Closed by default: the pass form fields are NOT in the DOM until opened.
-    await expect(codeField, 'the pass form is CLOSED by default (no code field rendered)').toHaveCount(
-      0,
-    );
+    // Closed by default: the shared Collapse keeps the form mounted but hidden.
+    await expect(codeField, 'the pass form is CLOSED by default (code field hidden)').toBeHidden();
     await page.screenshot({ path: `${SHOT_DIR}/01a-pricing-accordion-closed.png`, fullPage: true });
 
     // Pressing the toggle OPENS the pass form.
@@ -153,7 +141,7 @@ test.describe('Kefi Crew & Commissions + Pricing organizer surfaces', () => {
 
     // Close it again — leave no dirty UI state (nothing was ever submitted).
     await toggle.click();
-    await expect(codeField, 'the pass form closed again after re-pressing the toggle').toHaveCount(0);
+    await expect(codeField, 'the pass form closed again after re-pressing the toggle').toBeHidden();
   });
 
   test('@ui Crew & Commissions tab: label is "Crew & Commissions"; the unified roster renders real rows', async () => {
