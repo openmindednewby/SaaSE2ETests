@@ -26,7 +26,7 @@ const STEPS_VENUE_TO_REVIEW = 3;
 const PUBLISH_RENDER_TIMEOUT_MS = 900_000;
 const PAGE_FETCH_MS = 60_000;
 const TEARDOWN_404_TIMEOUT_MS = 120_000;
-const WALKED_ROWS = new Set(['CM-03', 'CM-04', 'CM-05', 'CM-08', 'CM-13', 'CM-14', 'CM-15', 'CM-28', 'CM-29', 'CM-30', 'CM-32', 'CM-33', 'CM-35', 'CM-37', 'CM-43']);
+const WALKED_ROWS = new Set(['CM-03', 'CM-04', 'CM-05', 'CM-08', 'CM-13', 'CM-14', 'CM-15', 'CM-29', 'CM-30', 'CM-32', 'CM-33', 'CM-35', 'CM-37', 'CM-43']);
 const data = loadKucyRecreate();
 const c = data.config as unknown as KucyWalkView;
 
