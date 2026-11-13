@@ -19,6 +19,7 @@ import {
   restoreWindow,
   timelinePrice,
   type PassRef,
+  utcNowIso,
   type WindowReplacement,
 } from '../../helpers/kefi/kefiPriceWindowClient.js';
 import { getKefiUrls } from '../../helpers/kefi/kefiUrls.js';
@@ -30,6 +31,10 @@ const PUBLISH_TEST_TIMEOUT_MS = 900_000;
 const SHARED_PASS_CODE = 'CLASS';
 const SHARED_TIER_NAME = 'Workshop Pass';
 const PRICE_STEP_EUR = 2;
+const SWITCH_DELAY_MS = 15_000;
+const SWITCH_WAIT_MS = 90_000;
+const DAY_MS = 24 * HOUR_MS;
+const MAX_PUBLISHES = 2;
 
 test.describe.configure({ mode: 'serial' });
 
@@ -45,6 +50,8 @@ test.describe('KEFI-PRICE-E2E-1 organizer price change reaching the public page'
     tenant = getKefiFixtureTenant();
     bearer = await admin.getTenantOwnerBearer({ email: tenant.organizerEmail, password: tenant.organizerPassword });
   });
+
+  const owner = (): { ownerEmail: string; ownerPassword: string } => ({ ownerEmail: tenant.organizerEmail, ownerPassword: tenant.organizerPassword });
 
   async function sharedPass(): Promise<OrganizerPass> {
     const list = await new KefiPassPricingClient().getOrganizerPasses(bearer, tenant.eventExternalId);
@@ -105,25 +112,44 @@ test.describe('KEFI-PRICE-E2E-1 organizer price change reaching the public page'
     }
   });
 
-  test('AC-PRICE-3 with a window change, after a publish the page price-tag shows the new price', async ({ request }) => {
-    test.skip(process.env.KEFI_PRICE_E2E_PUBLISH !== '1', 'Two publishes per run rebuild every tenant site; set KEFI_PRICE_E2E_PUBLISH=1 once the owner allows it');
+  test('AC-PRICE-3 AC-PRICE-4 AC-PRICE-5 with a started window published, the price-tag shows its price; with a future window published, it keeps the current price', async ({ request }) => {
+    test.skip(process.env.KEFI_PRICE_E2E_PUBLISH !== '1', 'Two publishes per run rebuild every tenant site; opt in with KEFI_PRICE_E2E_PUBLISH=1');
     test.setTimeout(PUBLISH_TEST_TIMEOUT_MS);
-    const owner = { ownerEmail: tenant.organizerEmail, ownerPassword: tenant.organizerPassword };
     const pass = await sharedPass();
     const ref: PassRef = { bearer, eventExternalId: tenant.eventExternalId, passExternalId: pass.externalId };
     const current = await currentWindowOf(request, ref);
-    const newPriceEur = current.priceEur + PRICE_STEP_EUR;
-    const replacement = await replaceCurrentWindow(request, ref, current, newPriceEur);
+    const startedPriceEur = current.priceEur + PRICE_STEP_EUR;
+    const futurePriceEur = current.priceEur + 2 * PRICE_STEP_EUR;
+    let started: WindowReplacement | undefined = await replaceCurrentWindow(request, ref, current, startedPriceEur, utcNowIso(SWITCH_DELAY_MS));
+    let future: WindowReplacement | undefined;
+    let publishes = 0;
+    const publish = async (): Promise<void> => {
+      publishes += 1;
+      expect(publishes, 'at most two publishes per run').toBeLessThanOrEqual(MAX_PUBLISHES);
+      const job = await admin.publishLanding(owner());
+      await admin.pollPublishStatus({ ...owner(), jobName: job.jobName, timeoutMs: PUBLISH_TIMEOUT_MS });
+    };
     try {
-      const job = await admin.publishLanding(owner);
-      await admin.pollPublishStatus({ ...owner, jobName: job.jobName, timeoutMs: PUBLISH_TIMEOUT_MS });
+      await expect.poll(async () => timelinePrice(await getPriceTimeline(request, tenant.slug), SHARED_PASS_CODE), {
+        message: 'the window scheduled in the future has started', timeout: SWITCH_WAIT_MS,
+      }).toBe(startedPriceEur);
 
-      const baked = await bakedPriceTag(request, tenant.siteUrl, SHARED_TIER_NAME);
-      expect(baked, 'the published page shows the new price').toBe(`€${newPriceEur}`);
+      await publish();
+      const bakedAfterStart = await bakedPriceTag(request, tenant.siteUrl, SHARED_TIER_NAME);
+      await restoreWindow(request, ref, started);
+      started = undefined;
+      future = await replaceCurrentWindow(request, ref, current, futurePriceEur, utcNowIso(DAY_MS));
+      await publish();
+      const bakedBeforeFuture = await bakedPriceTag(request, tenant.siteUrl, SHARED_TIER_NAME);
+
+      expect.soft(bakedAfterStart, 'AC-PRICE-3 AC-PRICE-5 a started window is baked by the publish').toBe(`€${startedPriceEur}`);
+      expect.soft(bakedBeforeFuture, 'AC-PRICE-4 a window that has not started is not baked').toBe(`€${current.priceEur}`);
     } finally {
-      await restoreWindow(request, ref, replacement);
-      const restoreJob = await admin.publishLanding(owner);
-      await admin.pollPublishStatus({ ...owner, jobName: restoreJob.jobName, timeoutMs: PUBLISH_TIMEOUT_MS });
+      if (future) await restoreWindow(request, ref, future);
+      if (started) {
+        await restoreWindow(request, ref, started);
+        if (publishes > 0) await publish();
+      }
     }
   });
 });

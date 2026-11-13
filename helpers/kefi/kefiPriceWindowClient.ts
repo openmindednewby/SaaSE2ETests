@@ -61,8 +61,8 @@ function bodyOf(window: PriceWindow, effectiveUntilUtc: string | null): Record<s
 }
 
 /** Second-precision UTC instant ending in `Z`. */
-export function utcNowIso(): string {
-  return `${new Date().toISOString().slice(0, 19)}Z`;
+export function utcNowIso(offsetMs = 0): string {
+  return `${new Date(Date.now() + offsetMs).toISOString().slice(0, 19)}Z`;
 }
 
 export function isCurrent(window: PriceWindow, atMs: number): boolean {
@@ -101,15 +101,14 @@ export async function deleteWindow(request: APIRequestContext, ref: PassRef, win
   await expectOk(resp, 'delete price window');
 }
 
-/** The organizer's move: end the current window now and open a new one from now at `newPriceEur`. */
+/** The organizer's move: end the current window at `switchAtUtc` (default now) and open a new one from then at `newPriceEur`. */
 export async function replaceCurrentWindow(
-  request: APIRequestContext, ref: PassRef, current: PriceWindow, newPriceEur: number,
+  request: APIRequestContext, ref: PassRef, current: PriceWindow, newPriceEur: number, switchAtUtc: string = utcNowIso(),
 ): Promise<WindowReplacement> {
-  const now = utcNowIso();
-  await setWindowUntil(request, ref, current, now);
+  await setWindowUntil(request, ref, current, switchAtUtc);
   const added = await addWindow(request, ref, {
     priceEur: newPriceEur,
-    effectiveFromUtc: now,
+    effectiveFromUtc: switchAtUtc,
     effectiveUntilUtc: current.effectiveUntilUtc,
     label: null,
     minPaidCount: null,
