@@ -6,8 +6,6 @@ import { getKefiUrls } from '../../helpers/kefi/kefiUrls.js';
 import { isRemoteTarget } from '../../helpers/target.js';
 import { KefiLoginPage } from '../../pages/kefi/KefiLoginPage.js';
 
-test.describe.configure({ mode: 'serial' });
-
 const SHOT_DIR = 'qa-screenshots/kefi-soldout-register';
 const STATUSES = ['OnSale', 'SoldOut', 'Hidden', 'Retired'] as const;
 const MIN_HIT_PX = 44;
@@ -55,8 +53,9 @@ async function openPassEditor(page: Page, passId: string): Promise<void> {
 
 async function setStatusAndSave(page: Page, status: string): Promise<void> {
   await page.getByTestId(`organizer-pass-status-${status}`).click();
+  const saved = page.waitForResponse((res) => res.request().method() !== 'GET' && res.url().includes('/passes'));
   await page.getByTestId('organizer-pass-submit').click();
-  await expect(page.getByTestId('organizer-pass-submit'), 'save never finished').toBeEnabled();
+  expect((await saved).ok(), `saving status ${status}`).toBe(true);
 }
 
 async function expectSaneLayout(page: Page, testInfo: TestInfo, step: string): Promise<void> {
@@ -80,7 +79,7 @@ test.describe('Kefi pass status + register option lines (sighting)', () => {
     await signIn(page);
     const [pass] = await readPasses(page, eventId);
     expect(pass, 'the e2e fixture event has no pass to edit').toBeDefined();
-    const original = pass.status ?? 'OnSale';
+    const restoreTo = 'OnSale';
     await openPassEditor(page, pass.externalId);
     for (const status of STATUSES) {
       const chip = page.getByTestId(`organizer-pass-status-${status}`);
@@ -102,9 +101,9 @@ test.describe('Kefi pass status + register option lines (sighting)', () => {
       await expectSaneLayout(page, testInfo, 'pass-status-soldout');
     } finally {
       await openPassEditor(page, pass.externalId);
-      await setStatusAndSave(page, original);
+      await setStatusAndSave(page, restoreTo);
       const restored = (await readPasses(page, eventId)).find((p) => p.externalId === pass.externalId);
-      expect(restored?.status, `teardown restores ${original}`).toBe(original);
+      expect(restored?.status, `teardown restores ${restoreTo}`).toBe(restoreTo);
     }
   });
 
