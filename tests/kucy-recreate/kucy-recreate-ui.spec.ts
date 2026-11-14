@@ -24,6 +24,7 @@ test.describe.configure({ mode: 'serial' });
 const EVENT_DATE_ISO = '2027-04-24';
 const SIGNUP_MIN_FILL_MS = 3_500;
 const VISIBLE_TEXT_SELECTOR = 'body *:not([id^="a11y-hint"]):not(.visually-hidden):not(.nav-links a)';
+const WIDE_MIN_WIDTH = 1280;
 const STEPS_ABOUT_TO_PASSES = 3;
 const STEPS_PASSES_TO_VENUE = 2;
 const STEPS_VENUE_TO_REVIEW = 3;
@@ -219,16 +220,37 @@ test.describe('KEFI-RECREATE-1 KUCY recreated by a UI walk on a throwaway tenant
     expect(pageErrors, 'uncaught browser errors during the walk').toEqual([]);
   });
 
-  test('AC-OBQ-1 new organizer fills name, date and template in quick start, lands on the landing editor with the setup guide', async ({ page }) => {
+  test('AC-OBQ-1 new organizer fills name, date and template in quick start, reaches go-live or the editor with coach marks', async ({ page }) => {
     test.info().annotations.push({ type: 'canaryId', description: quickCtx.canaryId });
+    const wide = (page.viewportSize()?.width ?? 0) >= WIDE_MIN_WIDTH;
     const wizard = await signUpThroughUi(page, quickCtx);
     const quickStart = { name: `${quickCtx.slugPrefix}Quick Night`, dateIso: EVENT_DATE_ISO, templateKey: 'kucy' };
+    await expect(page.getByTestId('onboarding-draft-behind'), 'AC-OBQ-7 draft page behind the quick start below 1280').toHaveCount(wide ? 0 : 1);
     await sight(page, 'quick-start');
+    await page.getByTestId(`onboarding-look-example-open-${quickStart.templateKey}`).click();
+    await expect(page.getByTestId('onboarding-look-example'), 'AC-OBQ-8 See example opens the larger look').toBeVisible();
+    await sight(page, 'look-example');
+    await page.getByTestId('onboarding-look-example-close').click();
+    await expect(page.getByTestId('onboarding-look-example'), 'AC-OBQ-8 example modal closes').toHaveCount(0);
 
     await wizard.submitQuickStart(quickStart);
 
-    await expect(page, 'quick start lands on the landing editor').toHaveURL(/\/organizer\/landing\/?(\?publish=started)?$/, { timeout: 30_000 });
-    await expect(page.getByTestId('organizer-setup-guide'), 'setup guide beside the editor').toBeVisible({ timeout: 30_000 });
-    await sight(page, 'setup-guide');
+    if (wide) {
+      await expect(page, 'AC-OBQ-11 quick start at 1280 lands on the go-live review').toHaveURL(/\/organizer\/go-live\/?$/, { timeout: 30_000 });
+      await expect(page.getByTestId('onboarding-go-live-publish'), 'AC-OBQ-11 Publish inside the review').toBeVisible({ timeout: 30_000 });
+      await sight(page, 'go-live');
+      const posted = page.waitForResponse((r) => r.url().includes('/admin/landing-config/publish') && r.request().method() === 'POST');
+      await page.getByTestId('onboarding-go-live-publish').click();
+      expect((await posted).status(), 'AC-OBQ-11 go-live Publish POST').toBeLessThan(300);
+    }
+    await expect(page, 'lands on the landing editor').toHaveURL(/\/organizer\/landing\/?(\?publish=started)?$/, { timeout: 30_000 });
+    await expect(page.getByTestId('organizer-setup-guide'), 'AC-OBQ-9 coach marks above the editor').toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('organizer-coach-mark'), 'AC-OBQ-9 one coach mark tip open').toBeVisible();
+    await sight(page, 'coach-marks');
+    if (wide) return;
+    await new KefiLandingEditorPage(page).publish();
+    await expect(page.getByTestId('landing-live-moment'), 'AC-OBQ-10 live moment after publish at 360').toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('landing-live-share'), 'AC-OBQ-10 Share on the live moment').toBeVisible();
+    await sight(page, 'live-moment');
   });
 });
