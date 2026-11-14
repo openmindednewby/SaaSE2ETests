@@ -178,7 +178,9 @@ test.describe('KEFI-RECREATE-1 KUCY recreated by a UI walk on a throwaway tenant
     const published = await editor.publish();
 
     expect(published.tenantSlug, 'editor publish names the same tenant').toBe(slug);
-    const probe = await probeDynamicLandingRender({ slug, requiredMarkers: [c.branding.name], timeoutMs: PUBLISH_RENDER_TIMEOUT_MS });
+    expect(published.jobName, 'editor publish returned a job name').toBeTruthy();
+    await adminClient.pollPublishStatus({ ownerEmail: ctx.email, ownerPassword: ctx.password, jobName: published.jobName! });
+    const probe = await probeDynamicLandingRender({ slug, requiredMarkers: [c.branding.name, c.eventDetails.heading], timeoutMs: PUBLISH_RENDER_TIMEOUT_MS });
     html = decodeHtml(await (await request.get(probe.url, { timeout: PAGE_FETCH_MS })).text());
     const landing = await request.get(`${getKefiUrls().apiUrl}${publicTenantPath(slug)}`, { timeout: PAGE_FETCH_MS });
     expect(landing.status(), 'public landing read').toBe(200);
