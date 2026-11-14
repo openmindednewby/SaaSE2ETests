@@ -26,6 +26,10 @@ const WEBHOOK_TIMEOUT_MS = 60_000;
 const POLL_INTERVALS_MS = [1_000, 2_000, 3_000];
 const HTTP_CREATED = 201;
 const HTTP_OK = 200;
+const IDP_URL_ENV = 'AML_IDP_URL';
+const CLI_SECRET_ENV = 'AML_ADMIN_CLI_SECRET';
+const DEFAULT_IDP_URL = 'https://aml-identity.dloizides.com';
+const TEST_TENANT_ID = '7e57a001-0000-0000-0000-000000000001';
 
 interface DecisionProfile {
   code: string;
@@ -57,24 +61,42 @@ function moduleAHeaders(): Record<string, string> {
   return { 'x-api-key': env(AML_KEY_ENV) };
 }
 
-async function createProfile(request: APIRequestContext, code: string, name: string): Promise<void> {
-  const response = await request.post(moduleA('/v1/decision-profiles'), {
-    headers: moduleAHeaders(),
+async function gatewayKeyTenant(request: APIRequestContext): Promise<string> {
+  const response = await request.get(moduleA('/v1/me'), { headers: moduleAHeaders(), timeout: REQUEST_TIMEOUT_MS, failOnStatusCode: false });
+  expect(response.status(), `GET /v1/me with the gateway AML key: ${await response.text()}`).toBe(HTTP_OK);
+  return ((await response.json()) as { tenantId: string }).tenantId;
+}
+
+async function operatorHeaders(request: APIRequestContext): Promise<Record<string, string>> {
+  const idp = (process.env[IDP_URL_ENV]?.trim() || DEFAULT_IDP_URL).replace(//+$/, '');
+  const token = await request.post(`${idp}/connect/token`, {
+    form: { grant_type: 'client_credentials', client_id: 'aml-admin-cli', client_secret: env(CLI_SECRET_ENV) },
+    timeout: REQUEST_TIMEOUT_MS,
+    failOnStatusCode: false,
+  });
+  expect(token.status(), 'aml-admin-cli token mint').toBe(HTTP_OK);
+  return { Authorization: `Bearer ${((await token.json()) as { access_token: string }).access_token}` };
+}
+
+function tenantProfiles(tenantId: string, suffix = ''): string {
+  return moduleA(`/v1/tenants/${tenantId}/decision-profiles${suffix}`);
+}
+
+async function createProfile(request: APIRequestContext, tenantId: string, code: string, name: string): Promise<void> {
+  const response = await request.post(tenantProfiles(tenantId), {
+    headers: await operatorHeaders(request),
     data: { code, name },
     timeout: REQUEST_TIMEOUT_MS,
     failOnStatusCode: false,
   });
-  expect([HTTP_CREATED, HTTP_OK], `POST /v1/decision-profiles ${code}: ${await response.text()}`).toContain(
-    response.status(),
-  );
+  expect([HTTP_CREATED, HTTP_OK], `POST decision-profiles ${code}: ${await response.text()}`).toContain(response.status());
 }
 
-async function removeProfile(request: APIRequestContext, code: string): Promise<string> {
-  const url = moduleA(`/v1/decision-profiles/${code}`);
-  const options = { headers: moduleAHeaders(), timeout: REQUEST_TIMEOUT_MS, failOnStatusCode: false };
-  const deleted = await request.delete(url, options);
+async function removeProfile(request: APIRequestContext, tenantId: string, code: string): Promise<string> {
+  const options = { headers: await operatorHeaders(request), timeout: REQUEST_TIMEOUT_MS, failOnStatusCode: false };
+  const deleted = await request.delete(tenantProfiles(tenantId, `/${code}`), options);
   if (deleted.ok()) return 'deleted';
-  const disabled = await request.post(`${url}/disable`, options);
+  const disabled = await request.post(tenantProfiles(tenantId, `/${code}/disable`), options);
   return disabled.ok() ? `disabled (delete answered ${deleted.status()})` : `left (delete ${deleted.status()}, disable ${disabled.status()})`;
 }
 
@@ -182,7 +204,9 @@ test.describe('ERIC-SETTLE-1 session decision profile override @modb-api', () =>
     const code = `E2E_DP_${randomUUID().slice(0, 8).toUpperCase()}`;
     const name = `E2E decision profile ${code}`;
     const expectedSource = 'request';
-    await createProfile(request, code, name);
+    const tenantId = await gatewayKeyTenant(request);
+    expect(tenantId, 'TEST-TENANT-1: the profile is written only on the test tenant').toBe(TEST_TENANT_ID);
+    await createProfile(request, tenantId, code, name);
 
     try {
       const { session, requestId, aml } = await screen(request, code);
@@ -195,7 +219,7 @@ test.describe('ERIC-SETTLE-1 session decision profile override @modb-api', () =>
       for (const hook of hooks)
         expect(hook.body.decision_profile, `${hook.event} decision_profile`).toMatchObject({ code, source: expectedSource });
     } finally {
-      test.info().annotations.push({ type: 'cleanup', description: `${code}: ${await removeProfile(request, code)}` });
+      test.info().annotations.push({ type: 'cleanup', description: `${code}: ${await removeProfile(request, tenantId, code)}` });
     }
   });
 
