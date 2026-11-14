@@ -68,7 +68,7 @@ async function gatewayKeyTenant(request: APIRequestContext): Promise<string> {
 }
 
 async function operatorHeaders(request: APIRequestContext): Promise<Record<string, string>> {
-  const idp = (process.env[IDP_URL_ENV]?.trim() || DEFAULT_IDP_URL).replace(//+$/, '');
+  const idp = (process.env[IDP_URL_ENV]?.trim() || DEFAULT_IDP_URL).replace(/\/+$/, '');
   const token = await request.post(`${idp}/connect/token`, {
     form: { grant_type: 'client_credentials', client_id: 'aml-admin-cli', client_secret: env(CLI_SECRET_ENV) },
     timeout: REQUEST_TIMEOUT_MS,
