@@ -248,8 +248,9 @@ test.describe('KEFI-RECREATE-1 KUCY recreated by a UI walk on a throwaway tenant
     await expect(page.getByTestId('organizer-coach-mark'), 'AC-OBQ-9 one coach mark tip open').toBeVisible();
     await sight(page, 'coach-marks');
     if (wide) return;
-    await new KefiLandingEditorPage(page).publish();
-    await expect(page.getByTestId('landing-live-moment'), 'AC-OBQ-10 live moment after publish at 360').toBeVisible({ timeout: 60_000 });
+    const published = await new KefiLandingEditorPage(page).publish();
+    await adminClient.pollPublishStatus({ ownerEmail: quickCtx.email, ownerPassword: quickCtx.password, jobName: published.jobName! });
+    await expect(page.getByTestId('landing-live-moment'), 'AC-OBQ-10 live moment once the publish job succeeds at 360').toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId('landing-live-share'), 'AC-OBQ-10 Share on the live moment').toBeVisible();
     await sight(page, 'live-moment');
   });
