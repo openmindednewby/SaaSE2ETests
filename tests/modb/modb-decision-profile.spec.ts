@@ -163,7 +163,7 @@ test.describe('ERIC-SETTLE-1 session decision profile override @modb-api', () =>
   test('AC-ES-11 a session naming no decision profile, is decided by the session-flow default on check, case and webhook', async ({
     request,
   }) => {
-    const expectedSource = 'default';
+    const expectedSource = 'flow_default';
 
     const { session, requestId, aml } = await screen(request);
 
