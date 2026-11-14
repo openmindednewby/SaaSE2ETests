@@ -95,6 +95,7 @@ test.describe('Kefi Phase F — free-tier dynamic publish', () => {
       const eventDateIso = toIsoDate(new Date(Date.now() + CANARY_EVENT_DAYS_AHEAD * MS_PER_DAY));
       await wizard.fillFastPath({ canaryPrefix: ctx.slugPrefix, eventDateIso });
       await wizard.finishFromReview();
+      await wizard.waitForFinishPublish(ctx, adminClient);
 
       // ── 4. API: publish on Free — MUST be 202 (the ungating proof) ────
       const publishResult = await adminClient.publishLanding({

@@ -152,6 +152,7 @@ async function registerVerifyOnboard(input: {
     await forceOnboardingPlan({ apiUrl: getKefiUrls().apiUrl, bearer, code: 'pro' });
   }
   await wizard.finishFromReview();
+  await wizard.waitForFinishPublish(ctx, admin);
   return captured;
 }
 

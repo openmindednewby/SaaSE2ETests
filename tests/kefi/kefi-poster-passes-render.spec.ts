@@ -101,6 +101,7 @@ test.describe('Kefi published poster + pass render (#266)', () => {
         eventDateIso: toIsoDate(new Date(Date.now() + CANARY_EVENT_DAYS_AHEAD * MS_PER_DAY)),
       });
       await wizard.finishFromReview();
+      await wizard.waitForFinishPublish(ctx, admin);
 
       // ── 2. PUT a config with price tiers + a poster carrying a real image ──
       await admin.putLandingConfig({

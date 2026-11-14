@@ -1,4 +1,6 @@
+import { expectTextFits } from '@dloizides/game-e2e';
 import { test, expect, type Page } from '@playwright/test';
+import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { KefiAdminClient } from '../../helpers/kefi/kefiAdminClient.js';
@@ -21,6 +23,7 @@ test.describe.configure({ mode: 'serial' });
 
 const EVENT_DATE_ISO = '2027-04-24';
 const SIGNUP_MIN_FILL_MS = 3_500;
+const VISIBLE_TEXT_SELECTOR = 'body *:not([id^="a11y-hint"]):not(.visually-hidden):not(.nav-links a)';
 const STEPS_ABOUT_TO_PASSES = 3;
 const STEPS_PASSES_TO_VENUE = 2;
 const STEPS_VENUE_TO_REVIEW = 3;
@@ -62,6 +65,12 @@ async function signUpThroughUi(page: Page, canary: KefiCanaryContext): Promise<K
   return wizard;
 }
 
+async function sight(page: Page, screen: string): Promise<void> {
+  const project = test.info().project.name;
+  await page.screenshot({ path: join(process.env.SIGHTING_DIR ?? test.info().outputDir, `obq-${screen}-${project}.png`), fullPage: true });
+  await expectTextFits(page, VISIBLE_TEXT_SELECTOR, { where: `${screen} ${project}` });
+}
+
 async function walkWizard(page: Page, wizard: KefiOnboardingWizardPage, editor: KefiLandingEditorPage): Promise<string> {
   await wizard.openStepByStep();
   await wizard.eventNameInput.fill(c.branding.name);
@@ -90,6 +99,7 @@ async function walkWizard(page: Page, wizard: KefiOnboardingWizardPage, editor: 
   await expect(page.getByTestId('onboarding-step-review')).toBeVisible();
   const published = await wizard.finishFromReview();
   await expect(page, 'Finish lands on the landing editor').toHaveURL(/\/organizer\/landing\/?(\?publish=started)?$/, { timeout: 30_000 });
+  await wizard.waitForFinishPublish(ctx);
   return published.tenantSlug ?? '';
 }
 
@@ -211,10 +221,12 @@ test.describe('KEFI-RECREATE-1 KUCY recreated by a UI walk on a throwaway tenant
     test.info().annotations.push({ type: 'canaryId', description: quickCtx.canaryId });
     const wizard = await signUpThroughUi(page, quickCtx);
     const quickStart = { name: `${quickCtx.slugPrefix}Quick Night`, dateIso: EVENT_DATE_ISO, templateKey: 'kucy' };
+    await sight(page, 'quick-start');
 
     await wizard.submitQuickStart(quickStart);
 
-    await expect(page, 'quick start lands on the landing editor').toHaveURL(/\/organizer\/landing\/?$/, { timeout: 30_000 });
+    await expect(page, 'quick start lands on the landing editor').toHaveURL(/\/organizer\/landing\/?(\?publish=started)?$/, { timeout: 30_000 });
     await expect(page.getByTestId('organizer-setup-guide'), 'setup guide beside the editor').toBeVisible({ timeout: 30_000 });
+    await sight(page, 'setup-guide');
   });
 });

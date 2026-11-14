@@ -16,6 +16,8 @@
 import { type Locator, type Page, type Response, expect } from '@playwright/test';
 import { setTimeout as delay } from 'node:timers/promises';
 
+import { KefiAdminClient } from '../../helpers/kefi/kefiAdminClient.js';
+
 /**
  * ms the wizard's auto-save debounce takes — wait this + a little before
  * advancing. The PUT itself fires AFTER the 400ms debounce and runs
@@ -62,6 +64,8 @@ export class KefiOnboardingWizardPage {
   readonly quickStartForm: Locator;
   readonly quickStepByStepLink: Locator;
   readonly quickSubmitButton: Locator;
+
+  private finishJobName = '';
 
   constructor(page: Page) {
     this.page = page;
@@ -206,7 +210,14 @@ export class KefiOnboardingWizardPage {
     await this.expectOk(await completeResponse, 'complete-onboarding');
     const published = await publishResponse;
     await this.expectOk(published, 'Finish publish');
-    return (await published.json()) as { tenantSlug?: string; jobName?: string };
+    const body = (await published.json()) as { tenantSlug?: string; jobName?: string };
+    this.finishJobName = body.jobName ?? '';
+    return body;
+  }
+
+  async waitForFinishPublish(owner: { email: string; password: string }, admin = new KefiAdminClient()): Promise<void> {
+    expect(this.finishJobName, 'Finish publish returned a job name').not.toBe('');
+    await admin.pollPublishStatus({ ownerEmail: owner.email, ownerPassword: owner.password, jobName: this.finishJobName });
   }
 
   private waitForPost(path: string): Promise<Response> {

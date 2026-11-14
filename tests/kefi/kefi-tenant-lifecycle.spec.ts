@@ -132,6 +132,7 @@ test.describe('Kefi tenant lifecycle — full self-serve canary', () => {
         code: 'pro',
       });
       await wizard.finishFromReview();
+      await wizard.waitForFinishPublish(ctx, adminClient);
 
       // ── 6. API: trigger welcome-email sweep + IMAP-poll the inbox ────
       // Phase D — the wizard's `complete` POST flips

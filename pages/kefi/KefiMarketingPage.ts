@@ -5,9 +5,13 @@
  */
 
 import { type Locator, type Page, expect } from '@playwright/test';
+import { setTimeout as delay } from 'node:timers/promises';
+
 import { KefiAdminClient } from '../../helpers/kefi/kefiAdminClient.js';
 import { authorizeCanarySignup } from '../../helpers/kefi/kefiCanarySignupAuth.js';
 import { getKefiUrls } from '../../helpers/kefi/kefiUrls.js';
+
+const SIGNUP_MIN_FILL_MS = 3_500;
 
 export class KefiMarketingPage {
   readonly page: Page;
@@ -17,6 +21,8 @@ export class KefiMarketingPage {
   readonly tosCheckbox: Locator;
   readonly submitButton: Locator;
   readonly errorMessage: Locator;
+
+  private loadedAtMs = 0;
 
   constructor(page: Page) {
     this.page = page;
@@ -31,6 +37,7 @@ export class KefiMarketingPage {
   async goto(): Promise<void> {
     const { marketingUrl } = getKefiUrls();
     await this.page.goto(`${marketingUrl}/signup`);
+    this.loadedAtMs = Date.now();
     await expect(this.emailInput).toBeVisible();
   }
 
@@ -56,6 +63,7 @@ export class KefiMarketingPage {
   }): Promise<void> {
     await authorizeCanarySignup(this.page, input.tenantName, () => new KefiAdminClient().getBearer());
     await this.fillSignupForm(input);
+    await delay(Math.max(0, SIGNUP_MIN_FILL_MS - (Date.now() - this.loadedAtMs)));
     await Promise.all([
       this.page.waitForURL(/\/signup-success\/?$/),
       this.submit(),

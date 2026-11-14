@@ -133,11 +133,12 @@ test.describe('KEFI-WIZARD-FULL-1 "Setup wizard creates the full site and form"'
       await checkTextFit('review-clean');
       await wizard.finishFromReview();
 
-      await expect(page, 'Finish lands on the landing editor').toHaveURL(/\/organizer\/landing\/?$/, { timeout: 30_000 });
+      await expect(page, 'Finish lands on the landing editor').toHaveURL(/\/organizer\/landing\/?(\?publish=started)?$/, { timeout: 30_000 });
       await expect(page.getByText(ERROR_BOUNDARY_TITLE), 'no error boundary on /organizer/landing').toBeHidden();
       await expect(page.getByTestId('onboarding-wizard'), 'the wizard does not bounce back').toBeHidden();
       await checkTextFit('organizer-home');
 
+      await wizard.waitForFinishPublish(ctx, adminClient);
       const published = await adminClient.publishLanding({ ownerEmail: ctx.email, ownerPassword: ctx.password });
       const terminal = await adminClient.pollPublishStatus({
         ownerEmail: ctx.email,
