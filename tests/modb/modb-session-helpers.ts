@@ -71,6 +71,12 @@ export interface CheckRow {
   source?: string;
 }
 
+const SDK_RECOVERY_VERSION = '2';
+
+function sdkHeaders(session: SessionHandle): Record<string, string> {
+  return { Authorization: `Bearer ${session.token}`, 'x-proovid-recovery-version': SDK_RECOVERY_VERSION };
+}
+
 function api(): string {
   return `${resolveGatewayUrl(process.env)}/api`;
 }
@@ -162,7 +168,7 @@ export async function sessionConfiguration(
   session: SessionHandle,
 ): Promise<{ steps: string[]; flow_id: string; session_id: string }> {
   const response = await request.get(`${api()}/v1/verification-sessions/current`, {
-    headers: { Authorization: `Bearer ${session.token}` },
+    headers: sdkHeaders(session),
     timeout: REQUEST_TIMEOUT_MS,
     failOnStatusCode: false,
   });
@@ -178,7 +184,7 @@ export async function submitDocument(
 ): Promise<string> {
   const { mockOutcomes, extraFields = {}, documentType = 'identity_card' } = controls;
   const response = await request.post(`${api()}/v1/verifications/document`, {
-    headers: { Authorization: `Bearer ${session.token}` },
+    headers: sdkHeaders(session),
     timeout: REQUEST_TIMEOUT_MS,
     failOnStatusCode: false,
     multipart: {
@@ -232,7 +238,7 @@ export async function waitForAmlTerminal(request: APIRequestContext, sessionId: 
 /** The applicant progress state the browser sees: not_started | processing | retry_required | complete. */
 export async function progressState(request: APIRequestContext, session: SessionHandle): Promise<string> {
   const response = await request.get(`${api()}/v1/verifications/current`, {
-    headers: { Authorization: `Bearer ${session.token}` },
+    headers: sdkHeaders(session),
     timeout: REQUEST_TIMEOUT_MS,
     failOnStatusCode: false,
   });
