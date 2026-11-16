@@ -217,7 +217,8 @@ test.describe('FinReg funds, deal gate, blocking, roles @zygos-api @api', () => 
 
       await putSettings(admin!, { gateEnabled: true, gateStage: GATE_STAGE, approvalThreshold: THRESHOLD });
       const problem = await expectProblem(res, 409, 'ProviderBalanceInsufficient');
-      expect(problem.detail ?? '', 'the refusal states the shortfall').toMatch(/provider balance/i);
+      expect(problem.detail ?? '', 'the refusal compares against a reported balance').toMatch(/exceeds the provider balance/i);
+      expect(problem.detail ?? '', 'the provider reported a balance, so this is a real shortfall').not.toMatch(/could not be pre-checked|does not report a balance/i);
     });
 
     test('AC-G2 moving a 40 deal into the gate stage with no balance, is refused 409 with shortfall 40', async () => {
