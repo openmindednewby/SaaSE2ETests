@@ -4,7 +4,8 @@ import path from 'path';
 import { expectTextFits } from '@dloizides/game-e2e';
 import { devices, expect, test } from '@playwright/test';
 
-import { MASTER_IDS, MASTER_ROUTES, MERCHANTS, ZYGOS_WEB_URL, enterConsoleAs, id, masterAccount, openId, resolveDemoAccounts, sessionFor } from './zygos-master.js';
+import { MASTER_IDS, MASTER_ROUTES, MERCHANTS, ZYGOS_WEB_URL, enterConsoleAs, id, masterAccount, merchantAccount, openId, resolveDemoAccounts, sessionFor } from './zygos-master.js';
+import { ZYGOS_API_PREFIX } from './zygos-helpers.js';
 
 const SHOT_DIR = process.env.SIGHTING_DIR ?? path.join('test-results', 'finreg-funds-sighting');
 const ACME = MERCHANTS[0];
@@ -17,6 +18,51 @@ const VIEWPORTS = [
   { label: '360x640', device: { ...devices['Galaxy S5'], viewport: { width: 360, height: 640 } } },
   { label: '1280x800', device: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } } },
 ] as const;
+
+const MODAL_CANCEL = '[data-testid$="-edit-modal-cancel"]';
+const TAB_LIMIT = 80;
+
+async function rowOpens(page: import('@playwright/test').Page, shot: string): Promise<string> {
+  const cancel = page.locator(MODAL_CANCEL).first();
+  await page.keyboard.press('Escape');
+  if (await cancel.isVisible()) await cancel.click();
+  const closedFirst = await cancel.waitFor({ state: 'hidden', timeout: 5_000 }).then(() => true, () => false);
+  const table = page.locator('[data-testid$="-table"]:has([data-testid*="-table-row-"])').first();
+  const row = table.locator('[data-testid*="-table-row-"]:not([data-testid*="fade"])').first();
+  if ((await row.count()) === 0) return `closedFirst=${closedFirst} rowCheck=NO ROW`;
+  const rowId = await row.getAttribute('data-testid');
+  const cursor = await row.evaluate((el) => getComputedStyle(el).cursor);
+  const clicked = await row.locator(':scope > *').first().click({ timeout: 5_000 }).then(() => 'ok', (e: Error) => e.message.split('\n')[0].slice(0, 80));
+  const clickOpens = await cancel.waitFor({ state: 'visible', timeout: 5_000 }).then(() => true, () => false);
+  if (clickOpens) await page.screenshot({ path: shot });
+  await page.keyboard.press('Escape');
+  const escapeCloses = await cancel.waitFor({ state: 'hidden', timeout: 5_000 }).then(() => true, () => false);
+  if (!escapeCloses && (await cancel.isVisible())) await cancel.click();
+  let tabReached = false;
+  for (let i = 0; i < TAB_LIMIT && !tabReached; i++) {
+    await page.keyboard.press('Tab');
+    tabReached = await row.evaluate((el) => el === document.activeElement || el.contains(document.activeElement));
+  }
+  let enterOpens = false;
+  if (tabReached) {
+    await page.keyboard.press('Enter');
+    enterOpens = await cancel.waitFor({ state: 'visible', timeout: 5_000 }).then(() => true, () => false);
+    await page.keyboard.press('Escape');
+  }
+  return `closedFirst=${closedFirst} row=${rowId} click=${clicked} rowClickOpens=${clickOpens} escapeCloses=${escapeCloses} cursor=${cursor} tabReachesRow=${tabReached} enterOpens=${enterOpens}`;
+}
+
+test('SIGHT tenant user without access.users.read gets 403 on GET /access/users @zygos-ui', async () => {
+  fs.mkdirSync(SHOT_DIR, { recursive: true });
+  const demo = await sessionFor(merchantAccount(await resolveDemoAccounts()));
+  test.skip(!demo, 'no demo merchant session');
+
+  const res = await demo!.context.get(`${ZYGOS_API_PREFIX}/access/users`);
+
+  const body = (await res.text()).slice(0, 300).replace(/\s+/g, ' ');
+  fs.appendFileSync(path.join(SHOT_DIR, 'findings.txt'), `demo GET /access/users -> ${res.status()} ${body}\n`);
+  expect(res.status(), `a tenant user must be refused, not crash; body: ${body}`).toBe(403);
+});
 
 for (const vp of VIEWPORTS) {
   test(`SIGHT funds screens ${vp.label} @zygos-ui`, async ({ browser }) => {
@@ -99,6 +145,7 @@ for (const vp of VIEWPORTS) {
             const cancel = page.locator('[data-testid$="-edit-modal-cancel"]').first();
             if (await cancel.isVisible()) await cancel.click();
           } else roles = 'NO USER ROW (0 edit buttons)';
+          roles += ` ${await rowOpens(page, path.join(SHOT_DIR, `${vp.label}-access-users-row-open.png`))}`;
         }
         lines.push(`${vp.label} ${name} url=${m.url} sw=${m.sw}/${m.vw} small=${m.small} [${m.smallList}] text=${m.textLen} fit=${fit} keys=[${x.keys}] switches=[${x.sw}] scroll=${bottom} roles=[${roles}] errs=${errs.join(' ; ') || 'none'}`);
       }
