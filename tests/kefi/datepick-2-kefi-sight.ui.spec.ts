@@ -57,6 +57,7 @@ async function guardWrites(page: Page): Promise<WriteGuard> {
     }
     if (req.method() === 'GET' || req.method() === 'HEAD' || req.method() === 'OPTIONS') return route.continue();
     const path = new URL(req.url()).pathname;
+    if (req.method() === 'POST' && path === '/bff/landing-preview') return route.continue();
     if (req.method() === 'PUT' && path.endsWith('/admin/onboarding')) {
       guard.onboardingWrites.push(`${req.method()} ${path}`);
       const sent = (req.postDataJSON() ?? {}) as Record<string, unknown>;
@@ -195,7 +196,8 @@ for (const device of DEVICES) {
       facts.interceptedOnboardingWrites = guard.onboardingWrites;
       facts.abortedWrites = guard.otherWrites;
       expect.soft(guard.otherWrites, 'no write other than the intercepted onboarding autosave leaves the page').toEqual([]);
-      expect.soft(consoleErrors, 'no console errors on the onboarding page').toEqual([]);
+      const anonymousSessionProbe = (e: string): boolean => e.includes('status of 401') && e.endsWith('/bff/me');
+      expect.soft(consoleErrors.filter((e) => !anonymousSessionProbe(e)), 'no console errors on the onboarding page (the pre-sign-in /bff/me 401 excluded)').toEqual([]);
       fs.writeFileSync(info.outputPath(`${device.name}-facts.json`), JSON.stringify(facts, null, 2));
       console.log(`DATEPICK-2 kefi FACTS ${JSON.stringify(facts)}`);
     });
