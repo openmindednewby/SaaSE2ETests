@@ -26,8 +26,8 @@ const UNAVAILABLE = "This step isn't available here";
 async function seedAutoTour(page: Page, tourId: string): Promise<void> {
   await page.addInitScript((id: string) => {
     const host = window as unknown as { __tourEvents: TourEventRecord[]; umami: unknown };
-    host.__tourEvents = [];
-    host.umami = { track: (name: string, data: Record<string, string>) => host.__tourEvents.push({ name, tourId: data.tourId, mode: data.mode }) };
+    host.__tourEvents = JSON.parse(sessionStorage.getItem('__tour-e2e-events') ?? '[]') as TourEventRecord[];
+    host.umami = { track: (name: string, data: Record<string, string>) => { host.__tourEvents.push({ name, tourId: data.tourId, mode: data.mode }); sessionStorage.setItem('__tour-e2e-events', JSON.stringify(host.__tourEvents)); } };
     if (sessionStorage.getItem('__tour-e2e-seeded') === null) {
       sessionStorage.setItem('__tour-e2e-seeded', '1');
       sessionStorage.setItem('__tour-state', JSON.stringify({ tourId: id, step: 0, mode: 'auto' }));
