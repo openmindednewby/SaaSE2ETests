@@ -22,6 +22,7 @@ const VIEWPORTS = [
 const SCHEMES = ['light', 'dark'] as const;
 const TEXT_MIN = 4.5;
 const RING_MIN = 3;
+const RING_SETTLE_MS = 800;
 
 function channels(color: string): number[] {
   const parts = color.match(/[\d.]+/g) ?? [];
@@ -72,6 +73,7 @@ test.describe('TOUR-1 caption and ring contrast', () => {
 
         await enterConsoleAs(page, session!, '/instructions');
         await expect(page.locator('[data-testid="tour-ring"]')).toBeVisible({ timeout: 20_000 });
+        await page.waitForTimeout(RING_SETTLE_MS);
         const result = await measure(page);
 
         const textRatio = contrast(result.textColor, result.captionBg);
