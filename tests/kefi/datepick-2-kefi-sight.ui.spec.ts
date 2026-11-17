@@ -50,6 +50,11 @@ async function guardWrites(page: Page): Promise<WriteGuard> {
   });
   await page.route('**/bff/**', async (route: Route) => {
     const req = route.request();
+    if (req.method() === 'GET' && /\/bff\/admin\/onboarding$/.test(new URL(req.url()).pathname)) {
+      const real = await route.fetch();
+      const body = { ...((await real.json()) as Record<string, unknown>), completed: false };
+      return route.fulfill({ response: real, json: body });
+    }
     if (req.method() === 'GET' || req.method() === 'HEAD' || req.method() === 'OPTIONS') return route.continue();
     const path = new URL(req.url()).pathname;
     if (req.method() === 'PUT' && path.endsWith('/admin/onboarding')) {
@@ -66,10 +71,14 @@ async function guardWrites(page: Page): Promise<WriteGuard> {
 async function openOnboardingField(page: Page): Promise<WriteGuard> {
   const webUrl = getKefiUrls().webUrl.replace(/\/+$/, '');
   await page.goto(`${webUrl}/login`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  await expect(page.getByTestId('kefi-login-tab-password'), 'login screen settled before the sign-in fetch').toBeVisible({ timeout: 45_000 });
   await bffLogin(page, proofOrganizer());
   const guard = await guardWrites(page);
   await page.goto(`${webUrl}${ONBOARDING_PATH}`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-  await expect(page.getByTestId('onboarding-wizard'), 'onboarding wizard renders for the e2e organizer').toBeVisible({ timeout: 45_000 });
+  const quickStart = page.getByTestId('onboarding-quick-start');
+  await expect(page.getByTestId('onboarding-wizard').or(quickStart), 'onboarding wizard or quick start renders for the e2e organizer').toBeVisible({ timeout: 45_000 });
+  if (await quickStart.isVisible()) await page.getByTestId('onboarding-quick-step-by-step').click();
+  await expect(page.getByTestId('onboarding-wizard'), 'onboarding wizard renders for the e2e organizer').toBeVisible({ timeout: 20_000 });
   for (let i = 0; i < MAX_BACK_STEPS && !(await page.getByTestId(STEP_BASICS).isVisible()); i++) {
     await page.getByTestId('onboarding-back').click();
   }
