@@ -250,7 +250,7 @@ export function buildProjects(): ProjectConfig {
     {
       name: 'datepick-sight',
       workers: 1,
-      testMatch: /datepick-2-.*-sight\.ui\.spec\.ts/,
+      testMatch: /datepick-\d+-.*-sight\.ui\.spec\.ts/,
       use: { ...CHROME, ignoreHTTPSErrors: true },
     },
     // Agora (eShop) — @api tier. Health probes, the full merchant-admin CRUD surface
