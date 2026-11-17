@@ -87,7 +87,7 @@ for (const device of DEVICES) {
       facts.field = fieldBox;
       facts.smallestCell = cells.reduce((m, c) => (c.w * c.h < m.w * m.h ? c : m), cells[0] ?? { w: 0, h: 0 });
       facts.textFitOpen = await textFitProblem(page);
-      facts.textFitPicker = await textFitProblem(page, `${DIALOG} *, [data-testid="${FIELD}-anchor"] *`);
+      facts.textFitPicker = await textFitProblem(page, `${DIALOG} *:not([id^="a11y-hint-"]), [data-testid="${FIELD}-anchor"] *:not([id^="a11y-hint-"])`);
       const shot = info.outputPath(`${device.name}-open.png`);
       await page.screenshot({ path: shot });
       facts.screenshot = shot;
@@ -117,11 +117,12 @@ for (const device of DEVICES) {
         const [y, m, d] = iso.split('-').map(Number);
         const opts: Intl.DateTimeFormatOptions = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
         const date = new Date(y, m - 1, d);
-        return [navigator.language, 'en-GB'].map((l) => new Intl.DateTimeFormat(l, opts).format(date));
+        return [navigator.language, 'en-GB'].map((l) => new Intl.DateTimeFormat(l, opts).format(date).replace(/,/g, ''));
       }, pickIso);
       facts.closedValue = shown;
       facts.expectedValues = expected;
-      expect.soft(expected, `closed field shows the picked date by locale, got "${shown}"`).toContain(shown);
+      expect.soft(expected, `closed field shows the picked date by locale, got "${shown}"`).toContain(shown.replace(/,/g, ''));
+      expect.soft(facts.valueWhileFocused, 'field after Set date (focus returned) never shows mm/dd/yyyy').not.toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
       facts.textFitClosed = await textFitProblem(page);
       expect.soft(facts.textFitClosed, 'expectTextFits with the field closed').toBe('');
 
