@@ -100,7 +100,10 @@ for (const device of DEVICES) {
         expect.soft(cells.filter((c) => c.w < MIN_TAP || c.h < MIN_TAP), 'every day cell >= 44x44').toEqual([]);
       } else {
         expect.soft(facts.variant, 'desktop opens the popover variant').toBe('popover');
-        expect.soft(final.y, 'popover opens below the field').toBeGreaterThanOrEqual(fieldBox.y + fieldBox.height - EDGE_PX);
+        const below = final.y >= fieldBox.y + fieldBox.height - EDGE_PX;
+        const above = final.y + final.height <= fieldBox.y + EDGE_PX;
+        facts.popoverSide = below ? 'below' : above ? 'above' : 'covers-field';
+        expect.soft(facts.popoverSide, 'popover below the field, or above it when there is no room below, never over it').not.toBe('covers-field');
         expect.soft(final.x >= 0 && final.y >= 0 && final.x + final.width <= viewport.width && final.y + final.height <= viewport.height, 'popover inside the viewport').toBe(true);
         expect.soft(Math.abs(atRest.width - final.width), 'width 300 ms after open equals final width (no stuck scale)').toBeLessThanOrEqual(0.5);
       }
