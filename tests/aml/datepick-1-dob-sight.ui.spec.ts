@@ -125,7 +125,10 @@ for (const device of DEVICES) {
       facts.expectedValues = expected;
       expect.soft(expected, `closed field shows the picked date by locale, got "${shown}"`).toContain(shown.replace(/,/g, ''));
       expect.soft(facts.valueWhileFocused, 'field after Set date (focus returned) never shows mm/dd/yyyy').not.toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
-      facts.textFitClosed = await textFitProblem(page);
+      facts.textFitClosed = await page.getByTestId(FIELD).first().evaluate((el) => {
+        const input = el as HTMLInputElement;
+        return input.scrollWidth > input.clientWidth + 1 ? `value "${input.value}" ${input.scrollWidth}px in a ${input.clientWidth}px box` : '';
+      });
       expect.soft(facts.textFitClosed, 'expectTextFits on the closed date field').toBe('');
 
       await page.getByTestId(`${FIELD}-calendar`).click();
