@@ -21,7 +21,7 @@ void _desktopBrowser;
 
 const DEVICES = [
   { name: 'phone-360x640', use: PHONE, phone: true },
-  { name: 'desktop-1280x800', use: DESKTOP, phone: false },
+  { name: 'desktop-1280x800', use: { ...DESKTOP, viewport: { width: 1280, height: 800 } }, phone: false },
 ] as const;
 
 interface Box { x: number; y: number; width: number; height: number }
@@ -39,9 +39,9 @@ async function openPlaygroundField(page: Page): Promise<void> {
   await expect(field, 'DOB field screen-dob visible on the public playground').toBeVisible({ timeout: 20_000 });
 }
 
-async function textFitProblem(page: Page): Promise<string> {
+async function textFitProblem(page: Page, selector = VISIBLE_TEXT): Promise<string> {
   try {
-    await expectTextFits(page, VISIBLE_TEXT);
+    await expectTextFits(page, selector);
     return '';
   } catch (error) {
     return (error as Error).message.split('\n').slice(0, 4).join(' | ');
@@ -62,6 +62,8 @@ for (const device of DEVICES) {
       const consoleErrors: string[] = [];
       page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 200)); });
       page.on('pageerror', (e) => consoleErrors.push(`PAGEERROR ${e.message.slice(0, 200)}`));
+      const failedResponses: string[] = [];
+      page.on('response', (r) => { if (r.status() >= 400) failedResponses.push(`${r.status()} ${r.request().method()} ${r.url().slice(0, 140)}`); });
       const pickIso = firstOfMonthIso();
       const viewport = page.viewportSize() ?? { width: 0, height: 0 };
       await openPlaygroundField(page);
@@ -85,6 +87,7 @@ for (const device of DEVICES) {
       facts.field = fieldBox;
       facts.smallestCell = cells.reduce((m, c) => (c.w * c.h < m.w * m.h ? c : m), cells[0] ?? { w: 0, h: 0 });
       facts.textFitOpen = await textFitProblem(page);
+      facts.textFitPicker = await textFitProblem(page, `${DIALOG} *, [data-testid="${FIELD}-anchor"] *`);
       const shot = info.outputPath(`${device.name}-open.png`);
       await page.screenshot({ path: shot });
       facts.screenshot = shot;
@@ -101,12 +104,15 @@ for (const device of DEVICES) {
         expect.soft(final.x >= 0 && final.y >= 0 && final.x + final.width <= viewport.width && final.y + final.height <= viewport.height, 'popover inside the viewport').toBe(true);
         expect.soft(Math.abs(atRest.width - final.width), 'width 300 ms after open equals final width (no stuck scale)').toBeLessThanOrEqual(0.5);
       }
-      expect.soft(facts.textFitOpen, 'expectTextFits with the picker open').toBe('');
+      expect.soft(facts.textFitPicker, 'expectTextFits inside the open picker and field').toBe('');
+      expect.soft(facts.textFitOpen, 'expectTextFits page-wide with the picker open').toBe('');
 
       await page.locator(`[data-testid="${FIELD}-picker-day-${pickIso}"]`).click();
       await page.getByTestId(`${FIELD}-picker-set`).last().click();
       await expect(dialog, 'Set date closes the picker').toBeHidden();
-      const shown = await page.getByTestId(FIELD).first().inputValue().catch(async () => page.getByTestId(FIELD).first().innerText());
+      facts.valueWhileFocused = await page.getByTestId(FIELD).first().inputValue();
+      await page.getByTestId(FIELD).first().blur();
+      const shown = await page.getByTestId(FIELD).first().inputValue();
       const expected = await page.evaluate((iso) => {
         const [y, m, d] = iso.split('-').map(Number);
         const opts: Intl.DateTimeFormatOptions = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
@@ -131,6 +137,7 @@ for (const device of DEVICES) {
       expect.soft(facts.focusAfterEsc, 'Esc returns focus to the field').toBe(FIELD);
 
       facts.consoleErrors = consoleErrors;
+      facts.failedResponses = failedResponses;
       expect.soft(consoleErrors, 'no console errors').toEqual([]);
       fs.writeFileSync(info.outputPath(`${device.name}-facts.json`), JSON.stringify(facts, null, 2));
       console.log(`DATEPICK-1 FACTS ${JSON.stringify(facts)}`);
