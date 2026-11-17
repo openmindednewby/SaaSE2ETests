@@ -247,6 +247,12 @@ export function buildProjects(): ProjectConfig {
       testMatch: /aml\/(.*\.ui|aml-gdelt-page-qa)\.spec\.ts/,
       use: { ...CHROME, ignoreHTTPSErrors: true },
     },
+    {
+      name: 'datepick-sight',
+      workers: 1,
+      testMatch: /datepick-2-.*-sight\.ui\.spec\.ts/,
+      use: { ...CHROME, ignoreHTTPSErrors: true },
+    },
     // Agora (eShop) — @api tier. Health probes, the full merchant-admin CRUD surface
     // (products / categories / coupons / stock / shop settings), and the cross-tenant
     // isolation rig. Seed-based, no browser, seconds.
