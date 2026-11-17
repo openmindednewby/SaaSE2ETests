@@ -9,6 +9,8 @@ import { isRemoteTarget } from '../../helpers/target.js';
 const EREVNA_BASE_URL = (process.env.EREVNA_BASE_URL ?? 'https://staging.erevna.dloizides.com').replace(/\/+$/, '');
 const TEMPLATES_PATH = '/quiz-templates';
 const FIELD = 'template-closing-date-input';
+const TEMPLATE_ROW = 'tenant-list-item';
+const EDIT_LABEL = 'Edit';
 const PICK_DAY = '15';
 const DIALOG = `[data-testid="${FIELD}-picker"][data-variant]`;
 const DAYS = `[data-testid^="${FIELD}-picker-day-"]`;
@@ -50,14 +52,14 @@ async function guardWrites(page: Page): Promise<WriteGuard> {
 }
 
 async function openClosingDateField(page: Page): Promise<WriteGuard> {
-  const username = process.env.TEST_USER_USERNAME ?? '';
-  const password = process.env.TEST_USER_PASSWORD ?? '';
-  expect(username !== '' && password !== '', 'TEST_USER_USERNAME / TEST_USER_PASSWORD (staging e2e test tenant) configured').toBe(true);
+  const username = process.env.EREVNA_TEST_USERNAME ?? '';
+  const password = process.env.EREVNA_TEST_PASSWORD ?? '';
+  expect(username !== '' && password !== '', 'EREVNA_TEST_USERNAME / EREVNA_TEST_PASSWORD (questioner-realm user on the named erevna test tenant) configured in .env.<env>.secrets').toBe(true);
   await page.goto(`${EREVNA_BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await loginAsTenantAdminBrowser(page, { username, password });
   const guard = await guardWrites(page);
   await page.goto(`${EREVNA_BASE_URL}${TEMPLATES_PATH}`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-  const edit = page.getByTestId('edit-button').first();
+  const edit = page.getByTestId(TEMPLATE_ROW).first().getByRole('button', { name: EDIT_LABEL, exact: true });
   await expect(edit, 'the e2e test tenant has a template row with an edit action').toBeVisible({ timeout: 45_000 });
   await edit.click();
   const field = page.getByTestId(FIELD).first();
@@ -78,7 +80,7 @@ async function textFitProblem(page: Page, selector = PICKER_TEXT): Promise<strin
 for (const device of DEVICES) {
   test.describe(device.name, () => {
     test.skip(!isRemoteTarget(), 'drives the deployed erevna-web template editor');
-    test.use({ ...device.use, ignoreHTTPSErrors: true });
+    test.use({ ...device.use, baseURL: EREVNA_BASE_URL, ignoreHTTPSErrors: true });
 
     test(`AC-UI-DP-${device.phone ? 1 : 2} erevna template closing date DateField picker on ${device.name}, opens as ${device.phone ? 'bottom sheet' : 'popover under the field'}, Set date shows a locale date, Esc returns focus`, async ({ page }, info) => {
       test.setTimeout(120_000);
