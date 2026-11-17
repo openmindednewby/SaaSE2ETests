@@ -63,10 +63,11 @@ async function guardWrites(page: Page): Promise<WriteGuard> {
   return guard;
 }
 
-async function openOnboardingField(page: Page): Promise<void> {
+async function openOnboardingField(page: Page): Promise<WriteGuard> {
   const webUrl = getKefiUrls().webUrl.replace(/\/+$/, '');
   await page.goto(`${webUrl}/login`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await bffLogin(page, proofOrganizer());
+  const guard = await guardWrites(page);
   await page.goto(`${webUrl}${ONBOARDING_PATH}`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await expect(page.getByTestId('onboarding-wizard'), 'onboarding wizard renders for the e2e organizer').toBeVisible({ timeout: 45_000 });
   for (let i = 0; i < MAX_BACK_STEPS && !(await page.getByTestId(STEP_BASICS).isVisible()); i++) {
@@ -75,6 +76,7 @@ async function openOnboardingField(page: Page): Promise<void> {
   const field = page.getByTestId(FIELD).first();
   await field.scrollIntoViewIfNeeded({ timeout: 20_000 });
   await expect(field, 'DateField onboarding-event-date visible on the event basics step').toBeVisible({ timeout: 20_000 });
+  return guard;
 }
 
 async function textFitProblem(page: Page, selector = PICKER_TEXT): Promise<string> {
@@ -99,8 +101,7 @@ for (const device of DEVICES) {
       const failedResponses: string[] = [];
       page.on('response', (r) => { if (r.status() >= 400) failedResponses.push(`${r.status()} ${r.request().method()} ${r.url().slice(0, 140)}`); });
       const viewport = page.viewportSize() ?? { width: 0, height: 0 };
-      const guard = await guardWrites(page);
-      await openOnboardingField(page);
+      const guard = await openOnboardingField(page);
       const initialValue = await page.getByTestId(FIELD).first().inputValue();
       const facts: Record<string, unknown> = { device: device.name, viewport, utc: new Date().toISOString(), initialValue, pickDay: PICK_DAY };
 
