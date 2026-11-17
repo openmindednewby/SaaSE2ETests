@@ -44,13 +44,13 @@ async function guardWrites(page: Page): Promise<WriteGuard> {
   const guard: WriteGuard = { onboardingWrites: [], otherWrites: [] };
   let lastOnboarding: Record<string, unknown> = { completed: false, step: null, state: null };
   page.on('response', async (r) => {
-    if (r.request().method() === 'GET' && /\/bff\/admin\/onboarding$/.test(new URL(r.url()).pathname) && r.ok()) {
+    if (r.request().method() === 'GET' && /\/bff\/.*\/admin\/onboarding$/.test(new URL(r.url()).pathname) && r.ok()) {
       lastOnboarding = (await r.json().catch(() => lastOnboarding)) as Record<string, unknown>;
     }
   });
   await page.route('**/bff/**', async (route: Route) => {
     const req = route.request();
-    if (req.method() === 'GET' && /\/bff\/admin\/onboarding$/.test(new URL(req.url()).pathname)) {
+    if (req.method() === 'GET' && /\/bff\/.*\/admin\/onboarding$/.test(new URL(req.url()).pathname)) {
       const real = await route.fetch();
       const body = { ...((await real.json()) as Record<string, unknown>), completed: false };
       return route.fulfill({ response: real, json: body });
