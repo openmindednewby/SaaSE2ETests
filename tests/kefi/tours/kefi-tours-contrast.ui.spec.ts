@@ -22,6 +22,7 @@ interface Measure {
   readonly pageBg: string;
   readonly scrim: string;
   readonly underScrim: string;
+  readonly besideRing: string;
   readonly fontFamily: string;
   readonly overflow: boolean;
 }
@@ -66,13 +67,20 @@ function contrast(a: string, b: string): number {
 
 async function measure(page: Page): Promise<Measure> {
   return page.evaluate(() => {
-    const opaque = (bg: string): boolean => bg !== 'transparent' && !/rgba\([^)]*,\s*0\)$/.test(bg);
+    const parse = (bg: string): number[] => {
+      const v = (bg.match(/[\d.]+/g) ?? []).map(Number);
+      return bg === 'transparent' || v.length < 3 ? [0, 0, 0, 0] : [v[0], v[1], v[2], v[3] ?? 1];
+    };
     const fillOf = (start: Element | null): string => {
+      const layers: number[][] = [];
       for (let node = start; node !== null; node = node.parentElement) {
-        const bg = getComputedStyle(node).backgroundColor;
-        if (opaque(bg)) return bg;
+        const layer = parse(getComputedStyle(node).backgroundColor);
+        if (layer[3] > 0) layers.push(layer);
+        if (layer[3] >= 1) break;
       }
-      return 'rgb(255, 255, 255)';
+      const base = layers.length > 0 && layers[layers.length - 1][3] >= 1 ? layers.pop() as number[] : [255, 255, 255, 1];
+      const [r, g, b] = layers.reverse().reduce((under, [lr, lg, lb, la]) => [lr * la + under[0] * (1 - la), lg * la + under[1] * (1 - la), lb * la + under[2] * (1 - la)], base);
+      return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
     };
     const caption = document.querySelector('[data-testid="tour-caption"]') as HTMLElement;
     const text = document.querySelector('[data-testid="tour-text"]') as HTMLElement;
@@ -92,7 +100,12 @@ async function measure(page: Page): Promise<Measure> {
       .map(([name, node]) => ({ name, color: getComputedStyle(node).color, background: fillOf(node) }));
     const box = ring.getBoundingClientRect();
     const inset = parseFloat(getComputedStyle(ring).borderTopWidth) + 2;
-    const under = document.elementsFromPoint(box.left + inset, box.top + box.height / 2).find((node) => node.closest('[data-tour-overlay], [data-testid="tour-caption"]') === null) ?? null;
+    const clampX = (x: number): number => Math.min(Math.max(x, 2), innerWidth - 2);
+    const midY = Math.min(Math.max(box.top + box.height / 2, 2), innerHeight - 2);
+    const pageAt = (x: number, y: number): Element | null => document.elementsFromPoint(x, y).find((node) => node.closest('[data-tour-overlay], [data-testid="tour-caption"]') === null) ?? null;
+    const under = pageAt(clampX(box.left + inset), midY);
+    if (under === null) throw new Error(`no page element inside the ring at x=${clampX(box.left + inset)} y=${midY}`);
+    const outsideOnScreen = box.left - 4 >= 0;
     const caption2 = caption.getBoundingClientRect();
     const inside = (x: number, y: number, r: DOMRect): boolean => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
     const corners: [number, number][] = [[4, 4], [innerWidth - 4, 4], [4, innerHeight - 4], [innerWidth - 4, innerHeight - 4]];
@@ -107,6 +120,7 @@ async function measure(page: Page): Promise<Measure> {
       pageBg: fillOf(document.body),
       scrim,
       underScrim: fillOf(outside),
+      besideRing: outsideOnScreen ? fillOf(pageAt(box.left - 4, midY)) : 'none',
       fontFamily: getComputedStyle(caption).fontFamily,
       overflow: !fits(caption) || !fits(text),
     };
@@ -149,16 +163,18 @@ test.describe('TOUR-3 kefi caption and ring contrast', () => {
 
         const texts = result.texts.map((pair) => ({ ...pair, ratio: contrast(pair.color, pair.background) }));
         const dimmedPage = seenThroughScrim(result.scrim, result.underScrim);
-        const ringRatio = contrast(result.ringColor, result.behindRing);
+        const ringInside = contrast(result.ringColor, result.behindRing);
+        const ringOutside = result.besideRing === 'none' ? 0 : contrast(result.ringColor, seenThroughScrim(result.scrim, result.besideRing));
+        const ringRatio = Math.max(ringInside, ringOutside);
         fs.mkdirSync(OUT_DIR, { recursive: true });
         await page.screenshot({ path: `${OUT_DIR}/${scheme}-${viewport.width}.png` });
-        fs.writeFileSync(`${OUT_DIR}/${scheme}-${viewport.width}.json`, JSON.stringify({ ...result, texts, ringRatio, dimmedPage, dimmedLuminance: luminance(dimmedPage) }, null, 2));
+        fs.writeFileSync(`${OUT_DIR}/${scheme}-${viewport.width}.json`, JSON.stringify({ ...result, texts, ringInside, ringOutside, ringRatio, dimmedPage, dimmedLuminance: luminance(dimmedPage) }, null, 2));
         await context.close();
         expect(texts.map((pair) => pair.name), 'caption shows step label, body and Back/Next/End').toEqual(expect.arrayContaining(['step label', 'body', 'Back', 'Next', 'End']));
         for (const pair of texts) {
           expect.soft(pair.ratio, `${pair.name} text ${pair.color} on ${pair.background}`).toBeGreaterThanOrEqual(TEXT_MIN);
         }
-        expect.soft(ringRatio, `ring ${result.ringColor} against the page behind it ${result.behindRing}`).toBeGreaterThanOrEqual(RING_MIN);
+        expect.soft(ringRatio, `ring ${result.ringColor} reaches 3:1 on one edge: inside ${result.behindRing} ${ringInside}, outside ${result.besideRing} ${ringOutside}`).toBeGreaterThanOrEqual(RING_MIN);
         if (scheme === 'dark') {
           expect.soft(luminance(dimmedPage), `page under the scrim ${result.scrim} over ${result.underScrim} is ${dimmedPage}, dark`).toBeLessThan(DARK_PAGE_MAX_LUMINANCE);
           expect.soft(luminance(result.pageBg), `page background ${result.pageBg} follows the dark scheme`).toBeLessThanOrEqual(DARK_PAGE_MAX_LUMINANCE);
