@@ -22,7 +22,7 @@ const VIEWPORTS = [
   { width: 360, height: 640 },
   { width: 1280, height: 800 },
 ] as const;
-const SCHEMES = ['light'] as const;
+const SCHEMES = ['light', 'dark'] as const;
 const TEXT_MIN = 4.5;
 const RING_MIN = 3;
 const RING_SETTLE_MS = 800;
