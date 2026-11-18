@@ -899,6 +899,12 @@ export function buildProjects(): ProjectConfig {
       use: { ...MOBILE_FLOOR, navigationTimeout: 45_000, actionTimeout: 15_000 },
     },
     {
+      name: 'kefi-tours',
+      workers: 1,
+      testMatch: /kefi\/tours\/.*\.ui\.spec\.ts/,
+      use: { ...CHROME, navigationTimeout: 45_000, actionTimeout: 15_000 },
+    },
+    {
       name: 'kefi-landing-sighting-1280',
       workers: 1,
       timeout: 180_000,
