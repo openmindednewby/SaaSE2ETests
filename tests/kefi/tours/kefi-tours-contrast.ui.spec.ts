@@ -20,6 +20,8 @@ interface Measure {
   readonly ringColor: string;
   readonly behindRing: string;
   readonly pageBg: string;
+  readonly scrim: string;
+  readonly underScrim: string;
   readonly fontFamily: string;
   readonly overflow: boolean;
 }
@@ -41,6 +43,20 @@ function luminance(color: string): number {
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
   });
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function channels(color: string): number[] {
+  const values = (color.match(/[\d.]+/g) ?? []).map(Number);
+  const srgb = color.startsWith('color(');
+  const rgb = values.slice(0, 3).map((value) => (srgb ? value * 255 : value));
+  return [...rgb, values[3] ?? 1];
+}
+
+function seenThroughScrim(scrim: string, page: string): string {
+  const [sr, sg, sb, alpha] = channels(scrim);
+  const [pr, pg, pb] = channels(page);
+  const mix = (top: number, under: number): number => Math.round(top * alpha + under * (1 - alpha));
+  return `rgb(${mix(sr, pr)}, ${mix(sg, pg)}, ${mix(sb, pb)})`;
 }
 
 function contrast(a: string, b: string): number {
@@ -77,12 +93,20 @@ async function measure(page: Page): Promise<Measure> {
     const box = ring.getBoundingClientRect();
     const inset = parseFloat(getComputedStyle(ring).borderTopWidth) + 2;
     const under = document.elementsFromPoint(box.left + inset, box.top + box.height / 2).find((node) => node.closest('[data-tour-overlay], [data-testid="tour-caption"]') === null) ?? null;
+    const caption2 = caption.getBoundingClientRect();
+    const inside = (x: number, y: number, r: DOMRect): boolean => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+    const corners: [number, number][] = [[4, 4], [innerWidth - 4, 4], [4, innerHeight - 4], [innerWidth - 4, innerHeight - 4]];
+    const [sx, sy] = corners.find(([x, y]) => !inside(x, y, box) && !inside(x, y, caption2)) ?? corners[0];
+    const outside = document.elementsFromPoint(sx, sy).find((node) => node.closest('[data-tour-overlay], [data-testid="tour-caption"]') === null) ?? null;
+    const scrim = getComputedStyle(ring).boxShadow.match(/(rgba?|color)\([^)]*\)/)?.[0] ?? 'transparent';
     const fits = (node: HTMLElement): boolean => node.scrollWidth <= node.clientWidth + 1 && node.scrollHeight <= node.clientHeight + 1;
     return {
       texts,
       ringColor: getComputedStyle(ring).borderTopColor,
       behindRing: fillOf(under),
       pageBg: fillOf(document.body),
+      scrim,
+      underScrim: fillOf(outside),
       fontFamily: getComputedStyle(caption).fontFamily,
       overflow: !fits(caption) || !fits(text),
     };
@@ -124,10 +148,11 @@ test.describe('TOUR-3 kefi caption and ring contrast', () => {
         const result = await measure(page);
 
         const texts = result.texts.map((pair) => ({ ...pair, ratio: contrast(pair.color, pair.background) }));
+        const dimmedPage = seenThroughScrim(result.scrim, result.underScrim);
         const ringRatio = contrast(result.ringColor, result.behindRing);
         fs.mkdirSync(OUT_DIR, { recursive: true });
         await page.screenshot({ path: `${OUT_DIR}/${scheme}-${viewport.width}.png` });
-        fs.writeFileSync(`${OUT_DIR}/${scheme}-${viewport.width}.json`, JSON.stringify({ ...result, texts, ringRatio }, null, 2));
+        fs.writeFileSync(`${OUT_DIR}/${scheme}-${viewport.width}.json`, JSON.stringify({ ...result, texts, ringRatio, dimmedPage, dimmedLuminance: luminance(dimmedPage) }, null, 2));
         await context.close();
         expect(texts.map((pair) => pair.name), 'caption shows step label, body and Back/Next/End').toEqual(expect.arrayContaining(['step label', 'body', 'Back', 'Next', 'End']));
         for (const pair of texts) {
@@ -135,6 +160,7 @@ test.describe('TOUR-3 kefi caption and ring contrast', () => {
         }
         expect.soft(ringRatio, `ring ${result.ringColor} against the page behind it ${result.behindRing}`).toBeGreaterThanOrEqual(RING_MIN);
         if (scheme === 'dark') {
+          expect.soft(luminance(dimmedPage), `page under the scrim ${result.scrim} over ${result.underScrim} is ${dimmedPage}, dark`).toBeLessThan(DARK_PAGE_MAX_LUMINANCE);
           expect.soft(luminance(result.pageBg), `page background ${result.pageBg} follows the dark scheme`).toBeLessThanOrEqual(DARK_PAGE_MAX_LUMINANCE);
         }
         expect.soft(result.overflow, 'caption text fits its box').toBe(false);
