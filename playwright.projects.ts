@@ -901,7 +901,7 @@ export function buildProjects(): ProjectConfig {
     {
       name: 'kefi-tours',
       workers: 1,
-      testMatch: /kefi\/tours\/.*\.ui\.spec\.ts/,
+      testMatch: /kefi\/(tours|dark)\/.*\.ui\.spec\.ts/,
       use: { ...CHROME, navigationTimeout: 45_000, actionTimeout: 15_000 },
     },
     {
