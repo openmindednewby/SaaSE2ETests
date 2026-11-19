@@ -1,0 +1,75 @@
+{
+  "helpers/auth-helper.ts": {
+    "max-lines": 1
+  },
+  "helpers/kefi/kefiBackofficeClient.ts": {
+    "@typescript-eslint/member-ordering": 1
+  },
+  "helpers/kefi/kefiLifecycleClient.ts": {
+    "@typescript-eslint/member-ordering": 6
+  },
+  "helpers/kefi/kefiPassEditClient.ts": {
+    "@typescript-eslint/member-ordering": 8
+  },
+  "helpers/questioner-admin.ts": {
+    "max-lines": 1
+  },
+  "pages/MarketingPage.ts": {
+    "@typescript-eslint/member-ordering": 7
+  },
+  "pages/NotificationsStressPage.ts": {
+    "@typescript-eslint/member-ordering": 7
+  },
+  "pages/OnlineMenusContentPage.ts": {
+    "max-lines": 1
+  },
+  "pages/OnlineMenusPage.ts": {
+    "@typescript-eslint/member-ordering": 38,
+    "max-lines": 1
+  },
+  "pages/OnlineMenusPublicPage.ts": {
+    "@typescript-eslint/member-ordering": 24
+  },
+  "pages/QuizTemplatesPage.ts": {
+    "@typescript-eslint/member-ordering": 12
+  },
+  "pages/QuizTemplatesQuizPage.ts": {
+    "@typescript-eslint/member-ordering": 9
+  },
+  "pages/kefi/KefiDevicePinPage.ts": {
+    "@typescript-eslint/member-ordering": 4
+  },
+  "pages/kefi/KefiPasskeyPage.ts": {
+    "@typescript-eslint/member-ordering": 6
+  },
+  "playwright.projects.ts": {
+    "max-lines": 1
+  },
+  "shared/testIds.ts": {
+    "max-lines": 1
+  },
+  "tests/aml/aml-adverse-media.spec.ts": {
+    "max-lines": 1
+  },
+  "tests/digital-kin/digital-kin-authz.spec.ts": {
+    "max-lines": 1
+  },
+  "tests/digital-kin/digital-kin-public-api.spec.ts": {
+    "max-lines": 1
+  },
+  "tests/identity/direct-kc-helpers.ts": {
+    "max-lines": 1
+  },
+  "tests/kefi-crew-commissions/kefi-crew-commissions-pricing.ui.spec.ts": {
+    "max-lines": 1
+  },
+  "tests/kefi/kefi-qr-checkin.spec.ts": {
+    "max-lines": 1
+  },
+  "tests/online-menus/menu-content-upload-basic.spec.ts": {
+    "max-lines": 1
+  },
+  "tests/zygos/zygos-session.ts": {
+    "max-lines": 1
+  }
+}
