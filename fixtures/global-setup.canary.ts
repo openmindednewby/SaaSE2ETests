@@ -36,6 +36,12 @@ import type { FullConfig } from '@playwright/test';
 
 import { AuthHelper } from '../helpers/auth-helper.js';
 import { acquireCanaryLock } from '../helpers/canary-lock.js';
+import {
+  type CanaryClientConfig,
+  canaryClientConfigFromEnv,
+  mintCanaryServiceToken,
+} from '../helpers/canary-service-token.js';
+import { resolveKeycloakBaseUrl } from '../helpers/keycloak-base-url.js';
 import { openCanaryRegistry } from '../helpers/kefi/kefiCanaryRegistry.js';
 import { loadE2EEnv } from './env-loader.js';
 import { installHostOverride } from './host-override.js';
@@ -56,6 +62,77 @@ function genRunId(): string {
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
   const hex = bytes.toString('hex');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function resolveServiceAccountConfig(): CanaryClientConfig | undefined {
+  if (!process.env.CANARY_CLIENT_SECRET?.trim()) return undefined;
+  try {
+    return canaryClientConfigFromEnv(resolveKeycloakBaseUrl());
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    process.stderr.write(`[canary-setup] ERROR resolving the Keycloak base URL for the service account: ${msg}\n`);
+    return undefined;
+  }
+}
+
+async function mintServiceAccountToken(config: CanaryClientConfig, target: string): Promise<void> {
+  try {
+    const token = await mintCanaryServiceToken(config);
+    process.env.E2E_CANARY_ACCESS_TOKEN = token.accessToken;
+    process.stdout.write(
+      `[canary-setup] minted service-account token (client=${config.clientId}, target=${target})\n`,
+    );
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    process.stderr.write(
+      `[canary-setup] ERROR minting service-account token (client=${config.clientId}): ${msg}\n` +
+        '  Read-only suites will still run; data-creating suites will fail at test time.\n' +
+        '  Cleanup endpoints in global-teardown will be skipped.\n',
+    );
+  }
+}
+
+async function mintSuperUserTokenByPassword(target: string): Promise<void> {
+  const identityApiUrl = process.env.IDENTITY_API_URL;
+  // The canary cleanup endpoints require a superUser JWT. The dedicated
+  // SUPERUSER_* vars are the design-preferred names (see parent design), but
+  // we fall back to TEST_USER_* for backward-compat with the existing
+  // .env.staging.secrets which seeds superUser into TEST_USER_USERNAME.
+  const superUsername = process.env.SUPERUSER_USERNAME ?? process.env.TEST_USER_USERNAME;
+  const superPassword = process.env.SUPERUSER_PASSWORD ?? process.env.TEST_USER_PASSWORD;
+
+  if (!identityApiUrl) {
+    process.stderr.write(
+      '[canary-setup] WARN: IDENTITY_API_URL unset. Cannot mint superUser JWT.\n' +
+        '  Cleanup endpoints in global-teardown will be unable to authenticate.\n',
+    );
+  } else if (!superUsername || !superPassword) {
+    process.stderr.write(
+      '[canary-setup] WARN: SUPERUSER_USERNAME/PASSWORD (or TEST_USER_*) unset.\n' +
+        '  Cleanup endpoints in global-teardown will be unable to authenticate.\n',
+    );
+  } else {
+    try {
+      const auth = new AuthHelper(identityApiUrl);
+      const tokens = await auth.loginViaAPI(superUsername, superPassword);
+      if (tokens.accessToken) {
+        process.env.E2E_CANARY_ACCESS_TOKEN = tokens.accessToken;
+      }
+      if (tokens.refreshToken) {
+        process.env.E2E_CANARY_REFRESH_TOKEN = tokens.refreshToken;
+      }
+      process.stdout.write(
+        `[canary-setup] minted superUser JWT (user=${superUsername}, target=${target})\n`,
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      process.stderr.write(
+        `[canary-setup] ERROR minting superUser JWT (user=${superUsername}): ${msg}\n` +
+          '  Read-only suites will still run; data-creating suites will fail at test time.\n' +
+          '  Cleanup endpoints in global-teardown will be skipped.\n',
+      );
+    }
+  }
 }
 
 async function canaryGlobalSetup(config: FullConfig): Promise<void> {
@@ -101,46 +178,15 @@ async function canaryGlobalSetup(config: FullConfig): Promise<void> {
   // (dev PC with no kube-context) — see helpers/canary-lock.ts.
   acquireCanaryLock(runId);
 
-  // ---------- 2. Mint superUser JWT + refresh token ----------
-  const identityApiUrl = process.env.IDENTITY_API_URL;
-  // The canary cleanup endpoints require a superUser JWT. The dedicated
-  // SUPERUSER_* vars are the design-preferred names (see parent design), but
-  // we fall back to TEST_USER_* for backward-compat with the existing
-  // .env.staging.secrets which seeds superUser into TEST_USER_USERNAME.
-  const superUsername = process.env.SUPERUSER_USERNAME ?? process.env.TEST_USER_USERNAME;
-  const superPassword = process.env.SUPERUSER_PASSWORD ?? process.env.TEST_USER_PASSWORD;
-
-  if (!identityApiUrl) {
-    process.stderr.write(
-      '[canary-setup] WARN: IDENTITY_API_URL unset. Cannot mint superUser JWT.\n' +
-        '  Cleanup endpoints in global-teardown will be unable to authenticate.\n',
-    );
-  } else if (!superUsername || !superPassword) {
-    process.stderr.write(
-      '[canary-setup] WARN: SUPERUSER_USERNAME/PASSWORD (or TEST_USER_*) unset.\n' +
-        '  Cleanup endpoints in global-teardown will be unable to authenticate.\n',
-    );
+  const serviceAccount = resolveServiceAccountConfig();
+  if (serviceAccount) {
+    await mintServiceAccountToken(serviceAccount, target);
   } else {
-    try {
-      const auth = new AuthHelper(identityApiUrl);
-      const tokens = await auth.loginViaAPI(superUsername, superPassword);
-      if (tokens.accessToken) {
-        process.env.E2E_CANARY_ACCESS_TOKEN = tokens.accessToken;
-      }
-      if (tokens.refreshToken) {
-        process.env.E2E_CANARY_REFRESH_TOKEN = tokens.refreshToken;
-      }
-      process.stdout.write(
-        `[canary-setup] minted superUser JWT (user=${superUsername}, target=${target})\n`,
-      );
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      process.stderr.write(
-        `[canary-setup] ERROR minting superUser JWT (user=${superUsername}): ${msg}\n` +
-          '  Read-only suites will still run; data-creating suites will fail at test time.\n' +
-          '  Cleanup endpoints in global-teardown will be skipped.\n',
-      );
-    }
+    process.stderr.write(
+      '[canary-setup] WARN: no canary-cleanup service account (CANARY_CLIENT_SECRET unset or Keycloak URL unresolved). Falling back to superUser password login\n' +
+        '  (SUPERUSER_* or TEST_USER_*). Set CANARY_CLIENT_SECRET to use the canary-cleanup service account.\n',
+    );
+    await mintSuperUserTokenByPassword(target);
   }
 
   // ---------- 3. Defer to the legacy setup for everything else ----------

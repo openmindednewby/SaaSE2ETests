@@ -126,6 +126,14 @@ TEST_USER_USERNAME=superUser
 TEST_USER_PASSWORD=SuperUser123!
 ```
 
+Canary runs (`E2E_TARGET=staging|prod`) mint the cleanup token `E2E_CANARY_ACCESS_TOKEN` from a platform service account when its secret is set, and fall back to the `SUPERUSER_*` / `TEST_USER_*` password login (with a warning) when it is not:
+
+| Env | Default | Purpose |
+|---|---|---|
+| `CANARY_CLIENT_SECRET` | unset | Secret of the canary cleanup client; enables the `client_credentials` grant |
+| `CANARY_CLIENT_ID` | `canary-cleanup` | Keycloak client id |
+| `CANARY_REALM` | `platform` | Realm holding the client; token URL is `<KEYCLOAK_URL or KEYCLOAK_ISSUER base>/realms/<realm>/protocol/openid-connect/token` |
+
 #### Targeting staging
 
 ```bash
