@@ -40,6 +40,7 @@ import { releaseCanaryLock } from '../helpers/canary-lock.js';
 import { clearCanaryRegistry } from '../helpers/kefi/kefiCanaryRegistry.js';
 import { sweepPendingKefiCanaries, sweepPendingEventOpsRows } from './canary-kefi-sweeps.js';
 import { sharedHttpsAgent } from '../helpers/http-agent.js';
+import { chooseCleanupToken } from '../helpers/canary-cleanup-token.js';
 
 interface CleanupServiceConfig {
   /** Human-readable label used in log lines. */
@@ -170,9 +171,13 @@ export async function runCanaryCleanup(
   // return was a second way for a leak to pass unobserved.
   // Pair each slice with the (non-null) token so the compiler carries the
   // narrowing into the loop, instead of a non-null assertion.
+  const cleanupToken = await chooseCleanupToken(target, accessToken);
+  process.stdout.write(`  [auth] cleanup token        ${cleanupToken.source}: ${cleanupToken.note}
+`);
+  const cleanupAccessToken = cleanupToken.token;
   const legacySlices: ReadonlyArray<[CleanupServiceConfig, string]> =
-    accessToken === null ? [] : SERVICES.map((service) => [service, accessToken]);
-  if (accessToken === null) {
+    cleanupAccessToken === null ? [] : SERVICES.map((service) => [service, cleanupAccessToken]);
+  if (cleanupAccessToken === null) {
     process.stdout.write(
       '  [warn] legacy slices        skipped - E2E_CANARY_ACCESS_TOKEN unset. Kefi leak detection still runs.\n',
     );
