@@ -36,12 +36,7 @@ import type { FullConfig } from '@playwright/test';
 
 import { AuthHelper } from '../helpers/auth-helper.js';
 import { acquireCanaryLock } from '../helpers/canary-lock.js';
-import {
-  type CanaryClientConfig,
-  canaryClientConfigFromEnv,
-  mintCanaryServiceToken,
-} from '../helpers/canary-service-token.js';
-import { resolveKeycloakBaseUrl } from '../helpers/keycloak-base-url.js';
+import { chooseCleanupToken } from '../helpers/canary-cleanup-token.js';
 import { openCanaryRegistry } from '../helpers/kefi/kefiCanaryRegistry.js';
 import { loadE2EEnv } from './env-loader.js';
 import { installHostOverride } from './host-override.js';
@@ -64,32 +59,21 @@ function genRunId(): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-function resolveServiceAccountConfig(): CanaryClientConfig | undefined {
-  if (!process.env.CANARY_CLIENT_SECRET?.trim()) return undefined;
-  try {
-    return canaryClientConfigFromEnv(resolveKeycloakBaseUrl());
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    process.stderr.write(`[canary-setup] ERROR resolving the Keycloak base URL for the service account: ${msg}\n`);
-    return undefined;
-  }
-}
-
-async function mintServiceAccountToken(config: CanaryClientConfig, target: string): Promise<void> {
-  try {
-    const token = await mintCanaryServiceToken(config);
-    process.env.E2E_CANARY_ACCESS_TOKEN = token.accessToken;
-    process.stdout.write(
-      `[canary-setup] minted service-account token (client=${config.clientId}, target=${target})\n`,
-    );
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+async function mintServiceAccountToken(target: string): Promise<boolean> {
+  const choice = await chooseCleanupToken(target, null);
+  if (choice.token === null) {
     process.stderr.write(
-      `[canary-setup] ERROR minting service-account token (client=${config.clientId}): ${msg}\n` +
-        '  Read-only suites will still run; data-creating suites will fail at test time.\n' +
-        '  Cleanup endpoints in global-teardown will be skipped.\n',
+      `[canary-setup] WARN: no canary-cleanup service-account token (${choice.note}). Falling back to superUser password login
+` +
+        `  (SUPERUSER_* or TEST_USER_*). Set PLATFORM_CANARY_CLIENT_SECRET_${target.toUpperCase()} to use the canary-cleanup service account.
+`,
     );
+    return false;
   }
+  process.env.E2E_CANARY_ACCESS_TOKEN = choice.token;
+  process.stdout.write(`[canary-setup] ${choice.note}, target=${target}
+`);
+  return true;
 }
 
 async function mintSuperUserTokenByPassword(target: string): Promise<void> {
@@ -178,14 +162,7 @@ async function canaryGlobalSetup(config: FullConfig): Promise<void> {
   // (dev PC with no kube-context) — see helpers/canary-lock.ts.
   acquireCanaryLock(runId);
 
-  const serviceAccount = resolveServiceAccountConfig();
-  if (serviceAccount) {
-    await mintServiceAccountToken(serviceAccount, target);
-  } else {
-    process.stderr.write(
-      '[canary-setup] WARN: no canary-cleanup service account (CANARY_CLIENT_SECRET unset or Keycloak URL unresolved). Falling back to superUser password login\n' +
-        '  (SUPERUSER_* or TEST_USER_*). Set CANARY_CLIENT_SECRET to use the canary-cleanup service account.\n',
-    );
+  if (!(await mintServiceAccountToken(target))) {
     await mintSuperUserTokenByPassword(target);
   }
 

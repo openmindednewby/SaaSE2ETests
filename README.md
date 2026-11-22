@@ -130,9 +130,9 @@ Canary runs (`E2E_TARGET=staging|prod`) mint the cleanup token `E2E_CANARY_ACCES
 
 | Env | Default | Purpose |
 |---|---|---|
-| `CANARY_CLIENT_SECRET` | unset | Secret of the canary cleanup client; enables the `client_credentials` grant |
-| `CANARY_CLIENT_ID` | `canary-cleanup` | Keycloak client id |
-| `CANARY_REALM` | `platform` | Realm holding the client; token URL is `<KEYCLOAK_URL or KEYCLOAK_ISSUER base>/realms/<realm>/protocol/openid-connect/token` |
+| `PLATFORM_CANARY_CLIENT_SECRET_<TARGET>` | unset | Secret of the `canary-cleanup` client in the `platform` realm (`_STAGING`, `_PROD`); enables the `client_credentials` grant for setup and teardown |
+| `PLATFORM_CANARY_CLIENT_SECRET` | unset | Target-independent fallback for the secret above |
+| `PLATFORM_CANARY_TOKEN_URL` | derived | Token URL; default replaces the realm in `KEYCLOAK_ISSUER` with `platform` and appends `/protocol/openid-connect/token` |
 
 #### Targeting staging
 
