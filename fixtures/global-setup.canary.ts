@@ -38,6 +38,7 @@ import { AuthHelper } from '../helpers/auth-helper.js';
 import { acquireCanaryLock } from '../helpers/canary-lock.js';
 import { chooseCleanupToken } from '../helpers/canary-cleanup-token.js';
 import { openCanaryRegistry } from '../helpers/kefi/kefiCanaryRegistry.js';
+import { warmUpCanaryTarget } from './canary-warmup.js';
 import { loadE2EEnv } from './env-loader.js';
 import { installHostOverride } from './host-override.js';
 import legacyGlobalSetup from './global-setup.js';
@@ -165,6 +166,9 @@ async function canaryGlobalSetup(config: FullConfig): Promise<void> {
   if (!(await mintServiceAccountToken(target))) {
     await mintSuperUserTokenByPassword(target);
   }
+
+  // ---------- 2b. Warm the SPA and its BFF so the first browser login is not the cold one ----------
+  await warmUpCanaryTarget(config.projects[0]?.use?.baseURL || process.env.BASE_URL || '');
 
   // ---------- 3. Defer to the legacy setup for everything else ----------
   // The legacy setup handles: browser storage state for auth.fixture.ts,

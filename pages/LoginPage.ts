@@ -2,6 +2,12 @@ import { Locator, Page, expect } from '@playwright/test';
 import { BasePage } from './BasePage.js';
 import { TestIds, testIdSelector } from '../shared/testIds.js';
 
+// One login fits the 30 s test cap: navigation + spinner + form + redirect = 28 s.
+const LOGIN_NAV_MS = 6000;
+const LOGIN_SPINNER_MS = 8000;
+const LOGIN_FORM_MS = 2000;
+const LOGIN_REDIRECT_MS = 12000;
+
 export class LoginPage extends BasePage {
   readonly usernameInput: Locator;
   readonly passwordInput: Locator;
@@ -23,8 +29,18 @@ export class LoginPage extends BasePage {
    * Navigate to login page
    */
   async goto() {
-    // Expo Router: (auth) is a route group, the URL is just /login
-    await super.goto('/login');
+    await this.registerOverlayHandlers();
+    await this.page.goto('/login', { waitUntil: 'domcontentloaded', timeout: LOGIN_NAV_MS });
+  }
+
+  async waitForForm() {
+    await expect(
+      this.loadingIndicator.filter({ visible: true }),
+      'login page still shows its loading spinner: the SPA has not finished booting',
+    ).toHaveCount(0, { timeout: LOGIN_SPINNER_MS });
+    await expect(this.usernameInput, 'spinner gone but the username input never rendered').toBeVisible({
+      timeout: LOGIN_FORM_MS,
+    });
   }
 
   /**
@@ -32,8 +48,7 @@ export class LoginPage extends BasePage {
    */
   async login(username: string, password: string) {
     await this.dismissOverlay();
-    // Wait for React to render the login form (dev builds can take 10+ seconds)
-    await this.usernameInput.waitFor({ state: 'visible', timeout: 30000 });
+    await this.waitForForm();
     await this.usernameInput.fill(username);
     await this.passwordInput.fill(password);
     await this.loginButton.click();
@@ -43,36 +58,18 @@ export class LoginPage extends BasePage {
    * Wait for login to complete and redirect to protected area
    * Expo Router: (protected) is a route group, URL doesn't include parentheses
    */
-  async waitForLoginComplete(timeout = 30000) {
+  async waitForLoginComplete(timeout = LOGIN_REDIRECT_MS) {
     // After login, we should be redirected away from /login to a protected route
     // Common protected routes: /quiz-templates, /quiz-active, /quiz-answers, /tenants, /users
     await expect(this.page).not.toHaveURL(/\/login/, { timeout });
   }
 
   /**
-   * Perform login and wait for success.
-   * Retries once on failure to handle transient backend slowness.
+   * Perform login and wait for the redirect away from /login.
    */
   async loginAndWait(username: string, password: string) {
-    const MAX_ATTEMPTS = 3;
-    let lastError: Error | undefined;
-
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      try {
-        await this.login(username, password);
-        const timeout = attempt < MAX_ATTEMPTS ? 20000 : 45000;
-        await this.waitForLoginComplete(timeout);
-        return;
-      } catch (error) {
-        lastError = error as Error;
-        if (attempt < MAX_ATTEMPTS) {
-          // Navigate back to login for a fresh retry
-          await this.goto();
-        }
-      }
-    }
-
-    throw lastError!;
+    await this.login(username, password);
+    await this.waitForLoginComplete();
   }
 
   /**

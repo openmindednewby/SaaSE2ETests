@@ -22,6 +22,7 @@ loadE2EEnv();
 // per-test cap 200 s — see playwright.scheduled.ts (TEST-5MIN-1a). Identity otherwise.
 const projects = applyScheduledMode([...buildProjects(), ...buildJinxProjects(), ...buildKefiWizardProjects(), ...buildKucyRecreateUiProjects()]);
 const scheduled = isScheduled();
+const isCanaryTarget = ['staging', 'prod'].includes(process.env.E2E_TARGET ?? 'local');
 
 // Install Node-side DNS override if E2E_HOST_OVERRIDE_IP is set. This config
 // module is re-evaluated in each worker process, so the patch applies to all
@@ -95,8 +96,9 @@ export default defineConfig({
 
   use: {
     baseURL: BASE_URL,
-    // on-first-retry never fires with retries 0, so scheduled runs keep the trace of every failure.
-    trace: scheduled ? 'retain-on-failure' : 'on-first-retry',
+    // on-first-retry never fires with retries 0 and never records attempt 1, so scheduled and
+    // canary (staging/prod) runs keep the trace of every failure.
+    trace: scheduled || isCanaryTarget ? 'retain-on-failure' : 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     ignoreHTTPSErrors: true,

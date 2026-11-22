@@ -1,4 +1,4 @@
-import { test as setup, expect } from '@playwright/test';
+import { test as setup } from '@playwright/test';
 import { LoginPage } from '../pages/LoginPage.js';
 import fs from 'fs';
 import path from 'path';
@@ -101,10 +101,6 @@ setup('authenticate', async ({ page, baseURL: _baseURL }) => {
 
     // Navigate directly to login page
     await loginPage.goto();
-
-    // Wait for the login form to be ready with increased timeout
-    // This gives React time to hydrate and render
-    await expect(loginPage.usernameInput).toBeVisible({ timeout: 15000 });
 
     await loginPage.loginAndWait(username, password);
 
