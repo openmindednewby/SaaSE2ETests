@@ -9,6 +9,7 @@
 import { expect, test } from '@playwright/test';
 
 import {
+  ACCEPTED_FRAME_OPTIONS,
   ANONYMOUS_RETENTION_DAYS,
   CLAIM_TOKEN_PATTERN,
   HTTP,
@@ -108,6 +109,9 @@ test.describe('Selida served page @selida-api @selida', () => {
     for (const [name, value] of Object.entries(REQUIRED_EXACT_HEADERS)) {
       expect(headers[name], `served page header ${name}`).toBe(value);
     }
+    expect(ACCEPTED_FRAME_OPTIONS, 'served page header x-frame-options must be present, DENY or SAMEORIGIN').toContain(
+      headers['x-frame-options'],
+    );
 
     const csp = parseCsp(headers['content-security-policy'] ?? '');
     const sandbox = csp.get('sandbox');
@@ -118,7 +122,9 @@ test.describe('Selida served page @selida-api @selida', () => {
     expect(sandbox).not.toContain('allow-same-origin');
     expect(effectiveFetchSources(csp, 'connect-src'), 'no network egress from user script').toEqual(["'none'"]);
     expect(csp.get('form-action'), 'form-action does not fall back to default-src').toEqual(["'none'"]);
-    expect(csp.get('frame-ancestors')).toEqual(["'none'"]);
+    expect(csp.get('frame-ancestors'), "frame-ancestors 'none' is what blocks framing; it overrides X-Frame-Options").toEqual([
+      "'none'",
+    ]);
     expect(csp.get('base-uri')).toEqual(["'none'"]);
 
     // The user's bytes come first, untouched; the report link follows them.

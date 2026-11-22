@@ -79,14 +79,21 @@ export const CLAIM_TOKEN_PATTERN = /^[0-9a-f]{64}$/;
  * asserts the TABLE rather than a hand-picked subset. Names are lowercase because Playwright
  * lowercases response header names. CSP is asserted per directive (see `parseCsp`), not as one
  * string, because its source lists are expected to grow (CDN allowlists) without weakening it.
+ * X-Frame-Options is not here: the public edge rewrites it, see `ACCEPTED_FRAME_OPTIONS`.
  */
 export const REQUIRED_EXACT_HEADERS: Readonly<Record<string, string>> = {
   'x-content-type-options': 'nosniff',
-  'x-frame-options': 'DENY',
   'referrer-policy': 'no-referrer',
   'x-robots-tag': 'noindex, nofollow',
   'cache-control': 'no-cache',
 };
+
+/**
+ * The app sends DENY, the edge's entrypoint security-headers middleware sets SAMEORIGIN last.
+ * Either is safe because CSP `frame-ancestors 'none'` overrides X-Frame-Options in modern browsers;
+ * the header must still be present for browsers that ignore CSP.
+ */
+export const ACCEPTED_FRAME_OPTIONS: readonly string[] = ['DENY', 'SAMEORIGIN'];
 
 /** DTOs/CreatedPageDto.cs — the one response that carries the claim token. */
 export interface CreatedPage {
