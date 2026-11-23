@@ -51,6 +51,6 @@ console.log(`[run-aml-e2e] target ${process.env.AML_API_URL ?? '(helper default)
 // AM-READY-5 §3.6 added the browser tier; the project is selectable so the same env shim (which is
 // the whole point of this file) serves both. Default stays aml-api so existing callers are unchanged.
 const project = process.env.AML_E2E_PROJECT ?? 'aml-api';
-const args = ['playwright', 'test', `--project=${project}`, ...process.argv.slice(2)];
-const result = spawnSync('npx', args, { cwd: resolve(HERE, '..'), stdio: 'inherit', shell: true });
+const args = [resolve(HERE, 'pw-changed.mjs'), `--project=${project}`, ...process.argv.slice(2)];
+const result = spawnSync(process.execPath, args, { cwd: resolve(HERE, '..'), stdio: 'inherit' });
 process.exit(result.status ?? 1);
