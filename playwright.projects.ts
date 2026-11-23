@@ -77,6 +77,7 @@ const UBB_PHONE_375x812 = { ...devices['iPhone X'], navigationTimeout: 45_000, a
 const AUTH = 'playwright/.auth/user.json';
 
 type AppName = 'erevna' | 'katalogos';
+const isAppName = (portal: string): portal is AppName => portal === 'erevna' || portal === 'katalogos';
 
 interface ChunkOpts {
   /** Loads the saved auth storage state — set for any project that drives the UI as a logged-in user. */
@@ -92,6 +93,9 @@ interface ChunkOpts {
 }
 
 export function buildProjects(): ProjectConfig {
+  // D-AWAY-SR-6 "katalogos/erevna E2E run on the prod canary only": both apps run on prod
+  // only, so a staging run skips their chunks and mobile gates instead of hitting prod.
+  const onStaging = process.env.E2E_TARGET === 'staging';
   const erevnaUrl = process.env.EREVNA_BASE_URL;
   const kefiWebUrl = process.env.KEFI_WEB_URL;
   const ichnosWebUrl = process.env.ICHNOS_WEB_URL;
@@ -127,6 +131,7 @@ export function buildProjects(): ProjectConfig {
       name,
       workers: 1,
       testMatch: new RegExp(`${dir}/${body}\\.spec\\.ts`),
+      ...(onStaging && opts.app ? { testIgnore: /.*/ } : {}),
       use,
       dependencies: opts.multiTenant ? ['setup', 'multi-tenant-setup'] : ['setup'],
     };
@@ -1416,7 +1421,7 @@ export function buildProjects(): ProjectConfig {
         workers: 1,
         timeout: 180_000,
         testMatch: /mobile[/\\]mobile-gates\.spec\.ts/,
-        use: { ...device, baseURL: url || UNCONFIGURED_HOST },
+        use: { ...device, baseURL: (onStaging && isAppName(portal) ? '' : url) || UNCONFIGURED_HOST },
       })),
     ),
   ];
