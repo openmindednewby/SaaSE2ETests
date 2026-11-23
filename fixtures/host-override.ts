@@ -52,6 +52,7 @@ const DEFAULT_PATTERN = '^([a-z0-9-]+\\.)*staging\\.([a-z0-9-]+\\.)*dloizides\\.
 
 const SAAS_STAGING_HOSTNAMES = [
   'staging.app.dloizides.com',
+  'staging.app.ichnos.dloizides.com',
   'staging.identity.dloizides.com',
   'staging.identity-api.dloizides.com',
   'staging.questioner-api.dloizides.com',
