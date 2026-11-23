@@ -9,7 +9,7 @@ import { assertLogoutKillsServerSession } from '../../helpers/bff-logout-session
  * why the obvious "we redirected to /login" assertion passes against the bug
  * and therefore proves nothing.
  */
-const KATALOGOS_BASE_URL = process.env.KATALOGOS_BASE_URL ?? 'https://staging.katalogos.dloizides.com';
+const KATALOGOS_BASE_URL = process.env.KATALOGOS_BASE_URL ?? 'https://katalogos.dloizides.com';
 
 test.describe('Logout kills the server session @online-menus @bff @security', () => {
   test.slow();

@@ -6,7 +6,7 @@ import { devices, expect, test, type Page, type Route } from '@playwright/test';
 import { loginAsTenantAdminBrowser } from '../../helpers/realm-browser-auth.js';
 import { isRemoteTarget } from '../../helpers/target.js';
 
-const EREVNA_BASE_URL = (process.env.EREVNA_BASE_URL ?? 'https://staging.erevna.dloizides.com').replace(/\/+$/, '');
+const EREVNA_BASE_URL = (process.env.EREVNA_BASE_URL ?? 'https://erevna.dloizides.com').replace(/\/+$/, '');
 const TEMPLATES_PATH = '/quiz-templates';
 const FIELD = 'template-closing-date-input';
 const TEMPLATE_ROW = 'tenant-list-item';

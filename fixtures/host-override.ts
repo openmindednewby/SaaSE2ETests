@@ -65,9 +65,6 @@ const SAAS_STAGING_HOSTNAMES = [
   // OWN resolver and only honours these explicit `MAP` rules. Omitting them
   // made the browser fall through to public DNS (a CNAME to the PROD IP),
   // which has no `staging.{product}.dloizides.com` ingress → Traefik 404.
-  // That 404 was previously misdiagnosed as an erevna-web SPA routing defect.
-  'staging.erevna.dloizides.com',
-  'staging.katalogos.dloizides.com',
   // Kefi tenant-lifecycle E2E (Phase B) — marketing site + the kefi-api
   // ingress's KUCY-era hostname. Same Chromium-resolver footnote as above.
   'staging.kefi.dloizides.com',

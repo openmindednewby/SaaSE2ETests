@@ -33,7 +33,7 @@ import { retryWhileRateLimited } from '../../../helpers/rate-limit.js';
  * Tagged @questioner so it runs with the questioner suite.
  */
 const EREVNA_BASE_URL =
-  process.env.EREVNA_BASE_URL ?? 'https://staging.erevna.dloizides.com';
+  process.env.EREVNA_BASE_URL ?? 'https://erevna.dloizides.com';
 
 interface BffLoginResult {
   status: number;

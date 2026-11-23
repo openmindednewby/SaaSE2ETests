@@ -9,7 +9,7 @@ import { assertLogoutKillsServerSession } from '../../../helpers/bff-logout-sess
  * why the obvious "we redirected to /login" assertion passes against the bug
  * and therefore proves nothing.
  */
-const EREVNA_BASE_URL = process.env.EREVNA_BASE_URL ?? 'https://staging.erevna.dloizides.com';
+const EREVNA_BASE_URL = process.env.EREVNA_BASE_URL ?? 'https://erevna.dloizides.com';
 
 test.describe('Logout kills the server session @questioner @bff @security', () => {
   test.slow();

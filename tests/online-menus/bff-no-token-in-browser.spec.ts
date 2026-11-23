@@ -28,7 +28,7 @@ import { getProjectUsers } from '../../fixtures/test-data.js';
  * Tagged @online-menus so it runs with the katalogos suite.
  */
 const KATALOGOS_BASE_URL =
-  process.env.KATALOGOS_BASE_URL ?? 'https://staging.katalogos.dloizides.com';
+  process.env.KATALOGOS_BASE_URL ?? 'https://katalogos.dloizides.com';
 
 interface BffLoginResult {
   status: number;
