@@ -89,7 +89,7 @@ interface ChunkOpts {
    * to `EREVNA_BASE_URL`; omitted / 'katalogos' inherits the global baseURL
    * (katalogos-web). API-only chunks (no UI) leave this unset.
    */
-  app?: AppName;
+  app?: AppName | 'ichnos';
 }
 
 export function buildProjects(): ProjectConfig {
@@ -131,7 +131,7 @@ export function buildProjects(): ProjectConfig {
       name,
       workers: 1,
       testMatch: new RegExp(`${dir}/${body}\\.spec\\.ts`),
-      ...(onStaging && opts.app ? { testIgnore: /.*/ } : {}),
+      ...(onStaging && isAppName(opts.app ?? '') ? { testIgnore: /.*/ } : {}),
       use,
       dependencies: opts.multiTenant ? ['setup', 'multi-tenant-setup'] : ['setup'],
     };
@@ -379,7 +379,7 @@ export function buildProjects(): ProjectConfig {
     // (Register has NO canary spec: CreateTenantUser's validator rejects the
     // `e2ec-` reserved prefix on user-input name fields, so a register test
     // cannot be made canary-sweepable. See job.yml.tpl E2E_SUITE comment.)
-    chunk('identity-auth', 'identity', ['login', 'login-direct', 'logout', 'token-refresh', 'auth-methods-canary'], { auth: true, app: 'katalogos' }),
+    chunk('identity-auth', 'identity', ['login', 'login-direct', 'logout', 'token-refresh', 'auth-methods-canary'], { auth: true, app: 'ichnos' }),
     chunk('identity-account', 'identity', ['email-otp', 'password-reset', 'host-override-smoke', 'cookie-session'], { auth: true, app: 'katalogos' }),
 
     // ---- Smoke → erevna-web ----

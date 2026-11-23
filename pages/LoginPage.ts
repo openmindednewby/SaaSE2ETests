@@ -1,12 +1,24 @@
-import { Locator, Page, expect } from '@playwright/test';
+import { Locator, Page, expect, test } from '@playwright/test';
 import { BasePage } from './BasePage.js';
-import { TestIds, testIdSelector } from '../shared/testIds.js';
+import { TestIds, testIdSelector, type TestId } from '../shared/testIds.js';
 
 // One login fits the 30 s test cap: navigation + spinner + form + redirect = 28 s.
 const LOGIN_NAV_MS = 6000;
 const LOGIN_SPINNER_MS = 8000;
 const LOGIN_FORM_MS = 2000;
 const LOGIN_REDIRECT_MS = 12000;
+
+const ICHNOS_TEST_ID_PREFIX = 'ichnos';
+
+/** The auth-web `testIdPrefix` of the app under test: Ichnos prefixes its login form, katalogos does not. */
+export function loginTestIdPrefix(baseURL: string | undefined): string {
+  const host = baseURL === undefined || baseURL === '' ? '' : new URL(baseURL).hostname;
+  return host.split('.').includes(ICHNOS_TEST_ID_PREFIX) ? ICHNOS_TEST_ID_PREFIX : '';
+}
+
+function prefixedTestId(baseId: TestId, prefix: string): string {
+  return prefix === '' ? testIdSelector(baseId) : `[data-testid="${prefix}-${baseId}"]`;
+}
 
 export class LoginPage extends BasePage {
   readonly usernameInput: Locator;
@@ -18,10 +30,11 @@ export class LoginPage extends BasePage {
   constructor(page: Page) {
     super(page);
     // Use testId-only locators for speed (no .or() fallback chains)
-    this.usernameInput = page.locator(testIdSelector(TestIds.USERNAME_INPUT));
-    this.passwordInput = page.locator(testIdSelector(TestIds.PASSWORD_INPUT));
-    this.loginButton = page.locator(testIdSelector(TestIds.LOGIN_BUTTON));
-    this.loginError = page.locator(testIdSelector(TestIds.LOGIN_ERROR));
+    const prefix = loginTestIdPrefix(test.info().project.use.baseURL);
+    this.usernameInput = page.locator(prefixedTestId(TestIds.USERNAME_INPUT, prefix));
+    this.passwordInput = page.locator(prefixedTestId(TestIds.PASSWORD_INPUT, prefix));
+    this.loginButton = page.locator(prefixedTestId(TestIds.LOGIN_BUTTON, prefix));
+    this.loginError = page.locator(prefixedTestId(TestIds.LOGIN_ERROR, prefix));
     this.loadingIndicator = page.locator('[role="progressbar"]');
   }
 
