@@ -21,6 +21,15 @@ import { getKefiUrls } from './kefiUrls.js';
 const HTTP_TIMEOUT_MS = 30_000;
 const HTTP_OK = 200;
 const HTTP_CREATED = 201;
+const HTTP_REDIRECT_MIN = 300;
+const STAFF_PASS_CODE = 'STAFF';
+
+export interface DoorCompSeed {
+  eventExternalId: string;
+  teacherExternalId: string;
+  staffAttendeeExternalId: string;
+  guestAttendeeExternalId: string;
+}
 
 /** A promoter row (`OrganizerPromoterDto`). */
 export interface OrganizerPromoter {
@@ -91,7 +100,57 @@ export class KefiPromoterClient {
     return resp.data;
   }
 
+  /** Seed one teacher staff comp and one STAFF-pass EUR 0 guest comp on the event; throws on a non-2xx. */
+  async seedDoorComps(bearer: string, eventExternalId: string, tag: string): Promise<DoorCompSeed> {
+    const teacher = await this.post<{ externalId: string }>(bearer, this.promotersPath(eventExternalId), {
+      name: `E2E door teacher ${tag}`, role: 'teacher', headcount: 1,
+    }, 'create teacher');
+    const provision = await this.post<{ tickets: Array<{ promoterExternalId: string; attendeeExternalId: string }> }>(
+      bearer, `${this.eventPath(eventExternalId)}/staff-tickets/provision`,
+      { promoterExternalIds: [teacher.externalId] }, 'provision staff ticket',
+    );
+    const ticket = provision.tickets.find((t) => t.promoterExternalId === teacher.externalId);
+    if (ticket === undefined) throw new Error(`[kefiPromoterClient] provision minted no ticket for ${teacher.externalId}`);
+    const guest = await this.post<{ externalId: string }>(bearer, `${this.eventPath(eventExternalId)}/attendees`, {
+      name: 'E2E door guest', surname: tag, passCode: STAFF_PASS_CODE, paid: true, paidEur: 0, comp: true,
+    }, 'create STAFF guest');
+    return {
+      eventExternalId,
+      teacherExternalId: teacher.externalId,
+      staffAttendeeExternalId: ticket.attendeeExternalId,
+      guestAttendeeExternalId: guest.externalId,
+    };
+  }
+
+  /** Delete the seeded door comps and return each failed delete as a `path status` line. */
+  async removeDoorComps(bearer: string, seed: DoorCompSeed): Promise<string[]> {
+    const event = this.eventPath(seed.eventExternalId);
+    const paths = [
+      `${event}/attendees/${seed.guestAttendeeExternalId}`,
+      `${event}/attendees/${seed.staffAttendeeExternalId}`,
+      `${event}/promoters/${seed.teacherExternalId}`,
+    ];
+    const failed: string[] = [];
+    for (const path of paths) {
+      const resp = await this.http.delete(path, { headers: { Authorization: `Bearer ${bearer}` } });
+      if (resp.status >= HTTP_REDIRECT_MIN) failed.push(`${path} ${resp.status}`);
+    }
+    return failed;
+  }
+
+  private async post<T>(bearer: string, path: string, body: unknown, what: string): Promise<T> {
+    const resp = await this.http.post<T>(path, body, { headers: { Authorization: `Bearer ${bearer}` } });
+    if (resp.status >= HTTP_REDIRECT_MIN) {
+      throw new Error(`[kefiPromoterClient] ${what} expected 2xx, got ${resp.status}: ${JSON.stringify(resp.data)}`);
+    }
+    return resp.data;
+  }
+
+  private eventPath(eventExternalId: string): string {
+    return `/api/v1/organizer/events/${encodeURIComponent(eventExternalId)}`;
+  }
+
   private promotersPath(eventExternalId: string): string {
-    return `/api/v1/organizer/events/${encodeURIComponent(eventExternalId)}/promoters`;
+    return `${this.eventPath(eventExternalId)}/promoters`;
   }
 }
