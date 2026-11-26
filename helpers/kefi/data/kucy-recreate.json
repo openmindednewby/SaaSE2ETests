@@ -617,7 +617,7 @@
           "id": "whatsapp",
           "kind": "whatsapp",
           "label": "Message Jimmy on WhatsApp",
-          "url": "https://wa.me/35796650527"
+          "url": "https://wa.me/35700000000"
         }
       ],
       "passes": [
@@ -747,12 +747,12 @@
           "sub": "Reserve your spot in seconds — tell us who you are, your level and which pass you want. We’ll confirm by WhatsApp and send payment instructions.",
           "buttonLabel": "Send via WhatsApp",
           "note": "Submitting opens WhatsApp with a pre-filled message to Jimmy. Payment instructions will follow.",
-          "whatsAppUrl": "https://wa.me/35796650527",
+          "whatsAppUrl": "https://wa.me/35700000000",
           "closedEyebrow": "Online registration closed",
           "closedTitle": "See you at the door 🎟️",
           "closedBody": "Online registration is now closed. Passes are still available — please come early and purchase your ticket directly at the door on the night.",
           "closedCtaLabel": "Let Jimmy know you're coming",
-          "closedCtaUrl": "https://wa.me/35796650527?text=Hi%20Jimmy%2C%20I%27m%20coming%20to%20Kizomba%20Union%20CY%20tonight%20and%20will%20buy%20my%20pass%20at%20the%20door.",
+          "closedCtaUrl": "https://wa.me/35700000000?text=Hi%20Jimmy%2C%20I%27m%20coming%20to%20Kizomba%20Union%20CY%20tonight%20and%20will%20buy%20my%20pass%20at%20the%20door.",
           "closedMeta": "Doors open from 15:30 · Classes start 16:00 · Party 21:30 — late"
         }
       },
@@ -763,13 +763,13 @@
         "subOpen": "Message or call Jimmy to reserve your pass, then send payment via Revolut or pay cash at the door.",
         "subClosed": "Online Revolut payments are closed. Message Jimmy to confirm your pass, then pay cash at the door.",
         "contactHeading": "Contact the Organizer",
-        "contactPhone": "+357 96 650 527",
+        "contactPhone": "+357 00 000 000",
         "revolut": {
           "heading": "Pay via Revolut",
-          "qrImg": "https://kizombaunioncy.dloizides.com/assets/revolut-qr.png",
-          "qrAlt": "Revolut QR code for revolut.me/demetreiis",
-          "url": "https://revolut.me/demetreiis",
-          "urlLabel": "Open revolut.me/demetreiis",
+          "qrImg": "https://placehold.co/400x400/png?text=QR+placeholder",
+          "qrAlt": "Revolut QR code for revolut.me/placeholder-account",
+          "url": "https://revolut.me/placeholder-account",
+          "urlLabel": "Open revolut.me/placeholder-account",
           "methodLabel": null
         },
         "bankTransfer": null,
