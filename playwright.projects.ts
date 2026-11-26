@@ -917,6 +917,14 @@ export function buildProjects(): ProjectConfig {
       use: { ...CHROME, viewport: { width: 1280, height: 800 }, navigationTimeout: 45_000, actionTimeout: 15_000 },
     },
     {
+      name: 'kefi-door-comp-sighting',
+      workers: 1,
+      timeout: 120_000,
+      testMatch: /kefi-mobile-review\/kefi-zindex-sighting\.spec\.ts/,
+      grep: /KEFI-DOOR-DESKTOP-1/,
+      use: { ...CHROME, navigationTimeout: 45_000, actionTimeout: 15_000 },
+    },
+    {
       name: 'kefi-soldout-register-360',
       workers: 1,
       timeout: 300_000,
