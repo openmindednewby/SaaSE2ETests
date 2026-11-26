@@ -24,7 +24,7 @@ interface WalkConfig {
 const GROUP_ADD = /^landing-artist-group-.+-add$/;
 const GROUP_RENAME = /^landing-artist-group-.+-rename$/;
 const GROUP_TITLE_INPUT = /^landing-artist-group-.+-title-input$/;
-const BOOK = 'landing-form-book-pay';
+const BOOK = 'landing-form-booking';
 const PERSON_TIMEOUT_MS = 15_000;
 
 async function fillOptional(editor: KefiLandingEditorPage, testId: string, value: Text): Promise<void> {
