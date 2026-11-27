@@ -106,6 +106,32 @@ export async function resolveAttendeeIdByEmail(
 }
 
 /**
+ * Rows on the roster whose email carries this run's marker but that no spec
+ * tracked. A row created through the browser is only tracked after its id is
+ * read back, so a failure between the submit and that read used to leave it on
+ * the fixture tenant for good.
+ */
+export async function findUntrackedMarkerRows(
+  bearer: string,
+  tenant: KefiFixtureTenant,
+  marker: string,
+  tracked: readonly string[],
+): Promise<AbsenceResult> {
+  const resp = await new KefiDoorLedgerClient()
+    .getLedgerByBearer(tenant.slug, bearer, tenant.eventExternalId)
+    .catch((error: unknown) => ({ status: 0, data: String(error) }));
+  if (resp.status !== HTTP_OK) {
+    return { messages: [`could not read the roster to sweep marker ${marker} (status ${resp.status})`], unresolved: [] };
+  }
+  const view = resp.data as { attendees?: { email: string | null; attendeeExternalId: string }[] };
+  const ids = (view.attendees ?? [])
+    .filter((a) => a.email?.startsWith(`${marker}-`) === true)
+    .map((a) => a.attendeeExternalId)
+    .filter((id) => !tracked.includes(id));
+  return { messages: [], unresolved: ids };
+}
+
+/**
  * Confirm each id is GONE from the live roster. Ids proven absent are marked
  * cleaned; ids still present (or unverifiable) are returned as failure strings
  * and stay pending, so the global teardown re-sweeps and then fails the run.

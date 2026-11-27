@@ -33,7 +33,7 @@
 import { HTTP_CREATED, HTTP_NOT_FOUND, HTTP_NO_CONTENT, HTTP_OK } from './kefiHttpStatus.js';
 import { KefiAdminClient } from './kefiAdminClient.js';
 import { recordCleaned, recordCreated } from './kefiCanaryRegistry.js';
-import { assertAttendeesAbsent, resolveAttendeeIdByEmail } from './kefiEventOpsLeaks.js';
+import { assertAttendeesAbsent, findUntrackedMarkerRows, resolveAttendeeIdByEmail } from './kefiEventOpsLeaks.js';
 import {
   KefiAccessLinkClient,
   type CreateAccessLinkInput,
@@ -246,6 +246,9 @@ export async function openEventOps(): Promise<EventOpsSession> {
       }
     }
 
+    const strays = await findUntrackedMarkerRows(bearer, tenant, marker, createdAttendees);
+    failures.push(...strays.messages);
+    for (const id of strays.unresolved) declare('attendee', createdAttendees, id);
     const deleteAccepted: string[] = [];
     for (const attendeeId of createdAttendees) {
       try {
@@ -286,7 +289,7 @@ export async function openEventOps(): Promise<EventOpsSession> {
     importAttendee,
     mintLink,
     createTemplate,
-    trackAttendee: (externalId: string) => void createdAttendees.push(externalId),
+    trackAttendee: (externalId: string) => declare('attendee', createdAttendees, externalId),
     trackLink: (externalId: string) => void createdLinks.push(externalId),
     trackTemplate: (externalId: string) => void createdTemplates.push(externalId),
     cleanup,
