@@ -21,6 +21,7 @@
 import { test, expect } from '@playwright/test';
 
 import { KefiAdminClient } from '../../helpers/kefi/kefiAdminClient.js';
+import { bffLogin } from '../../helpers/kefi/kefiBrowserLogin.js';
 import { masterAdminAvailable } from '../../helpers/kefi/kefiKeycloakAdmin.js';
 import {
   bearerFor,
@@ -36,11 +37,13 @@ import {
   teardownLandingPeopleFixture,
   type LandingPeopleFixture,
 } from '../../helpers/kefi/kefiLandingPeopleFixture.js';
-import { tenantPathUrl } from '../../helpers/kefi/kefiUrls.js';
+import { getKefiUrls, tenantPathUrl } from '../../helpers/kefi/kefiUrls.js';
 import { isRemoteTarget } from '../../helpers/target.js';
 
 const PUBLISH_TEST_TIMEOUT_MS = 600_000;
 const PUBLISH_POLL_TIMEOUT_MS = 480_000;
+const EDITOR_TIMEOUT_MS = 45_000;
+const PHONE_FLOOR = { viewport: { width: 360, height: 640 }, isMobile: true, hasTouch: true };
 
 test.describe.configure({ mode: 'serial' });
 
@@ -212,5 +215,32 @@ test.describe('KEFI-PEOPLE-1 organizer people editor — landing-config PUT', ()
     expect(other.status(), `tenant B organizer writes its OWN tenant: ${await other.text()}`).toBe(200);
     expect(groupByKey(await draftLanding(request, bearerB), 'teachers')?.title, 'the write landed on tenant B').toBe('Hijacked');
     expect((await draftLanding(request, bearerA)).performerGroups, 'tenant A people must be unchanged').toEqual(before);
+  });
+
+  test('AC-08 at 360 the organizer clicks Remove person, the card leaves the roster, and a reload without saving brings it back', async ({ request, browser }) => {
+    const { organizerA } = must();
+    const bearer = await bearerFor(admin, organizerA);
+    const person: Person = { id: 'ac08-remove', name: 'Remove Ac08', role: 'Teacher', topic: 'Salsa', socials: [] };
+    const put = await putLandingPatch(request, bearer, { performerGroups: [{ key: 'teachers', title: 'Teachers', performers: [person] }] });
+    expect(put.status(), `seed PUT should be 200: ${await put.text()}`).toBe(200);
+    const context = await browser.newContext({ ...PHONE_FLOOR, ignoreHTTPSErrors: true });
+    const page = await context.newPage();
+    const card = page.getByTestId('landing-artist-card-ac08-remove');
+    try {
+      await page.goto(`${getKefiUrls().webUrl}/login`, { waitUntil: 'domcontentloaded' });
+      await bffLogin(page, { username: organizerA.username, password: organizerA.password });
+      await page.goto(`${getKefiUrls().webUrl}/organizer/landing`, { waitUntil: 'domcontentloaded' });
+      await card.getByTestId('landing-artist-card-ac08-remove-edit').click({ timeout: EDITOR_TIMEOUT_MS });
+
+      await page.getByTestId('landing-person-remove').click();
+
+      await expect(card, 'Remove person takes the card off the roster').toHaveCount(0);
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await expect(card, 'a reload without Save brings the person back').toBeVisible({ timeout: EDITOR_TIMEOUT_MS });
+      const draft = groupByKey(await draftLanding(request, bearer), 'teachers')?.performers ?? [];
+      expect(draft.map((p) => p.id), 'the unsaved remove wrote nothing to the draft').toEqual(['ac08-remove']);
+    } finally {
+      await context.close();
+    }
   });
 });
