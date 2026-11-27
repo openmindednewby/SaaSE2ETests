@@ -295,6 +295,12 @@ export default [
             'kefi-ubb-ticket-surface-ui.spec.ts',
             'kefi-ubb-tiered-pricing.spec.ts',
           ],
+          'kefi-landing': [
+            'kefi-landing-editor-action-parity.spec.ts',
+            'kefi-landing-people.spec.ts',
+            'kefi-landing-upload.spec.ts',
+            'kefi-price-change.spec.ts',
+          ],
           'kefi-core': [
             'kefi-access-link-dead-vs-forbidden.spec.ts',
             'kefi-access-link-expiry.spec.ts',

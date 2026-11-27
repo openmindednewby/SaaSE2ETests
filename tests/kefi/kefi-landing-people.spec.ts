@@ -235,6 +235,7 @@ test.describe('KEFI-PEOPLE-1 organizer people editor — landing-config PUT', ()
       await page.getByTestId('landing-person-remove').click();
 
       await expect(card, 'Remove person takes the card off the roster').toHaveCount(0);
+      // eslint-disable-next-line no-page-reload/no-page-reload -- a reload is the AC-08 subject: unsaved edits must not persist
       await page.reload({ waitUntil: 'domcontentloaded' });
       await expect(card, 'a reload without Save brings the person back').toBeVisible({ timeout: EDITOR_TIMEOUT_MS });
       const draft = groupByKey(await draftLanding(request, bearer), 'teachers')?.performers ?? [];

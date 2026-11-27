@@ -175,6 +175,7 @@ test.describe('KEFI-PRICE-E2E-1 organizer price change reaching the public page'
     const current = await currentWindowOf(request, ref);
     const startedPriceEur = current.priceEur + PRICE_STEP_EUR;
     const futurePriceEur = current.priceEur + 2 * PRICE_STEP_EUR;
+    // eslint-disable-next-line no-console-in-tests/no-console-in-tests -- the price evidence is the output, not debugging
     const evidence = (kind: string, data: Record<string, unknown>): void => console.log(`[price-evidence] ${kind} ${JSON.stringify(data)}`);
     evidence('change', { atUtc: new Date().toISOString(), switchesAtUtc: utcNowIso(SWITCH_DELAY_MS), from: current.priceEur, to: startedPriceEur });
     let started: WindowReplacement | undefined = await replaceCurrentWindow(request, ref, current, startedPriceEur, utcNowIso(SWITCH_DELAY_MS));
@@ -198,6 +199,7 @@ test.describe('KEFI-PRICE-E2E-1 organizer price change reaching the public page'
         evidence('poll', { publish: publishes, poll, expected, ...sample });
         seen = sample.price;
         if (seen === expected || Date.now() + SERVE_POLL_MS > deadline) return seen;
+        // eslint-disable-next-line no-set-timeout-in-promise/no-set-timeout-in-promise -- polling a served static site; there is no element or response to await
         await new Promise((resolve) => setTimeout(resolve, SERVE_POLL_MS));
       }
     };
