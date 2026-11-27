@@ -112,7 +112,7 @@ export class KefiPromoterClient {
     const ticket = provision.tickets.find((t) => t.promoterExternalId === teacher.externalId);
     if (ticket === undefined) throw new Error(`[kefiPromoterClient] provision minted no ticket for ${teacher.externalId}`);
     const guest = await this.post<{ externalId: string }>(bearer, `${this.eventPath(eventExternalId)}/attendees`, {
-      name: 'E2E door guest', surname: tag, passCode: STAFF_PASS_CODE, paid: true, paidEur: 0, comp: true,
+      name: 'E2E door guest', surname: tag, passCode: STAFF_PASS_CODE, paid: false, paidEur: 0, comp: true,
     }, 'create STAFF guest');
     return {
       eventExternalId,
