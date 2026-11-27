@@ -42,7 +42,7 @@ const APP_SPECS = {
 };
 const PASSTHROUGH_FLAGS = ['--ui', '--debug', '--last-failed', '--only-changed', '--test-list'];
 const GATE_TARGETS = new Set(['staging', 'prod']);
-const NAMED_SPEC = /\.(spec|test)\.[cm]?[jt]s$/;
+const NAMED_SPEC = /\.(spec|test)\.[cm]?[jt]s(:\d+)*$/;
 const GIT_TIMEOUT_MS = 15000;
 const LIST_BUFFER_BYTES = 64 * 1024 * 1024;
 const NOTHING_PICKED_EXIT = 3;
@@ -112,7 +112,11 @@ function changedAppSpecs() {
   return changed.length ? { why: `app ${app} changed in ${changed.join(', ')}`, specs: APP_SPECS[app].specs } : null;
 }
 
-function fullRunReason(args) {
+export function isFullRunFile(file) {
+  return FULL_RUN_FILES.some((re) => re.test(file));
+}
+
+export function fullRunReason(args) {
   if (args.includes('--full') || process.env.E2E_FULL === '1') return '--full / E2E_FULL=1';
   if (GATE_TARGETS.has(process.env.E2E_TARGET ?? '')) return `E2E_TARGET=${process.env.E2E_TARGET} (gate run)`;
   if (process.env.PWTEST_WATCH) return 'watch mode';
@@ -133,7 +137,7 @@ function selection(args) {
   const base = resolveBase(E2E_ROOT, process.env.E2E_BASE);
   if (!base) return { mode: 'full', reason: 'no git checkout or no origin default branch' };
   const config = configArg(args);
-  const trigger = changedFiles(base).find((f) => f === config || FULL_RUN_FILES.some((re) => re.test(f)));
+  const trigger = changedFiles(base).find((f) => f === config || isFullRunFile(f));
   if (trigger) return { mode: 'full', reason: `shared file changed: ${trigger}` };
   const app = changedAppSpecs();
   return app ? { mode: 'app', ...app } : { mode: 'changed', base };
@@ -157,7 +161,7 @@ function pickedCount(pwArgs) {
   }
 }
 
-function buildArgs(args, pick) {
+export function buildArgs(args, pick) {
   const pwArgs = ['test', ...args.filter((a) => a !== '--full')];
   if (pick.mode === 'app') pwArgs.push(...pick.specs);
   if (pick.mode === 'changed') pwArgs.push(`--only-changed=${pick.base}`);
@@ -179,4 +183,4 @@ function main() {
   process.exit(run.status ?? 1);
 }
 
-main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
