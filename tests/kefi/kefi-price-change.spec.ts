@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext } from '@playwright/test';
 
 import { KefiAdminClient } from '../../helpers/kefi/kefiAdminClient.js';
+import { openEventOps } from '../../helpers/kefi/kefiEventOpsFixture.js';
 import { KefiPassPricingClient, type OrganizerPass } from '../../helpers/kefi/kefiPassPricingClient.js';
 import { KefiPassEditClient } from '../../helpers/kefi/kefiPassEditClient.js';
 import {
@@ -70,13 +71,26 @@ test.describe('KEFI-PRICE-E2E-1 organizer price change reaching the public page'
     return current;
   }
 
+  function passUrl(ref: PassRef): string {
+    return `${getKefiUrls().apiUrl}/api/v1/organizer/events/${ref.eventExternalId}/passes/${ref.passExternalId}`;
+  }
+
+  async function createDedicatedPass(code: string, priceEur: number): Promise<PassRef> {
+    const created = await new KefiPassEditClient().createPass(bearer, tenant.eventExternalId, { code, label: `Price e2e ${code}`, priceEur });
+    expect(created.status, `create dedicated pass ${code}`).toBe(201);
+    return { bearer, eventExternalId: tenant.eventExternalId, passExternalId: (created.data as { externalId: string }).externalId };
+  }
+
+  async function removePass(request: APIRequestContext, ref: PassRef, code: string): Promise<void> {
+    const removed = await request.delete(passUrl(ref), { headers: { Authorization: `Bearer ${bearer}` } });
+    expect(removed.status(), `dedicated pass ${code} removed`).toBeLessThan(300);
+  }
+
   test('AC-PRICE-1 with the current window closed and a new one opened from now, the price timeline returns the new price', async ({ request }) => {
     const code = `PRC${Date.now().toString(36).toUpperCase()}`;
     const oldPriceEur = 10;
     const newPriceEur = 14;
-    const created = await new KefiPassEditClient().createPass(bearer, tenant.eventExternalId, { code, label: `Price e2e ${code}`, priceEur: oldPriceEur });
-    expect(created.status, `create dedicated pass ${code}`).toBe(201);
-    const ref: PassRef = { bearer, eventExternalId: tenant.eventExternalId, passExternalId: (created.data as { externalId: string }).externalId };
+    const ref = await createDedicatedPass(code, oldPriceEur);
     try {
       const current = await addWindow(request, ref, {
         priceEur: oldPriceEur, effectiveFromUtc: new Date(Date.now() - HOUR_MS).toISOString(), effectiveUntilUtc: null, label: null, minPaidCount: null,
@@ -88,11 +102,7 @@ test.describe('KEFI-PRICE-E2E-1 organizer price change reaching the public page'
       expect(timeline.eventExternalId, 'the timeline is the fixture event').toBe(tenant.eventExternalId);
       expect(timelinePrice(timeline, code), `timeline price of ${code} after the window change`).toBe(newPriceEur);
     } finally {
-      const removed = await request.delete(
-        `${getKefiUrls().apiUrl}/api/v1/organizer/events/${tenant.eventExternalId}/passes/${ref.passExternalId}`,
-        { headers: { Authorization: `Bearer ${bearer}` } },
-      );
-      expect(removed.status(), `dedicated pass ${code} removed`).toBeLessThan(300);
+      await removePass(request, ref, code);
     }
   });
 
@@ -113,6 +123,47 @@ test.describe('KEFI-PRICE-E2E-1 organizer price change reaching the public page'
       expect(bakedAfter, 'the page keeps the old price until a publish').toBe(bakedBefore);
     } finally {
       if (replacement) await restoreWindow(request, ref, replacement);
+    }
+  });
+
+  test('AC-PRICE-6 with the pass marked sold out, a public registration for it is rejected with 400 naming sold out', async ({ request }) => {
+    const code = `SLD${Date.now().toString(36).toUpperCase()}`;
+    const priceEur = 10;
+    const ref = await createDedicatedPass(code, priceEur);
+    const ops = await openEventOps();
+    try {
+      const marked = await request.put(passUrl(ref), {
+        headers: { Authorization: `Bearer ${bearer}` },
+        data: { label: `Price e2e ${code}`, priceEur, status: 'SoldOut' },
+      });
+      expect(marked.status(), `mark ${code} sold out`).toBeLessThan(300);
+
+      const attempt = ops.registerAttendee('soldout', code);
+
+      await expect(attempt, 'a sold-out pass refuses the registration').rejects.toThrow(/expected 201, got 400.*sold out/);
+    } finally {
+      expect(await ops.cleanup(), 'every row this test created was cleaned up').toEqual([]);
+      await removePass(request, ref, code);
+    }
+  });
+
+  test('AC-PRICE-7 with a window at a new price started an hour ago, a public registration is charged the window price', async ({ request }) => {
+    const code = `CHG${Date.now().toString(36).toUpperCase()}`;
+    const basePriceEur = 10;
+    const windowPriceEur = 14;
+    const ref = await createDedicatedPass(code, basePriceEur);
+    const ops = await openEventOps();
+    try {
+      await addWindow(request, ref, {
+        priceEur: windowPriceEur, effectiveFromUtc: new Date(Date.now() - HOUR_MS).toISOString(), effectiveUntilUtc: null, label: null, minPaidCount: null,
+      });
+
+      const attendee = await ops.registerAttendee('charged', code);
+
+      expect(attendee.priceEur, `the price ${code} charges at registration`).toBe(windowPriceEur);
+    } finally {
+      expect(await ops.cleanup(), 'every row this test created was cleaned up').toEqual([]);
+      await removePass(request, ref, code);
     }
   });
 
