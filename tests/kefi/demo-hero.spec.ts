@@ -17,7 +17,8 @@ interface HeroLook {
 }
 
 async function heroLook(page: Page, slug: string): Promise<HeroLook> {
-  await page.goto(`${WEB}/t/${slug}/`, { waitUntil: 'networkidle' });
+  await page.goto(`${WEB}/t/${slug}/`, { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('.hero'), `${slug} landing renders its .hero`).toBeVisible();
   return page.locator('.hero').evaluate(hero => {
     const style = getComputedStyle(hero);
     return {
@@ -53,7 +54,7 @@ for (const vp of VIEWPORTS) {
   test.describe(`demo hero at ${vp.width}x${vp.height}`, () => {
     test.use({ viewport: { width: vp.width, height: vp.height } });
 
-    test('demo hero matches the KUCY hero', async ({ page }) => {
+    test(`AC-DH-4 demo at ${vp.width}x${vp.height}, hero background, font and --body-bg equal KUCY`, async ({ page }) => {
       const kucy = await heroLook(page, 'kucy');
 
       const demo = await heroLook(page, 'demo');
@@ -61,8 +62,9 @@ for (const vp of VIEWPORTS) {
       expect(demo).toEqual(kucy);
     });
 
-    test('demo hero fits, no horizontal scroll, CTA contrast >= 4.5:1', async ({ page }) => {
-      await page.goto(`${WEB}/t/demo/`, { waitUntil: 'networkidle' });
+    test(`AC-DH-5 demo at ${vp.width}x${vp.height}, no horizontal scroll, hero text fits, CTA contrast >= 4.5:1`, async ({ page }) => {
+      await page.goto(`${WEB}/t/demo/`, { waitUntil: 'domcontentloaded' });
+      await expect(page.locator('.hero'), 'demo landing renders its .hero').toBeVisible();
 
       const widths = await page.evaluate(() => ({
         scroll: document.documentElement.scrollWidth,
