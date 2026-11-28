@@ -229,7 +229,9 @@ test.describe('KEFI-PEOPLE-1 organizer people editor — landing-config PUT', ()
     try {
       await page.goto(`${getKefiUrls().webUrl}/login`, { waitUntil: 'domcontentloaded' });
       await bffLogin(page, { username: organizerA.username, password: organizerA.password });
+      await page.addLocatorHandler(page.getByTestId('tour-offer-dismiss'), async (dismiss) => { await dismiss.click(); });
       await page.goto(`${getKefiUrls().webUrl}/organizer/landing`, { waitUntil: 'domcontentloaded' });
+      await page.getByTestId('organizer-setup-guide-site-people').click({ timeout: EDITOR_TIMEOUT_MS });
       await card.getByTestId('landing-artist-card-ac08-remove-edit').click({ timeout: EDITOR_TIMEOUT_MS });
 
       await page.getByTestId('landing-person-remove').click();
@@ -237,6 +239,7 @@ test.describe('KEFI-PEOPLE-1 organizer people editor — landing-config PUT', ()
       await expect(card, 'Remove person takes the card off the roster').toHaveCount(0);
       // eslint-disable-next-line no-page-reload/no-page-reload -- a reload is the AC-08 subject: unsaved edits must not persist
       await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.getByTestId('organizer-setup-guide-site-people').click({ timeout: EDITOR_TIMEOUT_MS });
       await expect(card, 'a reload without Save brings the person back').toBeVisible({ timeout: EDITOR_TIMEOUT_MS });
       const draft = groupByKey(await draftLanding(request, bearer), 'teachers')?.performers ?? [];
       expect(draft.map((p) => p.id), 'the unsaved remove wrote nothing to the draft').toEqual(['ac08-remove']);
