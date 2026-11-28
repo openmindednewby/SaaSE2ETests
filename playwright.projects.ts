@@ -486,6 +486,12 @@ export function buildProjects(): ProjectConfig {
       testMatch: /kefi\/kefi-tenant-landing-health\.spec\.ts/,
       use: CHROME,
     },
+    {
+      name: 'kefi-demo-hero',
+      workers: 1,
+      testMatch: /kefi\/demo-hero\.spec\.ts/,
+      use: CHROME,
+    },
 
     // ---- Kefi tenant-lifecycle E2E (Phases B + C) ----
     // Standalone project — no auth dependency (the spec signs up a fresh
