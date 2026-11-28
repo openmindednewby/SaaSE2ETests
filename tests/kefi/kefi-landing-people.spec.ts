@@ -229,7 +229,7 @@ test.describe('KEFI-PEOPLE-1 organizer people editor — landing-config PUT', ()
     try {
       await page.goto(`${getKefiUrls().webUrl}/login`, { waitUntil: 'domcontentloaded' });
       await bffLogin(page, { username: organizerA.username, password: organizerA.password });
-      await page.addLocatorHandler(page.getByTestId('tour-offer-dismiss'), async (dismiss) => { await dismiss.click(); });
+      await page.addLocatorHandler(page.getByTestId('tour-offer-dismiss'), async (dismiss) => { await dismiss.press('Enter'); });
       await page.goto(`${getKefiUrls().webUrl}/organizer/landing`, { waitUntil: 'domcontentloaded' });
       await page.getByTestId('organizer-setup-guide-site-people').click({ timeout: EDITOR_TIMEOUT_MS });
       await card.getByTestId('landing-artist-card-ac08-remove-edit').click({ timeout: EDITOR_TIMEOUT_MS });
